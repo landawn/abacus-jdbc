@@ -7044,14 +7044,20 @@ public final class JdbcUtil {
             }
         });
         sqlTypeGetterMap.put(Types.FLOAT, new OutParameterGetter() {
+            // Per JDBC spec (Appendix B), SQL FLOAT is an 8-byte, double-precision type that maps to
+            // Java double (it is the synonym of Types.DOUBLE); SQL REAL is the 4-byte type that maps to
+            // Java float. Reading a Types.FLOAT out parameter with getFloat() would narrow the value to
+            // single precision (losing precision and overflowing to Float.POSITIVE_INFINITY beyond ~3.4e38).
+            // Use getDouble() for parity with the Types.DOUBLE getter and the input-side convention in
+            // AbstractQuery.setFloat (which uses Types.REAL for Java float).
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getFloat(outParameterIndex);
+                return stmt.getDouble(outParameterIndex);
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getFloat(outParameterName);
+                return stmt.getDouble(outParameterName);
             }
         });
         sqlTypeGetterMap.put(Types.DOUBLE, new OutParameterGetter() {
@@ -11050,7 +11056,7 @@ public final class JdbcUtil {
      *     // Automatic CRUD methods are inherited:
      *     // - save(User user)
      *     // - batchSave(Collection<User> users)
-     *     // - getsById(Long id)
+     *     // - gett(Long id)
      *     // - update(User user)
      *     // - deleteById(Long id)
      *     // - list()

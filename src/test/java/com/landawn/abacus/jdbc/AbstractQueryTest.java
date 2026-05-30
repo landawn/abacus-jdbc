@@ -94,6 +94,18 @@ public class AbstractQueryTest extends TestBase {
         verify(preparedStatement).setString(3, "b");
     }
 
+    // A null element takes the setObject(idx, null) branch (AbstractQuery L3021) rather than the
+    // type-resolved path; non-null neighbours still use their resolved Type.
+    @Test
+    public void testSetParametersFrom_Collection_WithNullElement() throws SQLException {
+        TestQuery result = query.setParametersFrom(1, Arrays.asList("a", null, "b"));
+
+        assertSame(query, result);
+        verify(preparedStatement).setString(1, "a");
+        verify(preparedStatement).setObject(2, null);
+        verify(preparedStatement).setString(3, "b");
+    }
+
     @Test
     public void testSetNullForIndices() throws SQLException {
         TestQuery result = query.setNullForIndices(Types.INTEGER, 1, 3);

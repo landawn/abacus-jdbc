@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,7 +31,16 @@ import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlBuilder.PSC;
+import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
+import com.landawn.abacus.util.u.OptionalBoolean;
+import com.landawn.abacus.util.u.OptionalByte;
+import com.landawn.abacus.util.u.OptionalChar;
+import com.landawn.abacus.util.u.OptionalDouble;
+import com.landawn.abacus.util.u.OptionalFloat;
+import com.landawn.abacus.util.u.OptionalInt;
+import com.landawn.abacus.util.u.OptionalLong;
+import com.landawn.abacus.util.u.OptionalShort;
 
 /**
  * End-to-end integration coverage for the dynamically generated DAO implementation
@@ -96,8 +106,72 @@ public class DaoImplIntegrationTest extends TestBase {
     public interface UserAccountDao extends CrudDao<UserAccount, Long, PSC, UserAccountDao> {
     }
 
+    @Table("type_probe")
+    public static class TypeProbe {
+        @Id
+        @ReadOnly
+        private Long id;
+        private char charVal;
+        private java.sql.Date dateVal;
+        private java.sql.Time timeVal;
+        private java.sql.Timestamp tsVal;
+        private byte[] bytesVal;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public char getCharVal() {
+            return charVal;
+        }
+
+        public void setCharVal(final char charVal) {
+            this.charVal = charVal;
+        }
+
+        public java.sql.Date getDateVal() {
+            return dateVal;
+        }
+
+        public void setDateVal(final java.sql.Date dateVal) {
+            this.dateVal = dateVal;
+        }
+
+        public java.sql.Time getTimeVal() {
+            return timeVal;
+        }
+
+        public void setTimeVal(final java.sql.Time timeVal) {
+            this.timeVal = timeVal;
+        }
+
+        public java.sql.Timestamp getTsVal() {
+            return tsVal;
+        }
+
+        public void setTsVal(final java.sql.Timestamp tsVal) {
+            this.tsVal = tsVal;
+        }
+
+        public byte[] getBytesVal() {
+            return bytesVal;
+        }
+
+        public void setBytesVal(final byte[] bytesVal) {
+            this.bytesVal = bytesVal;
+        }
+    }
+
+    public interface TypeProbeDao extends CrudDao<TypeProbe, Long, PSC, TypeProbeDao> {
+    }
+
     private DataSource ds;
     private UserAccountDao dao;
+    private TypeProbeDao typeDao;
 
     private static UserAccount newUser(final String first, final String last, final int age) {
         final UserAccount u = new UserAccount();
@@ -116,9 +190,17 @@ public class DaoImplIntegrationTest extends TestBase {
              Statement st = conn.createStatement()) {
             st.execute("CREATE TABLE IF NOT EXISTS user_account (" + "id BIGINT AUTO_INCREMENT PRIMARY KEY, " + "first_name VARCHAR(64), "
                     + "last_name VARCHAR(64), " + "age INT, " + "active BOOLEAN)");
+
+            // Typed table for the date/time/char/binary queryFor* accessors; one fixed row (id=1).
+            st.execute("CREATE TABLE IF NOT EXISTS type_probe (" + "id BIGINT PRIMARY KEY, char_val CHAR(1), date_val DATE, time_val TIME, "
+                    + "ts_val TIMESTAMP, bytes_val VARBINARY(16))");
+            st.execute("DELETE FROM type_probe");
+            st.execute("INSERT INTO type_probe (id, char_val, date_val, time_val, ts_val, bytes_val) "
+                    + "VALUES (1, 'A', DATE '2020-01-15', TIME '10:30:00', TIMESTAMP '2020-01-15 10:30:00', X'0102')");
         }
 
         dao = JdbcUtil.createDao(UserAccountDao.class, ds);
+        typeDao = JdbcUtil.createDao(TypeProbeDao.class, ds);
     }
 
     @AfterAll
@@ -126,6 +208,7 @@ public class DaoImplIntegrationTest extends TestBase {
         try (Connection conn = ds.getConnection();
              Statement st = conn.createStatement()) {
             st.execute("DROP TABLE IF EXISTS user_account");
+            st.execute("DROP TABLE IF EXISTS type_probe");
         }
     }
 
@@ -382,6 +465,235 @@ public class DaoImplIntegrationTest extends TestBase {
         // restored both thread-locals.
         assertEquals(priorSqlLogEnabled, JdbcUtil.isSqlLogEnabled(), "SQL log thread-local must be restored after beginTransaction failure");
         assertEquals(priorMinPerfLog, JdbcUtil.getMinExecutionTimeForSqlPerfLog(), "Perf log thread-local must be restored after beginTransaction failure");
+    }
+
+    // CrudDao queryFor* single-column-by-id family: each typed accessor drives a distinct generated
+    // builder branch in DaoImpl.
+    @Test
+    public void testQueryForById_TypedAccessors() throws SQLException {
+        final Long id = dao.insert(newUser("Quinn", "Probe", 7));
+
+        assertEquals(OptionalBoolean.of(true), dao.queryForBoolean("active", id));
+        assertEquals(OptionalByte.of((byte) 7), dao.queryForByte("age", id));
+        assertEquals(OptionalShort.of((short) 7), dao.queryForShort("age", id));
+        assertEquals(OptionalInt.of(7), dao.queryForInt("age", id));
+        assertEquals(OptionalLong.of(id), dao.queryForLong("id", id));
+        assertEquals(7.0f, dao.queryForFloat("age", id).orElseThrow(), 0.0001f);
+        assertEquals(7.0, dao.queryForDouble("age", id).orElseThrow(), 0.0001);
+        assertEquals(Nullable.of("Quinn"), dao.queryForString("firstName", id));
+        assertEquals(Integer.valueOf(7), dao.queryForSingleValue("age", id, Integer.class).orElseNull());
+        assertEquals(Integer.valueOf(7), dao.queryForSingleNonNull("age", id, Integer.class).orElseThrow());
+        assertEquals(Integer.valueOf(7), dao.queryForUniqueValue("age", id, Integer.class).orElseNull());
+        assertEquals(Integer.valueOf(7), dao.queryForUniqueNonNull("age", id, Integer.class).orElseThrow());
+    }
+
+    // Dao queryFor* single-column-by-Condition family.
+    @Test
+    public void testQueryForByCondition_TypedAccessors() throws SQLException {
+        final Long id = dao.insert(newUser("Cara", "Cond", 9));
+
+        assertEquals(OptionalBoolean.of(true), dao.queryForBoolean("active", Filters.eq("id", id)));
+        assertEquals(OptionalByte.of((byte) 9), dao.queryForByte("age", Filters.eq("id", id)));
+        assertEquals(OptionalShort.of((short) 9), dao.queryForShort("age", Filters.eq("id", id)));
+        assertEquals(OptionalInt.of(9), dao.queryForInt("age", Filters.eq("id", id)));
+        assertEquals(OptionalLong.of(id), dao.queryForLong("id", Filters.eq("id", id)));
+        assertEquals(9.0f, dao.queryForFloat("age", Filters.eq("id", id)).orElseThrow(), 0.0001f);
+        assertEquals(9.0, dao.queryForDouble("age", Filters.eq("id", id)).orElseThrow(), 0.0001);
+        assertEquals(Nullable.of("Cara"), dao.queryForString("firstName", Filters.eq("id", id)));
+        assertEquals(Integer.valueOf(9), dao.queryForSingleValue("age", Filters.eq("id", id), Integer.class).orElseNull());
+        assertEquals(Integer.valueOf(9), dao.queryForSingleNonNull("age", Filters.eq("id", id), Integer.class).orElseThrow());
+        assertEquals(Integer.valueOf(9), dao.queryForUniqueValue("age", Filters.eq("id", id), Integer.class).orElseNull());
+        assertEquals(Integer.valueOf(9), dao.queryForUniqueNonNull("age", Filters.eq("id", id), Integer.class).orElseThrow());
+    }
+
+    // findFirst / findOnlyOne overloads (Condition, selectPropNames, RowMapper, BiRowMapper).
+    @Test
+    public void testFindFirstAndFindOnlyOne_Variants() throws SQLException {
+        final Long id = dao.insert(newUser("Fin", "Only", 12));
+
+        assertTrue(dao.findFirst(Filters.eq("id", id)).isPresent());
+        assertEquals("Fin", dao.findFirst(Filters.eq("id", id), (Jdbc.RowMapper<String>) rs -> rs.getString("first_name")).orElse(null));
+        assertEquals("Fin", dao.findFirst(Filters.eq("id", id), (Jdbc.BiRowMapper<String>) (rs, cols) -> rs.getString("first_name")).orElse(null));
+        assertEquals("Fin", dao.findFirst(List.of("firstName"), Filters.eq("id", id)).map(UserAccount::getFirstName).orElse(null));
+
+        assertTrue(dao.findOnlyOne(Filters.eq("id", id)).isPresent());
+        assertEquals("Fin", dao.findOnlyOne(Filters.eq("id", id), (Jdbc.RowMapper<String>) rs -> rs.getString("first_name")).orElse(null));
+        assertEquals("Fin", dao.findOnlyOne(List.of("firstName"), Filters.eq("id", id)).map(UserAccount::getFirstName).orElse(null));
+    }
+
+    // list / stream overloads (Condition, selectPropNames, single-prop, RowMapper, BiRowMapper).
+    @Test
+    public void testListAndStream_Variants() throws SQLException {
+        dao.insert(newUser("L1", "Grp", 20));
+        dao.insert(newUser("L2", "Grp", 21));
+
+        assertEquals(2, dao.list(Filters.eq("lastName", "Grp")).size());
+        assertEquals(2, dao.list(Filters.eq("lastName", "Grp"), (Jdbc.RowMapper<String>) rs -> rs.getString("first_name")).size());
+        assertEquals(2, dao.list(Filters.eq("lastName", "Grp"), (Jdbc.BiRowMapper<String>) (rs, cols) -> rs.getString("first_name")).size());
+        assertEquals(2, dao.list(List.of("firstName"), Filters.eq("lastName", "Grp")).size());
+        assertEquals(2, dao.<String> list("firstName", Filters.eq("lastName", "Grp")).size());
+
+        assertEquals(2L, dao.stream(Filters.eq("lastName", "Grp")).count());
+        assertEquals(2L, dao.stream(Filters.eq("lastName", "Grp"), (Jdbc.RowMapper<String>) rs -> rs.getString("first_name")).count());
+    }
+
+    // batchGet overloads + id-set operations (count(ids), notExists, batchDeleteByIds).
+    @Test
+    public void testBatchGetAndIdSetOps() throws SQLException {
+        final Long id1 = dao.insert(newUser("BG1", "Set", 30));
+        final Long id2 = dao.insert(newUser("BG2", "Set", 31));
+        final List<Long> ids = List.of(id1, id2);
+
+        assertEquals(2, dao.batchGet(ids).size());
+        assertEquals(2, dao.batchGet(ids, List.of("id", "firstName")).size());
+        assertEquals(2, dao.batchGet(ids, 1).size());
+        assertEquals(2, dao.count(ids));
+        assertFalse(dao.notExists(id1));
+        assertTrue(dao.notExists(999999L));
+        assertTrue(dao.notExists(Filters.eq("firstName", "nobody")));
+
+        assertEquals(2, dao.batchDeleteByIds(ids));
+        assertEquals(0, dao.count(ids));
+    }
+
+    // update(Map, Condition) and delete(Condition) drive the by-condition mutation branches.
+    @Test
+    public void testUpdateAndDeleteByCondition() throws SQLException {
+        dao.insert(newUser("UC1", "Mut", 40));
+        dao.insert(newUser("UC2", "Mut", 41));
+
+        assertEquals(2, dao.update(Map.of("active", false), Filters.eq("lastName", "Mut")));
+        assertEquals(0, dao.list(Filters.eq("active", true).and(Filters.eq("lastName", "Mut"))).size());
+
+        assertEquals(2, dao.delete(Filters.eq("lastName", "Mut")));
+        assertEquals(0, dao.count(Filters.eq("lastName", "Mut")));
+    }
+
+    // Custom @Query SELECT/COUNT/DELETE methods with scalar, entity-list, and int return types.
+    public interface CustomQueryDao extends CrudDao<UserAccount, Long, PSC, CustomQueryDao> {
+        @Query("SELECT first_name FROM user_account WHERE id = ?")
+        String firstNameById(long id) throws SQLException;
+
+        @Query("SELECT * FROM user_account WHERE age >= ? ORDER BY age")
+        List<UserAccount> findOlderThan(int minAge) throws SQLException;
+
+        @Query("SELECT COUNT(*) FROM user_account WHERE last_name = ?")
+        int countByLastName(String lastName) throws SQLException;
+
+        @Query("DELETE FROM user_account WHERE last_name = ?")
+        int deleteByLastName(String lastName) throws SQLException;
+    }
+
+    @Test
+    public void testCustomQueryMethods() throws SQLException {
+        final CustomQueryDao cqDao = JdbcUtil.createDao(CustomQueryDao.class, ds);
+        final Long id = dao.insert(newUser("Cust", "Query", 40));
+        dao.insert(newUser("Cust2", "Query", 50));
+
+        assertEquals("Cust", cqDao.firstNameById(id));
+        assertEquals(2, cqDao.findOlderThan(40).size());
+        assertEquals(2, cqDao.countByLastName("Query"));
+        assertEquals(2, cqDao.deleteByLastName("Query"));
+        assertEquals(0, cqDao.countByLastName("Query"));
+    }
+
+    // queryFor* accessors for char/date/time/timestamp/byte[] against the fixed type_probe row,
+    // by id and by Condition — the remaining queryFor* builder branches in DaoImpl.
+    @Test
+    public void testQueryForById_CharDateTimeBytes() throws SQLException {
+        assertEquals(OptionalChar.of('A'), typeDao.queryForChar("charVal", 1L));
+        assertEquals(java.sql.Date.valueOf("2020-01-15"), typeDao.queryForDate("dateVal", 1L).orElseNull());
+        assertEquals(java.sql.Time.valueOf("10:30:00"), typeDao.queryForTime("timeVal", 1L).orElseNull());
+        assertEquals(java.sql.Timestamp.valueOf("2020-01-15 10:30:00"), typeDao.queryForTimestamp("tsVal", 1L).orElseNull());
+        assertArrayEquals(new byte[] { 1, 2 }, typeDao.queryForBytes("bytesVal", 1L).orElseNull());
+    }
+
+    @Test
+    public void testQueryForByCondition_CharDateTimeBytes() throws SQLException {
+        assertEquals(OptionalChar.of('A'), typeDao.queryForChar("charVal", Filters.eq("id", 1L)));
+        assertEquals(java.sql.Date.valueOf("2020-01-15"), typeDao.queryForDate("dateVal", Filters.eq("id", 1L)).orElseNull());
+        assertEquals(java.sql.Time.valueOf("10:30:00"), typeDao.queryForTime("timeVal", Filters.eq("id", 1L)).orElseNull());
+        assertEquals(java.sql.Timestamp.valueOf("2020-01-15 10:30:00"), typeDao.queryForTimestamp("tsVal", Filters.eq("id", 1L)).orElseNull());
+        assertArrayEquals(new byte[] { 1, 2 }, typeDao.queryForBytes("bytesVal", Filters.eq("id", 1L)).orElseNull());
+    }
+
+    // Dao default prepareQuery(String)/prepareQuery(Condition)/prepareNamedQuery(String) factory paths.
+    @Test
+    public void testPrepareQueryAndNamedQuery() throws SQLException {
+        final Long id = dao.insert(newUser("Prep", "Q", 33));
+
+        final List<String> names = dao.prepareQuery("SELECT first_name FROM user_account WHERE id = ?").setLong(1, id).list(String.class);
+        assertEquals(1, names.size());
+        assertEquals("Prep", names.get(0));
+
+        final OptionalInt age = dao.prepareNamedQuery("SELECT age FROM user_account WHERE id = :id").setLong("id", id).queryForInt();
+        assertEquals(OptionalInt.of(33), age);
+
+        assertEquals(1, dao.prepareQuery(Filters.eq("id", id)).list(UserAccount.class).size());
+    }
+
+    // @Query with a named parameter bound via @Bind drives the named-SQL custom-method dispatch.
+    public interface BindDao extends CrudDao<UserAccount, Long, PSC, BindDao> {
+        @Query("SELECT first_name FROM user_account WHERE age = :age")
+        String firstNameByAge(@com.landawn.abacus.jdbc.annotation.Bind("age") int age) throws SQLException;
+    }
+
+    @Test
+    public void testBindNamedQuery() throws SQLException {
+        final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds);
+        dao.insert(newUser("Bind", "Me", 77));
+
+        assertEquals("Bind", bindDao.firstNameByAge(77));
+    }
+
+    // insert/update/batchInsert/batchUpdate overloads that take an explicit prop-name collection.
+    @Test
+    public void testInsertUpdateBatch_PropNameVariants() throws SQLException {
+        final List<String> writableProps = List.of("firstName", "lastName", "age", "active");
+
+        final Long id = dao.insert(newUser("Ins", "Props", 15), writableProps);
+        assertNotNull(id);
+
+        // update(entity, propNamesToUpdate): only "age" is persisted; lastName change is ignored.
+        final UserAccount loaded = dao.gett(id);
+        loaded.setAge(16);
+        loaded.setLastName("Ignored");
+        assertEquals(1, dao.update(loaded, List.of("age")));
+        final UserAccount after = dao.gett(id);
+        assertEquals(16, after.getAge());
+        assertEquals("Props", after.getLastName());
+
+        // batchInsert with prop names, with and without an explicit batch size.
+        assertEquals(2, dao.batchInsert(List.of(newUser("BI1", "BP", 1), newUser("BI2", "BP", 2)), writableProps).size());
+        assertEquals(2, dao.batchInsert(List.of(newUser("BI3", "BP", 3), newUser("BI4", "BP", 4)), writableProps, 1).size());
+        assertEquals(4, dao.count(Filters.eq("lastName", "BP")));
+
+        // batchUpdate with prop names, with and without an explicit batch size.
+        final List<UserAccount> bp = dao.list(Filters.eq("lastName", "BP"));
+        for (final UserAccount x : bp) {
+            x.setAge(x.getAge() + 10);
+        }
+        assertEquals(4, dao.batchUpdate(bp, List.of("age")));
+        assertEquals(4, dao.batchUpdate(bp, List.of("age"), 2));
+    }
+
+    // forEach (RowConsumer / BiRowConsumer) and foreach (DisposableObjArray) iteration paths.
+    @Test
+    public void testForEachVariants() throws SQLException {
+        dao.insert(newUser("FE1", "Each", 50));
+        dao.insert(newUser("FE2", "Each", 51));
+
+        final int[] rowCount = { 0 };
+        dao.forEach(Filters.eq("lastName", "Each"), (Jdbc.RowConsumer) rs -> rowCount[0]++);
+        assertEquals(2, rowCount[0]);
+
+        final int[] biRowCount = { 0 };
+        dao.forEach(Filters.eq("lastName", "Each"), (Jdbc.BiRowConsumer) (rs, cols) -> biRowCount[0]++);
+        assertEquals(2, biRowCount[0]);
+
+        final int[] daCount = { 0 };
+        dao.foreach(Filters.eq("lastName", "Each"), arr -> daCount[0]++);
+        assertEquals(2, daCount[0]);
     }
 
 }

@@ -1644,4 +1644,46 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         // Verify the call signature exactly.
         Mockito.verify(md).getPrimaryKeys(null, "myschema", "users");
     }
+
+    // A three-part qualified name (catalog.schema.table) routes all three slots to getPrimaryKeys
+    // (JdbcCodeGenerationUtil L529-533, the parts.length >= 3 branch). The existing fixture only
+    // covered the two-part schema.table case.
+    @Test
+    public void testGenerateEntityClass_QualifiedTableName_CatalogSchemaTable() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMd = Mockito.mock(ResultSetMetaData.class);
+        final DatabaseMetaData md = Mockito.mock(DatabaseMetaData.class);
+        final Statement jdbcStmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+
+        when(conn.getMetaData()).thenReturn(md);
+        when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getDatabaseProductVersion()).thenReturn("15");
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMd);
+        when(rs.getStatement()).thenReturn(jdbcStmt);
+        when(jdbcStmt.getConnection()).thenReturn(conn);
+        // catalog.schema.table -> getPrimaryKeys("mycatalog", "myschema", "users").
+        when(md.getPrimaryKeys("mycatalog", "myschema", "users")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(true, false);
+        when(pkRs.getString("COLUMN_NAME")).thenReturn("id");
+
+        when(rsMd.getColumnCount()).thenReturn(2);
+        when(rsMd.getColumnLabel(1)).thenReturn("id");
+        when(rsMd.getColumnName(1)).thenReturn("id");
+        when(rsMd.getColumnType(1)).thenReturn(Types.BIGINT);
+        when(rsMd.getColumnClassName(1)).thenReturn("java.lang.Long");
+        when(rsMd.getColumnLabel(2)).thenReturn("name");
+        when(rsMd.getColumnName(2)).thenReturn("name");
+        when(rsMd.getColumnType(2)).thenReturn(Types.VARCHAR);
+        when(rsMd.getColumnClassName(2)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "mycatalog.myschema.users");
+        assertNotNull(result);
+        assertTrue(result.contains("@Id"), "Expected @Id annotation from catalog/schema-qualified PK lookup; got:\n" + result);
+        Mockito.verify(md).getPrimaryKeys("mycatalog", "myschema", "users");
+    }
 }

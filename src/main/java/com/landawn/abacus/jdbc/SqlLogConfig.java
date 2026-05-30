@@ -22,7 +22,7 @@ package com.landawn.abacus.jdbc;
  * <p>The configuration supports two modes:</p>
  * <ul>
  *   <li><b>General SQL logging:</b> Logs all SQL statements when enabled, useful for debugging</li>
- *   <li><b>Performance logging:</b> Logs only SQL statements that exceed a specified execution time threshold,
+ *   <li><b>Performance logging:</b> Logs only SQL statements whose execution time reaches or exceeds a specified threshold,
  *       useful for identifying slow queries in production environments</li>
  * </ul>
  *
@@ -85,7 +85,7 @@ final class SqlLogConfig {
 
     /**
      * Constructs a SqlLogConfig for performance-based SQL logging.
-     * Only SQL statements with execution time exceeding the threshold will be logged.
+     * Only SQL statements whose execution time reaches or exceeds the threshold will be logged.
      *
      * <p>This constructor creates a configuration that logs only slow queries, making it suitable
      * for production environments where you want to identify performance bottlenecks without
@@ -148,7 +148,7 @@ final class SqlLogConfig {
 
     /**
      * Updates the configuration for performance-based SQL logging.
-     * Only SQL statements with execution time exceeding the threshold will be logged.
+     * Only SQL statements whose execution time reaches or exceeds the threshold will be logged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -1024,6 +1024,7 @@ public final class Jdbc {
          * @param targetClass the class of the entities to create and merge
          * @param idPropNameForMerge the property name to use for identifying unique entities to merge
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          * @see Dataset#toMergedEntities(String, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final String idPropNameForMerge) {
@@ -1053,6 +1054,7 @@ public final class Jdbc {
          * @param targetClass the class of the entities to create and merge
          * @param idPropNamesForMerge the collection of property names that form the composite key for merging
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          * @see Dataset#toMergedEntities(Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final Collection<String> idPropNamesForMerge) {

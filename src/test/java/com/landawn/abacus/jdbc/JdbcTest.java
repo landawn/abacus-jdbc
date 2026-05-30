@@ -3473,4 +3473,76 @@ public class JdbcTest extends TestBase {
         assertEquals(1, p.getParameterIndex());
         assertEquals(java.sql.Types.INTEGER, p.getSqlType());
     }
+
+    // Entity with a @Column-aliased field so a ResultSet column name ("user_name") differs from the
+    // Java field ("userName"), exercising the column2FieldNameMap resolution branches in the
+    // entity-aware mappers (Jdbc L2037-2044 etc.).
+    public static class MappedColumnEntity {
+        private Long id;
+        @com.landawn.abacus.annotation.Column("user_name")
+        private String userName;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getUserName() {
+            return userName;
+        }
+
+        public void setUserName(final String userName) {
+            this.userName = userName;
+        }
+    }
+
+    // RowMapper.toDisposableObjArray(entityClass): "user_name" resolves to field "userName" via the
+    // @Column map; an "unknown" column stays unmapped (columnTypes[i]==null -> getColumnValue path).
+    @Test
+    public void testRowMapperToDisposableObjArray_WithColumnAnnotation() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(3);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("user_name");
+        when(mockResultSetMetaData.getColumnLabel(3)).thenReturn("unknown");
+        when(mockResultSet.getObject(3)).thenReturn("x");
+
+        final Jdbc.RowMapper<DisposableObjArray> mapper = Jdbc.RowMapper.toDisposableObjArray(MappedColumnEntity.class);
+        final DisposableObjArray arr = mapper.apply(mockResultSet);
+
+        assertNotNull(arr);
+        assertEquals(3, arr.length());
+        // The unmapped column falls back to JdbcUtil.getColumnValue.
+        assertEquals("x", arr.get(2));
+    }
+
+    // Static BiRowMapper.to(class, filter, converter, ignoreUnmatchedColumns=true): a non-trivial
+    // filter/converter routes mapping through the full bean block, and an unmatched column is nulled
+    // out and skipped rather than throwing (Jdbc L3197).
+    @Test
+    public void testBiRowMapperTo_FilterConverter_UnmatchedIgnored() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(6L);
+        when(mockResultSet.getObject(3)).thenReturn(25);
+
+        final java.util.function.Predicate<String> filter = s -> true;
+        final java.util.function.Function<String, String> converter = s -> s;
+        final Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, filter, converter, true);
+
+        final TestEntity result = mapper.apply(mockResultSet, Arrays.asList("id", "unknown_col", "age"));
+
+        assertNotNull(result);
+        assertNull(result.getName()); // unknown_col was skipped, leaving name unset
+    }
+
+    // Static BiRowMapper.to with ignoreUnmatchedColumns=false throws on an unmatched column.
+    @Test
+    public void testBiRowMapperTo_FilterConverter_UnmatchedThrows() throws SQLException {
+        final java.util.function.Predicate<String> filter = s -> true;
+        final java.util.function.Function<String, String> converter = s -> s;
+        final Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, filter, converter, false);
+
+        assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, Arrays.asList("id", "unknown_col", "age")));
+    }
 }

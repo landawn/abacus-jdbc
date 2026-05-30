@@ -82,7 +82,7 @@ import com.landawn.abacus.query.condition.Condition;
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
  * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateDao
  * @see NoUpdateCrudDao

@@ -1392,4 +1392,75 @@ public class JdbcUtilsTest extends TestBase {
             ((com.zaxxer.hikari.HikariDataSource) tgtDs).close();
         }
     }
+
+    // importData(Dataset, PreparedStatement, stmtSetter) delegating overload (JdbcUtils L874).
+    @Test
+    public void testImportData_DatasetStmtStmtSetter() throws SQLException {
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (q, row) -> q.setString(1, (String) row[0]);
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(0)).thenReturn("value");
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, stmtSetter);
+
+        assertEquals(1, result);
+        verify(mockPreparedStatement).setString(1, "value");
+    }
+
+    // importData(Dataset, PreparedStatement, batchSize, batchInterval, stmtSetter) delegating overload
+    // (JdbcUtils L904).
+    @Test
+    public void testImportData_DatasetStmtBatchConfigStmtSetter() throws SQLException {
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (q, row) -> q.setString(1, (String) row[0]);
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(2);
+        when(mockDataset.get(0)).thenReturn("a", "b");
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
+
+        final int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, 1, 0L, stmtSetter);
+
+        assertEquals(2, result);
+        verify(mockPreparedStatement, times(2)).setString(anyInt(), anyString());
+    }
+
+    // importData(Reader, ...): a func returning null skips that line (JdbcUtils L1227); batchSize=1 with
+    // a positive batch interval triggers the post-batch sleep branch (L1240).
+    @Test
+    public void testImportDataFromReader_NullRowSkipped_AndBatchInterval() throws Exception {
+        final Reader reader = new StringReader("a\nSKIP\nb\n");
+        final Throwables.Function<String, Object[], Exception> func = line -> "SKIP".equals(line) ? null : new Object[] { line };
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = JdbcUtils.importData(reader, mockPreparedStatement, 1, 1L, func);
+
+        assertEquals(2, result); // "a" and "b" imported; "SKIP" produced a null row and was skipped
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // importCsv with an empty reader returns 0 without touching the statement (JdbcUtils L1892-1893).
+    @Test
+    public void testImportCsv_EmptyReader_ReturnsZero() throws Exception {
+        final Reader reader = new StringReader("");
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
+
+        final long result = JdbcUtils.importCsv(reader, null, mockPreparedStatement, 1, 0L, stmtSetter);
+
+        assertEquals(0, result);
+        verify(mockPreparedStatement, never()).addBatch();
+    }
+
+    // importCsv with batchSize=1 and a positive interval exercises the post-batch sleep branch
+    // (JdbcUtils L1918).
+    @Test
+    public void testImportCsv_BatchInterval() throws Exception {
+        final Reader reader = new StringReader("col1\nv1\nv2");
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = JdbcUtils.importCsv(reader, null, mockPreparedStatement, 1, 1L, stmtSetter);
+
+        assertEquals(2, result);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
 }

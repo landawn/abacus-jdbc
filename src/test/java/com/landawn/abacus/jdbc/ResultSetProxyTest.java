@@ -1754,4 +1754,93 @@ public class ResultSetProxyTest extends TestBase {
 
         assertEquals(ts, proxy.getObject("d"));
     }
+
+    // ---- Blob/Clob materialization in the getObject(int)/getObject(String) first-call paths.
+    // Mirrors the existing Blob tests but for the Clob branch and the size-overflow guards
+    // (ResultSetProxy L525/L533-539 index path, L637/L645-651 label path). ----
+
+    @Test
+    public void testGetObjectByIndex_ClobColumn_MaterializedToString() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        Clob clob = Mockito.mock(Clob.class);
+        when(clob.length()).thenReturn(4L);
+        when(clob.getSubString(1, 4)).thenReturn("text");
+        when(delegate.getObject(1)).thenReturn(clob);
+
+        assertEquals("text", proxy.getObject(1));
+        // Clob handle is materialized to String then freed (caller never sees the raw Clob).
+        Mockito.verify(clob).free();
+    }
+
+    @Test
+    public void testGetObjectByIndex_BlobColumn_SizeOverflow_Throws() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        Blob blob = Mockito.mock(Blob.class);
+        when(blob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(delegate.getObject(1)).thenReturn(blob);
+
+        assertThrows(SQLException.class, () -> proxy.getObject(1));
+        // The Blob is still freed in the finally block even when the size guard trips.
+        Mockito.verify(blob).free();
+    }
+
+    @Test
+    public void testGetObjectByIndex_ClobColumn_SizeOverflow_Throws() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        Clob clob = Mockito.mock(Clob.class);
+        when(clob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(delegate.getObject(1)).thenReturn(clob);
+
+        assertThrows(SQLException.class, () -> proxy.getObject(1));
+        Mockito.verify(clob).free();
+    }
+
+    @Test
+    public void testGetObjectByLabel_ClobColumn_MaterializedToString() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("c")).thenReturn(1);
+        Clob clob = Mockito.mock(Clob.class);
+        when(clob.length()).thenReturn(3L);
+        when(clob.getSubString(1, 3)).thenReturn("abc");
+        when(delegate.getObject(1)).thenReturn(clob);
+
+        assertEquals("abc", proxy.getObject("c"));
+        Mockito.verify(clob).free();
+    }
+
+    @Test
+    public void testGetObjectByLabel_BlobColumn_SizeOverflow_Throws() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("b")).thenReturn(1);
+        Blob blob = Mockito.mock(Blob.class);
+        when(blob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(delegate.getObject(1)).thenReturn(blob);
+
+        assertThrows(SQLException.class, () -> proxy.getObject("b"));
+        Mockito.verify(blob).free();
+    }
+
+    @Test
+    public void testGetObjectByLabel_ClobColumn_SizeOverflow_Throws() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("c")).thenReturn(1);
+        Clob clob = Mockito.mock(Clob.class);
+        when(clob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(delegate.getObject(1)).thenReturn(clob);
+
+        assertThrows(SQLException.class, () -> proxy.getObject("c"));
+        Mockito.verify(clob).free();
+    }
 }

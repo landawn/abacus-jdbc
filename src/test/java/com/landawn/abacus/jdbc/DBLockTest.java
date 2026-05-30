@@ -437,10 +437,52 @@ public class DBLockTest extends TestBase {
     // lock() before the check is reached), which depends on thread-scheduling timing and would be
     // flaky. This matches the pre-existing untestable note below.
 
-    // TODO: L207 — tableExists returns false after creation (requires full constructor with real DB)
-    // TODO: L217-L218 — SQLException in constructor catch (requires full constructor with real DB)
-    // TODO: L224-L278 — refreshTask body (lambda created in constructor, untestable via Unsafe-based approach)
-    // TODO: L509-L511 — Thread.interrupted() during lock acquire (requires precise thread interruption timing)
+    // Live in-memory H2 DB exercises the real constructor (table creation, dead-lock cleanup,
+    // refresh-task scheduling — DBLock L188-221) and the scheduled refresh task body
+    // (L223-262 normal refresh + L246-254 stale-lock eviction), which the Unsafe-based fixtures
+    // above cannot reach because they bypass the constructor.
+    @Test
+    public void testConstructorAndRefreshTask_LiveDb() throws Exception {
+        final DataSource ds = JdbcUtil.createHikariDataSource("jdbc:h2:mem:dblock_live_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1", "sa", "");
+        DBLock lock = null;
+        try {
+            lock = new DBLock(ds, "live_lock_tbl");
+
+            final String code = lock.lock("res-live", 60_000L, 2_000L, 50L);
+            assertNotNull(code);
+            assertEquals(1, targetCodePool(lock).size());
+
+            // Let the scheduled refresh (1s fixed delay) run and keep the live lock in the pool.
+            Thread.sleep(1_500L);
+            assertEquals(1, targetCodePool(lock).size());
+
+            // Delete the backing row behind the lock's back: the next refresh sees 0 rows updated
+            // and evicts the now-stale entry from the in-memory pool.
+            // DBLock quotes the table identifier (case-sensitive lowercase in H2), so quote it here too.
+            try (Connection c = ds.getConnection()) {
+                JdbcUtil.executeUpdate(c, "DELETE FROM \"live_lock_tbl\" WHERE target = ?", "res-live");
+            }
+
+            final long deadline = System.currentTimeMillis() + 6_000L;
+            while (targetCodePool(lock).size() > 0 && System.currentTimeMillis() < deadline) {
+                Thread.sleep(100L);
+            }
+            assertEquals(0, targetCodePool(lock).size());
+        } finally {
+            if (lock != null) {
+                lock.close();
+            }
+        }
+    }
+
+    // TODO: L207 — tableExists returns false after creation (defensive; createTableIfNotExists +
+    //       tableExists make it practically unreachable)
+    // TODO: L217-L218 — SQLException in constructor catch (requires a DataSource that connects but
+    //       fails the CREATE TABLE / metadata calls)
+    // TODO: L263-266 / L270-273 — refresh-task SQLException / generic catch branches (require the
+    //       refresh connection to fail mid-cycle)
+    // TODO: L518-L520 — Thread.interrupted() during lock acquire (requires precise thread
+    //       interruption timing; see NOTE above)
     // TODO: L516 — attempts >= maxAttempts loop exit (requires impractical number of iterations)
 
     private static Unsafe unsafe() throws Exception {

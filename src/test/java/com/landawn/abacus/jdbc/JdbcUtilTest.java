@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -423,6 +424,52 @@ public class JdbcUtilTest extends TestBase {
         assertEquals("age", columns.get(2));
     }
 
+    // A two-part "schema.table" name splits into schema/table (JdbcUtil L1840-1843) and the columns
+    // are read from JDBC metadata via getColumnNamesFromMetadata (L1915-1941).
+    @Test
+    public void testGetColumnNames_TwoPartName_FromMetadata() throws SQLException {
+        final ResultSet colsRs = mock(ResultSet.class);
+        when(mockConnection.getCatalog()).thenReturn("cat");
+        when(mockConnection.getSchema()).thenReturn("myschema");
+        when(mockDatabaseMetaData.getColumns("cat", "myschema", "users", null)).thenReturn(colsRs);
+        when(colsRs.next()).thenReturn(true, true, false);
+        when(colsRs.getString("TABLE_NAME")).thenReturn("users");
+        when(colsRs.getString("TABLE_SCHEM")).thenReturn("myschema");
+        when(colsRs.getString("TABLE_CAT")).thenReturn("cat");
+        when(colsRs.getString("COLUMN_NAME")).thenReturn("id", "name");
+
+        final List<String> cols = JdbcUtil.getColumnNames(mockConnection, "myschema.users");
+        assertEquals(Arrays.asList("id", "name"), cols);
+    }
+
+    // A three-part "catalog.schema.table" name fills all three slots (JdbcUtil L1844-1848).
+    @Test
+    public void testGetColumnNames_ThreePartName_FromMetadata() throws SQLException {
+        final ResultSet colsRs = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getColumns("mycat", "myschema", "users", null)).thenReturn(colsRs);
+        when(colsRs.next()).thenReturn(true, false);
+        when(colsRs.getString("TABLE_NAME")).thenReturn("users");
+        when(colsRs.getString("TABLE_SCHEM")).thenReturn("myschema");
+        when(colsRs.getString("TABLE_CAT")).thenReturn("mycat");
+        when(colsRs.getString("COLUMN_NAME")).thenReturn("id");
+
+        final List<String> cols = JdbcUtil.getColumnNames(mockConnection, "mycat.myschema.users");
+        assertEquals(Arrays.asList("id"), cols);
+    }
+
+    // When neither the metadata lookups nor the SELECT fallback yield any column, a SQLException is
+    // raised (JdbcUtil L1886); getColumns returning null also exercises the rs==null guard (L1911).
+    @Test
+    public void testGetColumnNames_NoColumnsFound_Throws() throws SQLException {
+        when(mockConnection.getCatalog()).thenReturn(null);
+        when(mockConnection.getSchema()).thenReturn(null);
+        // getColumns(...) is unstubbed -> returns null -> emptyList for every metadata attempt.
+        // The SELECT fallback runs against the default mock statement whose metadata reports 0 columns.
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(0);
+
+        assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "ghost_table"));
+    }
+
     @Test
     public void testGetColumnLabelList() throws SQLException {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
@@ -505,6 +552,77 @@ public class JdbcUtilTest extends TestBase {
 
         Object value = JdbcUtil.getColumnValue(mockResultSet, 1);
         assertEquals(data, value);
+    }
+
+    // Blob whose length exceeds Integer.MAX_VALUE trips the size guard (JdbcUtil L2262); the Blob is
+    // still freed in the finally block.
+    @Test
+    public void testGetColumnValue_BlobSizeOverflow_Throws() throws SQLException {
+        when(mockBlob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(mockResultSet.getObject(1)).thenReturn(mockBlob);
+
+        assertThrows(SQLException.class, () -> JdbcUtil.getColumnValue(mockResultSet, 1));
+        verify(mockBlob).free();
+    }
+
+    // Clob whose length exceeds Integer.MAX_VALUE trips the size guard (JdbcUtil L2272).
+    @Test
+    public void testGetColumnValue_ClobSizeOverflow_Throws() throws SQLException {
+        when(mockClob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(mockResultSet.getObject(1)).thenReturn(mockClob);
+
+        assertThrows(SQLException.class, () -> JdbcUtil.getColumnValue(mockResultSet, 1));
+        verify(mockClob).free();
+    }
+
+    // A non-String/Number/Timestamp/Boolean/Blob/Clob value routes through the column converter
+    // (JdbcUtil L2279); the default converter returns the value unchanged.
+    @Test
+    public void testGetColumnValue_NonLobObject_AppliesConverter() throws SQLException {
+        final java.util.Date date = new java.util.Date();
+        when(mockResultSet.getObject(1)).thenReturn(date);
+
+        assertEquals(date, JdbcUtil.getColumnValue(mockResultSet, 1));
+    }
+
+    // getColumnValue(rs, columnLabel) label-path: simple value short-circuits (JdbcUtil L2321/L2330).
+    @Test
+    public void testGetColumnValueByLabel() throws SQLException {
+        when(mockResultSet.getObject("name")).thenReturn("Alice");
+        assertEquals("Alice", JdbcUtil.getColumnValue(mockResultSet, "name"));
+    }
+
+    // getColumnValue(rs, columnLabel) label-path Blob materialization to byte[] (JdbcUtil L2334-2342).
+    @Test
+    public void testGetColumnValueByLabel_Blob() throws SQLException {
+        final byte[] data = "blob".getBytes();
+        when(mockBlob.length()).thenReturn((long) data.length);
+        when(mockBlob.getBytes(1, data.length)).thenReturn(data);
+        when(mockResultSet.getObject("data")).thenReturn(mockBlob);
+
+        assertArrayEquals(data, (byte[]) JdbcUtil.getColumnValue(mockResultSet, "data"));
+        verify(mockBlob).free();
+    }
+
+    // getColumnValue(rs, columnLabel) label-path Clob materialization to String (JdbcUtil L2344-2352).
+    @Test
+    public void testGetColumnValueByLabel_Clob() throws SQLException {
+        final String data = "clob";
+        when(mockClob.length()).thenReturn((long) data.length());
+        when(mockClob.getSubString(1, data.length())).thenReturn(data);
+        when(mockResultSet.getObject("doc")).thenReturn(mockClob);
+
+        assertEquals(data, JdbcUtil.getColumnValue(mockResultSet, "doc"));
+        verify(mockClob).free();
+    }
+
+    // getColumnValue(rs, columnLabel) label-path converter fallback for a non-LOB object (JdbcUtil L2355).
+    @Test
+    public void testGetColumnValueByLabel_NonLobObject_AppliesConverter() throws SQLException {
+        final java.util.Date date = new java.util.Date();
+        when(mockResultSet.getObject("created")).thenReturn(date);
+
+        assertEquals(date, JdbcUtil.getColumnValue(mockResultSet, "created"));
     }
 
     @Test
@@ -1030,6 +1148,40 @@ public class JdbcUtilTest extends TestBase {
         assertNotNull(result);
         assertEquals("result", result.getOutParamValue(1));
         assertEquals(42, (Integer) result.getOutParamValue(2));
+    }
+
+    @Test
+    public void testGetOutParameters_floatTypeUsesGetDouble() throws SQLException {
+        // Regression: per the JDBC spec (Appendix B), SQL FLOAT is an 8-byte, double-precision type that
+        // maps to Java double (synonym of Types.DOUBLE), while SQL REAL is the 4-byte type mapping to Java
+        // float. A Types.FLOAT OUT parameter must therefore be read with getDouble(), not getFloat() (which
+        // would narrow to single precision and overflow to Float.POSITIVE_INFINITY beyond ~3.4e38).
+        final double preciseDoubleValue = 1234567.890123456d;
+        final float realValue = 3.5f;
+
+        when(mockCallableStatement.getDouble(1)).thenReturn(preciseDoubleValue);
+        when(mockCallableStatement.getFloat(2)).thenReturn(realValue);
+
+        List<OutParam> outParams = Arrays.asList(OutParam.of(1, Types.FLOAT), OutParam.of(2, Types.REAL));
+
+        OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, outParams);
+
+        assertNotNull(result);
+
+        // Types.FLOAT must be retrieved at full double precision (via getDouble), not narrowed to a Float.
+        Object floatParam = result.getOutParamValue(1);
+        assertTrue(floatParam instanceof Double, "Types.FLOAT OUT param should be read as Double via getDouble()");
+        assertEquals(preciseDoubleValue, (Double) floatParam, 0.0d);
+
+        // Types.REAL must still be retrieved as a Float (via getFloat).
+        Object realParam = result.getOutParamValue(2);
+        assertTrue(realParam instanceof Float, "Types.REAL OUT param should be read as Float via getFloat()");
+        assertEquals(realValue, (Float) realParam, 0.0f);
+
+        // Confirm the correct CallableStatement accessors were invoked for each SQL type.
+        verify(mockCallableStatement).getDouble(1);
+        verify(mockCallableStatement).getFloat(2);
+        verify(mockCallableStatement, never()).getFloat(1);
     }
 
     @Test

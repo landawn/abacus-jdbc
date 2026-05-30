@@ -119,6 +119,32 @@ public class SqlTransactionTest extends TestBase {
         verify(connection).rollback();
     }
 
+    // commit() where Connection.commit() throws a *non*-SQLException: the catch only handles
+    // SQLException, so commitException stays null and the finally takes the "Commit did not
+    // complete transaction ... Automatically rolling back" branch (SqlTransaction L399) before
+    // auto-rolling back. The original RuntimeException then propagates.
+    @Test
+    public void testCommit_NonSqlExceptionFromConnection_AutoRollsBack() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new IllegalStateException("non-sql commit failure")).when(connection).commit();
+
+        assertThrows(IllegalStateException.class, transaction::commit);
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection).rollback();
+    }
+
+    // rollback() where Connection.rollback() throws a *non*-SQLException: rollbackException stays
+    // null (catch handles only SQLException) so the finally takes the "Failed to roll back
+    // transaction" branch (SqlTransaction L579) and leaves the status at FAILED_ROLLBACK.
+    @Test
+    public void testRollback_NonSqlExceptionFromConnection_HitsFailedRollbackWarn() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new IllegalStateException("non-sql rollback failure")).when(connection).rollback();
+
+        assertThrows(IllegalStateException.class, transaction::rollback);
+        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+    }
+
     @Test
     public void testRollback() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);

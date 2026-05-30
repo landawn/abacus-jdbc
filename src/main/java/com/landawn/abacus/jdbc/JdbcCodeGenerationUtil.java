@@ -112,8 +112,9 @@ public final class JdbcCodeGenerationUtil {
     public static final String SF = "sf";
 
     /**
-     * Default name of the inner class for typed field accessor constants inside a generated entity class.
-     * This inner class holds typed accessor constants providing compile-time safe field references.
+     * Default name of the inner interface that holds field(property) name constants inside a generated entity class.
+     * This inner interface declares a {@code String} constant for each field, providing compile-time safe field-name references.
+     * It is generated only when {@link EntityCodeConfig#generateFieldNameTable} is enabled.
      */
     public static final String X = "x";
 

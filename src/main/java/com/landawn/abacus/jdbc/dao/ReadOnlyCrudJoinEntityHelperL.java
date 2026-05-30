@@ -54,7 +54,7 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * @param <T> the entity type that this helper manages
  * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the companion {@link CrudDaoL} type (with {@code Long} primary key) that owns
  *             this helper, used for fluent method chaining and access to CRUD operations
  * @see ReadOnlyCrudJoinEntityHelper

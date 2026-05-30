@@ -63,7 +63,7 @@ import com.landawn.abacus.util.u.Optional;
  * {@link DuplicateResultException} when multiple records are found for a unique query.</p>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
  * @param <TD> the self-type of the companion {@link UncheckedCrudDaoL} (with {@code Long} primary key) that
  *             owns this helper, enabling fluent method chaining and access to its CRUD operations
  * @see UncheckedCrudJoinEntityHelper

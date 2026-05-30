@@ -1642,6 +1642,130 @@ public class JoinInfoTest extends TestBase {
         // would have appeared instead of "INNER JOIN userRoleLink".
         assertFalse(sql.contains("INNER JOIN userId ON"), "Pre-fix broken-SQL pattern leaked into output:\n" + sql);
     }
+
+    // M2M DAO whose middle FK column (perm_ref) does NOT collide with any referenced-entity column
+    // (perm_id, label). This exercises the hasSameColumnName == false branch of the batch SELECT SQL
+    // builder (JoinInfo L422 in the eager build and L447 in the dynamic lambda) — the existing M2M
+    // fixtures all collide (UserRoleLink.roleId vs RoleLookupEntity.roleId), so only the true branch
+    // was covered before.
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface UserPermDao extends Dao<UserPermEntity, PSC, UserPermDao> {
+    }
+
+    @Test
+    public void testGetBatchSelectSqlPlan_ManyToMany_DistinctColumnNames() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserPermDao.class, UserPermEntity.class, "user_perm_entity", "perms");
+        assertTrue(joinInfo.isManyToManyJoin());
+
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        assertNotNull(plan);
+
+        // Eager-built batchSelectAllLeftSql already ran the L422 (false) branch during construction;
+        // null columns returns that eager SQL.
+        final String sqlAll = plan._1.apply(null, 2);
+        assertNotNull(sqlAll);
+        assertTrue(sqlAll.contains("JOIN"));
+
+        // Non-empty columns (not containing the referenced prop) drives the dynamic builder through
+        // the L447 (false) branch.
+        final String sqlCols = plan._1.apply(List.of("label"), 2);
+        assertNotNull(sqlCols);
+        assertTrue(sqlCols.contains("JOIN"));
+    }
+
+    // ---- Direct unit tests for the private SQL-token helpers (JoinInfo L1266/L1275/L1283). These
+    // defensive return paths are not reached by normal SELECT/FROM/WHERE SQL, so exercise them
+    // directly via reflection. ----
+
+    @Test
+    public void testIndexOfKeyword_NotFound() throws Exception {
+        final java.lang.reflect.Method m = JoinInfo.class.getDeclaredMethod("indexOfKeyword", List.class, String.class);
+        m.setAccessible(true);
+        final int idx = (int) m.invoke(null, List.of("alpha", "beta", "gamma"), "SELECT");
+        assertEquals(-1, idx);
+    }
+
+    @Test
+    public void testNextNonBlankToken_NegativeIndex() throws Exception {
+        final java.lang.reflect.Method m = JoinInfo.class.getDeclaredMethod("nextNonBlankToken", List.class, int.class);
+        m.setAccessible(true);
+        final Object res = m.invoke(null, List.of("alpha", "beta"), -1);
+        assertNull(res);
+    }
+
+    @Test
+    public void testNextNonBlankToken_NoNonBlankAfterIndex() throws Exception {
+        final java.lang.reflect.Method m = JoinInfo.class.getDeclaredMethod("nextNonBlankToken", List.class, int.class);
+        m.setAccessible(true);
+        // afterIndex=0 is valid, but every token after it is blank -> falls through to the final null.
+        final Object res = m.invoke(null, Arrays.asList("alpha", "   ", "\t"), 0);
+        assertNull(res);
+    }
+}
+
+final class UserPermEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserPermLink.userId, UserPermLink.permRef = permId")
+    private List<PermLookupEntity> perms;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public List<PermLookupEntity> getPerms() {
+        return perms;
+    }
+
+    public void setPerms(final List<PermLookupEntity> perms) {
+        this.perms = perms;
+    }
+}
+
+final class PermLookupEntity {
+    private long permId;
+    private String label;
+
+    public long getPermId() {
+        return permId;
+    }
+
+    public void setPermId(final long permId) {
+        this.permId = permId;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(final String label) {
+        this.label = label;
+    }
+}
+
+final class UserPermLink {
+    private long userId;
+    private long permRef;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public long getPermRef() {
+        return permRef;
+    }
+
+    public void setPermRef(final long permRef) {
+        this.permRef = permRef;
+    }
 }
 
 final class UserRoleUserEntity {
