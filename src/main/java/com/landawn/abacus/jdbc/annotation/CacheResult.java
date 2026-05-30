@@ -142,9 +142,10 @@ public @interface CacheResult {
     long maxIdleTime() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME;
 
     /**
-     * Specifies the minimum size requirement for caching collection results.
+     * Specifies the minimum size requirement for caching results.
      * Results with fewer elements than this value will not be cached.
-     * Only applies to methods returning {@code Collection} or {@code DataSet}.
+     * The size is the element count for a {@code Collection} or {@code DataSet} result;
+     * any other (scalar) result is treated as a single element of size {@code 1}.
      *
      * <p>This is useful to avoid caching overhead for very small result sets
      * that are cheap to query.</p>
@@ -157,14 +158,15 @@ public @interface CacheResult {
      * List<Product> findByCategory(@Bind("category") String category);
      * }</pre>
      *
-     * @return the minimum collection size to cache, 0 means no minimum
+     * @return the minimum result size to cache; the default {@code 0} means no minimum
      */
     int minSize() default 0;
 
     /**
-     * Specifies the maximum size limit for caching collection results.
+     * Specifies the maximum size limit for caching results.
      * Results with more elements than this value will not be cached.
-     * Only applies to methods returning {@code Collection} or {@code DataSet}.
+     * The size is the element count for a {@code Collection} or {@code DataSet} result;
+     * any other (scalar) result is treated as a single element of size {@code 1}.
      *
      * <p>This prevents memory issues from caching very large result sets
      * and ensures predictable memory usage.</p>
@@ -177,7 +179,7 @@ public @interface CacheResult {
      * List<Order> findOrdersSince(@Bind("startDate") Date date);
      * }</pre>
      *
-     * @return the maximum collection size to cache
+     * @return the maximum result size to cache; the default {@link Integer#MAX_VALUE} means no maximum
      */
     int maxSize() default Integer.MAX_VALUE;
 

@@ -18,22 +18,25 @@ package com.landawn.abacus.jdbc;
 /**
  * Transaction participation policies used by {@link com.landawn.abacus.jdbc.annotation.Transactional}.
  *
- * <p>Each constant describes how a DAO method should behave when a transaction already exists:
- * join it, require it, suspend it, or refuse it.</p>
+ * <p>Each constant describes how a DAO method should behave relative to any transaction that is
+ * already active when the method is invoked: join it, require it, suspend it, or refuse it, and
+ * whether a new transaction should be created when none exists.</p>
  *
  * @see com.landawn.abacus.jdbc.annotation.Transactional
+ * @see com.landawn.abacus.jdbc.annotation.Transactional#propagation()
  */
 public enum Propagation {
 
     /**
      * Support a current transaction, create a new one if none exists.
      * 
-     * <p>This is the default and most commonly used propagation behavior.
-     * If a transaction is already active, the method will participate in it.
-     * If no transaction exists, a new one will be created for the method execution.</p>
-     * 
-     * <p>Use this when you want transactional behavior but don't care whether
-     * the transaction is new or existing.</p>
+     * <p>This is the default and most commonly used propagation behavior; it is the value
+     * returned by {@link com.landawn.abacus.jdbc.annotation.Transactional#propagation()} when
+     * the element is not specified. If a transaction is already active, the method participates
+     * in it. If no transaction exists, a new one is created for the method execution.</p>
+     *
+     * <p>Use this for methods that need transactional behavior regardless of whether the
+     * transaction is new or inherited from an outer call.</p>
      */
     REQUIRED,
 

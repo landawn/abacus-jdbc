@@ -70,7 +70,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}/{@code PAC}/{@code PLC}/{@code PSB})
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
@@ -1198,7 +1198,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
         final Class<?> cls = entity.getClass();

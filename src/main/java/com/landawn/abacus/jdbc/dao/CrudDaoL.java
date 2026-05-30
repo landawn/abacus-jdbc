@@ -70,9 +70,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalBoolean if no record is found.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalBoolean} if no record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = userDao.queryForBoolean("isActive", 123L);
@@ -83,7 +84,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalBoolean containing the value if found, otherwise empty
+     * @return an {@link OptionalBoolean} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalBoolean queryForBoolean(final String singleSelectPropName, final long id) throws SQLException {
@@ -92,9 +93,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalChar if no record is found.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalChar} if no record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = studentDao.queryForChar("grade", 123L);
@@ -103,7 +105,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalChar containing the value if found, otherwise empty
+     * @return an {@link OptionalChar} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalChar queryForChar(final String singleSelectPropName, final long id) throws SQLException {
@@ -112,8 +114,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a byte value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalByte if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalByte} if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -123,7 +126,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalByte containing the value if found, otherwise empty
+     * @return an {@link OptionalByte} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalByte queryForByte(final String singleSelectPropName, final long id) throws SQLException {
@@ -132,8 +135,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalShort if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalShort} if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -143,7 +147,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalShort containing the value if found, otherwise empty
+     * @return an {@link OptionalShort} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalShort queryForShort(final String singleSelectPropName, final long id) throws SQLException {
@@ -152,9 +156,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalInt if no record is found.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalInt} if no record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt age = userDao.queryForInt("age", 123L);
@@ -163,7 +168,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalInt containing the value if found, otherwise empty
+     * @return an {@link OptionalInt} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalInt queryForInt(final String singleSelectPropName, final long id) throws SQLException {
@@ -172,9 +177,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalLong if no record is found.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalLong} if no record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong lastLoginTime = userDao.queryForLong("lastLoginTimestamp", 123L);
@@ -183,7 +189,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalLong containing the value if found, otherwise empty
+     * @return an {@link OptionalLong} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalLong queryForLong(final String singleSelectPropName, final long id) throws SQLException {
@@ -192,8 +198,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a float value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalFloat if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalFloat} if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -203,7 +210,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalFloat containing the value if found, otherwise empty
+     * @return an {@link OptionalFloat} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalFloat queryForFloat(final String singleSelectPropName, final long id) throws SQLException {
@@ -212,9 +219,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty OptionalDouble if no record is found.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link OptionalDouble} if no record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble balance = accountDao.queryForDouble("balance", 123L);
@@ -223,7 +231,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalDouble containing the value if found, otherwise empty
+     * @return an {@link OptionalDouble} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default OptionalDouble queryForDouble(final String singleSelectPropName, final long id) throws SQLException {
@@ -232,9 +240,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForString("email", 123L);
@@ -243,7 +252,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the String value if found, or Nullable.empty() if no record exists
+     * @return a {@link Nullable} containing the String value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<String> queryForString(final String singleSelectPropName, final long id) throws SQLException {
@@ -251,10 +260,11 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Queries for a Date value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
-     * 
+     * Queries for a {@link java.sql.Date} value from a single property of the entity with the specified ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", 123L);
@@ -263,7 +273,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the Date value if found, or Nullable.empty() if no record exists
+     * @return a {@link Nullable} containing the {@link java.sql.Date} value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final long id) throws SQLException {
@@ -271,9 +281,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Queries for a Time value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * Queries for a {@link java.sql.Time} value from a single property of the entity with the specified ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -283,7 +294,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the Time value if found, or Nullable.empty() if no record exists
+     * @return a {@link Nullable} containing the {@link java.sql.Time} value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final long id) throws SQLException {
@@ -291,10 +302,11 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Queries for a Timestamp value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
-     * 
+     * Queries for a {@link java.sql.Timestamp} value from a single property of the entity with the specified ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<Timestamp> lastModified = userDao.queryForTimestamp("lastModified", 123L);
@@ -303,7 +315,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
+     * @return a {@link Nullable} containing the {@link java.sql.Timestamp} value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final long id) throws SQLException {
@@ -312,8 +324,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      * This is typically used for BLOB data.
      *
      * <p><b>Usage Examples:</b></p>
@@ -324,7 +337,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
+     * @return a {@link Nullable} containing the byte array value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<byte[]> queryForBytes(final String singleSelectPropName, final long id) throws SQLException {
@@ -333,7 +346,8 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
      * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
      *
      * <p><b>Usage Examples:</b></p>
@@ -346,7 +360,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
+     * @return a {@link Nullable} containing the value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      */
     default <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
@@ -356,8 +370,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty Optional if no record is found or if the value is {@code null}.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Returns an empty {@link Optional} if no record is found or if the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -369,7 +384,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an Optional containing the non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
@@ -404,8 +419,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a unique single result of the specified type.
-     * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicateResultException if more than one record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p>This method ensures that at most one record matches the query.</p>
      *
@@ -419,7 +435,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
+     * @return a {@link Nullable} containing the unique value if found, or {@code Nullable.empty()} if no record exists
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -430,9 +446,10 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a unique non-null result of the specified type.
-     * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicateResultException if more than one record is found.
-     * Returns empty Optional if no record found or value is {@code null}.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Throws {@link DuplicateResultException} if more than one record is found.
+     * Returns an empty {@link Optional} if no record is found or the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -444,7 +461,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an Optional containing the unique non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the unique non-null value if found, otherwise empty
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */

@@ -95,9 +95,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * // NOTE: setJoinPropEntities(Collection, Collection) only supports one-to-many joins;
  * // many-to-many joins must use setJoinPropEntities(Collection, Map) with keys derived from
  * // the junction table, or be loaded via DaoImpl which augments the SELECT with the
- * // junction-table column for matching. Pre-fix this method silently produced empty/wrong
- * // results for M2M because srcEntityKeyExtractor and referencedEntityKeyExtractor read
- * // unrelated columns.
+ * // junction-table column for matching.
  * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(DepartmentDao.class, Department.class,
  *                                               "departments", "employees");
  * List<Department> departments = departmentDao.list();
@@ -942,6 +940,8 @@ public final class JoinInfo {
      *
      * @param entities the source entities to populate with joined entities
      * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities
+     * @throws UnsupportedOperationException if this is a many-to-many join; use {@link #setJoinPropEntities(Collection, Map)}
+     *                                  with keys derived from the junction table instead
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}

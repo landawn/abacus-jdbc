@@ -113,7 +113,7 @@ public @interface Transactional {
      * User getUser(long id) { ... }
      * }</pre>
      *
-     * @return the propagation behavior for this transaction
+     * @return the configured propagation behavior; defaults to {@link Propagation#REQUIRED}
      * @see Propagation
      */
     Propagation propagation() default Propagation.REQUIRED;
@@ -149,7 +149,7 @@ public @interface Transactional {
      * <p><strong>Note:</strong> Higher isolation levels may impact performance due to
      * increased locking. Choose the lowest level that meets your consistency requirements.</p>
      *
-     * @return the isolation level for this transaction
+     * @return the configured isolation level; defaults to {@link IsolationLevel#DEFAULT}
      * @see IsolationLevel
      */
     IsolationLevel isolation() default IsolationLevel.DEFAULT;

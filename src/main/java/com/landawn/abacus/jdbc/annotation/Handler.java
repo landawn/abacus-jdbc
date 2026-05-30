@@ -62,7 +62,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * }
  * 
  * // Apply handler to specific method
- * public interface OrderDao extends CrudDao<Order, Long> {
+ * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
  *     @Handler(type = PerformanceHandler.class)
  *     @Query("SELECT * FROM orders WHERE total > :amount")
  *     List<Order> findLargeOrders(@Bind("amount") BigDecimal amount);
@@ -71,7 +71,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * // Multiple handlers with filtering
  * @Handler(type = LoggingHandler.class, filter = {"find.*", "query.*"})
  * @Handler(type = CacheHandler.class, filter = {"get.*", "find.*"})
- * public interface ProductDao extends CrudDao<Product, Long> {
+ * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
  *     // Methods matching filters will be intercepted
  * }
  * }</pre>
@@ -100,7 +100,7 @@ public @interface Handler {
      * <pre>{@code
      * // Register handler instances at startup (e.g., HandlerFactory.register("auditHandler", new AuditHandler(...)))
      * @Handler(qualifier = "auditHandler")
-     * public interface ConfigDao extends CrudDao<Config, Long> {
+     * public interface ConfigDao extends CrudDao<Config, Long, SqlBuilder.PSC, ConfigDao> {
      *     // The handler registered under "auditHandler" will be applied
      * }
      * }</pre>

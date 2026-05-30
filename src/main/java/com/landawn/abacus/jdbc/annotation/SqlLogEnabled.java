@@ -68,8 +68,10 @@ public @interface SqlLogEnabled {
     /**
      * Specifies whether SQL logging is enabled or disabled.
      * 
-     * <p>When set to {@code true} (default), SQL statements will be logged.
-     * When set to {@code false}, SQL logging is disabled regardless of other settings.</p>
+     * <p>When set to {@code true} (default), SQL statements will be logged for the annotated scope.
+     * When set to {@code false}, SQL logging is disabled for that scope. A method-level
+     * {@code @SqlLogEnabled} still takes precedence over a type-level one (see the type-level
+     * documentation).</p>
      * 
      * <p>This is useful for:</p>
      * <ul>
@@ -94,7 +96,8 @@ public @interface SqlLogEnabled {
     /**
      * Specifies the maximum length of SQL statements in logs.
      * SQL statements longer than this limit will be truncated to prevent excessive log sizes.
-     * 
+     * This setting only has an effect when SQL logging is enabled via {@link #value()}.
+     *
      * <p>This is particularly useful when dealing with:</p>
      * <ul>
      *   <li>Large INSERT statements with many values</li>

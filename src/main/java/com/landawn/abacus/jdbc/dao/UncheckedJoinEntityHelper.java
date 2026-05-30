@@ -50,7 +50,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <ul>
  *   <li>On-demand loading of related entities</li>
  *   <li>Batch loading for performance optimization</li>
- *   <li>Conditional loading (loadJoinEntitiesIfNull)</li>
+ *   <li>Conditional loading ({@code loadJoinEntitiesIfNull})</li>
  *   <li>Parallel loading support for multiple join properties</li>
  *   <li>Cascade delete operations for related entities</li>
  * </ul>
@@ -86,7 +86,8 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the companion {@link UncheckedDao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
  * @see JoinEntityHelper

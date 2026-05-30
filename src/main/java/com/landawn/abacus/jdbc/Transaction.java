@@ -47,15 +47,16 @@ public interface Transaction {
 
     /**
      * Returns the isolation level of this transaction.
-     * The isolation level determines how transaction integrity is visible to other users
-     * and systems, controlling the trade-off between performance and consistency.
+     * The isolation level determines how and when changes made by this transaction become
+     * visible to other concurrent transactions, controlling the trade-off between performance
+     * and consistency.
      * 
      * <p>Common isolation levels include:</p>
      * <ul>
-     *   <li>READ_UNCOMMITTED - Allows dirty reads</li>
-     *   <li>READ_COMMITTED - Prevents dirty reads</li>
-     *   <li>REPEATABLE_READ - Prevents dirty and non-repeatable reads</li>
-     *   <li>SERIALIZABLE - Prevents all phenomena</li>
+     *   <li>{@code READ_UNCOMMITTED} - allows dirty reads</li>
+     *   <li>{@code READ_COMMITTED} - prevents dirty reads</li>
+     *   <li>{@code REPEATABLE_READ} - prevents dirty and non-repeatable reads</li>
+     *   <li>{@code SERIALIZABLE} - prevents dirty reads, non-repeatable reads, and phantom reads</li>
      * </ul>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -200,7 +201,6 @@ public interface Transaction {
      *        → FAILED_COMMIT (on commit failure)
      *        → FAILED_ROLLBACK (on rollback failure)
      * </pre>
-     *
      */
     enum Status {
         /**

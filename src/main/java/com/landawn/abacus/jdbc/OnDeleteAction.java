@@ -83,9 +83,10 @@ public enum OnDeleteAction {
     private final int intValue;
 
     /**
-     * Constructs an OnDeleteAction with the specified integer value.
+     * Constructs an {@code OnDeleteAction} with the specified integer value.
      *
-     * @param intValue the integer representation for this delete action (0 for NO_ACTION, 1 for SET_NULL, 2 for CASCADE)
+     * @param intValue the integer representation for this delete action ({@code 0} for {@link #NO_ACTION},
+     *         {@code 1} for {@link #SET_NULL}, {@code 2} for {@link #CASCADE})
      */
     OnDeleteAction(final int intValue) {
         this.intValue = intValue;

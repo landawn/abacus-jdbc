@@ -20,7 +20,7 @@ import com.landawn.abacus.query.SqlBuilder;
 /**
  * A specialized interface that combines read-only operations with join entity support for CRUD DAOs with unchecked exceptions.
  * This interface provides functionality to read entities along with their related entities through joins,
- * but explicitly disables any modification operations on the joined entities.
+ * but explicitly disables the delete operations on the joined entities.
  *
  * <p>This interface is particularly useful in scenarios where you need to fetch entities with their
  * relationships (like one-to-many or many-to-many) but want to ensure that the related entities

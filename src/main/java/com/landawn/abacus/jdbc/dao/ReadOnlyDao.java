@@ -173,10 +173,12 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a query with auto-generated key retrieval is not allowed in a read-only DAO,
+     * since key generation only applies to {@code INSERT} statements.
      *
      * @param query the SQL query string
      * @param generateKeys {@code true} to retrieve auto-generated keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -189,10 +191,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a query that returns generated keys by column index is not allowed in a read-only DAO.
      *
      * @param query the SQL query string
      * @param returnColumnIndexes an array of column indexes for returned keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -205,10 +208,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a query that returns generated keys by column name is not allowed in a read-only DAO.
      *
      * @param query the SQL query string
      * @param returnColumnNames an array of column names for returned keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -261,10 +265,12 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a named query with auto-generated key retrieval is not allowed in a read-only DAO,
+     * since key generation only applies to {@code INSERT} statements.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param generateKeys {@code true} to retrieve auto-generated keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -277,10 +283,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a named query that returns generated keys by column index is not allowed in a read-only DAO.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -293,10 +300,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a named query that returns generated keys by column name is not allowed in a read-only DAO.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnNames an array of column names for returned keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -393,10 +401,12 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a parsed named query with auto-generated key retrieval is not allowed in a read-only DAO,
+     * since key generation only applies to {@code INSERT} statements.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param generateKeys {@code true} to retrieve auto-generated keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -409,10 +419,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a parsed named query that returns generated keys by column index is not allowed in a read-only DAO.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -425,10 +436,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Preparing a parsed named query that returns generated keys by column name is not allowed in a read-only DAO.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnNames an array of column names for returned keys
-     * @return never returns normally
+     * @return never returns normally; this method always throws
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -441,6 +453,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Saving (inserting) an entity is not permitted in a read-only DAO.
      *
      * @param entityToSave the entity to save
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
@@ -454,6 +467,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Saving (inserting) selected properties of an entity is not permitted in a read-only DAO.
      *
      * @param entityToSave the entity to save
      * @param propNamesToSave collection of property names to save
@@ -468,6 +482,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Saving an entity via a custom named insert statement is not permitted in a read-only DAO.
      *
      * @param namedInsertSql the named SQL insert statement
      * @param entityToSave the entity to save
@@ -482,6 +497,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving (inserting) entities is not permitted in a read-only DAO.
      *
      * @param entitiesToSave collection of entities to save
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
@@ -495,6 +511,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving (inserting) entities with a configurable batch size is not permitted in a read-only DAO.
      *
      * @param entitiesToSave collection of entities to save
      * @param batchSize the number of entities to process per batch
@@ -509,6 +526,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving (inserting) selected properties of entities is not permitted in a read-only DAO.
      *
      * @param entitiesToSave collection of entities to save
      * @param propNamesToSave collection of property names to save
@@ -523,6 +541,8 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving (inserting) selected properties of entities with a configurable batch size is not
+     * permitted in a read-only DAO.
      *
      * @param entitiesToSave collection of entities to save
      * @param propNamesToSave collection of property names to save
@@ -539,6 +559,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving entities via a custom named insert statement is not permitted in a read-only DAO.
      *
      * @param namedInsertSql the named SQL insert statement
      * @param entitiesToSave collection of entities to save
@@ -553,6 +574,8 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving entities via a custom named insert statement with a configurable batch size is not
+     * permitted in a read-only DAO.
      *
      * @param namedInsertSql the named SQL insert statement
      * @param entitiesToSave collection of entities to save

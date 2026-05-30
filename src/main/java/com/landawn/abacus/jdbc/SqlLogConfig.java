@@ -35,7 +35,7 @@ package com.landawn.abacus.jdbc;
  * // This logs only slow queries, not all queries
  * SqlLogConfig config2 = new SqlLogConfig(500L, 1000);
  *
- * // Enable performance logging with no SQL length limit
+ * // Enable performance logging; a non-positive max length falls back to the default
  * SqlLogConfig config3 = new SqlLogConfig(100L, -1);
  * }</pre>
  *

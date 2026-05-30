@@ -333,7 +333,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalBoolean if no record is found.
+     * Returns an empty {@code OptionalBoolean} if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -345,7 +345,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalBoolean containing the value if found, otherwise empty
+     * @return an {@code OptionalBoolean} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForBoolean()
      */
@@ -353,7 +353,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalChar if no record is found.
+     * Returns an empty {@code OptionalChar} if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -363,7 +363,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalChar containing the value if found, otherwise empty
+     * @return an {@code OptionalChar} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForChar()
      */
@@ -371,7 +371,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a byte value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalByte if no record is found.
+     * Returns an empty {@code OptionalByte} if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -381,7 +381,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalByte containing the value if found, otherwise empty
+     * @return an {@code OptionalByte} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForByte()
      */
@@ -389,7 +389,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalShort if no record is found.
+     * Returns an empty {@code OptionalShort} if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -399,7 +399,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalShort containing the value if found, otherwise empty
+     * @return an {@code OptionalShort} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForShort()
      */
@@ -407,7 +407,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalInt if no record is found.
+     * Returns an empty {@code OptionalInt} if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -417,7 +417,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalInt containing the value if found, otherwise empty
+     * @return an {@code OptionalInt} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForInt()
      */
@@ -425,7 +425,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalLong if no record is found.
+     * Returns an empty {@code OptionalLong} if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -435,7 +435,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalLong containing the value if found, otherwise empty
+     * @return an {@code OptionalLong} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForLong()
      */
@@ -443,7 +443,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a float value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalFloat if no record is found.
+     * Returns an empty {@code OptionalFloat} if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -453,7 +453,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalFloat containing the value if found, otherwise empty
+     * @return an {@code OptionalFloat} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForFloat()
      */
@@ -461,7 +461,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
-     * Returns an empty OptionalDouble if no record is found.
+     * Returns an empty {@code OptionalDouble} if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -471,7 +471,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalDouble containing the value if found, otherwise empty
+     * @return an {@code OptionalDouble} containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForDouble()
      */
@@ -479,7 +479,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -489,7 +489,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the String value if found, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the String value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForString()
      */
@@ -497,7 +497,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a Date value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -507,7 +507,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Date value if found, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the Date value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForDate()
      */
@@ -515,7 +515,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a Time value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -525,7 +525,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Time value if found, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the Time value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForTime()
      */
@@ -533,7 +533,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -543,7 +543,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the Timestamp value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForTimestamp()
      */
@@ -551,7 +551,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
      * This is typically used for BLOB data.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -562,7 +562,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the byte array value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForBytes()
      */
@@ -582,7 +582,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the value if found, or {@code Nullable.empty()} if no record exists
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -590,7 +590,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
-     * Returns an empty Optional if no record is found or if the value is {@code null}.
+     * Returns an empty {@code Optional} if no record is found or if the value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -602,7 +602,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an Optional containing the non-null value if found, otherwise empty
+     * @return an {@code Optional} containing the non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -631,8 +631,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a unique single result of the specified type.
-     * Throws DuplicateResultException if more than one record is found.
-     * 
+     * Throws {@link DuplicateResultException} if more than one record is found.
+     *
      * <p>This method ensures that at most one record matches the query.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -645,8 +645,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @return a {@code Nullable} containing the unique value if found, or {@code Nullable.empty()} if no record exists
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
@@ -655,8 +655,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a unique non-null result of the specified type.
-     * Throws DuplicateResultException if more than one record is found.
-     * Returns empty Optional if no record found or value is {@code null}.
+     * Throws {@link DuplicateResultException} if more than one record is found.
+     * Returns an empty {@code Optional} if no record is found or the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -669,8 +669,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an Optional containing the unique non-null value if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @return an {@code Optional} containing the unique non-null value if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */

@@ -29,8 +29,8 @@ public enum OP {
      * Returns a {@code boolean} indicating the existence of matching records.
      *
      * <p>This operation is optimized for existence checks and typically translates to
-     * a query with {@code LIMIT 1} or uses {@code EXISTS} clause internally for better performance.</p>
-     * 
+     * a query with {@code LIMIT 1} or uses an {@code EXISTS} clause internally for better performance.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT 1 FROM users WHERE email = ?", op = OP.exists)
@@ -61,7 +61,7 @@ public enum OP {
     /**
      * Retrieves the first record from the query results.
      * Returns an {@code Optional} that is empty if no records are found.
-     * 
+     *
      * <p>This operation is useful when you want at most one result but don't require
      * exactly one. The query should typically include an {@code ORDER BY} clause to
      * ensure deterministic results.</p>
@@ -79,10 +79,10 @@ public enum OP {
     /**
      * Retrieves all matching records as a {@code List}.
      * Returns an empty {@code List} if no records are found.
-     * 
+     *
      * <p>This is the most common operation for queries that return multiple records.
      * All results are loaded into memory at once, so use with caution for large result sets.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE active = true", op = OP.list)
@@ -130,7 +130,7 @@ public enum OP {
     /**
      * Retrieves the first single column value from the query result without checking for uniqueness.
      * Returns a {@code Nullable} that is empty if no result is found.
-     * Typically used for aggregate queries that return one value (e.g., COUNT, SUM, MAX, MIN).
+     * Typically used for aggregate queries that return one value (e.g., {@code COUNT}, {@code SUM}, {@code MAX}, {@code MIN}).
      *
      * <p>Unlike {@link #queryForUnique}, this operation does not throw an exception if the
      * query returns more than one row -- it simply returns the value from the first row.
@@ -239,17 +239,17 @@ public enum OP {
     executeAndGetOutParameters,
 
     /**
-     * Executes an UPDATE, INSERT, or DELETE statement and returns the number of affected rows.
+     * Executes an {@code UPDATE}, {@code INSERT}, or {@code DELETE} statement and returns the number of affected rows.
      * Returns an {@code int} representing the row count.
-     * 
+     *
      * <p>This is the standard operation for DML (Data Manipulation Language) statements
      * that modify data in the database. The return value indicates how many rows were affected.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
      * int deactivateInactiveUsers(Date threshold);
-     * 
+     *
      * @Query(value = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)
      * int createUser(String name, String email);
      * }</pre>
@@ -257,12 +257,12 @@ public enum OP {
     update,
 
     /**
-     * Executes an UPDATE, INSERT, or DELETE statement that may affect a large number of rows.
+     * Executes an {@code UPDATE}, {@code INSERT}, or {@code DELETE} statement that may affect a large number of rows.
      * Returns a {@code long} representing the row count for compatibility with large datasets.
-     * 
-     * <p>Use this operation when the number of affected rows might exceed the range of int.
+     *
+     * <p>Use this operation when the number of affected rows might exceed the range of {@code int}.
      * This is particularly relevant for bulk operations on large tables.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "DELETE FROM audit_logs WHERE created_date < ?", op = OP.largeUpdate)
@@ -276,11 +276,11 @@ public enum OP {
     /**
      * Default operation that lets the framework automatically determine the appropriate operation
      * based on the SQL statement type and method signature.
-     * 
-     * <p>When DEFAULT is used, the framework analyzes the SQL statement and method return type
-     * to select the most appropriate operation. For example, SELECT statements default to {@link #list}
-     * or {@link #query} operations, while UPDATE/INSERT/DELETE statements default to {@link #update} operations.</p>
-     * 
+     *
+     * <p>When {@code DEFAULT} is used, the framework analyzes the SQL statement and method return type
+     * to select the most appropriate operation. For example, {@code SELECT} statements default to {@link #list}
+     * or {@link #query} operations, while {@code UPDATE}/{@code INSERT}/{@code DELETE} statements default to {@link #update} operations.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT

@@ -371,7 +371,7 @@ public final class cs { // NOSONAR
      */
     public static final String propNamesToUpdate = "propNamesToUpdate";
     /**
-     * Parameter name for property values to update, typically a map from property name to its new value, used by update operations to provide partial updates. 
+     * Parameter name for property values to update, typically a map from property name to its new value, used by update operations to provide partial updates.
      */
     public static final String propsToUpdate = "propsToUpdate";
     /**

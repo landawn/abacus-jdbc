@@ -34,7 +34,7 @@ import java.lang.annotation.Target;
  *
  * <p>The DAO proxy ({@code DaoImpl}) resolves these substitutions when building the SQL for a
  * call. If the replacement text itself contains named parameter placeholders (e.g.,
- * {@code "discount &gt;= :minDiscount"}), set
+ * {@code "discount >= :minDiscount"}), set
  * {@link Query#fragmentContainsNamedParameters() @Query(fragmentContainsNamedParameters = true)}
  * so the proxy re-scans the assembled SQL for them.</p>
  *

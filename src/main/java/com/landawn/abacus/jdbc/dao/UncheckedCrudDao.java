@@ -308,7 +308,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalBoolean containing the value, or empty if no entity found
+     * @return an {@code OptionalBoolean} containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForBoolean()
      */

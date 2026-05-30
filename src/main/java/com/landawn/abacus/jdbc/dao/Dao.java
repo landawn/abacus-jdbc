@@ -650,7 +650,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Creates a CallableQuery for executing stored procedures or functions.
-     * The query should use the JDBC escape syntax: {call procedure_name(?, ?)}
+     * The query should use the JDBC escape syntax: {@code {call procedure_name(?, ?)}}
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -842,7 +842,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Checks if no records exist that match the specified condition.
-     * Convenience method equivalent to {@code !}{@link #exists(Condition)}.
+     * Convenience method equivalent to the negation of {@link #exists(Condition)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -872,7 +872,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the condition for counting
-     * @return the number of matching records
+     * @return the number of matching records, or {@code 0} if none match
      * @throws SQLException if a database access error occurs
      */
     int count(final Condition cond) throws SQLException;
@@ -888,7 +888,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the search condition
-     * @return Optional containing the first matching entity
+     * @return an {@code Optional} containing the first matching entity, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      */
     Optional<T> findFirst(final Condition cond) throws SQLException;
@@ -941,7 +941,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
-     * @return Optional containing the first matching entity
+     * @return an {@code Optional} containing the first matching entity, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      */
     Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
@@ -987,7 +987,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the search condition
-     * @return Optional containing the single matching entity
+     * @return an {@code Optional} containing the single matching entity, or an empty {@code Optional} if no record matches
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      */
@@ -1029,7 +1029,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
-     * @return Optional containing the single matching entity
+     * @return an {@code Optional} containing the single matching entity, or an empty {@code Optional} if no record matches
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      */
@@ -1447,7 +1447,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the search condition
-     * @return Dataset containing the query results
+     * @return a {@code Dataset} containing the query results
      * @throws SQLException if a database access error occurs
      */
     Dataset query(final Condition cond) throws SQLException;
@@ -1540,7 +1540,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the search condition
-     * @return list of matching entities
+     * @return a list of matching entities, or an empty list if none match
      * @throws SQLException if a database access error occurs
      */
     List<T> list(final Condition cond) throws SQLException;
@@ -1954,7 +1954,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Returns a paginated Stream of query results as Dataset pages.
-     * Each element in the stream represents one page of results. The condition must include orderBy for consistent pagination.
+     * Each element in the stream represents one page of results. The condition must include an {@code orderBy} clause for consistent pagination.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2391,7 +2391,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the condition to match records for deletion
-     * @return the number of records deleted
+     * @return the number of records deleted, or {@code 0} if none match
      * @throws SQLException if a database access error occurs
      */
     int delete(final Condition cond) throws SQLException;
@@ -2458,6 +2458,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Executes an asynchronous database operation without return value using default executor.
      * Useful for fire-and-forget operations like logging or cleanup.
+     * Note: Transactions started in the current thread are NOT propagated to the async operation.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

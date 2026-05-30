@@ -34,7 +34,8 @@ import com.landawn.abacus.util.u.Optional;
  * and better performance by avoiding auto-boxing in high-frequency operations.</p>
  * 
  * <p>The interface supports loading related entities through various join strategies, allowing you to
- * fetch an entity along with its associated entities in a single operation or through lazy loading.</p>
+ * fetch an entity and eagerly load its associated entities, either all mapped relationships at once or
+ * only the specific join entity types you request.</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -63,8 +64,8 @@ import com.landawn.abacus.util.u.Optional;
  *
  * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the companion {@link UncheckedCrudDaoL} type (with {@code Long} primary key) that owns
- *             this helper, used for fluent method chaining and access to CRUD operations
+ * @param <TD> the self-type of the companion {@link UncheckedCrudDaoL} (with {@code Long} primary key) that
+ *             owns this helper, enabling fluent method chaining and access to its CRUD operations
  * @see UncheckedCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see UncheckedCrudDaoL
@@ -151,7 +152,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @param selectPropNames the properties (columns) to select from the main entity.
      *                        If {@code null}, all properties are selected
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return an {@link Optional} containing the entity with selected properties and loaded join entities
+     * @return an {@link Optional} containing the entity with the selected properties and loaded join entities,
+     *         or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -182,7 +184,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @param selectPropNames the properties (columns) to select from the main entity.
      *                        If {@code null}, all properties are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
-     * @return an {@link Optional} containing the entity with selected properties and loaded join entities
+     * @return an {@link Optional} containing the entity with the selected properties and loaded join entities,
+     *         or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -218,7 +221,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      *                        If {@code null}, all properties are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an {@link Optional} containing the entity with selected properties
+     * @return an {@link Optional} containing the entity with the selected properties, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */

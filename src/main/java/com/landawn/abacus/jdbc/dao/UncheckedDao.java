@@ -809,7 +809,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code Optional} describing the non-null value in the first row/column if it exists.
-     * Unlike queryForSingleValue, this method returns empty Optional for {@code null} values.
+     * Unlike {@link #queryForSingleValue(String, Condition, Class)}, this method returns an empty {@code Optional} for {@code null} values.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

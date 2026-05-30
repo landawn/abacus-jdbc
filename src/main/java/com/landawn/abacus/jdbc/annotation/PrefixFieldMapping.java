@@ -77,7 +77,7 @@ public @interface PrefixFieldMapping {
      * 
      * <p>Rules:</p>
      * <ul>
-     *   <li>Prefixes should match the column aliases used in the SQL query</li>
+     *   <li>Each prefix should match the leading segment of the column aliases used in the SQL query (e.g., the prefix {@code addr} matches the alias {@code addr.street})</li>
      *   <li>Field paths can be simple field names or nested paths (e.g., "address.city")</li>
      *   <li>The prefix must be separated from the column name by a dot (e.g., {@code d.id}); underscores are not supported</li>
      *   <li>The prefix is removed from the column name before mapping to the field</li>

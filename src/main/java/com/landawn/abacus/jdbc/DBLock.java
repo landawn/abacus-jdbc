@@ -64,7 +64,7 @@ import com.landawn.abacus.util.Strings;
  *   <li><b>Automatic Cleanup:</b> Expired and "dead" locks (e.g., from crashed hosts) are automatically
  *       removed to maintain a clean and efficient lock table.</li>
  *   <li><b>Configurable Behavior:</b> Offers flexible control over lock {@code liveTime}, acquisition
- *       {@code timeout}, and retry {@code period} for diverse use cases.</li>
+ *       {@code timeout}, and {@code retryInterval} for diverse use cases.</li>
  *   <li><b>Optimistic Locking:</b> Utilizes optimistic locking principles to handle concurrent lock
  *       acquisition attempts efficiently.</li>
  * </ul>
@@ -111,12 +111,12 @@ public final class DBLock {
     private static final Logger logger = LoggerFactory.getLogger(DBLock.class);
 
     /**
-     * Status constant indicating a locked state.
+     * Value written to the {@code status} column of the lock table to indicate that a target is currently locked.
      */
     public static final String LOCKED = "locked";
 
     /**
-     * Status constant indicating an unlocked state.
+     * Value representing the {@code status} column of the lock table when a target is not locked.
      */
     public static final String UNLOCKED = "unlocked";
 

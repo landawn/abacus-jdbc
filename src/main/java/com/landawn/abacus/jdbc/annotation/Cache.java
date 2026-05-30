@@ -81,7 +81,7 @@ public @interface Cache {
      * combined with TTL/idle-time-based eviction; see {@link CacheResult#liveTime()} and
      * {@link CacheResult#maxIdleTime()}).
      *
-     * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_CAPACITY}, which is
+     * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_CAPACITY} (1000 entries), which is
      * typically suitable for most use cases. For DAOs handling large amounts
      * of frequently accessed data, consider increasing this value.</p>
      * 

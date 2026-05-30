@@ -47,7 +47,7 @@ public @interface Query {
 
     /**
      * Specifies the inline SQL statement(s) to execute.
-     * This can contain any valid SQL including SELECT, INSERT, UPDATE, DELETE, or stored procedure calls.
+     * This can contain any valid SQL, including SELECT, INSERT, UPDATE, DELETE, or stored procedure calls.
      *
      * <p>For ordinary abstract DAO methods only the first entry is used (additional entries are ignored).
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
@@ -187,7 +187,7 @@ public @interface Query {
      *   <li>{@link OP#queryForSingle} - Returns a single scalar value</li>
      *   <li>{@link OP#queryForUnique} - Returns a unique single value or null</li>
      *   <li>{@link OP#update} - Executes UPDATE/INSERT/DELETE and returns row count</li>
-     *   <li>{@link OP#largeUpdate} - For updates affecting potentially > Integer.MAX_VALUE rows</li>
+     *   <li>{@link OP#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>
@@ -493,8 +493,8 @@ public @interface Query {
 
     /**
      * Enables automatic timestamp parameter injection for the query.
-     * When {@code true}, named parameters {@code :sysTime} or {@code :now} are automatically set to the current system timestamp and named parameters {@code :sysDate} are automatically set to the current system date,
-     * without requiring it to be passed as a method parameter.
+     * When {@code true}, the named parameters {@code :sysTime} or {@code :now} are automatically set to the current system timestamp, and the named parameter {@code :sysDate} is automatically set to the current system date,
+     * without requiring them to be passed as method parameters.
      *
      * <p>This feature is useful for:</p>
      * <ul>

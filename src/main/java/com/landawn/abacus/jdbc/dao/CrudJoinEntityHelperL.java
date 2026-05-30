@@ -26,7 +26,7 @@ import com.landawn.abacus.util.u.Optional;
 
 /**
  * A specialized interface for CRUD operations with join entity support that uses {@code Long} as the ID type.
- * This interface extends CrudJoinEntityHelper and provides convenience methods that accept primitive {@code long} values
+ * This interface extends {@link CrudJoinEntityHelper} and provides convenience methods that accept primitive {@code long} values
  * in addition to the {@code Long} object methods inherited from the parent interface.
  * 
  * <p>This interface is designed to work with entities that have relationships defined using the {@code @JoinedBy} annotation.
@@ -59,7 +59,7 @@ import com.landawn.abacus.util.u.Optional;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the companion {@link CrudDaoL} type (with {@code Long} primary key) that owns
  *             this helper, used for fluent method chaining and access to CRUD operations
  *
@@ -85,7 +85,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      *
      * @param id the primitive {@code long} ID of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
+     * @return an {@code Optional} containing the retrieved entity with the specified join entities loaded, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -114,7 +114,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @param id the primitive {@code long} ID of the entity to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an Optional containing the retrieved entity with join entities loaded as specified, or an empty Optional if no entity is found
+     * @return an {@code Optional} containing the retrieved entity with join entities loaded as specified, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -137,7 +137,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
+     * @return an {@code Optional} containing the retrieved entity with join entities loaded, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -162,7 +162,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
-     * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
+     * @return an {@code Optional} containing the retrieved entity with join entities loaded, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -188,7 +188,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an Optional containing the retrieved entity with join entities loaded as specified, or an empty Optional if no entity is found
+     * @return an {@code Optional} containing the retrieved entity with join entities loaded as specified, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */

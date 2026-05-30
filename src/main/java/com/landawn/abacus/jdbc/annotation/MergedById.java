@@ -32,7 +32,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  * into a single entity with nested collections.</p>
  * 
  * <p>The merging is performed based on the entity's ID field(s). Rows with the
- * same ID are combined, with collection properties populated from the multiple rows.</p>
+ * same ID are combined into one entity, with collection properties populated from the multiple rows.</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

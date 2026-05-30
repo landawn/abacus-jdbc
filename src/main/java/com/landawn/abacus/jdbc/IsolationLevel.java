@@ -159,14 +159,17 @@ public enum IsolationLevel {
     SERIALIZABLE(Connection.TRANSACTION_SERIALIZABLE);
 
     /**
-     * The integer value representing this isolation level, as defined in {@link Connection}.
+     * The integer value representing this isolation level. For all levels except {@link #DEFAULT}
+     * this is the corresponding {@link Connection} {@code TRANSACTION_*} constant; for {@link #DEFAULT}
+     * it is {@code -1}.
      */
     private final int intValue;
 
     /**
-     * Constructs an IsolationLevel with the specified integer value.
+     * Constructs an {@code IsolationLevel} with the specified integer value.
      *
-     * @param intValue the JDBC constant value for this isolation level
+     * @param intValue the JDBC {@code TRANSACTION_*} constant value for this isolation level,
+     *        or {@code -1} for {@link #DEFAULT}
      */
     IsolationLevel(final int intValue) {
         this.intValue = intValue;

@@ -42,9 +42,10 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
  * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     // Single query methods will automatically add LIMIT 1
- *     @Query("SELECT * FROM users WHERE email = :email")
- *     User findByEmail(@Bind("email") String email);   // LIMIT 1 added automatically
+ *     // Built-in Condition-based single-result methods (e.g. findFirst, findOnlyOne, exists)
+ *     // will have a LIMIT clause appended automatically. User-supplied SQL in @Query methods
+ *     // is left untouched.
+ *     User findFirst(Condition cond);   // LIMIT 1 added automatically
  *
  *     // ID generation will be called if user.id is null or 0
  *     default User createUser(String name, String email) {

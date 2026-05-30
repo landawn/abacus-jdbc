@@ -94,8 +94,9 @@ final class DaoUtil {
     }
 
     /**
-     * A consumer that configures a PreparedStatement for handling large query results efficiently.
-     * Sets the fetch direction to FETCH_FORWARD and fetch size to the default for big results.
+     * A consumer that configures a {@link PreparedStatement} for handling large query results efficiently.
+     * Sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and the fetch size to
+     * {@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_BIG_RESULT}.
      */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
@@ -177,7 +178,7 @@ final class DaoUtil {
      * Seid id = compositeIdExtractor.apply(orderLine);
      * }</pre>
      *
-     * @param <T> the entity type managed by this DAO
+     * @param <T> the entity type
      * @param <ID> the ID type of the entity
      * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
      * @param entityInfo the bean information for the entity class

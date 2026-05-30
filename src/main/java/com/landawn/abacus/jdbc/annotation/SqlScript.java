@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 
 /**
  * Marks a {@code static final String} field as a named SQL script — an inline alternative to
- * pulling SQL in from an external mapper via {@link SqlSource}.
+ * pulling SQL from an external mapper via {@link SqlSource}.
  *
  * <p>The DAO proxy ({@code DaoImpl}) scans the DAO interface for fields carrying this annotation
  * at build time and registers each one as a named entry. Methods annotated with

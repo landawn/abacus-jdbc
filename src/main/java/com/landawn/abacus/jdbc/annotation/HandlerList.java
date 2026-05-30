@@ -43,9 +43,9 @@ import java.lang.annotation.Target;
  * 
  * <p>The handlers are executed in the order they are declared:</p>
  * <ol>
- *   <li>beforeInvoke() is called in declaration order</li>
- *   <li>afterInvoke() is called in reverse declaration order</li>
- *   <li>This creates a nested interception pattern</li>
+ *   <li>{@code beforeInvoke()} is called in declaration order.</li>
+ *   <li>{@code afterInvoke()} is called in reverse declaration order.</li>
+ *   <li>This creates a nested interception pattern.</li>
  * </ol>
  * 
  * <p>Execution flow example with three handlers A, B, C:</p>
@@ -72,9 +72,9 @@ public @interface HandlerList {
      * <p>When multiple handlers are applied to a DAO or method, they form
      * a chain of interceptors. Each handler may:</p>
      * <ul>
-     *   <li>Inspect arguments and run custom logic in {@code beforeInvoke}</li>
-     *   <li>Mutate mutable elements within the {@code args} array (e.g., entity fields)</li>
-     *   <li>Observe the return value and run custom logic in {@code afterInvoke}</li>
+     *   <li>Inspect arguments and run custom logic in {@code beforeInvoke}.</li>
+     *   <li>Mutate mutable elements within the {@code args} array (e.g., entity fields).</li>
+     *   <li>Observe the return value and run custom logic in {@code afterInvoke}.</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>
@@ -97,7 +97,7 @@ public @interface HandlerList {
      * }
      * }</pre>
      *
-     * @return array of Handler annotations
+     * @return the array of {@link Handler} annotations contained in this list
      */
     Handler[] value();
 }

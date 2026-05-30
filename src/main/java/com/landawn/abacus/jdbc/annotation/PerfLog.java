@@ -111,7 +111,7 @@ public @interface PerfLog {
      * Specifies the minimum execution time threshold (in milliseconds) for logging DAO method performance.
      * DAO operations that complete faster than this threshold will not be logged.
      * 
-     * <p>This threshold is typically set higher than minExecutionTimeForSql since DAO operations
+     * <p>This threshold is typically set higher than {@link #minExecutionTimeForSql()} since DAO operations
      * may include multiple SQL executions, result processing, and business logic.</p>
      * 
      * <p><b>Usage Examples:</b></p>

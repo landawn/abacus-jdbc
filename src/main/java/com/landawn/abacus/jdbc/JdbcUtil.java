@@ -198,7 +198,7 @@ public final class JdbcUtil {
     public static final int DEFAULT_BATCH_SIZE = 200;
 
     /**
-     * Default fetch size used by {@code prepareQueryForLargeResult} when retrieving large result sets.
+     * Default fetch size applied when preparing queries that are expected to return a large result set.
      * Value: {@code 1000}.
      */
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
@@ -1782,8 +1782,8 @@ public final class JdbcUtil {
      *
      * @param rs the {@link ResultSet} to query; must not be {@code null}
      * @return the number of columns in the result set
-     * @throws SQLException if a database access error occurs (including {@link NullPointerException}
-     *                      semantics if {@code rs} is {@code null})
+     * @throws SQLException if a database access error occurs
+     * @throws NullPointerException if {@code rs} is {@code null}
      * @see ResultSet#getMetaData()
      * @see ResultSetMetaData#getColumnCount()
      */
@@ -2236,14 +2236,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Retrieves the value of the specified column in the current row of the given ResultSet.
-     * This method also checks the data type of the column value if specified.
+     * Retrieves the value of the specified column in the current row of the given {@link ResultSet}.
+     * When {@code checkDateType} is {@code true}, database-specific date/time types are normalized to
+     * standard Java types.
      *
-     * @param rs The ResultSet from which to retrieve the column value
-     * @param columnIndex The index of the column to retrieve, starting from 1
-     * @param checkDateType Whether to check the data type of the column value
-     * @return The value of the specified column in the current row of the ResultSet
-     * @throws SQLException if a SQL exception occurs while retrieving the column value
+     * @param rs The {@link ResultSet} from which to retrieve the column value
+     * @param columnIndex The 1-based index of the column to retrieve
+     * @param checkDateType Whether to normalize database-specific date/time types to standard Java types
+     * @return The value of the specified column in the current row of the {@code ResultSet}
+     * @throws SQLException if a database access error occurs while retrieving the column value
      */
     static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -2639,8 +2640,8 @@ public final class JdbcUtil {
      * Determines the {@link SqlOperation} type from a given SQL string by analyzing its leading keyword.
      * This method trims the SQL string and performs a case-insensitive check for the keywords
      * {@code SELECT}, {@code UPDATE}, {@code INSERT}, {@code DELETE}, and {@code MERGE}. If none of
-     * these match, it falls back to matching the leading word against every {@link SqlOperation}
-     * constant name.
+     * these match, it falls back to matching the leading word (on a word boundary) against the
+     * {@link SqlOperation#sqlToken() SQL token} of every {@link SqlOperation} constant.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4112,7 +4113,7 @@ public final class JdbcUtil {
 
     /**
      * Prepares a named SQL query optimized for large result sets using the provided DataSource.
-     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
+     * This method sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and a larger fetch size to improve performance when streaming many rows.
      *
      * <p>
      * This method intelligently manages connections: if a transaction is active on the current thread
@@ -4134,7 +4135,7 @@ public final class JdbcUtil {
 
     /**
      * Prepares a named SQL query optimized for large result sets using the provided DataSource and ParsedSql object.
-     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
+     * This method sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and a larger fetch size to improve performance when streaming many rows.
      *
      * <p>
      * This method intelligently manages connections: if a transaction is active on the current thread
@@ -4156,7 +4157,7 @@ public final class JdbcUtil {
 
     /**
      * Prepares a named SQL query optimized for large result sets using the provided Connection.
-     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
+     * This method sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and a larger fetch size to improve performance when streaming many rows.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
      *
@@ -5135,7 +5136,7 @@ public final class JdbcUtil {
 
     /**
      * Executes a large batch SQL update using the provided DataSource with specified batch size.
-     * This method returns a long value to support updates affecting more than Integer.MAX_VALUE rows.
+     * This method returns a {@code long} value to support updates affecting more than {@link Integer#MAX_VALUE} rows.
      *
      * @param ds The DataSource to use for the batch update
      * @param sql The SQL string to execute

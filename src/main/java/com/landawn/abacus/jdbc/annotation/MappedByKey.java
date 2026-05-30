@@ -162,7 +162,7 @@ public @interface MappedByKey {
      * ConcurrentHashMap<String, Config> getConfigMap();
      * }</pre>
      *
-     * @return the Map implementation class, defaults to HashMap
+     * @return the {@code Map} implementation class to instantiate; defaults to {@link HashMap}
      */
     @SuppressWarnings("rawtypes")
     Class<? extends Map> mapClass() default HashMap.class;

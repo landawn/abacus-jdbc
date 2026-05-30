@@ -85,7 +85,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      *
      * @param id the entity ID
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return an Optional containing the entity with join entities loaded, or empty if not found
+     * @return an {@link Optional} containing the entity with the specified join entities loaded, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -110,7 +110,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param id the entity ID
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an Optional containing the entity with join entities loaded, or empty if not found
+     * @return an {@link Optional} containing the entity with its join entities loaded (when requested), or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -138,7 +138,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return an Optional containing the entity with selected properties and loaded join entities
+     * @return an {@link Optional} containing the entity with the selected properties and the specified join entities loaded, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -168,7 +168,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
-     * @return an Optional containing the entity with selected properties and loaded join entities
+     * @return an {@link Optional} containing the entity with the selected properties and the specified join entities loaded, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -199,7 +199,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an Optional containing the entity with selected properties and loaded join entities
+     * @return an {@link Optional} containing the entity with the selected properties and its join entities loaded (when requested), or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -258,7 +258,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param id the entity ID
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with loaded join entities, or {@code null} if not found
+     * @return the entity with its join entities loaded (when requested), or {@code null} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -367,7 +367,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
+     * @return the entity with the selected properties and its join entities loaded (when requested), or {@code null} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -399,7 +399,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      *
      * @param ids the collection of entity IDs
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
-     * @return a list of entities with loaded join entities
+     * @return a list of the found entities, each with the specified join entities loaded; empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -426,7 +426,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param ids the collection of entity IDs
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return a list of entities with loaded join entities
+     * @return a list of the found entities, each with its join entities loaded (when requested); empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -454,7 +454,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
      *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
-     * @return a list of entities with selected properties and loaded join entities
+     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -484,7 +484,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
      *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
-     * @return a list of entities with selected properties and loaded join entities
+     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -515,7 +515,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      *                       If {@code null}, all properties of the main entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return a list of entities with selected properties and loaded join entities
+     * @return a list of the found entities, each with the selected properties and its join entities loaded (when requested); empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -546,7 +546,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
      * @param batchSize the size of each batch for processing
-     * @return a list of entities with selected properties and loaded join entities
+     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -588,7 +588,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param batchSize the size of each batch for processing
-     * @return a list of entities with selected properties and loaded join entities
+     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -637,7 +637,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param batchSize the size of each batch for processing
-     * @return a list of entities with selected properties and loaded join entities
+     * @return a list of the found entities, each with the selected properties and its join entities loaded (when requested); empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */

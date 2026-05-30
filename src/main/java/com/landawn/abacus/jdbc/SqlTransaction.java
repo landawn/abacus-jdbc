@@ -344,12 +344,14 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * the reference count without actually committing. The actual commit only occurs when the
      * outermost transaction's commit is called (reference count reaches 0).</p>
      *
-     * <p>If the transaction is marked for rollback only, it will be rolled back instead of committed.</p>
+     * <p>If the transaction is marked for rollback only (status {@link Status#MARKED_ROLLBACK}), it
+     * will be rolled back instead of committed, and {@code actionAfterCommit} is not run.</p>
      *
      * @param actionAfterCommit the action to be executed after the current transaction is committed successfully, must not be {@code null}
-     * @throws UncheckedSQLException if an SQL error occurs during the commit
-     * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE} when the
-     *         outermost scope attempts the actual commit
+     * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
+     *         automatic rollback is also attempted
+     * @throws IllegalStateException if the outermost commit is attempted while the transaction is
+     *         neither {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         _isMarkedByCommitOrRollbackPreviously = true;
@@ -457,9 +459,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * Rolls back the current transaction and executes the specified action after the rollback.
      * This is an internal method used for executing post-rollback callbacks with nested transaction support.
      *
-     * <p>When called on a nested transaction (reference count greater than 0), this method marks the transaction
-     * for rollback and decrements the reference count. The actual rollback occurs when the outermost
-     * transaction completes (reference count reaches 0).</p>
+     * <p>When called on a nested transaction (reference count still greater than 0 after decrementing),
+     * this method marks the transaction for rollback ({@link Status#MARKED_ROLLBACK}). The actual rollback
+     * occurs when the outermost transaction completes (reference count reaches 0).</p>
      *
      * @param actionAfterRollback the action to be executed after the current transaction is rolled back, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback

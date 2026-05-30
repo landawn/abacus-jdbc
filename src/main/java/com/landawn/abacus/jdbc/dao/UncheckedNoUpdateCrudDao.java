@@ -95,7 +95,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Updating an existing entity by ID is disallowed by {@code UncheckedNoUpdateCrudDao}
+     * Updating an existing entity (located by its ID) is disallowed by {@code UncheckedNoUpdateCrudDao}
      * because it would mutate an existing record, violating the read/insert-only contract.
      *
      * @param entityToUpdate the entity with updated values
@@ -149,7 +149,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * Multi-property updates by ID are disallowed by {@code UncheckedNoUpdateCrudDao}
      * because they would mutate an existing record, violating the read/insert-only contract.
      *
-     * @param updateProps a map of property names to their new values
+     * @param updateProps a {@code Map} of property names to their new values
      * @param id the entity ID to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted

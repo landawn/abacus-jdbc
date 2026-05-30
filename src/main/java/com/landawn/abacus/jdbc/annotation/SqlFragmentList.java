@@ -35,6 +35,11 @@ import java.lang.annotation.Target;
  * Empty collections produce an empty string in place of the token (which is usually a SQL syntax
  * error — callers should guard against that case).</p>
  *
+ * <p>If the joined fragment itself contains named parameter placeholders (for example, joining
+ * elements such as {@code "discount >= :minDiscount"}), set
+ * {@link Query#fragmentContainsNamedParameters() @Query(fragmentContainsNamedParameters = true)}
+ * so the proxy re-scans the assembled SQL for them.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  *
  * <p><b>Caller-selected projection columns:</b></p>
@@ -61,6 +66,7 @@ import java.lang.annotation.Target;
  *
  * @see SqlFragment
  * @see BindList
+ * @see Query#fragmentContainsNamedParameters()
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })
