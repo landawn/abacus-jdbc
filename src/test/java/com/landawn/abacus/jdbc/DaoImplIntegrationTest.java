@@ -353,6 +353,26 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals("Updated", dao.gett(existingId).getLastName());
     }
 
+    // batchUpsert with a COMPOSITE unique-prop key drives the multi-prop EntityId path
+    // (CrudDao L1311-1334: entityIdExtractor + Filters.id2Cond batch query), distinct from the
+    // single-prop path exercised by testBatchUpsert.
+    @Test
+    public void testBatchUpsert_MultiUniqueProps() throws SQLException {
+        final Long existingId = dao.insert(newUser("Multi", "Key", 70));
+
+        final List<UserAccount> batch = new ArrayList<>();
+        batch.add(newUser("Multi", "Key", 71)); // matches existing on (firstName,lastName) -> update
+        batch.add(newUser("Multi", "Other", 22)); // new
+        batch.add(newUser("Solo", "Key", 23)); // new
+
+        final List<UserAccount> result = dao.batchUpsert(batch, List.of("firstName", "lastName"), 2);
+        assertEquals(3, result.size());
+
+        // the existing row was updated in place (same id), not duplicated.
+        assertEquals(71, dao.gett(existingId).getAge());
+        assertEquals(3, dao.count(Filters.eq("firstName", "Multi").or(Filters.eq("lastName", "Key"))));
+    }
+
     // gett with an unknown id returns null and exists is false (no-row branch).
     @Test
     public void testGet_UnknownId_ReturnsNull() throws SQLException {
