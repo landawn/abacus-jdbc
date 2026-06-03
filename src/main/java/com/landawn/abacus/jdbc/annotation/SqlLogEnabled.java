@@ -68,8 +68,11 @@ public @interface SqlLogEnabled {
     /**
      * Specifies whether SQL logging is enabled or disabled.
      * 
-     * <p>When set to {@code true} (default), SQL statements will be logged for the annotated scope.
-     * When set to {@code false}, SQL logging is disabled for that scope. A method-level
+     * <p>When set to {@code true}, SQL statements will be logged for the annotated scope; when set to
+     * {@code false}, SQL logging is disabled for that scope. This element defaults to {@code true},
+     * meaning a bare {@code @SqlLogEnabled} turns logging on for the scope it is placed on &mdash; it
+     * does <em>not</em> imply SQL logging is globally enabled by default. When no {@code @SqlLogEnabled}
+     * is present at all, logging follows the global default configured on {@link JdbcUtil}. A method-level
      * {@code @SqlLogEnabled} still takes precedence over a type-level one (see the type-level
      * documentation).</p>
      * 

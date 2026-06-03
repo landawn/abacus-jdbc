@@ -579,10 +579,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a BigInteger value as a String for the specified parameter.
-     * This method converts the BigInteger to its string representation.
+     * Convenience alias that sets the {@code BigInteger} as its decimal string representation by
+     * delegating to {@link #setString(String, java.math.BigInteger)}.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigNumber = new BigInteger("99999999999999999999");
@@ -1484,9 +1484,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param x the object containing the input parameter value
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
-     * @param scaleOrLength for {@code java.sql.Types.DECIMAL} or {@code java.sql.Types.NUMERIC} types,
-     *                      this is the number of digits after the decimal point. For all other types,
-     *                      this value will be ignored
+     * @param scaleOrLength for DECIMAL/NUMERIC types, the scale (number of digits after the decimal point);
+     *                      for stream-backed types (e.g. {@code LONGVARCHAR}) the length of the data;
+     *                      for all other types this value is ignored
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @see java.sql.Types
@@ -1682,8 +1682,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, int, String)
      * @see java.sql.Types#STRUCT
-     * @see java.sql.Types#DISTINCT
-     * @see java.sql.Types#JAVA_OBJECT
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
@@ -1778,7 +1776,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, int, String)
      * @see java.sql.Types#STRUCT
-     * @see java.sql.Types#DISTINCT
      */
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
@@ -1794,10 +1791,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setString(1, "input_value")
+     * Jdbc.OutParamResult result = query.setString(1, "input_value")
      *      .registerOutParameter(2, JDBCType.VARCHAR)
      *      .registerOutParameter(3, JDBCType.TIMESTAMP)
-     *      .execute();
+     *      .executeAndGetOutParameters();
+     * String out2 = result.getOutParamValue(2);
+     * java.sql.Timestamp out3 = result.getOutParamValue(3);
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)

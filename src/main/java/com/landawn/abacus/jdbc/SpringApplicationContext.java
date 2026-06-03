@@ -98,6 +98,10 @@ public final class SpringApplicationContext {
      * Object dataSource = springAppContext.getBean("myDataSource");
      * }</pre>
      *
+     * <p>Returns {@code null} only when the context has not been initialized; if the context is
+     * initialized but no bean with the given name exists, {@code NoSuchBeanDefinitionException}
+     * is thrown.</p>
+     *
      * @param name the name of the bean to retrieve
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
      * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found

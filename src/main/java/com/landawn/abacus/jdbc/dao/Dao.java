@@ -578,7 +578,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a named SELECT query for specific columns based on the specified condition.
      * Generates a named-parameter query with the selected columns and the supplied condition appended.
      *
-     * @param selectPropNames the property names to select, or {@code null} for all
+     * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance
@@ -636,7 +636,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a named SELECT query for specific columns optimized for large result sets.
      * Combines column selection with cursor-based fetching and named parameters.
      *
-     * @param selectPropNames the property names to select, or {@code null} for all
+     * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery configured for large results
@@ -841,7 +841,6 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     boolean exists(final Condition cond) throws SQLException;
 
     /**
-     * Checks if no records exist that match the specified condition.
      * Convenience method equivalent to the negation of {@link #exists(Condition)}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1081,7 +1080,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalBoolean containing the value
+     * @return {@code OptionalBoolean} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1100,7 +1099,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalChar containing the value
+     * @return {@code OptionalChar} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1116,7 +1115,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalByte containing the value
+     * @return {@code OptionalByte} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1132,7 +1131,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalShort containing the value
+     * @return {@code OptionalShort} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1149,7 +1148,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalInt containing the value
+     * @return {@code OptionalInt} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1165,7 +1164,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalLong containing the value
+     * @return {@code OptionalLong} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1181,7 +1180,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalFloat containing the value
+     * @return {@code OptionalFloat} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1197,7 +1196,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return OptionalDouble containing the value
+     * @return {@code OptionalDouble} containing the value
      * @throws SQLException if a database access error occurs
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1214,7 +1213,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return Nullable containing the String value
+     * @return {@code Nullable} containing the String value
      * @throws SQLException if a database access error occurs
      */
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1230,7 +1229,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return Nullable containing the Date value
+     * @return {@code Nullable} containing the Date value
      * @throws SQLException if a database access error occurs
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1246,7 +1245,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return Nullable containing the Time value
+     * @return {@code Nullable} containing the Time value
      * @throws SQLException if a database access error occurs
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1262,7 +1261,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return Nullable containing the Timestamp value
+     * @return {@code Nullable} containing the Timestamp value
      * @throws SQLException if a database access error occurs
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1278,7 +1277,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
-     * @return Nullable containing the byte array
+     * @return {@code Nullable} containing the byte array
      * @throws SQLException if a database access error occurs
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -1300,7 +1299,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param targetValueType the class of the target value type
-     * @return Nullable containing the value
+     * @return {@code Nullable} containing the value
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -1323,7 +1322,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param targetValueType the class of the target value type
-     * @return Optional containing the non-null value
+     * @return {@code Optional} containing the non-null value
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -1347,7 +1346,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param rowMapper the function to map the result
-     * @return Optional containing the mapped value, empty if no row matches or the value is {@code null}
+     * @return {@code Optional} containing the mapped value, empty if no row matches or the value is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -1372,7 +1371,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param targetValueType the class of the target value type
-     * @return Nullable containing the unique value
+     * @return {@code Nullable} containing the unique value
      * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
@@ -1398,7 +1397,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param targetValueType the class of the target value type
-     * @return Optional containing the unique non-null value
+     * @return {@code Optional} containing the unique non-null value
      * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -1407,7 +1406,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
             throws DuplicateResultException, SQLException;
 
     /**
-     * Queries for a unique value using a custom row mapper.
+     * Queries for a unique non-null value using a custom row mapper.
      * Ensures uniqueness while allowing custom value transformation.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1426,7 +1425,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param rowMapper the function to map the result
-     * @return Optional containing the unique mapped value, empty if no row matches or the value is {@code null}
+     * @return {@code Optional} containing the unique mapped value, empty if no row matches or the value is {@code null}
      * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
      */
@@ -2317,6 +2316,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @return the saved entity (newly inserted or updated)
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws DuplicateResultException if more than one record matches
      * @see #upsert(Object, Condition)
      */
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException {
@@ -2427,6 +2427,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Executes an asynchronous database operation using the specified executor.
      * Provides control over which thread pool executes the operation.
+     * Note: Transactions started in the current thread are NOT propagated to the async operation.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2482,6 +2483,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Executes an asynchronous database operation without return value using specified executor.
      * Combines async execution with custom thread pool management.
+     * Note: Transactions started in the current thread are NOT propagated to the async operation.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

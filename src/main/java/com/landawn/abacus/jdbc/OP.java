@@ -37,6 +37,7 @@ public enum OP {
      * boolean emailExists(String email);
      * }</pre>
      *
+     * @see AbstractQuery#exists()
      */
     exists,
 
@@ -90,6 +91,7 @@ public enum OP {
      * List<User> getActiveUsers();
      * }</pre>
      *
+     * @see AbstractQuery#list()
      */
     list,
 
@@ -183,7 +185,6 @@ public enum OP {
      * @Query(value = "{call getUsersAndOrders(?)}", op = OP.listAll, isProcedure = true)
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
      * }</pre>
-     *
      */
     listAll,
 
@@ -201,7 +202,6 @@ public enum OP {
      * @Query(value = "{call getComplexReport(?, ?)}", op = OP.queryAll, isProcedure = true)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre>
-     *
      */
     queryAll,
 
@@ -219,7 +219,6 @@ public enum OP {
      * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
      * }</pre>
-     *
      */
     streamAll,
 
@@ -259,6 +258,7 @@ public enum OP {
      * int createUser(String name, String email);
      * }</pre>
      *
+     * @see AbstractQuery#update()
      */
     update,
 
@@ -275,6 +275,7 @@ public enum OP {
      * long purgeOldAuditLogs(Date cutoffDate);
      * }</pre>
      *
+     * @see AbstractQuery#largeUpdate()
      */
     largeUpdate,
 
@@ -293,10 +294,9 @@ public enum OP {
      * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT
      * List<User> getAllUsers();      // Framework infers OP.list
      * 
-     * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
+     * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT
      * int deleteUser(long id);                  // Framework infers OP.update
      * }</pre>
-     *
      */
     DEFAULT
 

@@ -119,6 +119,11 @@ public @interface Query {
      * This allows SQL to be defined separately from Java code, enabling better organization and reusability.
      * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
      *
+     * <p>For ordinary abstract DAO methods only the first entry is used (additional entries are ignored).
+     * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
+     * entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if
+     * applicable, and passed to that {@code String[]} parameter at runtime.</p>
+     *
      * <p>The SQL mapper can be specified at the DAO interface level using the {@link SqlSource} annotation,
      * which points to XML files or other configuration sources containing SQL definitions.</p>
      *
@@ -492,9 +497,10 @@ public @interface Query {
     boolean fragmentContainsNamedParameters() default false;
 
     /**
-     * Enables automatic timestamp parameter injection for the query.
-     * When {@code true}, the named parameters {@code :sysTime} or {@code :now} are automatically set to the current system timestamp, and the named parameter {@code :sysDate} is automatically set to the current system date,
-     * without requiring them to be passed as method parameters.
+     * Enables automatic system-time parameter injection for the query.
+     * When {@code true}, the named parameters {@code :now} and {@code :sysTime} are automatically set to the current
+     * system timestamp, and the named parameter {@code :sysDate} is automatically set to the current system date,
+     * without requiring any of them to be passed as method parameters.
      *
      * <p>This feature is useful for:</p>
      * <ul>
@@ -580,11 +586,11 @@ public @interface Query {
      *
      * <p>Important considerations:</p>
      * <ul>
-     *   <li>The {@code :sysTime} parameter is set once when the query is executed, ensuring consistency across the query</li>
-     *   <li>The timestamp is obtained from the application server's system time, not the database server</li>
+     *   <li>The system-time parameters ({@code :now}, {@code :sysTime}, {@code :sysDate}) are each set once when the query is executed, ensuring consistency across the query</li>
+     *   <li>The value is obtained from the application server's system time, not the database server</li>
      *   <li>For database server time, use SQL functions like {@code CURRENT_TIMESTAMP} or {@code NOW()} instead</li>
      *   <li>The timestamp format and precision depend on the database column type and JDBC driver</li>
-     *   <li>Cannot manually override the {@code :sysTime} parameter when this is enabled</li>
+     *   <li>Cannot manually override the {@code :now}, {@code :sysTime}, or {@code :sysDate} parameters when this is enabled</li>
      * </ul>
      *
      * <p>When not to use this feature:</p>

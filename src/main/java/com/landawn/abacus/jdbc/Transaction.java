@@ -155,6 +155,9 @@ public interface Transaction {
      * }
      * }</pre>
      *
+     * <p>Note: the {@link SqlTransaction} implementation deprecates direct calls to this method
+     * in favor of {@link #rollbackIfNotCommitted()}.</p>
+     *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction is not in a valid state for rollback
      *         (e.g., already committed or rolled back)
@@ -200,6 +203,7 @@ public interface Transaction {
      *        → MARKED_ROLLBACK → ROLLED_BACK (on rollback-only mode)
      *        → FAILED_COMMIT (on commit failure)
      *        → FAILED_ROLLBACK (on rollback failure)
+     * FAILED_COMMIT → ROLLED_BACK / FAILED_ROLLBACK (on automatic rollback after a failed commit)
      * </pre>
      */
     enum Status {

@@ -45,8 +45,9 @@ public @interface OutParameter {
      * Specifies the name of the output parameter.
      * Use this for named parameters in the stored procedure call.
      *
-     * <p>Exactly one of {@code name} or {@code position} should be specified for a given
-     * {@code @OutParameter}. Named parameters are generally preferred for readability and
+     * <p>Exactly one of {@code name} or {@code position} must be specified for a given
+     * {@code @OutParameter}; supplying both, or neither, fails with {@code UnsupportedOperationException}
+     * at DAO initialization time. Named parameters are generally preferred for readability and
      * maintainability when the JDBC driver and procedure support them.</p>
      *
      * <p>The parameter name should match the name used in the stored procedure call syntax.</p>
@@ -73,7 +74,8 @@ public @interface OutParameter {
      * Use this for positional parameters in the stored procedure call.
      *
      * <p>Positions start from 1, following JDBC convention. Exactly one of {@code name} or
-     * {@code position} should be specified for a given {@code @OutParameter}.</p>
+     * {@code position} must be specified for a given {@code @OutParameter} (supplying both, or
+     * neither, fails with {@code UnsupportedOperationException} at DAO initialization time).</p>
      *
      * <p>Position-based parameters are useful when:</p>
      * <ul>

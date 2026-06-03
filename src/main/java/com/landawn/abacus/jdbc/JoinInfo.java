@@ -767,6 +767,7 @@ public final class JoinInfo {
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the SQL builder function and parameter setter
+     * @throws IllegalArgumentException if the SQL builder class is not supported
      * @deprecated Use {@link #getSelectSqlPlan(Class)}.
      */
     @Deprecated
@@ -830,6 +831,7 @@ public final class JoinInfo {
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch SQL builder function and parameter setter
+     * @throws IllegalArgumentException if the SQL builder class is not supported
      * @deprecated Use {@link #getBatchSelectSqlPlan(Class)}.
      */
     @Deprecated
@@ -902,6 +904,7 @@ public final class JoinInfo {
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the delete SQL, the middle (join) table delete SQL (always {@code null}), and the parameter setter
+     * @throws IllegalArgumentException if the SQL builder class is not supported
      * @deprecated Use {@link #getDeleteSqlPlan(Class)}.
      */
     @Deprecated
@@ -968,6 +971,7 @@ public final class JoinInfo {
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch delete SQL builder functions and parameter setter
+     * @throws IllegalArgumentException if the SQL builder class is not supported
      * @deprecated Use {@link #getBatchDeleteSqlPlan(Class)}.
      */
     @Deprecated
@@ -1045,8 +1049,8 @@ public final class JoinInfo {
      * }</pre>
      *
      * @param entities the source entities to populate with joined entities
-     * @param groupedPropEntities a map of grouped joined entities keyed by their referenced join key (the value extracted
-     *                            via the {@code @JoinedBy} target property on the joined entity)
+     * @param groupedPropEntities a map of grouped joined entities keyed by the join key used to match source entities
+     *                            (the source key for one-to-many; the junction-table-derived key for many-to-many)
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}

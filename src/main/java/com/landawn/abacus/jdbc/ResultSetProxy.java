@@ -559,6 +559,10 @@ final class ResultSetProxy implements ResultSet {
      *   <li>Disambiguates between {@code DATE} and {@code TIMESTAMP} types using metadata when necessary</li>
      * </ul>
      *
+     * <p>Unlike the index form, the label is always resolved to a column index via the underlying
+     * {@link ResultSet#findColumn(String)}; there is no out-of-range pass-through path for the label
+     * form, so its caching behavior is consistent with the documented index form.</p>
+     *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is null
      * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set

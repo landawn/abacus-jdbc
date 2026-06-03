@@ -94,7 +94,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param ds the data source the connection came from; used to release the connection on completion when {@code closeConnection} is {@code true}. May be {@code null} if {@code closeConnection} is {@code false}
      * @param conn the JDBC connection that backs this transaction, must not be {@code null}
      * @param isolationLevel the isolation level for this transaction, must not be {@code null}
-     * @param creator the source that created this transaction; used to compute the transaction ID
+     * @param creator the originator type (see {@link CreatedBy}) used to compute the transaction ID
      * @param closeConnection if {@code true}, the connection will be released back to {@code ds} when the transaction completes
      * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails
      * @throws IllegalArgumentException if {@code conn} or {@code isolationLevel} is {@code null}
@@ -329,7 +329,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         automatic rollback is also attempted, and any rollback failure is suppressed in
      *         favour of this exception
      * @throws IllegalStateException if the outermost commit is attempted while the transaction is
-     *         not in {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}
+     *         not in {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}. If this transaction
+     *         scope has already completed (reference count already at or below zero), the call is
+     *         logged and ignored rather than throwing.
      */
     @Override
     public void commit() throws UncheckedSQLException {
@@ -351,7 +353,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
      *         automatic rollback is also attempted
      * @throws IllegalStateException if the outermost commit is attempted while the transaction is
-     *         neither {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}
+     *         neither {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}. If this transaction
+     *         scope has already completed (reference count already at or below zero), the call is
+     *         logged and ignored rather than throwing.
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         _isMarkedByCommitOrRollbackPreviously = true;
@@ -446,7 +450,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the outermost rollback is attempted while the transaction
      *         status is not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
-     *         {@link Status#FAILED_COMMIT}
+     *         {@link Status#FAILED_COMMIT}. If this transaction scope has already completed
+     *         (reference count already at or below zero), the call is logged and ignored rather
+     *         than throwing.
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated
@@ -466,7 +472,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param actionAfterRollback the action to be executed after the current transaction is rolled back, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE},
-     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}
+     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. If this transaction
+     *         scope has already completed (reference count already at or below zero), the call is
+     *         logged and ignored rather than throwing.
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         _isMarkedByCommitOrRollbackPreviously = true;
@@ -639,8 +647,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * This is an internal method used to support nested transaction operations by maintaining
      * a reference count and stacking isolation levels.
      *
-     * <p>The isolation level stack allows nested transactions to have different isolation levels,
-     * which are restored when the nested transaction completes.</p>
+     * <p>For the second and deeper nested scopes, the current isolation level and forUpdateOnly flag
+     * are pushed onto a stack and restored when that scope exits. This allows nested transactions to
+     * have different isolation levels, which are restored when the nested transaction completes.</p>
      *
      * @param isolationLevel the isolation level for the nested transaction, must not be {@code null}
      * @param forUpdateOnly whether this transaction level is for update operations only
@@ -840,7 +849,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
      * @throws E if the {@code Runnable} throws an exception
-     * @throws IllegalStateException if another transaction is opened during execution
+     * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
+     *         been opened on this thread for the same id and was not closed. If {@code cmd} itself
+     *         throws, this condition is instead attached as a suppressed exception.
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
         synchronized (_outsideTxLock) { //NOSONAR
@@ -903,7 +914,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param cmd the {@code Callable} to be executed outside of this transaction, must not be {@code null}
      * @return the result returned by the {@code Callable}
      * @throws E if the {@code Callable} throws an exception
-     * @throws IllegalStateException if another transaction is opened during execution
+     * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
+     *         been opened on this thread for the same id and was not closed. If {@code cmd} itself
+     *         throws, this condition is instead attached as a suppressed exception.
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<R, E> cmd) throws E {
         synchronized (_outsideTxLock) { //NOSONAR
@@ -1116,8 +1129,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         JDBC_UTIL,
 
         /**
-         * Transaction created by SqlExecutor (deprecated, not used).
-         * @deprecated not used
+         * Formerly used by the now-removed SqlExecutor; retained only for ordinal stability.
+         * @deprecated no longer used
          */
         @Deprecated
         SQL_EXECUTOR

@@ -35,12 +35,17 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>Implementing cache at the Data Access Layer (DAL) can lead to data consistency issues if not
  * managed properly. Consider whether caching should be implemented at a higher layer instead.</p>
  *
- * <p><strong>Restriction:</strong> {@link CacheResult @CacheResult} and {@link RefreshCache @RefreshCache}
- * (whether declared at the type or method level) are only honored on
- * {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Using either annotation on a DAO that
- * supports updates/deletes fails with {@code UnsupportedOperationException} at initialization time.
- * {@code @Cache} itself only configures the cache pool used by methods that opt in via
- * {@code @CacheResult}; it has no caching effect on its own.</p>
+ * <p><strong>What {@code @Cache} does:</strong> {@code @Cache} is a type-level annotation that only
+ * configures the cache pool (capacity, eviction sweep interval, and implementation) shared by the DAO.
+ * It does not, by itself, cache any method result; methods must opt in to caching via
+ * {@link CacheResult @CacheResult}, and cached entries are invalidated/refreshed via
+ * {@link RefreshCache @RefreshCache}.</p>
+ *
+ * <p><strong>Restriction (applies to the method-result annotations, not to {@code @Cache}):</strong>
+ * {@code @CacheResult} and {@code @RefreshCache} (whether declared at the type or method level) are only
+ * honored on {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Using either annotation on a DAO
+ * that supports updates/deletes fails with {@code UnsupportedOperationException} at initialization time.
+ * {@code @Cache} itself carries no such DAO-type restriction.</p>
  *
  * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} (or eligible
  * methods when {@code @CacheResult} is applied at the type level) will have their results cached

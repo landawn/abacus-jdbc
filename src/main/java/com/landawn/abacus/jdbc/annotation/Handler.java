@@ -163,7 +163,7 @@ public @interface Handler {
      * }
      * }</pre>
      *
-     * @return array of filter patterns, default matches all methods
+     * @return array of filter patterns (default matches all methods)
      */
     String[] filter() default { ".*" };
 

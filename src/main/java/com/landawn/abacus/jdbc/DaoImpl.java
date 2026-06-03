@@ -405,13 +405,22 @@ final class DaoImpl {
      *       {@link UnsupportedOperationException} is raised.</li>
      *   <li>Methods annotated with {@link MappedByKey @MappedByKey}: always treated as list queries.</li>
      *   <li>Any explicit {@code op} other than {@link OP#DEFAULT}: not a list query.</li>
-     *   <li>{@link OP#DEFAULT}: a list query when the return type is a {@code Collection} subtype and either the
-     *       method is annotated with {@link MergedById @MergedById}, or the generic element type is compatible with
-     *       a trailing {@code RowMapper}/{@code BiRowMapper} parameter, or the method name does not start with one
-     *       of the single-result prefixes (e.g., {@code get}, {@code findFirst}, {@code findOne}, {@code findOnlyOne},
-     *       {@code selectFirst}, {@code selectOne}, {@code selectOnlyOne}, {@code exist}, {@code notExist},
-     *       {@code has}, {@code is}). A trailing {@code ResultExtractor}/{@code BiResultExtractor} parameter forces
-     *       a non-list dispatch.</li>
+     *   <li>{@link OP#DEFAULT}: only a return type that is a {@code Collection} subtype can be a list query; for any
+     *       other return type the result is non-list. When the return type is a {@code Collection} subtype, the
+     *       following rules are applied in order:
+     *       <ol>
+     *         <li>if the method is annotated with {@link MergedById @MergedById}, the result is a list;</li>
+     *         <li>otherwise, if the last parameter is a parameterized {@code RowMapper}/{@code BiRowMapper}, the
+     *             decision is based on comparing its element type with the return element type: it is non-list when
+     *             the mapper produces the whole return type, otherwise it is a list unless the return element type is
+     *             assignable from the mapper element type;</li>
+     *         <li>otherwise, if the last parameter is a {@code ResultExtractor}/{@code BiResultExtractor}, the result
+     *             is non-list;</li>
+     *         <li>otherwise, the result is a list unless the method name starts with one of the single-result prefixes
+     *             (e.g., {@code get}, {@code findFirst}, {@code findOne}, {@code findOnlyOne}, {@code selectFirst},
+     *             {@code selectOne}, {@code selectOnlyOne}, {@code exist}, {@code notExist}, {@code has}, {@code is}).</li>
+     *       </ol>
+     *   </li>
      * </ul>
      *
      * @param method the DAO method to inspect
@@ -1822,7 +1831,7 @@ final class DaoImpl {
      *         configurations or generic type arguments
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
      *         incompatible return type for the declared {@link OP}, or a feature not yet enabled (e.g., cache on a
-     *         non-{@code NoUpdateDao} interface, or {@code RowMapper}/{@code ResultExtractor} as a method parameter)
+     *         non-{@code NoUpdateDao} interface, or a {@code RowMapper}/{@code ResultExtractor} parameter that is not the last method parameter)
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })

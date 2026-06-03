@@ -1091,13 +1091,13 @@ public final class Jdbc {
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * // Maps 'u_id' to 'user.id', 'u_name' to 'user.name', etc.
-         * Map<String, String> prefixMap = Map.of("u_", "user.");
+         * // For columns labeled 'u.id' and 'u.name', maps them to the 'user' property's 'id' and 'name'.
+         * Map<String, String> prefixMap = Map.of("u", "user");
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(User.class, prefixMap);
          * }</pre>
          *
          * @param entityClassForExtractor the class used to map fields from columns
-         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are field name prefixes for dot notation
+         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name.
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
@@ -1644,6 +1644,7 @@ public final class Jdbc {
          * @param rowFilter a predicate to filter rows
          * @param rowMapper the function to map each accepted row to an element
          * @return a {@code BiResultExtractor} that produces a filtered {@code List}
+         * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
          */
         static <T> BiResultExtractor<List<T>> toList(final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, cs.rowFilter);
@@ -3270,14 +3271,15 @@ public final class Jdbc {
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * // Maps "u_id" to user.id, "a_street" to user.address.street
-         * Map<String, String> prefixMap = Map.of("u_", "user.", "a_", "user.address.");
+         * // For columns labeled "u.id" and "a.street", maps "u" to the 'user' property and "a" to the 'address' property,
+         * // resolving them to user.id and address.street respectively.
+         * Map<String, String> prefixMap = Map.of("u", "user", "a", "address");
          * BiRowMapper<User> mapper = BiRowMapper.to(User.class, prefixMap);
          * }</pre>
          *
          * @param <T> target entity type
          * @param entityClass the class to map rows to
-         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
+         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          * @throws IllegalArgumentException if {@code entityClass} is {@code null} or not a valid bean class
          */
@@ -3298,7 +3300,7 @@ public final class Jdbc {
          *
          * @param <T> target entity type
          * @param entityClass the class to map rows to
-         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
+         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
@@ -5078,14 +5080,14 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful {@code RowExtractor} based on an entity class, with custom mapping for
-         * column prefixes to field name prefixes. This is useful for handling flattened one-to-one relationships.
+         * Creates a stateful {@code RowExtractor} based on an entity class, with custom mapping from
+         * column-label prefixes to bean property names. This is useful for handling flattened one-to-one relationships.
          *
          * <p><b>Warning:</b> The returned extractor is stateful and should not be reused across different
          * queries or in parallel streams.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
-         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding entity field prefixes.
+         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
          * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */
@@ -5123,7 +5125,7 @@ public final class Jdbc {
          *
          * @param entityClassForFetch the entity class for type mapping.
          * @param columnLabels an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet}.
-         * @param prefixAndFieldNameMap an optional map for mapping column prefixes to field name prefixes.
+         * @param prefixAndFieldNameMap an optional map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
          * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */

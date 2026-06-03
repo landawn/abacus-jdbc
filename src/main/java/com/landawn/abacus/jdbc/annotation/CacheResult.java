@@ -66,7 +66,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>Cache invalidation strategies:</p>
  * <ul>
  *   <li>Time-based: Entries expire after {@code liveTime} milliseconds</li>
- *   <li>Idle-based: Entries expire if not accessed for {@code maxIdleTime}</li>
+ *   <li>Idle-based: Entries expire if not accessed for {@code maxIdleTime} milliseconds</li>
  *   <li>Size-based: Only cache results within size bounds (for collections)</li>
  *   <li>Manual: Use {@link RefreshCache} annotation on update methods</li>
  * </ul>

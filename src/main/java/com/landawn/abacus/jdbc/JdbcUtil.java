@@ -1780,7 +1780,6 @@ public final class JdbcUtil {
      * @param rs the {@link ResultSet} to query; must not be {@code null}
      * @return the number of columns in the result set
      * @throws SQLException if a database access error occurs
-     * @throws NullPointerException if {@code rs} is {@code null}
      * @see ResultSet#getMetaData()
      * @see ResultSetMetaData#getColumnCount()
      */
@@ -2624,8 +2623,8 @@ public final class JdbcUtil {
      *
      * // Recommended alternative:
      * try (ResultSet rs = stmt.executeQuery("SELECT id, balance FROM accounts")) {
-     *     int idIndex = rs.findColumn("id");
-     *     int balanceIndex = rs.findColumn("balance");
+     *     int idIndex = JdbcUtil.getColumnIndex(rs, "id");
+     *     int balanceIndex = JdbcUtil.getColumnIndex(rs, "balance");
      *     while (rs.next()) {
      *         Long id = JdbcUtil.getColumnValue(rs, idIndex, Long.class);
      *         BigDecimal balance = JdbcUtil.getColumnValue(rs, balanceIndex, BigDecimal.class);
@@ -2640,6 +2639,7 @@ public final class JdbcUtil {
      * @return The column value, converted to the specified {@code targetClass}.
      * @throws SQLException if a database access error occurs.
      * @deprecated Use {@link #getColumnValue(ResultSet, int, Class)} with a cached column index for better performance.
+     * @see #getColumnIndex(ResultSet, String)
      */
     @Deprecated
     public static <T> T getColumnValue(final ResultSet rs, final String columnLabel, final Class<? extends T> targetClass) throws SQLException {
@@ -2686,7 +2686,10 @@ public final class JdbcUtil {
      * // op2 is SqlOperation.INSERT
      *
      * SqlOperation op3 = JdbcUtil.getSqlOperation("CREATE TABLE new_table (...)");
-     * // op3 is SqlOperation.CREATE if that constant is defined in SqlOperation, otherwise SqlOperation.UNKNOWN
+     * // op3 is SqlOperation.CREATE
+     *
+     * SqlOperation op4 = JdbcUtil.getSqlOperation("CREATEX foo");
+     * // op4 is SqlOperation.UNKNOWN (no SqlOperation token matches the leading keyword)
      * }</pre>
      *
      * @param sql The SQL statement to analyze.
@@ -5158,7 +5161,7 @@ public final class JdbcUtil {
      * @param ds The DataSource to use for the batch update
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
-     * @return The number of rows affected by the batch update
+     * @return The total number of rows affected by the batch update across all batches.
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
@@ -6096,8 +6099,8 @@ public final class JdbcUtil {
      *               only rows for which {@code filter.test(rs)} returns {@code true} will be included in the result.
      *               Must not be {@code null}.
      * @return A Dataset containing the filtered data
-     * @throws SQLException if a SQL exception occurs while extracting data
      * @throws IllegalArgumentException if {@code rs} or {@code filter} is {@code null}
+     * @throws SQLException if a SQL exception occurs while extracting data
      * @see RowFilter
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
@@ -6126,8 +6129,8 @@ public final class JdbcUtil {
      *                     that receives the current ResultSet and an output row array, allowing modification
      *                     of the row data before it's added to the Dataset. Must not be {@code null}.
      * @return A Dataset containing the extracted and transformed data
-     * @throws SQLException if a SQL exception occurs while extracting data
      * @throws IllegalArgumentException if {@code rs} or {@code rowExtractor} is {@code null}
+     * @throws SQLException if a SQL exception occurs while extracting data
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
@@ -6160,8 +6163,8 @@ public final class JdbcUtil {
      * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
      *                     Must not be {@code null}.
      * @return A Dataset containing the filtered and transformed data
-     * @throws SQLException if a SQL exception occurs while extracting data
      * @throws IllegalArgumentException if any argument is {@code null}
+     * @throws SQLException if a SQL exception occurs while extracting data
      * @see RowFilter
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter)
@@ -7839,8 +7842,9 @@ public final class JdbcUtil {
      *
      * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's catalog/schema
      * and the table name as supplied, then upper- and lower-case variants). If metadata lookup yields no match,
-     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL state from that query
-     * matching a known "table not found" code returns {@code false}; any other SQL error is propagated.</p>
+     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL error from that query
+     * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
+     * {@code false}; any other SQL error is propagated.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
      * or {@code catalog.schema.table}.</p>
@@ -7904,8 +7908,9 @@ public final class JdbcUtil {
      *
      * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's catalog/schema
      * and the table name as supplied, then upper- and lower-case variants). If metadata lookup yields no match,
-     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL state from that query
-     * matching a known "table not found" code returns {@code false}; any other SQL error is propagated.</p>
+     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL error from that query
+     * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
+     * {@code false}; any other SQL error is propagated.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
      * or {@code catalog.schema.table}.</p>

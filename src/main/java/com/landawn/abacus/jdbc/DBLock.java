@@ -116,7 +116,9 @@ public final class DBLock {
     public static final String LOCKED = "locked";
 
     /**
-     * Value representing the {@code status} column of the lock table when a target is not locked.
+     * Value representing an unlocked target in the {@code status} column of the lock table.
+     * This is a reserved/legacy constant that is not currently written by the implementation:
+     * a lock is released by deleting its row, so no row ever carries this value.
      */
     public static final String UNLOCKED = "unlocked";
 
@@ -177,6 +179,9 @@ public final class DBLock {
      * <p>The lock table schema is designed to support optimistic locking and automatic expiration.
      * It includes a unique constraint on the {@code target} column to ensure only one active lock
      * per resource at any given time.</p>
+     *
+     * <p>This constructor is package-private; instances are normally obtained via
+     * {@code JdbcUtil.getDBLock(DataSource, String)}.</p>
      *
      * @param ds the {@link DataSource} to use for database connections. Must not be {@code null}.
      * @param tableName the name of the database table to use for storing lock information.

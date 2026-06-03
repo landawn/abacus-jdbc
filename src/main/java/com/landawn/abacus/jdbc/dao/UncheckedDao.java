@@ -278,7 +278,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @return {@code true} if no records are found, {@code false} if at least one record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#notExists()
+     * @see #exists(Condition)
      */
     @Beta
     @Override

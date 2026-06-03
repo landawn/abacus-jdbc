@@ -75,13 +75,24 @@ public @interface PrefixFieldMapping {
      * 
      * <p>Format: {@code "prefix1=fieldPath1, prefix2=fieldPath2, ..."}</p>
      * 
-     * <p>Rules:</p>
+     * <p>Two distinct syntaxes are involved &mdash; do not confuse them:</p>
      * <ul>
-     *   <li>Each prefix should match the leading segment of the column aliases used in the SQL query (e.g., the prefix {@code addr} matches the alias {@code addr.street})</li>
-     *   <li>Field paths can be simple field names or nested paths (e.g., "address.city")</li>
-     *   <li>The prefix must be separated from the column name by a dot (e.g., {@code d.id}); underscores are not supported</li>
-     *   <li>The prefix is removed from the column name before mapping to the field</li>
-     *   <li>Columns without matching prefixes are mapped normally</li>
+     *   <li><b>Mapping syntax (this element's value):</b> a comma-separated list of {@code prefix=fieldPath}
+     *       pairs. The left side ({@code prefix}) is the alias prefix; the right side ({@code fieldPath}) is the
+     *       target property path, which may be a simple field name or a dot-separated nested path
+     *       (e.g., {@code "addr=address"} or {@code "bill=billing.address"}). The {@code =} separates the two.</li>
+     *   <li><b>Column-alias syntax (in the SQL query):</b> each matching column alias must be of the form
+     *       {@code prefix.columnName}, i.e. the prefix is joined to the column name by a dot (e.g., {@code addr.street});
+     *       an underscore separator such as {@code addr_street} is not recognized.</li>
+     * </ul>
+     *
+     * <p>Resolution rules:</p>
+     * <ul>
+     *   <li>Each {@code prefix} must match the leading segment (before the dot) of the column aliases used in the query
+     *       (e.g., the prefix {@code addr} matches the alias {@code addr.street})</li>
+     *   <li>The {@code prefix.} portion is stripped from the alias, and the remaining column name is mapped onto the
+     *       configured {@code fieldPath} target</li>
+     *   <li>Columns whose aliases have no matching prefix are mapped normally</li>
      * </ul>
      * 
      * <p>Example mappings:</p>

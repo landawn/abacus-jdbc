@@ -62,6 +62,9 @@ import com.landawn.abacus.util.Throwables;
  *       {@code SELECT} and {@code INSERT} statements</li>
  * </ul>
  *
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
+ * incompatible changes, or even removal, in a future release.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a no-update DAO for append-only audit logs

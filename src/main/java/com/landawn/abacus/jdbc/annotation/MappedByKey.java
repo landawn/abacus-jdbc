@@ -37,7 +37,7 @@ import java.util.Map;
  * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Map users by their ID
  *     @Query("SELECT * FROM users WHERE status = :status")
- *     @MappedByKey("id")
+ *     @MappedByKey(keyName = "id")
  *     Map<Long, User> findUsersByStatus(@Bind("status") String status);
  *     
  *     // Map users by email (assuming email is unique)
@@ -52,7 +52,7 @@ import java.util.Map;
  *     
  *     // Map with composite objects
  *     @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
- *     @MappedByKey("id")
+ *     @MappedByKey(keyName = "id")
  *     Map<Long, Map<String, Object>> getUserLoginStats();
  * }
  * 

@@ -59,7 +59,7 @@ package com.landawn.abacus.jdbc;
  *
  * // Read
  * String sql_select = NE.selectFrom(Account.class).where(L.eq(ID, L.QME)).sql();
- * Account dbAccount = sqlExecutor.findFirst(Account.class, sql_select, account);
+ * Account dbAccount = sqlExecutor.findFirst(Account.class, sql_select, account).orElse(null);
  *
  * // Update
  * String sql_update = NE.update(Account.class).set(FIRST_NAME).where(L.eq(ID, L.QME)).sql();
@@ -67,7 +67,7 @@ package com.landawn.abacus.jdbc;
  *
  * // Delete
  * String sql_delete = NE.deleteFrom(Account.class).where(L.eq(ID, L.QME)).sql();
- * sqlExecutor.delete(sql_delete, account);
+ * sqlExecutor.update(sql_delete, account);
  * }</pre>
  *
  * <p><b>Historical Transaction Pattern (no longer compilable):</b></p>

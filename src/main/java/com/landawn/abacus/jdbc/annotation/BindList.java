@@ -61,10 +61,15 @@ import com.landawn.abacus.annotation.Beta;
  * 
  * <p>The annotation automatically handles:</p>
  * <ul>
- *   <li>Empty collections (generates appropriate SQL or skips with prefix/suffix)</li>
- *   <li>Null collections (treated as empty)</li>
+ *   <li>Empty collections: the {@code {name}} token is replaced with an empty string, and the
+ *       {@link #prefixForNonEmpty()}/{@link #suffixForNonEmpty()} are <em>not</em> emitted. With a
+ *       bare {@code IN ({ids})} this yields {@code IN ()} (a SQL syntax error), so guard against the
+ *       empty case or wrap the clause entirely with the prefix/suffix so it disappears cleanly.</li>
+ *   <li>Null collections (treated the same as empty)</li>
  *   <li>Single element collections</li>
- *   <li>Large collections (up to database parameter limits)</li>
+ *   <li>Large collections: one placeholder is emitted per element; the caller is responsible for
+ *       keeping the total within the JDBC driver's/database's maximum bind-parameter count, as this
+ *       annotation imposes no limit of its own</li>
  * </ul>
  *
  * @see Bind

@@ -618,7 +618,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *     rs -> rs.getString(1).toUpperCase());
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the value type produced by the row mapper
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
@@ -688,7 +688,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * upperName.ifPresent(name -> System.out.println("Name: " + name));
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the value type produced by the row mapper
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row

@@ -25,6 +25,11 @@ import java.lang.annotation.Target;
  * {@code {name}} token in the surrounding {@link Query @Query} SQL. This is the "list" form of
  * {@link SqlFragment}.
  *
+ * <p>Despite the {@code List} suffix in its name, this is <em>not</em> a {@code @Repeatable}
+ * container (unlike {@code HandlerList} or {@code OutParameterList}, which hold multiple
+ * {@code @Handler}/{@code @OutParameter} instances). It is an independent parameter annotation
+ * applied to a single collection/array parameter whose elements are joined into one SQL fragment.</p>
+ *
  * <p>Unlike {@link BindList} — which expands a collection into a parenthesized list of JDBC
  * placeholders for an {@code IN} clause — {@code @SqlFragmentList} rewrites the SQL text itself
  * with the comma-joined elements (with no surrounding parentheses and no value binding). Use it

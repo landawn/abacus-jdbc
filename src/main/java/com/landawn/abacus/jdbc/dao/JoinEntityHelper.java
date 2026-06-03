@@ -655,7 +655,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a single entity by property name with specific property selection.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * This is an abstract method that must be implemented by concrete DAO classes.
+     * This is an abstract method whose implementation is provided by the generated DAO.
      *
      * <p>This method is the core implementation for loading join entities. It queries the database
      * for related entities based on the join relationship defined in the {@code @JoinedBy} annotation
@@ -711,7 +711,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a collection of entities by property name with specific property selection.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * This is an abstract method that must be implemented by concrete DAO classes.
+     * This is an abstract method whose implementation is provided by the generated DAO.
      *
      * <p>This method is the core batch implementation for loading join entities. It efficiently loads
      * related entities for multiple parent entities in a single operation, avoiding the N+1 query problem.
@@ -1198,7 +1198,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
+     * @throws NullPointerException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
         final Class<?> cls = entity.getClass();
@@ -1669,7 +1669,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes join entities for a single entity by property name.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * This is an abstract method that must be implemented by concrete DAO classes.
+     * This is an abstract method whose implementation is provided by the generated DAO.
      *
      * <p>This method deletes all related entities for the specified join property. The deletion
      * is based on the foreign key relationship defined in the {@code @JoinedBy} annotation. The
@@ -1706,7 +1706,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes join entities for a collection of entities by property name.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * This is an abstract method that must be implemented by concrete DAO classes.
+     * This is an abstract method whose implementation is provided by the generated DAO.
      *
      * <p>This method efficiently deletes all related entities for multiple parent entities in a batch operation.
      * The implementation typically uses an IN clause to delete all related records in one or more SQL statements,

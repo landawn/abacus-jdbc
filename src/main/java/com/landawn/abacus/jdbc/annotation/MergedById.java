@@ -78,7 +78,9 @@ import com.landawn.abacus.annotation.JoinedBy;
  * <p>The annotation supports:</p>
  * <ul>
  *   <li>Single ID field (most common case)</li>
- *   <li>Composite IDs (using the deprecated value parameter)</li>
+ *   <li>Composite IDs &mdash; auto-detected from the entity's {@code @Id}-annotated fields (or
+ *       standard id naming conventions); the deprecated {@link #value()} parameter is only a manual
+ *       override and is not required</li>
  *   <li>Multiple levels of nesting</li>
  *   <li>Both LEFT and INNER joins</li>
  * </ul>
