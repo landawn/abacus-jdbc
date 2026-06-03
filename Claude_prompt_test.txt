@@ -1,0 +1,45 @@
+
+---
+TASK: Read the Eclipse-generated HTML coverage reports located in ./report/coverage/260606/ batch by batch.
+Each batch contains 20 HTML files, ordered by highest "Missed Instructions" first (start with the classes that have the most uncovered instructions). 
+For each class report in the batch:
+
+  - Identify the lines that are not covered by existing tests.
+  - Add unit tests that execute those uncovered lines.
+
+The newly added unit tests must follow the requirements below:
+
+  - Use ONLY org.junit.jupiter.api.Assertions:
+    assertEquals, assertNotNull, assertTrue, assertThrows, assertDoesNotThrow, etc.
+
+  - Every test method: public void, annotated with @Test, contains at least one
+    meaningful assertion.
+
+  - Naming pattern:
+      testMethodName()            -- primary / happy-path case
+      testMethodName_EdgeCase()   -- named edge case
+        Examples: testMethodName_EmptyInput
+                  testMethodName_NullKey
+                  testMethodName_Overflow
+
+  - Add a one-line comment above each new test group if the intent is not obvious
+    from the method name.
+
+  - Use methods from Suppliers and IntFunctions to create Supplier and IntFunction instances for input parameters whenever appropriate.
+  
+  - Avoid using size()/length() > 0 or < 0 in assertions. When possible, use assertEquals(expectedSizeOrLength, size()/length()) instead.
+
+  - Before adding a test method, check whether a method with the same name already
+    exists in the test class. If so, append a disambiguating suffix to avoid
+    duplicate method names.
+
+  - If no test class exists yet, CREATE one in the same package under
+    ./src/test/java/, named {SourceClassName}Test.java, extending TestBase.
+
+  - If a public method is abstract, part of a generated API, or genuinely
+    untestable in isolation, SKIP it and leave a // TODO: comment in the test
+    class explaining why.
+
+
+After completing each batch, run only the newly added test methods. If any tests fail, fix them — updating the source code if the failure is caused by a bug, or correcting the test itself if the test is wrong.
+
