@@ -1149,11 +1149,6 @@ public final class JdbcUtil {
     /**
      * Closes the specified {@link Connection}.
      *
-     * @deprecated This method is deprecated because it directly closes the connection, which is often not the desired
-     * behavior when using a {@link javax.sql.DataSource} that provides pooled connections.
-     * Use {@link #releaseConnection(Connection, javax.sql.DataSource)} instead to correctly handle
-     * pooled connections and integration with transaction managers.
-     *
      * <p><b>Recommended Alternative:</b></p>
      * <pre>{@code
      * DataSource dataSource = ...;
@@ -1171,6 +1166,10 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if a database access error occurs during closing.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #closeQuietly(Connection)
+     * @deprecated This method is deprecated because it directly closes the connection, which is often not the desired
+     * behavior when using a {@link javax.sql.DataSource} that provides pooled connections.
+     * Use {@link #releaseConnection(Connection, javax.sql.DataSource)} instead to correctly handle
+     * pooled connections and integration with transaction managers.
      */
     @Deprecated
     public static void close(final Connection conn) throws UncheckedSQLException {
@@ -1502,13 +1501,6 @@ public final class JdbcUtil {
     /**
      * Unconditionally closes a {@link Connection}, suppressing any close failures.
      *
-     * @deprecated This method is deprecated as it encourages manual connection management.
-     *             Prefer {@link #releaseConnection(Connection, javax.sql.DataSource)} and a pooled DataSource.
-     *
-     * <p>This method is null-safe and always returns immediately when {@code conn} is {@code null}.
-     * All closing exceptions are ignored; it delegates to
-     * {@link #closeQuietly(ResultSet, Statement, Connection)} with no ResultSet or Statement.</p>
-     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Deprecated fallback when you cannot rely on a DataSource.
@@ -1525,6 +1517,11 @@ public final class JdbcUtil {
      * @param conn The {@link Connection} to close. Can be {@code null}.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #close(Connection)
+     * @deprecated This method is deprecated as it encourages manual connection management.
+     *             Prefer {@link #releaseConnection(Connection, javax.sql.DataSource)} and a pooled DataSource.
+     *
+     * <p>This method is null-safe and always returns immediately when {@code conn} is {@code null}.
+     * All closing exceptions are ignored; it delegates to {@link #closeQuietly(ResultSet, Statement, Connection)} with no ResultSet or Statement.</p>
      */
     @Deprecated
     public static void closeQuietly(final Connection conn) {
