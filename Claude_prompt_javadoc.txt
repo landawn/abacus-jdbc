@@ -1,4 +1,20 @@
 
+---
+Task: Deep, line-by-line review of existing Javadoc across ./src/main/java
+
+-- Use multiple parallel agents to review the existing Javadoc comments in all classes under ./src/main/java. This is a review of what's already written — do not add Javadoc to undocumented members, and do not change any executable code.
+
+-- Partition the work across agents by directory/package (or by class-family groups) so the entire tree under ./src/main/java is covered with no overlap and no gaps. Each agent reviews its assigned files line by line.
+
+-- Evaluate every Javadoc comment (class, method, constructor, field) against three criteria:
+
+	-- 1. Accuracy — Does the prose correctly describe the actual behavior? Do @param, @return, @throws tags match the real method signature, parameter names, return type, and thrown exceptions? Flag stale, copy-paste, contradictory, or wrong descriptions; missing/extra/misnamed @param; @return on void (or missing on non-void); undocumented or incorrectly documented thrown exceptions; broken or wrong {@link} / @see references.
+	-- 2. Clarity — Is the wording unambiguous, grammatically correct, and complete? Flag confusing phrasing, typos, incomplete sentences, and descriptions that restate the method name without adding information.
+	-- 3. Consistency — Is terminology, phrasing, tag ordering, and formatting consistent across the codebase? Pay special attention to cross-variant consistency: this code is largely template-generated, so analogous members across sibling classes (e.g. CharTuple vs. LongTuple, the primitive-type variants, the arity variants) should document the same concept with the same wording. Flag any variant whose Javadoc diverges from its siblings.
+	
+-- Output: Each agent reports its findings as a structured list — grouped by file, citing file_path:line_number, with: (a) the criterion violated, (b) the exact problem, and (c) a suggested correction. Then consolidate all agents' findings into a single deduplicated report, ordered by file, and summarize the most common/systemic issues at the top.
+
+
 ==============================================================================================================================================
 
 Begin the task below by leveraging the existing Python scripts under ./scripts/. If completing the task requires modifying any script, include a complete account of every change (which script, what changed, and why) in your final summary.

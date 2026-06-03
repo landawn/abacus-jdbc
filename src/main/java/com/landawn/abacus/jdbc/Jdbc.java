@@ -1141,7 +1141,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
-         * rs -> rs.getInt("status") > 0,          // Filter for positive status
+         * rs -> rs.getInt("status") > 0,       // Filter for positive status
          * RowExtractor.createBy(User.class)    // Use User class for type info
          * );
          * }</pre>
@@ -2124,6 +2124,7 @@ public final class Jdbc {
          * .getDate(3)       // Column 3 as Date
          * .toMap();
          * }</pre>
+         *
          */
         @SequentialOnly
         class RowMapperBuilder {
@@ -2926,7 +2927,7 @@ public final class Jdbc {
          * BiRowMapper<User> mapper = BiRowMapper.to(
          * User.class,
          * colName -> !colName.startsWith("temp_"),  // Filter out temporary columns
-         * String::toLowerCase                      // Convert column names to lowercase before matching
+         * String::toLowerCase                       // Convert column names to lowercase before matching
          * );
          * }</pre>
          *
@@ -3951,6 +3952,7 @@ public final class Jdbc {
          * .getInt("user_age")
          * .to(User.class);   // Assumes User has properties 'firstName' and 'userAge'
          * }</pre>
+         *
          */
         @SequentialOnly
         class BiRowMapperBuilder {
@@ -4390,6 +4392,7 @@ public final class Jdbc {
      * };
      * // preparedQuery.forEach(printer);
      * }</pre>
+     *
      */
     @FunctionalInterface
     public interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
@@ -4616,6 +4619,7 @@ public final class Jdbc {
      * };
      * // preparedQuery.forEach(consumer);
      * }</pre>
+     *
      */
     @FunctionalInterface
     public interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
@@ -5922,6 +5926,15 @@ public final class Jdbc {
              * The actual value returned at runtime is always the raw column object; the generic
              * type parameter {@code T} is unchecked.
              *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapper<Object> mapper = ColumnOne.getObject();
+             * // The same shared GET_OBJECT instance is returned (cast to the inferred type).
+             * boolean same = (mapper == ColumnOne.GET_OBJECT); // true
+             * // Reads the first column of the current row as Object.
+             * Object value = mapper.apply(resultSet); // returns e.g. "Alice"; throws SQLException
+             * }</pre>
+             *
              * @param <T> the inferred target type; unchecked at runtime
              * @return a {@code RowMapper} that extracts an {@code Object} from the first column
              */
@@ -6015,6 +6028,16 @@ public final class Jdbc {
              * Creates a {@code BiParametersSetter} for setting a value of the specified type as the first parameter
              * of a {@code PreparedStatement}.
              *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * BiParametersSetter<AbstractQuery, String> setter = ColumnOne.set(String.class);
+             * // Binds "Bob" to the first parameter of the prepared query.
+             * setter.accept(preparedQuery, "Bob"); // throws SQLException
+             *
+             * // Works for any type backed by an Abacus-common Type.
+             * BiParametersSetter<AbstractQuery, Integer> intSetter = ColumnOne.set(Integer.class);
+             * }</pre>
+             *
              * @param <T> parameter type
              * @param type the class of the parameter.
              * @return a {@code BiParametersSetter} for the specified type.
@@ -6103,6 +6126,17 @@ public final class Jdbc {
         /**
          * A factory method to create an {@code OutParam} with the specified index and SQL type.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * OutParam idOut = OutParam.of(1, Types.INTEGER);
+         * int idx = idOut.getParameterIndex();    // returns 1
+         * int type = idOut.getSqlType();          // returns Types.INTEGER
+         * String name = idOut.getParameterName(); // returns null (index-based registration)
+         *
+         * // parameterIndex is 1-based and must be greater than 0.
+         * OutParam bad = OutParam.of(0, Types.INTEGER); // throws IllegalArgumentException
+         * }</pre>
+         *
          * @param parameterIndex the 1-based index of the parameter (must be {@code > 0}).
          * @param sqlType the SQL type from {@code java.sql.Types}.
          * @return a new {@code OutParam} instance.
@@ -6130,8 +6164,8 @@ public final class Jdbc {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // After calling a stored procedure with output parameters
-     * OutParamResult result = callableQuery.call(outParams);
+     * // After executing a stored procedure with output parameters
+     * OutParamResult result = callableQuery.executeAndGetOutParameters();
      *
      * // Retrieve by index
      * int id = result.getOutParamValue(1);
@@ -6162,6 +6196,13 @@ public final class Jdbc {
         /**
          * Retrieves the value of an output parameter by its 1-based index.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * OutParamResult result = callableQuery.executeAndGetOutParameters();
+         * int id = result.getOutParamValue(1);       // returns the value registered at index 1
+         * Object none = result.getOutParamValue(99); // returns null (no value at index 99)
+         * }</pre>
+         *
          * @param <T> expected parameter value type
          * @param parameterIndex the 1-based index of the parameter.
          * @return the parameter value, cast to type {@code T}. May be {@code null}.
@@ -6172,6 +6213,13 @@ public final class Jdbc {
 
         /**
          * Retrieves the value of an output parameter by its name.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * OutParamResult result = callableQuery.executeAndGetOutParameters();
+         * String name = result.getOutParamValue("result_name"); // returns the value registered under "result_name"
+         * Object none = result.getOutParamValue("unknown");     // returns null (no such name)
+         * }</pre>
          *
          * @param <T> expected parameter value type
          * @param parameterName the name of the parameter.
@@ -6185,6 +6233,14 @@ public final class Jdbc {
          * Returns a map containing all output parameter values. The keys of the map are
          * either the parameter index ({@code Integer}) or name ({@code String}).
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * OutParamResult result = callableQuery.executeAndGetOutParameters();
+         * Map<Object, Object> all = result.getOutParamValues();
+         * Object byIndex = all.get(1);             // value keyed by 1-based index
+         * Object byName = all.get("result_name");  // value keyed by parameter name
+         * }</pre>
+         *
          * @return a map of all output parameter values.
          */
         public Map<Object, Object> getOutParamValues() {
@@ -6193,6 +6249,14 @@ public final class Jdbc {
 
         /**
          * Returns the list of {@link OutParam} definitions that were used to register the output parameters.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * OutParamResult result = callableQuery.executeAndGetOutParameters();
+         * List<OutParam> defs = result.getOutParams();
+         * int size = defs.size();                           // number of registered out-parameters
+         * int firstIndex = defs.get(0).getParameterIndex(); // 1-based index of the first out-param
+         * }</pre>
          *
          * @return a list of {@code OutParam} objects.
          */
@@ -6320,6 +6384,14 @@ public final class Jdbc {
          * The class must have an accessible no-argument constructor; the instance is created
          * via reflection.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * boolean registered = HandlerFactory.register(MyHandler.class); // returns true if newly registered
+         * boolean again = HandlerFactory.register(MyHandler.class);      // returns false (already registered)
+         *
+         * HandlerFactory.register((Class<? extends Handler<?>>) null); // throws IllegalArgumentException
+         * }</pre>
+         *
          * @param handlerClass the handler class to instantiate and register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
          * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
@@ -6333,6 +6405,15 @@ public final class Jdbc {
         /**
          * Registers a handler instance. The handler is registered using its canonical class name as the qualifier.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * Handler<MyDao> handler = new MyHandler();
+         * boolean registered = HandlerFactory.register(handler);    // returns true if newly registered
+         * boolean again = HandlerFactory.register(new MyHandler()); // returns false (same qualifier already present)
+         *
+         * HandlerFactory.register((Handler<?>) null); // throws IllegalArgumentException
+         * }</pre>
+         *
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
          * @throws IllegalArgumentException if {@code handler} is {@code null}.
@@ -6345,6 +6426,15 @@ public final class Jdbc {
 
         /**
          * Registers a handler instance with a specific qualifier string.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * Handler<MyDao> handler = new MyHandler();
+         * boolean registered = HandlerFactory.register("myHandler", handler);    // returns true if newly registered
+         * boolean again = HandlerFactory.register("myHandler", new MyHandler()); // returns false (qualifier already present)
+         *
+         * HandlerFactory.register("", handler); // throws IllegalArgumentException (empty qualifier)
+         * }</pre>
          *
          * @param qualifier the unique identifier for the handler.
          * @param handler the handler instance to register.
@@ -6361,6 +6451,15 @@ public final class Jdbc {
         /**
          * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found,
          * it attempts to retrieve it from the Spring application context if available.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * HandlerFactory.register("myHandler", new MyHandler());
+         * Handler<?> h = HandlerFactory.get("myHandler");          // returns the registered handler
+         * Handler<?> none = HandlerFactory.get("no.such.Handler"); // returns null (not registered, no Spring bean)
+         *
+         * HandlerFactory.get(""); // throws IllegalArgumentException (empty qualifier)
+         * }</pre>
          *
          * @param qualifier the unique identifier for the handler.
          * @return the handler instance, or {@code null} if not found.
@@ -6392,6 +6491,15 @@ public final class Jdbc {
          * Retrieves a handler by its class. It first checks the internal registry using the class's
          * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring
          * application context.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * HandlerFactory.register(new MyHandler());
+         * Handler<?> h = HandlerFactory.get(MyHandler.class);              // returns the registered handler
+         * Handler<?> none = HandlerFactory.get(UnregisteredHandler.class); // returns null (not registered, no Spring bean)
+         *
+         * HandlerFactory.get((Class<? extends Handler<?>>) null); // throws IllegalArgumentException
+         * }</pre>
          *
          * @param handlerClass the class of the handler to retrieve.
          * @return the handler instance, or {@code null} if not found.
@@ -6435,6 +6543,14 @@ public final class Jdbc {
          * Retrieves a handler by its class. If the handler is not found in the registry or Spring context,
          * a new instance is created, registered, and returned.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * Handler<?> h = HandlerFactory.getOrCreate(MyHandler.class);    // creates, registers and returns a new instance
+         * Handler<?> same = HandlerFactory.getOrCreate(MyHandler.class); // returns the same registered instance (h == same)
+         *
+         * HandlerFactory.getOrCreate((Class<? extends Handler<?>>) null); // throws IllegalArgumentException
+         * }</pre>
+         *
          * @param handlerClass the class of the handler to retrieve or create.
          * @return the existing or newly created handler instance.
          * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
@@ -6467,6 +6583,17 @@ public final class Jdbc {
         /**
          * Creates a {@code Handler} with a custom action to be executed before method invocation.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * Handler<UserDao> handler = HandlerFactory.create(
+         *     (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()));
+         * // The handler's beforeInvoke runs the action; afterInvoke is a no-op.
+         * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..."
+         *
+         * HandlerFactory.create((Throwables.TriConsumer<Object, Object[],
+         *         Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException
+         * }</pre>
+         *
          * @param <T> proxy type
          * @param <E> exception type that action can throw
          * @param beforeInvokeAction the action to perform before the method is called.
@@ -6488,6 +6615,17 @@ public final class Jdbc {
 
         /**
          * Creates a {@code Handler} with a custom action to be executed after method invocation.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * Handler<UserDao> handler = HandlerFactory.create(
+         *     (result, proxy, args, sig) -> System.out.println("After: " + result));
+         * // The handler's afterInvoke runs the action; beforeInvoke is a no-op.
+         * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..."
+         *
+         * HandlerFactory.create((Throwables.QuadConsumer<Object, Object, Object[],
+         *         Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException
+         * }</pre>
          *
          * @param <T> proxy type
          * @param <E> exception type that action can throw
@@ -6512,6 +6650,18 @@ public final class Jdbc {
 
         /**
          * Creates a {@code Handler} with custom actions to be executed both before and after method invocation.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * Handler<UserDao> handler = HandlerFactory.create(
+         *     (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()),
+         *     (result, proxy, args, sig) -> System.out.println("After: " + result));
+         * handler.beforeInvoke(daoProxy, args, sig);             // prints "Before: ..."
+         * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..."
+         *
+         * // Both actions are required; passing null for either throws.
+         * HandlerFactory.create((proxy, args, sig) -> {}, null); // throws IllegalArgumentException
+         * }</pre>
          *
          * @param <T> proxy type
          * @param <E> exception type that actions can throw
@@ -6678,6 +6828,15 @@ public final class Jdbc {
         /**
          * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Holds up to 1000 entries; the eviction thread runs every 3 seconds.
+         * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000);
+         * boolean cached = cache.put(key, result, daoProxy, args, sig);  // returns true (non-null result cached)
+         * Object hit = cache.get(key, daoProxy, args, sig);              // returns the cached result
+         * boolean rejected = cache.put(key2, null, daoProxy, args, sig); // returns false (null result not cached)
+         * }</pre>
+         *
          * @param capacity the maximum number of entries the cache can hold.
          * @param evictDelay the interval in milliseconds for the background eviction thread.
          */
@@ -6726,6 +6885,17 @@ public final class Jdbc {
          * Implements cache invalidation. If the table name can be determined from the cache key,
          * it removes all cache entries associated with that table. Otherwise, it clears the entire cache.
          * No action is taken for update operations that affect zero rows.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000);
+         * // Cache key format: fullMethodName#tableName#jsonArrayOfParameters
+         * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
+         * // An update against the "users" table invalidates all entries for that table.
+         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
+         * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted)
+         * }</pre>
+         *
          */
         @Override
         @SuppressWarnings("unused")

@@ -128,6 +128,7 @@ public final class JdbcCodeGenerationUtil {
      * String minExpr = MIN_FUNC.apply(User.class, Integer.class, "age");
      * // Returns: "min(age)"
      * }</pre>
+     *
      */
     public static final TriFunction<Class<?>, Class<?>, String, String> MIN_FUNC = (entityClass, propClass, propName) -> {
         if (Comparable.class.isAssignableFrom(propClass)) {
@@ -147,6 +148,7 @@ public final class JdbcCodeGenerationUtil {
      * String maxExpr = MAX_FUNC.apply(User.class, BigDecimal.class, "salary");
      * // Returns: "max(salary)"
      * }</pre>
+     *
      */
     public static final TriFunction<Class<?>, Class<?>, String, String> MAX_FUNC = (entityClass, propClass, propName) -> {
         if (Comparable.class.isAssignableFrom(propClass)) {

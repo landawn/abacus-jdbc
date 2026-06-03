@@ -36,6 +36,7 @@ public enum OP {
      * @Query(value = "SELECT 1 FROM users WHERE email = ?", op = OP.exists)
      * boolean emailExists(String email);
      * }</pre>
+     *
      */
     exists,
 
@@ -88,6 +89,7 @@ public enum OP {
      * @Query(value = "SELECT * FROM users WHERE active = true", op = OP.list)
      * List<User> getActiveUsers();
      * }</pre>
+     *
      */
     list,
 
@@ -181,6 +183,7 @@ public enum OP {
      * @Query(value = "{call getUsersAndOrders(?)}", op = OP.listAll, isProcedure = true)
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
      * }</pre>
+     *
      */
     listAll,
 
@@ -198,6 +201,7 @@ public enum OP {
      * @Query(value = "{call getComplexReport(?, ?)}", op = OP.queryAll, isProcedure = true)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre>
+     *
      */
     queryAll,
 
@@ -215,6 +219,7 @@ public enum OP {
      * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
      * }</pre>
+     *
      */
     streamAll,
 
@@ -253,6 +258,7 @@ public enum OP {
      * @Query(value = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)
      * int createUser(String name, String email);
      * }</pre>
+     *
      */
     update,
 
@@ -268,6 +274,7 @@ public enum OP {
      * @Query(value = "DELETE FROM audit_logs WHERE created_date < ?", op = OP.largeUpdate)
      * long purgeOldAuditLogs(Date cutoffDate);
      * }</pre>
+     *
      */
     largeUpdate,
 
@@ -284,11 +291,12 @@ public enum OP {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT
-     * List<User> getAllUsers();   // Framework infers OP.list
+     * List<User> getAllUsers();      // Framework infers OP.list
      * 
      * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
-     * int deleteUser(long id);   // Framework infers OP.update
+     * int deleteUser(long id);                  // Framework infers OP.update
      * }</pre>
+     *
      */
     DEFAULT
 

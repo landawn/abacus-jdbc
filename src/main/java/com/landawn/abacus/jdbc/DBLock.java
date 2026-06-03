@@ -75,7 +75,7 @@ import com.landawn.abacus.util.Strings;
  * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "app_distributed_locks");
  *
  * String resourceId = "inventory_item_123";
- * long lockLiveTimeMillis = 60 * 1000;  // Lock for 1 minute
+ * long lockLiveTimeMillis = 60 * 1000;       // Lock for 1 minute
  * long acquisitionTimeoutMillis = 5 * 1000;  // Try to acquire for up to 5 seconds
  *
  * String lockCode = dbLock.lock(resourceId, lockLiveTimeMillis, acquisitionTimeoutMillis);
@@ -379,7 +379,7 @@ public final class DBLock {
      * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "batch_processing_queue";
      * long lockDuration = 10 * 60 * 1000;  // Lock for 10 minutes
-     * long waitTimeout = 30 * 1000;  // Wait up to 30 seconds to acquire
+     * long waitTimeout = 30 * 1000;        // Wait up to 30 seconds to acquire
      *
      * String lockCode = dbLock.lock(resourceIdentifier, lockDuration, waitTimeout);
      *
@@ -425,9 +425,9 @@ public final class DBLock {
      * <pre>{@code
      * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "inventory_update_process";
-     * long lockDuration = 5 * 60 * 1000;  // Lock for 5 minutes
+     * long lockDuration = 5 * 60 * 1000;    // Lock for 5 minutes
      * long acquisitionTimeout = 10 * 1000;  // Wait up to 10 seconds
-     * long retryInterval = 500;  // Retry every 500 milliseconds
+     * long retryInterval = 500;             // Retry every 500 milliseconds
      *
      * String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval);
      *
@@ -634,6 +634,7 @@ public final class DBLock {
      *     dbLock.close();
      * }
      * }</pre>
+     *
      */
     public synchronized void close() {
         if (isClosed) {

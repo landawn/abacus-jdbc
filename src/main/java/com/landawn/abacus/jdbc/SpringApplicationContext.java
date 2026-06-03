@@ -73,6 +73,19 @@ public final class SpringApplicationContext {
      * <p>The Spring {@link ApplicationContext} field is populated by Spring after construction
      * via {@link Autowired}, so calling {@link #getBean(String)} or {@link #getBean(Class)} before
      * Spring has finished injection will return {@code null}.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Typically registered as a Spring @Bean so the ApplicationContext is auto-wired in.
+     * SpringApplicationContext ctx = new SpringApplicationContext();
+     *
+     * // Before Spring injects the ApplicationContext, lookups return null (no exception).
+     * Object notReady = ctx.getBean("myDataSource"); // null until Spring finishes injection
+     *
+     * // After injection, beans are resolved by name or by type.
+     * // DataSource ds = ctx.getBean(DataSource.class);
+     * }</pre>
+     *
      */
     public SpringApplicationContext() {
     }

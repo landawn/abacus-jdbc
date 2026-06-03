@@ -47,7 +47,21 @@ public final class EmptyHandler implements Jdbc.Handler<Dao> {
      * Constructs a new EmptyHandler instance.
      *
      * <p>This no-operation handler is used internally by the framework
-     * as a placeholder when no actual handling logic is required.</p>
+     * as a placeholder when no actual handling logic is required. Because it inherits the default
+     * {@link Jdbc.Handler#beforeInvoke} and {@link Jdbc.Handler#afterInvoke} methods, both hooks are
+     * pass-throughs that do nothing. It is normally supplied by the framework as a default/no-op
+     * handler rather than constructed directly by application code.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Framework-internal use: a pass-through handler whose hooks do nothing.
+     * Jdbc.Handler<Dao> handler = new EmptyHandler();
+     *
+     * // Invoking either hook is a no-op (no exception, no side effect).
+     * handler.beforeInvoke(null, null, null);
+     * handler.afterInvoke(null, null, null, null);
+     * }</pre>
+     *
      */
     public EmptyHandler() {
         // No-op constructor for empty handler

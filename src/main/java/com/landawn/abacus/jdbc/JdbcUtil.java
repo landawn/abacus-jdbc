@@ -1889,6 +1889,27 @@ public final class JdbcUtil {
     /**
      * Returns an ordered list of column names for a specified table.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     // Delegates to getColumnNames(conn, tableName).
+     *     List<String> cols = JdbcUtil.getColumnNameList(conn, "users");
+     *     System.out.println(cols);   // e.g. [ID, FIRST_NAME, LAST_NAME] (H2 upper-cases unquoted identifiers)
+     *
+     *     // Identical result to the non-deprecated method:
+     *     List<String> same = JdbcUtil.getColumnNames(conn, "users");   // equal to cols
+     *
+     *     // A qualified name (schema.table or catalog.schema.table) is also accepted:
+     *     List<String> qualified = JdbcUtil.getColumnNameList(conn, "PUBLIC.users");   // returns the same columns
+     *
+     *     // Non-existent table:
+     *     JdbcUtil.getColumnNameList(conn, "no_such_table");   // throws SQLException
+     *
+     *     // Blank table name:
+     *     JdbcUtil.getColumnNameList(conn, "");   // throws IllegalArgumentException
+     * }
+     * }</pre>
+     *
      * @param conn The database {@link Connection} to use.
      * @param tableName The name of the table for which to retrieve column names.
      * @return A {@link List} of column names in the order they are defined in the table.
@@ -1999,6 +2020,22 @@ public final class JdbcUtil {
 
     /**
      * Returns an ordered list of column labels from a {@link ResultSet}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Delegates to getColumnLabels(rs); prefers the column alias (label), falling back to the column name.
+     * try (Statement stmt = connection.createStatement();
+     *      ResultSet rs = stmt.executeQuery("SELECT id AS \"User ID\", first_name AS \"First Name\" FROM users")) {
+     *     List<String> labels = JdbcUtil.getColumnLabelList(rs);
+     *     System.out.println(labels);   // returns [User ID, First Name]
+     * }
+     *
+     * // No aliases: falls back to column names (H2 upper-cases unquoted identifiers).
+     * try (Statement stmt = connection.createStatement();
+     *      ResultSet rs = stmt.executeQuery("SELECT id, first_name FROM users")) {
+     *     List<String> labels = JdbcUtil.getColumnLabelList(rs);   // returns [ID, FIRST_NAME]
+     * }
+     * }</pre>
      *
      * @param rs The {@link ResultSet} from which to retrieve column labels.
      * @return A {@link List} of column labels in the order they appear in the {@code ResultSet}.
@@ -3781,6 +3818,19 @@ public final class JdbcUtil {
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Reuse a pre-parsed named SQL (parsing once is cheaper when the query is run repeatedly).
+     * ParsedSql psql = ParsedSql.parse("SELECT * FROM users WHERE first_name = :firstName AND status = :status");
+     * List<User> users = JdbcUtil.prepareNamedQuery(dataSource, psql)
+     *     .setString("firstName", "John")
+     *     .setString("status", "ACTIVE")
+     *     .list(User.class);
+     *
+     * // Passing a null ParsedSql throws IllegalArgumentException.
+     * JdbcUtil.prepareNamedQuery(dataSource, (ParsedSql) null);   // throws IllegalArgumentException
+     * }</pre>
+     *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @return A NamedQuery object representing the prepared named SQL query
@@ -3824,6 +3874,16 @@ public final class JdbcUtil {
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ParsedSql psql = ParsedSql.parse("INSERT INTO products (name, price) VALUES (:name, :price)");
+     * Optional<Long> newId = JdbcUtil.prepareNamedQuery(dataSource, psql, true)
+     *     .setString("name", "Laptop")
+     *     .setDouble("price", 999.99)
+     *     .insert();   // returns the generated key
+     * newId.ifPresent(id -> System.out.println("New product ID: " + id));
+     * }</pre>
      *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
@@ -3870,6 +3930,19 @@ public final class JdbcUtil {
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Request the auto-generated key from column index 1 (the 'id' column).
+     * ParsedSql psql = ParsedSql.parse("INSERT INTO events (event_type, message) VALUES (:type, :msg)");
+     * Optional<Long> generatedId = JdbcUtil.prepareNamedQuery(dataSource, psql, new int[]{1})
+     *     .setString("type", "SYSTEM")
+     *     .setString("msg", "System startup")
+     *     .insert();   // returns the generated key
+     *
+     * // An empty returnColumnIndexes array throws IllegalArgumentException.
+     * JdbcUtil.prepareNamedQuery(dataSource, psql, new int[0]);   // throws IllegalArgumentException
+     * }</pre>
      *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
@@ -3918,6 +3991,19 @@ public final class JdbcUtil {
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Request the auto-generated key by column name.
+     * ParsedSql psql = ParsedSql.parse("INSERT INTO notifications (user_id, message) VALUES (:userId, :msg)");
+     * Optional<Long> newId = JdbcUtil.prepareNamedQuery(dataSource, psql, new String[]{"id"})
+     *     .setInt("userId", 123)
+     *     .setString("msg", "Welcome to the system")
+     *     .insert();   // returns the generated key
+     *
+     * // An empty returnColumnNames array throws IllegalArgumentException.
+     * JdbcUtil.prepareNamedQuery(dataSource, psql, new String[0]);   // throws IllegalArgumentException
+     * }</pre>
+     *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnNames The column names for which auto-generated keys should be returned
@@ -3965,6 +4051,16 @@ public final class JdbcUtil {
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Create a scrollable ResultSet with named parameters.
+     * ParsedSql psql = ParsedSql.parse("SELECT * FROM users WHERE department = :dept");
+     * List<User> users = JdbcUtil.prepareNamedQuery(dataSource, psql,
+     *         (conn, sql) -> conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY))
+     *     .setString("dept", "Engineering")
+     *     .list(User.class);
+     * }</pre>
+     *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
@@ -4007,6 +4103,19 @@ public final class JdbcUtil {
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ParsedSql psql = ParsedSql.parse("UPDATE users SET status = :status WHERE id = :id");
+     * try (Connection conn = dataSource.getConnection()) {
+     *     int updated = JdbcUtil.prepareNamedQuery(conn, psql)
+     *         .setString("status", "ACTIVE")
+     *         .setLong("id", userId)
+     *         .update();   // returns the number of rows updated
+     * } catch (SQLException e) {
+     *     // Handle exception
+     * }
+     * }</pre>
+     *
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @return A NamedQuery object representing the prepared named SQL query
@@ -4025,6 +4134,21 @@ public final class JdbcUtil {
      * Prepares a named SQL query with auto-generated keys support using the provided Connection and ParsedSql object.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ParsedSql psql = ParsedSql.parse("INSERT INTO products (name, price, category) VALUES (:name, :price, :category)");
+     * try (Connection conn = dataSource.getConnection()) {
+     *     Optional<Long> newId = JdbcUtil.prepareNamedQuery(conn, psql, true)
+     *         .setString("name", "Laptop")
+     *         .setDouble("price", 999.99)
+     *         .setString("category", "Electronics")
+     *         .insert();   // returns the generated key
+     *     System.out.println("New product ID: " + newId.orElse(null));
+     * } catch (SQLException e) {
+     *     // Handle exception
+     * }
+     * }</pre>
      *
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
@@ -4046,6 +4170,21 @@ public final class JdbcUtil {
      * Prepares a named SQL query with specific column indexes for auto-generated keys using the provided Connection and ParsedSql object.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ParsedSql psql = ParsedSql.parse("INSERT INTO events (event_type, message) VALUES (:type, :msg)");
+     * try (Connection conn = dataSource.getConnection()) {
+     *     // Request the auto-generated key from column index 1 (the 'id' column).
+     *     Optional<Long> generatedId = JdbcUtil.prepareNamedQuery(conn, psql, new int[]{1})
+     *         .setString("type", "SYSTEM")
+     *         .setString("msg", "System startup")
+     *         .insert();   // returns the generated key
+     *     generatedId.ifPresent(id -> System.out.println("New event ID: " + id));
+     * } catch (SQLException e) {
+     *     // Handle exception
+     * }
+     * }</pre>
      *
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
@@ -4069,6 +4208,20 @@ public final class JdbcUtil {
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ParsedSql psql = ParsedSql.parse("INSERT INTO notifications (user_id, message) VALUES (:userId, :msg)");
+     * try (Connection conn = dataSource.getConnection()) {
+     *     Optional<Long> newId = JdbcUtil.prepareNamedQuery(conn, psql, new String[]{"id"})
+     *         .setInt("userId", 123)
+     *         .setString("msg", "Welcome to the system")
+     *         .insert();   // returns the generated key
+     *     newId.ifPresent(id -> System.out.println("New notification ID: " + id));
+     * } catch (SQLException e) {
+     *     // Handle exception
+     * }
+     * }</pre>
+     *
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnNames The column names for which auto-generated keys should be returned
@@ -4090,6 +4243,20 @@ public final class JdbcUtil {
      * Prepares a named SQL query using a custom statement creator with the provided Connection and ParsedSql object.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ParsedSql psql = ParsedSql.parse("SELECT * FROM orders WHERE customer_id = :customerId");
+     * try (Connection conn = dataSource.getConnection()) {
+     *     // Create a scrollable ResultSet with named parameters.
+     *     List<Order> orders = JdbcUtil.prepareNamedQuery(conn, psql,
+     *             (c, sql) -> c.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY))
+     *         .setInt("customerId", 456)
+     *         .list(Order.class);
+     * } catch (SQLException e) {
+     *     // Handle exception
+     * }
+     * }</pre>
      *
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
@@ -4119,6 +4286,17 @@ public final class JdbcUtil {
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Efficiently stream over a large, filtered result set without loading everything into memory.
+     * long count = JdbcUtil.prepareNamedQueryForLargeResult(dataSource,
+     *             "SELECT * FROM event_logs WHERE level = :level")
+     *     .setString("level", "ERROR")
+     *     .stream(LogEntry.class)
+     *     .count();
+     * System.out.println("Found " + count + " error entries.");
+     * }</pre>
+     *
      * @param ds The DataSource to use for the query
      * @param namedSql The named SQL string to prepare
      * @return A NamedQuery object configured for big result sets
@@ -4141,6 +4319,17 @@ public final class JdbcUtil {
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Reuse a pre-parsed named SQL while streaming a large result set.
+     * ParsedSql psql = ParsedSql.parse("SELECT * FROM event_logs WHERE level = :level");
+     * long count = JdbcUtil.prepareNamedQueryForLargeResult(dataSource, psql)
+     *     .setString("level", "ERROR")
+     *     .stream(LogEntry.class)
+     *     .count();
+     * System.out.println("Found " + count + " error entries.");
+     * }</pre>
+     *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @return A NamedQuery object configured for big result sets
@@ -4157,6 +4346,21 @@ public final class JdbcUtil {
      * This method sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and a larger fetch size to improve performance when streaming many rows.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     // Stream a large, filtered result set on a caller-managed connection.
+     *     long count = JdbcUtil.prepareNamedQueryForLargeResult(conn,
+     *                 "SELECT * FROM event_logs WHERE level = :level")
+     *         .setString("level", "ERROR")
+     *         .stream(LogEntry.class)
+     *         .count();
+     *     System.out.println("Found " + count + " error entries.");
+     * } catch (SQLException e) {
+     *     // Handle exception
+     * }
+     * }</pre>
      *
      * @param conn The Connection to use for the query
      * @param namedSql The named SQL string to prepare
@@ -4192,7 +4396,6 @@ public final class JdbcUtil {
      * Date createdDate = outResult.getOutParamValue(3);
      * }</pre>
      * 
-     *
      * @param ds The DataSource to use for the query
      * @param sql The SQL string for the stored procedure call
      * @return A CallableQuery object representing the prepared callable SQL query
@@ -4311,6 +4514,26 @@ public final class JdbcUtil {
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // The caller owns the connection and MUST close it.
+     * Connection conn = dataSource.getConnection();
+     * try (CallableQuery query = JdbcUtil.prepareCallableQuery(conn, "{call get_user_info(?, ?, ?)}")) {
+     *     Jdbc.OutParamResult outResult = query.setLong(1, userId)
+     *         .registerOutParameter(2, Types.VARCHAR)
+     *         .registerOutParameter(3, Types.DATE)
+     *         .executeAndGetOutParameters();
+     *
+     *     String name = outResult.getOutParamValue(2);
+     *     Date createdDate = outResult.getOutParamValue(3);
+     * } finally {
+     *     conn.close();   // this method does not close the connection for you
+     * }
+     *
+     * // A null connection or empty SQL is rejected.
+     * JdbcUtil.prepareCallableQuery((Connection) null, "{call foo()}");   // throws IllegalArgumentException
+     * }</pre>
+     *
      * @param conn The Connection to use for the query
      * @param sql The SQL string for the stored procedure call
      * @return A CallableQuery object representing the prepared callable SQL query
@@ -4328,6 +4551,27 @@ public final class JdbcUtil {
      * Prepares a callable SQL query using a custom statement creator with the provided Connection.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Custom statement creator: configure a query timeout on the CallableStatement.
+     * Connection conn = dataSource.getConnection();
+     * try (CallableQuery query = JdbcUtil.prepareCallableQuery(conn, "{call get_users(?, ?)}",
+     *         (c, sql) -> {
+     *             CallableStatement stmt = c.prepareCall(sql);
+     *             stmt.setQueryTimeout(30);   // 30 seconds
+     *             return stmt;
+     *         })) {
+     *     query.setInt(1, departmentId)
+     *          .registerOutParameter(2, Types.INTEGER)
+     *          .execute();
+     * } finally {
+     *     conn.close();   // this method does not close the connection for you
+     * }
+     *
+     * // A null stmtCreator (or conn, or empty sql) is rejected.
+     * JdbcUtil.prepareCallableQuery(conn, "{call foo()}", null);   // throws IllegalArgumentException
+     * }</pre>
      *
      * @param conn The Connection to use for the query
      * @param sql The SQL string for the stored procedure call
@@ -5011,6 +5255,22 @@ public final class JdbcUtil {
      * {@link #executeBatchUpdate(Connection, String, List, int)} for the auto-commit / atomicity
      * semantics that apply when {@code listOfParameters.size() > 1}.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Each element of the outer list supplies one row's parameters.
+     * List<List<?>> rows = Arrays.asList(
+     *         Arrays.asList("John", 25),
+     *         Arrays.asList("Jane", 30));
+     * try (Connection conn = dataSource.getConnection()) {
+     *     int total = JdbcUtil.executeBatchUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", rows);   // returns 2
+     *
+     *     // An empty list is a no-op.
+     *     int zero = JdbcUtil.executeBatchUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", Collections.emptyList()); // returns 0
+     * }                                                                                    // caller closes conn; this method does not
+     * }</pre>
+     *
      * @param conn the {@link Connection} to use; must not be {@code null} and not closed by this method
      * @param sql the SQL statement to execute; must not be {@code null} or empty
      * @param listOfParameters a list of parameter sets for the batch update; may be empty (no-op returning {@code 0})
@@ -5033,6 +5293,23 @@ public final class JdbcUtil {
      * auto-commit is temporarily disabled so that all batches execute as a single transaction. The original
      * auto-commit setting is restored after execution, with the changes either committed (on success) or
      * rolled back (on failure).</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Insert 10,000 rows in batches of 500, all within one transaction.
+     * List<List<?>> data = new ArrayList<>();
+     * for (int i = 0; i < 10_000; i++) {
+     *     data.add(Arrays.asList("User" + i, i % 100));
+     * }
+     * try (Connection conn = dataSource.getConnection()) {
+     *     int total = JdbcUtil.executeBatchUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", data, 500);   // returns 10000
+     *
+     *     // An empty list is a no-op; a non-positive batchSize is rejected.
+     *     int zero = JdbcUtil.executeBatchUpdate(conn, sql, Collections.emptyList(), 500);   // returns 0
+     *     JdbcUtil.executeBatchUpdate(conn, sql, data, 0);   // throws IllegalArgumentException
+     * }
+     * }</pre>
      *
      * @param conn The Connection to use for the batch update
      * @param sql The SQL string to execute
@@ -5116,6 +5393,19 @@ public final class JdbcUtil {
      * {@code long} sum of affected rows, suitable for updates whose total row counts may exceed
      * {@link Integer#MAX_VALUE}.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<List<?>> rows = Arrays.asList(
+     *         Arrays.asList("John", 25),
+     *         Arrays.asList("Jane", 30));
+     * long total = JdbcUtil.executeLargeBatchUpdate(dataSource,
+     *         "INSERT INTO users (name, age) VALUES (?, ?)", rows);   // returns 2L
+     *
+     * // An empty list is a no-op.
+     * long zero = JdbcUtil.executeLargeBatchUpdate(dataSource,
+     *         "INSERT INTO users (name, age) VALUES (?, ?)", Collections.emptyList());   // returns 0L
+     * }</pre>
+     *
      * @param ds the {@link javax.sql.DataSource} to use for the batch update; must not be {@code null}
      * @param sql the SQL statement to execute; must not be {@code null} or empty
      * @param listOfParameters a list of parameter sets; each element supplies one set of parameter
@@ -5134,6 +5424,22 @@ public final class JdbcUtil {
     /**
      * Executes a large batch SQL update using the provided DataSource with specified batch size.
      * This method returns a {@code long} value to support updates affecting more than {@link Integer#MAX_VALUE} rows.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Suitable when the total affected-row count may exceed Integer.MAX_VALUE.
+     * List<List<?>> data = new ArrayList<>();
+     * for (int i = 0; i < 1_000_000; i++) {
+     *     data.add(Arrays.asList("User" + i, i % 100));
+     * }
+     * // When data.size() > batchSize, a transaction is started automatically for atomicity.
+     * long total = JdbcUtil.executeLargeBatchUpdate(dataSource,
+     *         "INSERT INTO users (name, age) VALUES (?, ?)", data, 1000);
+     *
+     * // An empty list returns 0L; a non-positive batchSize is rejected.
+     * long zero = JdbcUtil.executeLargeBatchUpdate(dataSource, sql, Collections.emptyList(), 1000);   // returns 0L
+     * JdbcUtil.executeLargeBatchUpdate(dataSource, sql, data, 0);   // throws IllegalArgumentException
+     * }</pre>
      *
      * @param ds The DataSource to use for the batch update
      * @param sql The SQL string to execute
@@ -5185,6 +5491,20 @@ public final class JdbcUtil {
      * Executes a large batch SQL update using the provided Connection with default batch size.
      * This method does not close the provided Connection after the batch update is executed.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<List<?>> rows = Arrays.asList(
+     *         Arrays.asList("John", 25),
+     *         Arrays.asList("Jane", 30));
+     * try (Connection conn = dataSource.getConnection()) {
+     *     long total = JdbcUtil.executeLargeBatchUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", rows);   // returns 2L
+     *
+     *     long zero = JdbcUtil.executeLargeBatchUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", Collections.emptyList()); // returns 0L
+     * }                                                                                    // caller closes conn; this method does not
+     * }</pre>
+     *
      * @param conn The Connection to use for the batch update
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
@@ -5206,6 +5526,21 @@ public final class JdbcUtil {
      * auto-commit is temporarily disabled so that all batches execute as a single transaction. The original
      * auto-commit setting is restored after execution, with the changes either committed (on success) or
      * rolled back (on failure).</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<List<?>> rows = Arrays.asList(
+     *         Arrays.asList("c", 1), Arrays.asList("d", 2), Arrays.asList("e", 3));
+     * try (Connection conn = dataSource.getConnection()) {
+     *     // If conn is in auto-commit mode and more than one row is supplied,
+     *     // all batches run as a single transaction.
+     *     long total = JdbcUtil.executeLargeBatchUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", rows, 2);   // returns 3L
+     *
+     *     long zero = JdbcUtil.executeLargeBatchUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", Collections.emptyList(), 2);   // returns 0L
+     * }
+     * }</pre>
      *
      * @param conn The Connection to use for the batch update
      * @param sql The SQL string to execute
@@ -5289,6 +5624,20 @@ public final class JdbcUtil {
      * binding, and resource cleanup. Use it when you do not know in advance whether the SQL returns a
      * {@link ResultSet} or an update count.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // SELECT: the first result is a ResultSet -> returns true.
+     * boolean hasResultSet = JdbcUtil.execute(dataSource,
+     *         "SELECT * FROM users WHERE age > ?", 18);   // returns true
+     *
+     * // INSERT/UPDATE/DELETE: the first result is an update count -> returns false.
+     * boolean isResultSet = JdbcUtil.execute(dataSource,
+     *         "INSERT INTO users (name, age) VALUES (?, ?)", "John", 25);   // returns false
+     *
+     * // A null DataSource is rejected.
+     * JdbcUtil.execute((javax.sql.DataSource) null, "SELECT 1");   // throws IllegalArgumentException
+     * }</pre>
+     *
      * @param ds the {@link javax.sql.DataSource} to obtain a connection from; must not be {@code null}
      * @param sql the SQL statement to execute; must not be {@code null} or empty
      * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
@@ -5324,6 +5673,22 @@ public final class JdbcUtil {
      * <p>This method does not manage the lifecycle of the connection — the caller is responsible for
      * closing {@code conn}. The internally created {@link PreparedStatement} is always closed before
      * this method returns.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     // SELECT -> the first result is a ResultSet.
+     *     boolean hasResultSet = JdbcUtil.execute(conn,
+     *             "SELECT * FROM users WHERE age > ?", 18);   // returns true
+     *
+     *     // INSERT -> the first result is an update count, not a ResultSet.
+     *     boolean isResultSet = JdbcUtil.execute(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", "John", 25);   // returns false
+     *
+     *     // DDL -> no ResultSet.
+     *     boolean ddl = JdbcUtil.execute(conn, "CREATE TABLE tmp_x (id INT)");   // returns false
+     * }
+     * }</pre>
      *
      * @param conn the {@link Connection} to use; must not be {@code null} and not closed by this method
      * @param sql the SQL statement to execute; must not be {@code null} or empty
@@ -5751,6 +6116,20 @@ public final class JdbcUtil {
      * This method combines filtering and transformation: first, rows are filtered based on the
      * {@code RowFilter}, then the remaining rows are transformed using the {@code RowExtractor}.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Filter rows and transform a column in a single pass.
+     * RowFilter expensive = row -> row.getInt("price") >= 30;
+     * RowExtractor upperName = RowExtractor.builder().get(2, (rs, columnIndex) -> rs.getString(columnIndex).toUpperCase()).build();
+     * try (ResultSet rs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
+     *     Dataset data = JdbcUtil.extractData(rs, expensive, upperName);   // keeps only rows with price >= 30
+     * }
+     *
+     * // A filter that matches nothing yields an empty Dataset (column names still present); rs is NOT closed.
+     * RowFilter none = row -> false;
+     * Dataset empty = JdbcUtil.extractData(rs, none, RowExtractor.builder().build());   // empty.size() == 0
+     * }</pre>
+     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
      *               returns {@code true} will be processed by the extractor. Must not be {@code null}.
@@ -5772,6 +6151,18 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet and returns it as a Dataset.
      * This method allows specifying whether to close the ResultSet after extraction.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Extract all rows and let the method close the ResultSet for you.
+     * Dataset all = JdbcUtil.extractData(stmt.executeQuery("SELECT id, name, price FROM item"), true);
+     * // 'all' holds every selected row; the underlying ResultSet has been closed.
+     *
+     * // Keep the ResultSet open for further use.
+     * try (ResultSet rs = stmt.executeQuery("SELECT id, name FROM item WHERE id = ?")) {
+     *     Dataset data = JdbcUtil.extractData(rs, false);   // rs remains open
+     * }
+     * }</pre>
+     *
      * @param rs The ResultSet to extract data from
      * @param closeResultSet Whether to close the ResultSet after extraction
      * @return A Dataset containing the extracted data
@@ -5785,6 +6176,17 @@ public final class JdbcUtil {
     /**
      * Extracts data from the provided ResultSet with specified offset and count.
      * This method allows specifying whether to close the ResultSet after extraction.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Skip the first row, then take the next two (paging over the ResultSet).
+     * try (ResultSet rs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
+     *     Dataset page = JdbcUtil.extractData(rs, 1, 2, false);   // returns a Dataset with 2 rows
+     * }
+     *
+     * // An offset beyond the available rows yields an empty Dataset; here the method closes the ResultSet.
+     * Dataset beyond = JdbcUtil.extractData(stmt.executeQuery("SELECT id FROM item"), 1000, 50, true);   // beyond.size() == 0
+     * }</pre>
      *
      * @param rs The ResultSet to extract data from
      * @param offset The starting position in the ResultSet
@@ -5801,6 +6203,19 @@ public final class JdbcUtil {
     /**
      * Extracts data from the provided ResultSet with offset, count, and filter.
      * This method allows specifying whether to close the ResultSet after extraction.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Filter rows, then cap the result to at most `count` MATCHING rows.
+     * RowFilter atLeast20 = row -> row.getInt("price") >= 20;
+     * try (ResultSet rs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
+     *     Dataset data = JdbcUtil.extractData(rs, 0, 2, atLeast20, false);   // at most 2 rows that pass the filter
+     * }
+     *
+     * // A filter matching nothing yields an empty Dataset; here the method closes the ResultSet.
+     * Dataset empty = JdbcUtil.extractData(stmt.executeQuery("SELECT id, name, price FROM item"),
+     *         0, Integer.MAX_VALUE, row -> false, true);   // empty.size() == 0
+     * }</pre>
      *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative
@@ -5822,6 +6237,18 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet with offset, count, and extractor.
      * This method allows specifying whether to close the ResultSet after extraction.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Transform the name column (index 2) while extracting the first 3 rows.
+     * RowExtractor upperName = RowExtractor.builder().get(2, (rs, columnIndex) -> rs.getString(columnIndex).toUpperCase()).build();
+     * try (ResultSet rs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
+     *     Dataset data = JdbcUtil.extractData(rs, 0, 3, upperName, false);   // returns a Dataset with up to 3 rows
+     * }
+     *
+     * // count == 0 returns an empty Dataset; the extractor is never invoked; here the ResultSet is closed.
+     * Dataset none = JdbcUtil.extractData(stmt.executeQuery("SELECT id, name FROM item"), 0, 0, upperName, true);   // none.size() == 0
+     * }</pre>
+     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative
      * @param count The maximum number of rows to extract, must be non-negative
@@ -5842,6 +6269,23 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet with all extraction options.
      * This is the most comprehensive extraction method providing full control over the extraction process,
      * including pagination (offset/count), filtering (RowFilter), and transformation (RowExtractor).
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Page + filter + transform in a single pass, leaving the ResultSet open.
+     * RowFilter cheap = row -> row.getInt("price") <= 30;
+     * RowExtractor upperName = RowExtractor.builder().get(2, (rs, columnIndex) -> rs.getString(columnIndex).toUpperCase()).build();
+     * try (ResultSet rs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
+     *     Dataset data = JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, cheap, upperName, false);
+     *     // 'data' holds the rows with price <= 30, name column upper-cased
+     *
+     *     // Skip the first matching row and take the next one.
+     *     Dataset one = JdbcUtil.extractData(rs, 1, 1, cheap, upperName, false);   // one.size() <= 1
+     * }
+     *
+     * // Any null argument or negative offset/count throws IllegalArgumentException.
+     * JdbcUtil.extractData((ResultSet) null, 0, 1, cheap, upperName, false);   // throws IllegalArgumentException
+     * }</pre>
      *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative
@@ -6703,7 +7147,7 @@ public final class JdbcUtil {
      *     if (previousPage == null) {
      *         preparedQuery.setLong(1, 0);
      *     } else {
-     *         long lastId = previousPage.getLong(previousPage.size() - 1, "id");
+     *         long lastId = previousPage.moveToRow(previousPage.size() - 1).getLong("id");
      *         preparedQuery.setLong(1, lastId);
      *     }
      * }).forEach(page -> {
@@ -6790,6 +7234,26 @@ public final class JdbcUtil {
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided BiResultExtractor.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Keyset pagination: extract each page with a BiResultExtractor and use the last id as the cursor.
+     * String query = "SELECT id, name FROM item WHERE id > ? ORDER BY id LIMIT 500";
+     * Jdbc.BiResultExtractor<List<Long>> toIds = (rs, columnLabels) -> {
+     *     List<Long> ids = new ArrayList<>();
+     *     while (rs.next()) {
+     *         ids.add(rs.getLong("id"));
+     *     }
+     *     return ids;
+     * };
+     *
+     * JdbcUtil.queryByPage(dataSource, query, 500, (preparedQuery, previousIds) -> {
+     *     long lastId = (previousIds == null || previousIds.isEmpty()) ? 0L : previousIds.get(previousIds.size() - 1);
+     *     preparedQuery.setLong(1, lastId);   // first page: id > 0, then id > lastId
+     * }, toIds)
+     * .forEach(ids -> System.out.println("Fetched " + ids.size() + " ids"));
+     * // Iteration stops automatically once a page comes back empty.
+     * }</pre>
+     *
      * @param <R> the type of the result extracted from each page
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page
@@ -6829,6 +7293,24 @@ public final class JdbcUtil {
      * Similar to the DataSource version but uses an existing Connection.
      * The query must be ordered by at least one key/id and have a result size limitation.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Page through results on an existing Connection; each page is a Dataset.
+     * String query = "SELECT id, name FROM item WHERE id > ? ORDER BY id LIMIT 1000";
+     * try (Connection conn = dataSource.getConnection()) {
+     *     JdbcUtil.queryByPage(conn, query, 1000, (preparedQuery, previousPage) -> {
+     *         if (previousPage == null) {
+     *             preparedQuery.setLong(1, 0L);                       // first page: id > 0
+     *         } else {
+     *             // Read the id from the last row of the previous page.
+     *             long lastId = previousPage.moveToRow(previousPage.size() - 1).getLong("id");
+     *             preparedQuery.setLong(1, lastId);                   // next page: id > lastId
+     *         }
+     *     }).forEach(page -> System.out.println("Processing " + page.size() + " records"));
+     * }
+     * // An empty table yields zero pages.
+     * }</pre>
+     *
      * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
@@ -6845,6 +7327,28 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided ResultExtractor.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Page through results on a Connection, extracting each page with a ResultExtractor.
+     * String query = "SELECT id, name FROM item WHERE id > ? ORDER BY id LIMIT 500";
+     * Jdbc.ResultExtractor<List<Long>> toIds = rs -> {
+     *     List<Long> ids = new ArrayList<>();
+     *     while (rs.next()) {
+     *         ids.add(rs.getLong("id"));
+     *     }
+     *     return ids;
+     * };
+     *
+     * try (Connection conn = dataSource.getConnection()) {
+     *     JdbcUtil.queryByPage(conn, query, 500, (preparedQuery, previousIds) -> {
+     *         long lastId = (previousIds == null || previousIds.isEmpty()) ? 0L : previousIds.get(previousIds.size() - 1);
+     *         preparedQuery.setLong(1, lastId);
+     *     }, toIds)
+     *     .forEach(ids -> System.out.println("Got " + ids.size() + " ids"));
+     * }
+     * // Iteration stops when a page returns no rows.
+     * }</pre>
      *
      * @param <R> the type of the result extracted from each page
      * @param conn the Connection to use for queries
@@ -6884,6 +7388,27 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided BiResultExtractor.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Page through results on a Connection using a BiResultExtractor (also receives the column labels).
+     * String query = "SELECT id, name FROM item WHERE id > ? ORDER BY id LIMIT 500";
+     * Jdbc.BiResultExtractor<List<Long>> toIds = (rs, columnLabels) -> {
+     *     List<Long> ids = new ArrayList<>();
+     *     while (rs.next()) {
+     *         ids.add(rs.getLong("id"));
+     *     }
+     *     return ids;
+     * };
+     *
+     * try (Connection conn = dataSource.getConnection()) {
+     *     JdbcUtil.queryByPage(conn, query, 500, (preparedQuery, previousIds) -> {
+     *         long lastId = (previousIds == null || previousIds.isEmpty()) ? 0L : previousIds.get(previousIds.size() - 1);
+     *         preparedQuery.setLong(1, lastId);
+     *     }, toIds)
+     *     .forEach(ids -> System.out.println("Fetched " + ids.size() + " ids"));
+     * }
+     * }</pre>
      *
      * @param <R> the type of the result extracted from each page
      * @param conn the Connection to use for queries
@@ -7326,6 +7851,18 @@ public final class JdbcUtil {
     /**
      * Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource}.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * boolean exists = JdbcUtil.doesTableExist(dataSource, "account");          // returns true if the table exists
+     * boolean missing = JdbcUtil.doesTableExist(dataSource, "no_such_table");   // returns false (does NOT throw)
+     *
+     * // A qualified name (schema.table) is also accepted.
+     * boolean qualified = JdbcUtil.doesTableExist(dataSource, "PUBLIC.account");
+     *
+     * // A blank table name is rejected.
+     * JdbcUtil.doesTableExist(dataSource, "");   // throws IllegalArgumentException
+     * }</pre>
+     *
      * @param ds the data source to get the connection from
      * @param tableName the table name (optionally qualified); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
@@ -7436,6 +7973,17 @@ public final class JdbcUtil {
 
     /**
      * Checks whether a table exists on the given {@link Connection}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     boolean exists = JdbcUtil.doesTableExist(conn, "account");          // returns true if the table exists
+     *     boolean missing = JdbcUtil.doesTableExist(conn, "no_such_table");   // returns false (does NOT throw)
+     * }
+     *
+     * // A blank table name, or a null connection, is rejected.
+     * JdbcUtil.doesTableExist((Connection) null, "account");   // throws IllegalArgumentException
+     * }</pre>
      *
      * @param conn the database connection to use for checking table existence
      * @param tableName the table name (optionally qualified); must not be blank
@@ -9198,6 +9746,7 @@ public final class JdbcUtil {
      * // Disable SQL logging for production environment
      * JdbcUtil.turnOffSqlLogGlobally();
      * }</pre>
+     *
      */
     public static void turnOffSqlLogGlobally() {
         isSqlLogAllowed = false;
@@ -9213,6 +9762,7 @@ public final class JdbcUtil {
      * // Disable SQL performance logging for production
      * JdbcUtil.turnOffSqlPerfLogGlobally();
      * }</pre>
+     *
      */
     public static void turnOffSqlPerfLogGlobally() {
         isSqlPerfLogAllowed = false;
@@ -9228,6 +9778,7 @@ public final class JdbcUtil {
      * // Disable DAO performance logging
      * JdbcUtil.turnOffDaoMethodPerfLogGlobally();
      * }</pre>
+     *
      */
     public static void turnOffDaoMethodPerfLogGlobally() {
         isDaoMethodPerfLogAllowed = false;
@@ -9328,6 +9879,7 @@ public final class JdbcUtil {
      * JdbcUtil.disableSqlLog();
      * // SQL operations here will NOT be logged
      * }</pre>
+     *
      */
     public static void disableSqlLog() {
         enableSqlLog(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
@@ -10476,6 +11028,26 @@ public final class JdbcUtil {
      * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}.
      * See that method for the full contract and usage guidance.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Inside an active transaction, read on a SEPARATE connection that is NOT part of it.
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     orderDao.save(order);   // part of 'tran' (not yet committed)
+     *
+     *     long committedCount = JdbcUtil.callNotInStartedTransaction(dataSource, () ->
+     *         JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM orders")
+     *             .queryForLong().orElse(0L));   // does NOT see the uncommitted 'order'
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     *
+     * // With no active transaction it simply runs the callable and returns its result.
+     * String token = JdbcUtil.callNotInStartedTransaction(dataSource, () -> tokenStore.generate());
+     * }</pre>
+     *
      * @param <T> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
      * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
@@ -10501,6 +11073,27 @@ public final class JdbcUtil {
      * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)}.
      * See that method for the full contract and usage guidance.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // The DataSource is passed in; connections it vends here are NOT part of any active transaction.
+     * Boolean exists = JdbcUtil.callNotInStartedTransaction(dataSource, ds ->
+     *     JdbcUtil.tableExists(ds, "account"));   // returns true if the table exists
+     *
+     * // Inside an active transaction, the command still runs OUTSIDE it.
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     inventoryDao.reserve(itemId, qty);   // part of 'tran'
+     *
+     *     long count = JdbcUtil.callNotInStartedTransaction(dataSource, ds ->
+     *         JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM inventory")
+     *             .queryForLong().orElse(0L));   // separate connection, outside 'tran'
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     * }</pre>
+     *
      * @param <T> the type of the result returned by the function
      * @param <E> the type of exception that the function may throw
      * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
@@ -10525,6 +11118,25 @@ public final class JdbcUtil {
      * {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)}.
      * See that method for the full contract and usage guidance.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Write an audit record that must survive even if the enclosing transaction rolls back.
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     orderDao.save(order);   // part of 'tran'
+     *
+     *     JdbcUtil.runNotInStartedTransaction(dataSource, () -> {
+     *         // Runs on a SEPARATE connection, outside 'tran'; committed independently.
+     *         JdbcUtil.executeUpdate(dataSource,
+     *             "INSERT INTO audit_log (event) VALUES (?)", "ORDER_ATTEMPTED");
+     *     });
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();   // even on rollback, the audit row above persists
+     * }
+     * }</pre>
+     *
      * @param <E> the type of exception that the runnable may throw
      * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
      *           suspended, must not be {@code null}
@@ -10547,6 +11159,20 @@ public final class JdbcUtil {
      * <p>This method is a direct alias for
      * {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)}.
      * See that method for the full contract and usage guidance.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Invalidate a cache entry on a separate connection, outside any active transaction.
+     * JdbcUtil.runNotInStartedTransaction(dataSource, ds -> {
+     *     JdbcUtil.executeUpdate(ds,
+     *         "DELETE FROM query_cache WHERE entity_type = ? AND entity_id = ?",
+     *         "ORDER", order.getId());   // 'ds' is the same DataSource, but NOT part of the active transaction
+     * });
+     *
+     * // With no active transaction it simply runs the command immediately.
+     * JdbcUtil.runNotInStartedTransaction(dataSource, ds ->
+     *     JdbcUtil.executeUpdate(ds, "UPDATE heartbeat SET last = CURRENT_TIMESTAMP WHERE id = 1"));
+     * }</pre>
      *
      * @param <E> the type of exception that the consumer may throw
      * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
@@ -11225,7 +11851,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.fromFile("sql/user-queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.load("sql/user-queries.xml");
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
      * }</pre>
      *
@@ -11264,6 +11890,21 @@ public final class JdbcUtil {
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
      * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully
      * and prefer the thread-local alternative below.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SqlMapper sqlMapper = SqlMapper.load("sql/user-queries.xml");
+     * // or build one in code: new SqlMapper().add("findByName", "SELECT ... WHERE name = ?", null)
+     *
+     * // A non-null DaoCache is only allowed for NoUpdateDao / NoUpdateCrudDao interfaces
+     * // (e.g. UserReadDao extends NoUpdateCrudDao<User, Long, ...>):
+     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, sqlMapper, cache);
+     *
+     * // For a regular (mutating) Dao/CrudDao, pass null — a non-null cache would throw
+     * // UnsupportedOperationException for a non-NoUpdate interface:
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, null);
+     * }</pre>
      *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
@@ -11323,7 +11964,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.fromFile("sql/queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.load("sql/queries.xml");
      * ExecutorService executor = Executors.newCachedThreadPool();
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, executor);
      * }</pre>
@@ -11365,6 +12006,20 @@ public final class JdbcUtil {
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
      * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully or
      * prefer {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SqlMapper sqlMapper = SqlMapper.load("sql/queries.xml");
+     * ExecutorService executor = Executors.newFixedThreadPool(8);
+     *
+     * // Cache requires a NoUpdate DAO; size it with create(capacity, evictDelayMillis).
+     * Jdbc.DaoCache cache = Jdbc.DaoCache.create(1000, 3000);
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, sqlMapper, cache, executor);
+     *
+     * // For a mutating Dao/CrudDao, pass null cache (a non-null cache throws
+     * // UnsupportedOperationException for non-NoUpdate interfaces):
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, null, executor);
+     * }</pre>
      *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
@@ -11423,7 +12078,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.fromFile("sql/legacy-queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.load("sql/legacy-queries.xml");
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper);
      * }</pre>
      *
@@ -11462,6 +12117,19 @@ public final class JdbcUtil {
      *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code daoCache}
      * retains query results for the DAO's lifetime; size it carefully.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Map the DAO's entity onto a non-default table, with a result cache.
+     * SqlMapper sqlMapper = SqlMapper.load("sql/legacy-queries.xml");
+     *
+     * // Cache is only honored for NoUpdateDao / NoUpdateCrudDao interfaces:
+     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "legacy_users", dataSource, sqlMapper, cache);
+     *
+     * // Regular CrudDao on an overridden table — pass null cache:
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper, null);
+     * }</pre>
      *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
@@ -11522,7 +12190,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.fromResource("/sql/custom-queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.load("sql/custom-queries.xml");
      * ExecutorService executor = Executors.newWorkStealingPool();
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, sqlMapper, executor);
      * }</pre>
@@ -11565,6 +12233,21 @@ public final class JdbcUtil {
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code cache}
      * parameter retains query results for the DAO's lifetime; size it carefully or prefer
      * {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Full control: table override + external SQL + cache + async executor.
+     * SqlMapper sqlMapper = SqlMapper.load("sql/queries.xml");
+     * ExecutorService executor = Executors.newFixedThreadPool(8);
+     *
+     * // Cache is only honored for NoUpdateDao / NoUpdateCrudDao interfaces:
+     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "users_2024", dataSource, sqlMapper, cache, executor);
+     *
+     * // Regular mutating CrudDao — pass null cache (a non-null cache throws
+     * // UnsupportedOperationException for non-NoUpdate interfaces):
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, sqlMapper, null, executor);
+     * }</pre>
      *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement

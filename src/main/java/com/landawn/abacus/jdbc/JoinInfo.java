@@ -749,6 +749,22 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for single-entity select operations.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
+     *     plan = joinInfo.getSelectSqlBuilderAndParamSetter(PSC.class);
+     *
+     * // _1 builds the SELECT SQL from the selected column names (null -> all columns).
+     * String sql = plan._1.apply(null);  // a non-blank "SELECT ..." statement
+     * // _2 binds the join key(s) of one source entity onto the PreparedStatement.
+     * plan._2.accept(stmt, employee);
+     *
+     * // PLC produces lower-camel-case identifiers instead of snake_case.
+     * String plcSql = joinInfo.getSelectSqlBuilderAndParamSetter(PLC.class)._1.apply(null);
+     * }</pre>
+     *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the SQL builder function and parameter setter
      * @deprecated Use {@link #getSelectSqlPlan(Class)}.
@@ -798,6 +814,20 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for batch select operations.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
+     *     batchPlan = joinInfo.getBatchSelectSqlBuilderAndParamSetter(PSC.class);
+     *
+     * List<Employee> employees = getEmployees();
+     * // _1 builds the SELECT SQL sized for the batch (null columns -> all columns).
+     * String sql = batchPlan._1.apply(null, employees.size());  // a non-blank "SELECT ..." statement
+     * // _2 binds the join key(s) of every entity in the batch onto the PreparedStatement.
+     * batchPlan._2.accept(stmt, employees);
+     * }</pre>
+     *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch SQL builder function and parameter setter
      * @deprecated Use {@link #getBatchSelectSqlPlan(Class)}.
@@ -829,7 +859,7 @@ public final class JoinInfo {
      * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
      *     deletePlan = joinInfo.getDeleteSqlPlan(PSC.class);
      *
-     * String deleteSql = deletePlan._1;  // Main delete SQL
+     * String deleteSql = deletePlan._1;             // Main delete SQL
      * String middleTableDeleteSql = deletePlan._2;  // Always null in current implementation
      * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deletePlan._3;
      * }</pre>
@@ -856,6 +886,19 @@ public final class JoinInfo {
 
     /**
      * Retrieves the SQL plan for delete operations.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
+     *     deletePlan = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
+     *
+     * String deleteSql = deletePlan._1;            // a non-blank "DELETE ..." statement
+     * String middleTableDeleteSql = deletePlan._2; // always null in the current implementation
+     * // _3 binds the join key(s) of one source entity onto the PreparedStatement.
+     * deletePlan._3.accept(stmt, employee);
+     * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the delete SQL, the middle (join) table delete SQL (always {@code null}), and the parameter setter
@@ -907,6 +950,21 @@ public final class JoinInfo {
 
     /**
      * Retrieves the SQL plan for batch delete operations.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
+     *     batchDeletePlan = joinInfo.getBatchDeleteSqlBuilderAndParamSetter(PSC.class);
+     *
+     * List<Employee> employees = getEmployeesToDelete();
+     * // _1 builds the DELETE SQL sized for the batch.
+     * String deleteSql = batchDeletePlan._1.apply(employees.size());  // a non-blank "DELETE ..." statement
+     * // batchDeletePlan._2 is always null in the current implementation.
+     * // _3 binds the join key(s) of every entity in the batch onto the PreparedStatement.
+     * batchDeletePlan._3.accept(stmt, employees);
+     * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch delete SQL builder functions and parameter setter

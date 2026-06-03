@@ -933,6 +933,35 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     /**
      * Executes the specified {@code Runnable} outside of this transaction context.
+     * This transaction is temporarily suspended (removed from the current thread) while
+     * {@code cmd} runs, so any work performed inside {@code cmd} executes on a separate,
+     * non-transactional connection and is committed independently of this transaction.
+     * After {@code cmd} returns (or throws), this transaction is restored on the thread.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     // Inside the enclosing transaction: insert a row but do NOT commit yet.
+     *     JdbcUtil.prepareQuery(dataSource, "INSERT INTO widget (name) VALUES (?)").setString(1, "tx-row").update();
+     *
+     *     // runNotInMe suspends THIS transaction, so the command runs outside it.
+     *     tran.runNotInMe(() -> {
+     *         // This write happens on a separate, non-transactional connection and commits immediately.
+     *         JdbcUtil.prepareQuery(dataSource, "INSERT INTO audit_log (msg) VALUES (?)").setString(1, "widget added").update();
+     *     });
+     *
+     *     // ... an exception below triggers rollbackIfNotCommitted() in finally ...
+     *     throw new RuntimeException("business rule failed");
+     * } finally {
+     *     tran.rollbackIfNotCommitted(); // "tx-row" is rolled back, but the audit_log row stays committed.
+     * }
+     *
+     * // A checked exception thrown by the command is propagated as-is:
+     * tran.runNotInMe((Throwables.Runnable<java.io.IOException>) () -> {
+     *     throw new java.io.IOException("io failed"); // throws java.io.IOException
+     * });
+     * }</pre>
      *
      * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
@@ -945,7 +974,41 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Executes the specified {@code Callable} outside of this transaction context.
+     * Executes the specified {@code Callable} outside of this transaction context and returns its result.
+     * This transaction is temporarily suspended (removed from the current thread) while
+     * {@code cmd} runs, so any work performed inside {@code cmd} executes on a separate,
+     * non-transactional connection: it does not see this transaction's uncommitted changes,
+     * and any writes it performs are committed independently. After {@code cmd} returns
+     * (or throws), this transaction is restored on the thread.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     // Inside the enclosing transaction: insert a row but do NOT commit yet.
+     *     JdbcUtil.prepareQuery(dataSource, "INSERT INTO widget (name) VALUES (?)").setString(1, "inside-tx").update();
+     *
+     *     // callNotInMe suspends THIS transaction, so the query runs outside it and does NOT
+     *     // see the uncommitted insert above; here the count comes back as 0.
+     *     long committedCount = tran.callNotInMe(() ->
+     *         JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM widget").queryForLong().orElse(0L));
+     *
+     *     // callNotInMe returns the callable's value:
+     *     String marker = tran.callNotInMe(() -> {
+     *         JdbcUtil.prepareQuery(dataSource, "INSERT INTO audit_log (msg) VALUES (?)").setString(1, "checked").update();
+     *         return "done"; // committed independently of the enclosing transaction
+     *     });
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     *
+     * // A checked exception thrown by the command is propagated as-is:
+     * Object value = tran.callNotInMe((Throwables.Callable<Object, java.io.IOException>) () -> {
+     *     throw new java.io.IOException("io failed"); // throws java.io.IOException
+     * });
+     * }</pre>
      *
      * @param <R> the result type returned by the operation
      * @param <E> the exception type that may be thrown during execution

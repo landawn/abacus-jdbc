@@ -264,6 +264,7 @@ public interface Transaction {
      *     transaction.rollback();
      * }
      * }</pre>
+     *
      */
     enum Action {
         /**

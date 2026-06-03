@@ -1,15 +1,16 @@
+
 -- ==========================================================
 
 Use multiple agents to fix all javadoc issues reported by running: mvn javadoc:javadoc.
+
+Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java for performance improvements. 
+Fix/implement all performance improvements you have found, and add or run unit tests for the fixes to existing test classes.
 
 -- ==========================================================
 
 Review all public methods in the classes located under foler: ./src/main/java/ for naming convention consistency, and provide suggestions for design and method naming improvements. 
 
 -- ==========================================================
-
-Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.
-
 
 Use multiple agents to perform a thorough deep line by line review for classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes. For each class, following below steps:
 
@@ -19,17 +20,31 @@ Use multiple agents to perform a thorough deep line by line review for classes u
      ◻ Add tests for xxx fixes
      ◻ Run full test suite
 
+Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.
 
-Use multiple agents to perform a thorough deep line by line review for all the classes in package: com.landawn.abacus.jdbc under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.
+Use multiple agents to perform a thorough deep line by line review for all the classes in packages: com.landawn.abacus.util.stream and com.landawn.abacus.util.function under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.
+
+
+Use multiple agents to perform a thorough deep line by line review for all the classes in package: com.landawn.abacus.util under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.
+
+Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes. Exclude the classes in package: com.landawn.abacus.util and its sub packages.
+
+
 
 Are you sure you have identified and fixed all the bugs? Perform a thorough deep review again.
 
--- ==========================================================
+-- ========================================================== 
+
 
 Use multiple agents to perform a thorough deep line by line review for javadocs in all the classes under folder: ./src/main/java to improve/correct existing javadocs
 
+Use multiple agents to perform a thorough deep line by line review for javadocs in all the classes in packages: com.landawn.abacus.util.stream and com.landawn.abacus.util.function under folder: ./src/main/java to improve/correct existing javadocs. Don't add new javadocs.
 
-Use multiple agents to perform a thorough deep line by line review for javadocs in all the classes in package com.landawn.abacus.jdbc under folder: ./src/main/java to improve/correct existing javadocs
+
+Use multiple agents to perform a thorough deep line by line review for javadocs in all the classes in package com.landawn.abacus.util under folder: ./src/main/java to improve/correct existing javadocs
+
+
+Use multiple agents to perform a thorough deep line by line review for javadocs in all the classes under folder: ./src/main/java to improve/correct existing javadocs. Exclude the classes in package: com.landawn.abacus.util and its sub packages.
 
 
 -- ==========================================================
