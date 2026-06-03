@@ -5353,12 +5353,12 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
-                    res += N.sum(executeBatch(stmt));
+                    res += sumUpdatedRows(executeBatch(stmt));
                 }
             }
 
             if (idx % batchSize != 0) {
-                res += N.sum(executeBatch(stmt));
+                res += sumUpdatedRows(executeBatch(stmt));
             }
 
             noException = true;
@@ -5584,12 +5584,12 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
-                    res += N.sum(executeLargeBatch(stmt));
+                    res += sumUpdatedRows(executeLargeBatch(stmt));
                 }
             }
 
             if (idx % batchSize != 0) {
-                res += N.sum(executeLargeBatch(stmt));
+                res += sumUpdatedRows(executeLargeBatch(stmt));
             }
 
             noException = true;
@@ -5843,6 +5843,30 @@ public final class JdbcUtil {
                 }
             }
         }
+    }
+
+    private static int sumUpdatedRows(final int[] updateCounts) {
+        int result = 0;
+
+        for (final int updateCount : updateCounts) {
+            if (updateCount > 0) {
+                result += updateCount;
+            }
+        }
+
+        return result;
+    }
+
+    private static long sumUpdatedRows(final long[] updateCounts) {
+        long result = 0;
+
+        for (final long updateCount : updateCounts) {
+            if (updateCount > 0) {
+                result += updateCount;
+            }
+        }
+
+        return result;
     }
 
     static boolean execute(final PreparedStatement stmt) throws SQLException {

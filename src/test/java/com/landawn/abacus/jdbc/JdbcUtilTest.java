@@ -808,6 +808,16 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testExecuteBatchUpdate_IgnoresJdbcSentinelCounts() throws SQLException {
+        String sql = "INSERT INTO users (name) VALUES (?)";
+        List<Object[]> params = Arrays.asList(new Object[] { "John" }, new Object[] { "Jane" }, new Object[] { "Bob" }, new Object[] { "Alice" });
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 2, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1 });
+
+        int total = JdbcUtil.executeBatchUpdate(mockDataSource, sql, params);
+        assertEquals(3, total);
+    }
+
+    @Test
     public void testExecuteLargeBatchUpdate() throws SQLException {
         String sql = "INSERT INTO users (name) VALUES (?)";
         List<Object[]> params = Arrays.asList(new Object[] { "John" }, new Object[] { "Jane" });
@@ -815,6 +825,16 @@ public class JdbcUtilTest extends TestBase {
 
         long total = JdbcUtil.executeLargeBatchUpdate(mockDataSource, sql, params);
         assertEquals(2L, total);
+    }
+
+    @Test
+    public void testExecuteLargeBatchUpdate_IgnoresJdbcSentinelCounts() throws SQLException {
+        String sql = "INSERT INTO users (name) VALUES (?)";
+        List<Object[]> params = Arrays.asList(new Object[] { "John" }, new Object[] { "Jane" }, new Object[] { "Bob" }, new Object[] { "Alice" });
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 2L, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1L });
+
+        long total = JdbcUtil.executeLargeBatchUpdate(mockDataSource, sql, params);
+        assertEquals(3L, total);
     }
 
     @Test

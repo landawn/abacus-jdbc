@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 
@@ -31,8 +32,10 @@ import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
+import com.landawn.abacus.jdbc.annotation.OutParameter;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
+import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.NoUpdateDao;
@@ -94,6 +97,23 @@ public class DaoImplTest extends TestBase {
     interface ProcedureDao {
         @Query(value = "call test_proc(?, ?)", isProcedure = true)
         void callProc(@Bind("p1") String first, String second);
+    }
+
+    @SqlSource
+    interface DefaultSqlSourceDao extends Dao<TestEntity, PSC, DefaultSqlSourceDao> {
+        @Query("select * from test")
+        List<TestEntity> list() throws SQLException;
+    }
+
+    interface AmbiguousOutParameterDao extends Dao<TestEntity, PSC, AmbiguousOutParameterDao> {
+        @Query(value = "{call test_proc(?)}", isProcedure = true, op = OP.executeAndGetOutParameters)
+        @OutParameter(name = "out", position = 1, sqlType = Types.INTEGER)
+        Jdbc.OutParamResult call();
+    }
+
+    interface IncompatibleRowMapperListDao {
+        @Query("select * from test")
+        List<String> list(Jdbc.RowMapper<TestEntity> mapper);
     }
 
     // Regression: a stored-procedure DAO method declared as Stream<Dataset> with op=OP.streamAll
@@ -815,6 +835,27 @@ public class DaoImplTest extends TestBase {
         assertFalse(qi.isInsert);
         assertFalse(qi.isProcedure);
         assertFalse(qi.isNamedQuery);
+    }
+
+    @Test
+    public void testCreateDao_DefaultSqlSourceDoesNotLoadEmptyMapper() throws SQLException {
+        assertDoesNotThrow(() -> DaoImpl.createDao(DefaultSqlSourceDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+    }
+
+    @Test
+    public void testCreateDao_RejectsOutParameterWithNameAndPosition() throws SQLException {
+        DataSource ds = mockDataSourceForDaoCreation();
+
+        assertThrows(UnsupportedOperationException.class, () -> DaoImpl.createDao(AmbiguousOutParameterDao.class, null, ds, null, null, null));
+    }
+
+    @Test
+    public void testIsListQuery_IncompatibleRowMapperTypeIsNotListQuery() throws Exception {
+        Method daoMethod = IncompatibleRowMapperListDao.class.getMethod("list", Jdbc.RowMapper.class);
+        Method isListQuery = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        isListQuery.setAccessible(true);
+
+        assertFalse((Boolean) isListQuery.invoke(null, daoMethod, List.class, OP.DEFAULT, "IncompatibleRowMapperListDao.list"));
     }
 
     private static DataSource mockDataSourceForDaoCreation() throws SQLException {

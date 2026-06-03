@@ -460,11 +460,15 @@ final class DaoImpl {
                     final Class<?> paramClassInRowMapper = mapperTypeArg instanceof Class ? (Class<?>) mapperTypeArg
                             : (mapperTypeArg instanceof ParameterizedType ? (Class<?>) ((ParameterizedType) mapperTypeArg).getRawType() : null);
 
-                    if (paramClassInReturnType != null && paramClassInRowMapper != null && paramClassInReturnType.isAssignableFrom(paramClassInRowMapper)) {
+                    if (parameterizedReturnType.equals(mapperTypeArg)) {
+                        // The mapper returns the method's whole return type, not one element of it.
+                        return false;
+                    } else if (paramClassInReturnType != null && paramClassInRowMapper != null) {
+                        return paramClassInReturnType.isAssignableFrom(paramClassInRowMapper);
+                    } else if (returnTypeArg.equals(mapperTypeArg)) {
                         return true;
                     } else {
-                        // if the return type of the method is same as the return type of RowMapper/BiRowMapper parameter, return false;
-                        return !parameterizedReturnType.equals(rowMapperType.getActualTypeArguments()[0]);
+                        return true;
                     }
                 }
             }
@@ -1876,6 +1880,8 @@ final class DaoImpl {
                 .flatMapArray(Class::getAnnotations)
                 .select(SqlSource.class)
                 .map(SqlSource::value)
+                .map(String::trim)
+                .filter(Strings::isNotEmpty)
                 .map(SqlMapper::load)
                 .forEach(it -> {
                     for (final String key : it.sqlIds()) {
@@ -5518,6 +5524,11 @@ final class DaoImpl {
                         if (StreamEx.of(outParameterList).anyMatch(it -> Strings.isEmpty(it.name()) && it.position() < 0)) {
                             throw new UnsupportedOperationException(
                                     "One of the attribute: (name, position) of @OutParameter must be set in method: " + fullClassMethodName);
+                        }
+
+                        if (StreamEx.of(outParameterList).anyMatch(it -> Strings.isNotEmpty(it.name()) && it.position() >= 0)) {
+                            throw new UnsupportedOperationException(
+                                    "Only one of the attribute: (name, position) of @OutParameter can be set in method: " + fullClassMethodName);
                         }
                     }
 

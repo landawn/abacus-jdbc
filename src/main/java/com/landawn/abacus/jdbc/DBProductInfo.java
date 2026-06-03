@@ -40,9 +40,9 @@ package com.landawn.abacus.jdbc;
  * }
  * }</pre>
  *
- * @param productName the name of the database product (e.g., "MySQL", "PostgreSQL", "Oracle"), must not be {@code null}
- * @param productVersion the version string of the database product (e.g., "8.0.33", "15.3"), must not be {@code null}
- * @param version the parsed {@link DBVersion} enum representing the database type and major version, must not be {@code null}
+ * @param productName the name of the database product (e.g., "MySQL", "PostgreSQL", "Oracle"); may be {@code null} if JDBC metadata is unavailable
+ * @param productVersion the version string of the database product (e.g., "8.0.33", "15.3"); may be {@code null} if JDBC metadata is unavailable
+ * @param version the parsed {@link DBVersion} enum representing the database type and major version; may be {@code null} for manually-created records
  *
  * @see DBVersion
  */
