@@ -1585,7 +1585,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * List<User> adultUsers = dao.list(
      *     Filters.isNotNull("age"),
      *     rs -> rs.getInt("age") >= 18,  // filter
-     *     rs -> mapToUser(rs)             // mapper
+     *     rs -> mapToUser(rs)            // mapper
      * );
      * }</pre>
      *

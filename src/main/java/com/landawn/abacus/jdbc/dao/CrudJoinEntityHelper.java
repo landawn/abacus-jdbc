@@ -93,9 +93,9 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * // This will only load orders
      * Optional<User> user = userDao.get(userId, Order.class);
      * user.ifPresent(u -> {
-     *     assert u.getOrders() != null;  // Orders are loaded
+     *     assert u.getOrders() != null;   // Orders are loaded
      *     assert u.getProfile() == null;  // Profile is not loaded
-     *     assert u.getRoles() == null;  // Roles are not loaded
+     *     assert u.getRoles() == null;    // Roles are not loaded
      * });
      * }</pre>
      *

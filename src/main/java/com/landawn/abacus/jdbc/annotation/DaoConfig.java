@@ -38,7 +38,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @DaoConfig(
- *     addLimitForSingleQuery = true,
+ *     addLimitForSingleQuery            = true,
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
  * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {

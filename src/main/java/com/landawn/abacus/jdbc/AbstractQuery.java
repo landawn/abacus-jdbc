@@ -7630,7 +7630,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Stream with filtering and mapping
      * try (Stream<Order> stream = preparedQuery.stream(
-     *     rs -> rs.getBigDecimal("amount").compareTo(minAmount) >= 0,  // Filter
+     *     rs -> rs.getBigDecimal("amount").compareTo(minAmount) >= 0,    // Filter
      *     rs -> new Order(rs.getLong("id"), rs.getBigDecimal("amount"))  // Mapper
      * )) {
      *     BigDecimal total = stream

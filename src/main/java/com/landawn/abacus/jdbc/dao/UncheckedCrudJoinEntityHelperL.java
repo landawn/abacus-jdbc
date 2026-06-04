@@ -212,8 +212,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * 
      * // Fetch complete user data without relationships  
      * Optional<User> userOnly = userDao.get(123L,
-     *     null, // Select all properties
-     *     false);   // Don't load join entities
+     *     null,   // Select all properties
+     *     false); // Don't load join entities
      * }</pre>
      *
      * @param id the primary key value of the entity to retrieve
@@ -395,7 +395,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * // Get minimal user data but with all relationships
      * User user = userDao.gett(123L,
      *     Arrays.asList("id", "name"), // Only these fields
-     *     true);   // But load all join entities
+     *     true);                       // But load all join entities
      *
      * if (user != null) {
      *     // Process user with all relationships

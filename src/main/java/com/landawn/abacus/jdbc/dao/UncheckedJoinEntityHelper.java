@@ -104,7 +104,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * <pre>{@code
      * // Find user and load their orders
      * Optional<User> user = userDao.findFirst(
-     *     null,  // select all user properties
+     *     null,         // select all user properties
      *     Order.class,  // also load orders
      *     Filters.eq("email", "john@example.com")
      * );
@@ -311,7 +311,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * <pre>{@code
      * // Get all active users with their orders loaded
      * List<User> users = userDao.list(
-     *     null,  // select all user properties
+     *     null,         // select all user properties
      *     Order.class,  // load orders for each user
      *     Filters.eq("status", "ACTIVE")
      * );

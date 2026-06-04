@@ -185,6 +185,7 @@ public enum OP {
      * @Query(value = "{call getUsersAndOrders(?)}", op = OP.listAll, isProcedure = true)
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
      * }</pre>
+     *
      */
     listAll,
 
@@ -202,6 +203,7 @@ public enum OP {
      * @Query(value = "{call getComplexReport(?, ?)}", op = OP.queryAll, isProcedure = true)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre>
+     *
      */
     queryAll,
 
@@ -219,6 +221,7 @@ public enum OP {
      * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
      * }</pre>
+     *
      */
     streamAll,
 
@@ -297,6 +300,7 @@ public enum OP {
      * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT
      * int deleteUser(long id);                  // Framework infers OP.update
      * }</pre>
+     *
      */
     DEFAULT
 

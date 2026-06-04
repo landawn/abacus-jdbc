@@ -1162,7 +1162,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<Account> accounts = userDao.list(
      *     Filters.in("type", Arrays.asList("PREMIUM", "GOLD")),
-     *     (rs, cols) -> rs.getBoolean("verified"),                    // bi-row filter
+     *     (rs, cols) -> rs.getBoolean("verified"),                   // bi-row filter
      *     (rs, cols) -> Account.fromResultSet(rs, cols)              // bi-row mapper
      * );
      * }</pre>
@@ -1435,7 +1435,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * userDao.forEach(
      *     Filters.in("status", Arrays.asList("ACTIVE", "PENDING")),
-     *     (rs, cols) -> isEligibleForPromotion(rs),              // bi-filter
+     *     (rs, cols) -> isEligibleForPromotion(rs),             // bi-filter
      *     (rs, cols) -> sendPromotionEmail(rs, cols)            // bi-consumer
      * );
      * }</pre>
@@ -1496,7 +1496,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * userDao.forEach(
      *     Arrays.asList("id", "score", "level"),
      *     Filters.gt("score", 0),
-     *     rs -> rs.getInt("level") >= 5,                        // filter
+     *     rs -> rs.getInt("level") >= 5,                       // filter
      *     rs -> grantAchievement(rs.getLong("id"))             // consumer
      * );
      * }</pre>

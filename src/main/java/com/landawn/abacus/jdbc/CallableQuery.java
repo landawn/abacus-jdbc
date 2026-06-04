@@ -83,7 +83,7 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * <pre>{@code
  * // Example retrieving only OUT parameters
  * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_employee_info(?, ?, ?)}")) {
- *     query.setInt(1, 1001)  // IN parameter: employee ID
+ *     query.setInt(1, 1001)                         // IN parameter: employee ID
  *          .registerOutParameter(2, Types.VARCHAR)  // OUT parameter: employee name
  *          .registerOutParameter(3, Types.DECIMAL); // OUT parameter: salary
  *
@@ -1600,7 +1600,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setInt(1, 100)  // IN parameter
+     * query.setInt(1, 100)                          // IN parameter
      *      .registerOutParameter(2, Types.VARCHAR)  // OUT parameter
      *      .registerOutParameter(3, Types.INTEGER); // OUT parameter
      *
@@ -1823,7 +1823,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.registerOutParameter(1, JDBCType.DECIMAL, 2)  // For money
-     *      .registerOutParameter(2, JDBCType.NUMERIC, 4)   // For precise calculations
+     *      .registerOutParameter(2, JDBCType.NUMERIC, 4)  // For precise calculations
      *      .execute();
      * }</pre>
      *
@@ -2673,7 +2673,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *             (rs, columnLabels) -> JdbcUtil.extractData(rs)
      *         );
      *
-     *     Dataset orders = result._1.get(0);   // First result set
+     *     Dataset orders = result._1.get(0);       // First result set
      *     Dataset orderItems = result._1.get(1);   // Second result set
      *     BigDecimal totalAmount = result._2.getOutParamValue(2);
      * }
@@ -3269,9 +3269,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     Tuple2<List<List<Employee>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultSetsAndGetOutParameters(Employee.class);
      *     
-     *     List<Employee> managers = result._1.get(0);   // First result set
+     *     List<Employee> managers = result._1.get(0);     // First result set
      *     List<Employee> developers = result._1.get(1);   // Second result set
-     *     List<Employee> interns = result._1.get(2);   // Third result set
+     *     List<Employee> interns = result._1.get(2);      // Third result set
      *     
      *     int totalCount = result._2.getOutParamValue(1);
      *     System.out.println("Total employees: " + totalCount);
