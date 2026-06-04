@@ -28,10 +28,10 @@ package com.landawn.abacus.jdbc;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Enable general SQL logging with default max length
+ * // Enable general SQL logging with a 1000-char limit
  * SqlLogConfig config1 = new SqlLogConfig(true, 1000);
  *
- * // Enable performance logging for queries taking more than 500ms
+ * // Enable performance logging for queries taking 500ms or more
  * // This logs only slow queries, not all queries
  * SqlLogConfig config2 = new SqlLogConfig(500L, 1000);
  *
@@ -66,7 +66,7 @@ final class SqlLogConfig {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Enable SQL logging with default max length
+     * // Enable SQL logging with a 1000-char limit
      * SqlLogConfig config = new SqlLogConfig(true, 1000);
      *
      * // Passing 0 or a negative value falls back to the default max length
@@ -93,7 +93,7 @@ final class SqlLogConfig {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Log only queries taking more than 500ms
+     * // Log only queries taking 500ms or more
      * SqlLogConfig config = new SqlLogConfig(500L, 1000);
      *
      * // Log queries exceeding 1 second with the default SQL length

@@ -1179,7 +1179,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws NullPointerException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)

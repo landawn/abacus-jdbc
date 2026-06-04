@@ -176,8 +176,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *     // Use the connection for custom operations
      *     try (PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE id = ?")) {
      *         stmt.setLong(1, userId);
-     *         ResultSet rs = stmt.executeQuery();
-     *         // Process results...
+     *         try (ResultSet rs = stmt.executeQuery()) {
+     *             // Process results...
+     *         }
      *     }
      *     tran.commit();
      * } finally {
@@ -469,7 +470,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * this method marks the transaction for rollback ({@link Status#MARKED_ROLLBACK}). The actual rollback
      * occurs when the outermost transaction completes (reference count reaches 0).</p>
      *
-     * @param actionAfterRollback the action to be executed after the current transaction is rolled back, must not be {@code null}
+     * @param actionAfterRollback the action to be executed after the rollback; for a nested scope the rollback (and thus this action) is deferred to the outermost scope. Must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE},
      *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. If this transaction

@@ -185,12 +185,12 @@ public @interface Query {
      * <ul>
      *   <li>{@link OP#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases)</li>
      *   <li>{@link OP#list} - Returns all results as a List</li>
-     *   <li>{@link OP#stream} - Returns results as a Stream for lazy processing</li>
+     *   <li>{@link OP#stream} - (Deprecated) Returns results as a Stream; prefer {@link OP#DEFAULT} with a {@code Stream} return type</li>
      *   <li>{@link OP#findFirst} - Returns the first result wrapped in Optional</li>
-     *   <li>{@link OP#findOnlyOne} - Returns exactly one result, throws exception if zero or multiple found</li>
+     *   <li>{@link OP#findOnlyOne} - Returns at most one result wrapped in {@code Optional} (empty if none); throws {@code DuplicateResultException} if more than one is found</li>
      *   <li>{@link OP#exists} - Returns boolean indicating if any results exist</li>
      *   <li>{@link OP#queryForSingle} - Returns a single scalar value</li>
-     *   <li>{@link OP#queryForUnique} - Returns a unique single value or null</li>
+     *   <li>{@link OP#queryForUnique} - Returns a unique single value wrapped in {@code Nullable} (empty if none); throws {@code DuplicateResultException} if more than one is found</li>
      *   <li>{@link OP#update} - Executes UPDATE/INSERT/DELETE and returns row count</li>
      *   <li>{@link OP#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
      * </ul>
@@ -209,12 +209,12 @@ public @interface Query {
      * @Query(value = "SELECT * FROM users ORDER BY created_date DESC", op = OP.findFirst)
      * Optional<User> findLatestUser();
      *
-     * // Exactly one result (throws if not exactly one)
+     * // At most one match (throws DuplicateResultException if more than one matches; null if none)
      * @Query(value = "SELECT * FROM users WHERE id = :id", op = OP.findOnlyOne)
      * User getUserById(@Bind("id") Long id);
      *
-     * // Stream for large result sets
-     * @Query(value = "SELECT * FROM large_table", op = OP.stream, fetchSize = 1000)
+     * // Stream for large result sets (a Stream return type makes the framework stream automatically)
+     * @Query(value = "SELECT * FROM large_table", fetchSize = 1000)
      * Stream<Record> streamAllRecords();
      *
      * // Explicit update operation
@@ -227,7 +227,7 @@ public @interface Query {
      *   <li>For existence checks: use {@code OP.exists} for performance</li>
      *   <li>For scalar aggregates: use {@code OP.queryForSingle}</li>
      *   <li>When you need strict validation: use {@code OP.findOnlyOne}</li>
-     *   <li>For large result sets: use {@code OP.stream} with appropriate fetch size</li>
+     *   <li>For large result sets: return a {@code Stream} with an appropriate fetch size (the framework streams automatically)</li>
      * </ul>
      *
      * <p>Note: In most cases, {@link OP#DEFAULT} is sufficient as the framework intelligently
@@ -245,11 +245,10 @@ public @interface Query {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Stored procedure call with output parameter
+     * // Stored procedure call with output parameter (positional binding to match the '?' placeholders)
      * @Query(value = "{call calculate_bonus(?, ?, ?)}", isProcedure = true)
-     * @OutParameter(position = 3, sqlType = Types.DECIMAL)
-     * BigDecimal calculateBonus(@Bind("employeeId") long employeeId,
-     *                           @Bind("performanceScore") int score);
+     * @OutParameter(position = 3, sqlType = Types.DECIMAL)  // bonus (OUT)
+     * BigDecimal calculateBonus(long employeeId, int performanceScore);
      * }</pre>
      *
      * <p>When to use:</p>

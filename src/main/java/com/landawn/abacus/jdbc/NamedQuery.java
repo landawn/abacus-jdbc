@@ -583,10 +583,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to an Integer value.
-     * 
-     * <p>This method handles {@code null} values by setting the parameter to SQL {@code NULL} if the provided value is {@code null}.
-     * Otherwise, it sets the parameter to the int value.
-     * 
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Integer age = getAge();   // might return null

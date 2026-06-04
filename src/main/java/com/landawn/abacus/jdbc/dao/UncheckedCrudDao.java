@@ -627,7 +627,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
-     * Throws {@code DuplicateResultException} if more than one record is found.
+     * Throws {@link DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -650,7 +650,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.
-     * Throws {@code DuplicateResultException} if more than one record is found.
+     * Throws {@link DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -676,7 +676,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper for the entity with the specified ID.
-     * Throws {@code DuplicateResultException} if more than one record is found.
+     * Throws {@link DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -925,7 +925,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * }</pre>
      *
      * @param ids the collection of IDs to count
-     * @return the count of existing entities matching the given IDs
+     * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -1127,8 +1127,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param entity the entity to insert or update
      * @return the inserted or updated entity
-     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @Override
     default T upsert(final T entity) throws UncheckedSQLException {

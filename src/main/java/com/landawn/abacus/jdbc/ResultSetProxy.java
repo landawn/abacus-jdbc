@@ -443,8 +443,9 @@ final class ResultSetProxy implements ResultSet {
      *   <li>Disambiguates between {@code DATE} and {@code TIMESTAMP} types using metadata when necessary</li>
      * </ul>
      *
-     * <p>If the column index is out of the cached range, the call is delegated directly to the
-     * underlying {@link ResultSet} without caching.</p>
+     * <p>If the column index is non-positive or beyond the column count, or the value read is SQL
+     * NULL, the call is delegated to the underlying {@link ResultSet} without caching a getter
+     * strategy.</p>
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is null
@@ -560,8 +561,9 @@ final class ResultSetProxy implements ResultSet {
      * </ul>
      *
      * <p>Unlike the index form, the label is always resolved to a column index via the underlying
-     * {@link ResultSet#findColumn(String)}; there is no out-of-range pass-through path for the label
-     * form, so its caching behavior is consistent with the documented index form.</p>
+     * {@link ResultSet#findColumn(String)}, so there is no out-of-range pass-through path for the
+     * label form; like the index form, the getter strategy is cached only after the first non-null
+     * read for that label.</p>
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is null

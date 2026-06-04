@@ -37,8 +37,8 @@ import com.landawn.abacus.jdbc.Propagation;
  *   <li>Begins a {@link com.landawn.abacus.jdbc.Transaction Transaction} on the DAO's
  *       {@code DataSource}, honoring {@link #propagation()} and {@link #isolation()}.</li>
  *   <li>Runs the method body.</li>
- *   <li>Commits on normal return, or rolls back if a {@link java.sql.SQLException} or runtime
- *       exception propagates out.</li>
+ *   <li>Commits on normal return, or rolls back if any exception or error propagates out of
+ *       the method body before it returns normally.</li>
  * </ol>
  * The propagation rules follow the same semantics as the Spring equivalent: {@code REQUIRED}
  * joins an existing transaction or starts a new one, {@code REQUIRES_NEW} always starts a new

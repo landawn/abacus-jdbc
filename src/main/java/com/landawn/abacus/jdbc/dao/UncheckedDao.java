@@ -963,8 +963,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Executes a query and processes the result set using the provided result extractor.
-     * The ResultSet will be closed after this call, so don't save or return it.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<Long, String> idToEmail = userDao.query(

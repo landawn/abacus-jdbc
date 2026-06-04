@@ -89,7 +89,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
      * @param cond the condition identifying the records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Update operations are prohibited.
+     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
      */
     @Override
     @Deprecated
@@ -104,7 +104,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
      * @param cond the condition identifying the records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Update operations are prohibited.
+     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -119,7 +119,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
      * @param cond the condition identifying the records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Update operations are prohibited.
+     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -135,7 +135,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
      * @param cond the condition identifying the records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Update operations are prohibited.
+     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -151,7 +151,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
      * @param uniquePropNamesForQuery the property names used to look up an existing record
      * @return never returns normally
      * @throws UnsupportedOperationException always, since upsert operations are not supported
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Update operations are prohibited.
+     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Upserts are not allowed.
      */
     @Deprecated
     @Override
@@ -167,7 +167,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
      * @param cond the condition used to check whether the record already exists
      * @return never returns normally
      * @throws UnsupportedOperationException always, since upsert operations are not supported
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Update operations are prohibited.
+     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Upserts are not allowed.
      */
     @Deprecated
     @Override
@@ -181,7 +181,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
      * @param cond the condition identifying the records to delete
      * @return never returns normally
      * @throws UnsupportedOperationException always, since deletes are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Delete operations are prohibited.
+     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Deletes are not allowed.
      */
     @Deprecated
     @Override

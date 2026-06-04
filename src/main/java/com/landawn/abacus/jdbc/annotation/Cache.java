@@ -41,11 +41,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * {@link CacheResult @CacheResult}, and cached entries are invalidated/refreshed via
  * {@link RefreshCache @RefreshCache}.</p>
  *
- * <p><strong>Restriction (applies to the method-result annotations, not to {@code @Cache}):</strong>
- * {@code @CacheResult} and {@code @RefreshCache} (whether declared at the type or method level) are only
- * honored on {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Using either annotation on a DAO
- * that supports updates/deletes fails with {@code UnsupportedOperationException} at initialization time.
- * {@code @Cache} itself carries no such DAO-type restriction.</p>
+ * <p><strong>Restriction:</strong> {@code @Cache}, {@code @CacheResult}, and {@code @RefreshCache}
+ * (whether declared at the type or method level) are only honored on
+ * {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Applying any of them to a DAO that supports
+ * update/delete operations fails with {@code UnsupportedOperationException} at initialization time.</p>
  *
  * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} (or eligible
  * methods when {@code @CacheResult} is applied at the type level) will have their results cached

@@ -2098,7 +2098,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setObject(1, "123", Types.INTEGER);   // converts string to integer
+     * query.setObject(1, "123", Types.INTEGER);   // passes "123" with target SQL type INTEGER (driver may coerce)
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -3639,8 +3639,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Adds multiple sets of parameters for batch execution.
-     * Each element in the collection represents one set of parameters.
-     * 
+     * Each element in the collection represents one batch row: a {@code Collection} or {@code Object[]}
+     * of parameter values, or a single value (bound as the only parameter).
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<List<Object>> batchData = Arrays.asList(
@@ -3651,7 +3652,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.addBatchParameters(batchData).batchInsert();
      * }</pre>
      *
-     * @param batchParameters Collection where each element is a collection of parameters for one batch
+     * @param batchParameters Collection where each element is one batch row (a {@code Collection} or {@code Object[]} of values, or a single value bound as the only parameter)
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
      * @throws SQLException if a database access error occurs
@@ -3698,14 +3699,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Adds multiple sets of parameters for batch execution using an iterator.
-     * 
+     * Each element is one batch row: a {@code Collection} or {@code Object[]} of parameter values,
+     * or a single value (bound as the only parameter).
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Iterator<Object[]> dataIterator = getLargeDataset();
      * query.addBatchParameters(dataIterator).batchUpdate();
      * }</pre>
      *
-     * @param batchParameters Iterator over parameter sets
+     * @param batchParameters Iterator over batch rows (each a {@code Collection} or {@code Object[]} of values, or a single value bound as the only parameter)
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
      * @throws SQLException if a database access error occurs
@@ -6003,7 +6006,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType the class to map the result row to
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException if {@code targetType} is {@code null} or if the target type is invalid
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicateResultException if the query finds more than one record
@@ -6943,9 +6946,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * List<List<Order>> orderResults = query.listAllResultSets(Order.class);
      *
      * // Use Map for heterogeneous result sets
-     * List<List<Map<String, Object>>> allResults = query.listAllResultSets(Map.class);
-     * List<Map<String, Object>> orderMaps = allResults.get(0);
-     * List<Map<String, Object>> customerMaps = allResults.get(1);
+     * List<List<Map>> allResults = query.listAllResultSets(Map.class);
+     * List<Map> orderMaps = allResults.get(0);
+     * List<Map> customerMaps = allResults.get(1);
      * }</pre>
      *
      * @param <T> the type of entities extracted from each result set
@@ -9611,7 +9614,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return The number of rows affected by the update as a long value
      * @throws IllegalStateException if this query is closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs or the SQL statement is not a DML statement
      * @see #update()
      * @see #largeBatchUpdate()
      */

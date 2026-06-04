@@ -85,7 +85,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      *
      * @param entityToSave the entity that would be saved
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -99,7 +99,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      * @param entityToSave the entity that would be saved
      * @param propNamesToSave the collection of property names that would be saved
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -113,7 +113,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      * @param namedInsertSql the named SQL insert statement that would be executed
      * @param entityToSave the entity that would be saved
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -126,7 +126,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      *
      * @param entitiesToSave the collection of entities that would be saved
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -140,7 +140,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      * @param entitiesToSave the collection of entities that would be saved
      * @param batchSize the number of entities that would be processed per batch
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -154,7 +154,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      * @param entitiesToSave the collection of entities that would be saved
      * @param propNamesToSave the collection of property names that would be saved
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -169,7 +169,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      * @param propNamesToSave the collection of property names that would be saved
      * @param batchSize the number of entities that would be processed per batch
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -184,7 +184,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      * @param namedInsertSql the named SQL insert statement that would be executed
      * @param entitiesToSave the collection of entities that would be saved
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -199,7 +199,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
      * @param entitiesToSave the collection of entities that would be saved
      * @param batchSize the number of entities that would be processed per batch
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
-     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}; all modifications are prohibited
+     * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override

@@ -341,7 +341,8 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * 
+     * Returns an empty {@code Nullable} if no record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = userDao.queryForSingleValue("price", 123L, BigDecimal.class);
@@ -361,7 +362,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     }
 
     /**
-     * Queries for a single non-null value of the specified type from a property of the entity.
+     * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty {@code Optional} if no record is found or if the value is {@code null}.
      * 

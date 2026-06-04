@@ -2936,7 +2936,7 @@ public final class JdbcUtil {
      * // Assuming a table where a trigger generates a UUID and a timestamp on insert.
      * String insertSql = "INSERT INTO documents (content) VALUES (?)";
      *
-     * // Use insert(RowMapper) to extract multiple generated columns
+     * // Use insert(RowMapper) to read the generated column(s)
      * Optional<String> generatedUuid = JdbcUtil.prepareQuery(dataSource, insertSql, new int[]{1, 4})
      *     .setString(1, "Some content...")
      *     .insert(rs -> rs.getString(1));
@@ -3462,7 +3462,7 @@ public final class JdbcUtil {
      * // Assuming a table where a trigger generates a UUID at column 1 and a timestamp at column 4 on insert
      * String insertSql = "INSERT INTO documents (title, content) VALUES (:title, :content)";
      *
-     * // Use insert(RowMapper) to extract multiple generated columns
+     * // Use insert(RowMapper) to read the generated column(s)
      * Optional<String> generatedUuid = JdbcUtil.prepareNamedQuery(dataSource, insertSql, new int[]{1, 4})
      *     .setString("title", "Annual Report")
      *     .setString("content", "Report content...")
@@ -5449,7 +5449,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
      * @return The number of rows affected by the batch update as a long value
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
+     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
      */
@@ -6306,7 +6306,7 @@ public final class JdbcUtil {
      *     Dataset data = JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, cheap, upperName, false);
      *     // 'data' holds the rows with price <= 30, name column upper-cased
      *
-     *     // Skip the first matching row and take the next one.
+     *     // Skip the first row, then take up to one matching row.
      *     Dataset one = JdbcUtil.extractData(rs, 1, 1, cheap, upperName, false);   // one.size() <= 1
      * }
      *
@@ -7226,7 +7226,7 @@ public final class JdbcUtil {
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query
+     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      */
@@ -7285,7 +7285,7 @@ public final class JdbcUtil {
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query
+     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      */
@@ -7341,7 +7341,7 @@ public final class JdbcUtil {
      * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query
+     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
      */
     @SuppressWarnings("rawtypes")
@@ -7381,7 +7381,7 @@ public final class JdbcUtil {
      * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query
+     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      */
@@ -7441,7 +7441,7 @@ public final class JdbcUtil {
      * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query
+     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      */
@@ -8643,8 +8643,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action in a separate thread.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8669,8 +8669,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs two SQL actions in separate threads.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8700,8 +8700,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs three SQL actions in separate threads.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8735,8 +8735,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action with the given parameter.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8764,8 +8764,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action with two parameters.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8794,8 +8794,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action with three parameters.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8829,8 +8829,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously calls the specified SQL action and returns a result.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8855,8 +8855,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously calls two SQL actions and returns their results.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8887,8 +8887,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously calls three SQL actions and returns their results.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8925,8 +8925,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously calls the specified SQL action with one parameter and returns a result.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8954,8 +8954,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously calls the specified SQL action with two parameters and returns a result.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8986,8 +8986,8 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously calls the specified SQL action with three parameters and returns a result.
-     * <p>Note: Any transaction started in current thread won't be automatically applied to the specified 
-     * {@code sqlAction} which will be executed in another thread.
+     * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
+     * action(s) which will be executed in another thread.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9989,7 +9989,7 @@ public final class JdbcUtil {
      * String sql = extractor.apply(statement);
      * }</pre>
      *
-     * @return the current SQL extractor function
+     * @return the current SQL extractor function (defaults to a built-in non-null extractor), or {@code null} if a {@code null} extractor was explicitly set
      */
     public static Throwables.Function<Statement, String, SQLException> getSqlExtractor() {
         return JdbcUtil._sqlExtractor;

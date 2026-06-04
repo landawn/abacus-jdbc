@@ -149,8 +149,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }</pre>
      *
      * @param id the primary key value of the entity to retrieve
-     * @param selectPropNames the properties (columns) to select from the main entity.
-     *                        If {@code null}, all properties are selected
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an {@link Optional} containing the entity with the selected properties and loaded join entities,
      *         or empty if not found
@@ -181,8 +181,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }</pre>
      *
      * @param id the primary key value of the entity to retrieve
-     * @param selectPropNames the properties (columns) to select from the main entity.
-     *                        If {@code null}, all properties are selected
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return an {@link Optional} containing the entity with the selected properties and loaded join entities,
      *         or empty if not found
@@ -217,8 +217,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }</pre>
      *
      * @param id the primary key value of the entity to retrieve
-     * @param selectPropNames the properties (columns) to select from the main entity.
-     *                        If {@code null}, all properties are selected
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an {@link Optional} containing the entity with the selected properties and its join entities loaded (when requested), or empty if not found
@@ -284,7 +284,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }</pre>
      *
      * @param id the primary key value of the entity to retrieve
-     * @param includeAllJoinEntities if {@code true}, loads all mapped join entities
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
      * @return the entity, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
@@ -409,7 +410,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @param id the primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param includeAllJoinEntities if {@code true}, loads all mapped join entities
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
      * @return the entity with the selected properties and its join entities loaded (when requested), or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs

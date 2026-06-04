@@ -1454,7 +1454,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets an object value for the specified parameter with a specified SQL type.
-     * 
+     * The given {@code sqlType} (a constant from {@link java.sql.Types}) is the target SQL type
+     * passed to the driver for the conversion; the value may be {@code null} to set SQL {@code NULL}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject("amount", 123.45, Types.DECIMAL);

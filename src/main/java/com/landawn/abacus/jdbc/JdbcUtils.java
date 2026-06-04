@@ -995,7 +995,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * File csvFile = new File("users.csv");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * Function<String, Object[]> parser = line -> {
+     * Throwables.Function<String, Object[], Exception> parser = line -> {
      *     String[] parts = line.split(",");
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
      * };
@@ -1031,7 +1031,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * File csvFile = new File("large_users.csv");
      * String insertSql = "INSERT INTO users (name, age, email) VALUES (?, ?, ?)";
-     * Function<String, Object[]> parser = line -> {
+     * Throwables.Function<String, Object[], Exception> parser = line -> {
      *     String[] parts = line.split(",");
      *     if (parts.length < 3) return null;  // Skip invalid lines
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]), parts[2] };
@@ -1067,7 +1067,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * File dataFile = new File("products.txt");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO products (name, price) VALUES (?, ?)");
-     * Function<String, Object[]> parser = line -> {
+     * Throwables.Function<String, Object[], Exception> parser = line -> {
      *     String[] parts = line.split("\\|");
      *     return new Object[] { parts[0], Double.parseDouble(parts[1]) };
      * };
@@ -1101,7 +1101,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * Reader reader = new StringReader("John,25\nJane,30\nBob,35");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * Function<String, Object[]> parser = line -> {
+     * Throwables.Function<String, Object[], Exception> parser = line -> {
      *     String[] parts = line.split(",");
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
      * };
@@ -1137,7 +1137,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * Reader reader = new FileReader("large_data.txt");
      * String insertSql = "INSERT INTO transactions (account, amount, date) VALUES (?, ?, ?)";
-     * Function<String, Object[]> parser = line -> {
+     * Throwables.Function<String, Object[], Exception> parser = line -> {
      *     String[] parts = line.split("\t");
      *     return new Object[] {
      *         parts[0], 
@@ -1176,7 +1176,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * Reader reader = new InputStreamReader(inputStream);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO logs (level, message, timestamp) VALUES (?, ?, ?)");
-     * Function<String, Object[]> parser = line -> {
+     * Throwables.Function<String, Object[], Exception> parser = line -> {
      *     // Parse log format: [LEVEL] timestamp - message
      *     Pattern pattern = Pattern.compile("\\[(\\w+)\\] (\\d+) - (.+)");
      *     Matcher matcher = pattern.matcher(line);
@@ -1455,7 +1455,7 @@ public final class JdbcUtils {
      *
      * <p>The first line of the CSV file is treated as a header row and will be skipped during import.
      * The provided statement setter is responsible for parsing each CSV row value and binding it to
-     * the appropriate {@link PreparedStatement} parameter.</p>
+     * the appropriate {@link PreparedQuery} parameter.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

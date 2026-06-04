@@ -4696,7 +4696,7 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code BiRowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
-         * Do not store references to it. This consumer should not be reused in parallel streams.</p>
+         * Do not store references to it. This consumer should not be reused across different queries or in parallel streams.</p>
          *
          * @param consumer the consumer to process the column labels and {@code DisposableObjArray} for each row.
          * @return a new stateful {@code BiRowConsumer}.

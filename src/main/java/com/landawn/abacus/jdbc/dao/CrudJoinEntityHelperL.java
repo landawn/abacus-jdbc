@@ -85,7 +85,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      *
      * @param id the primitive {@code long} ID of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return an {@code Optional} containing the retrieved entity with the specified join entities loaded, or an empty {@code Optional} if no entity is found
+     * @return an {@code Optional} containing the retrieved entity with the join entities loaded, or an empty {@code Optional} if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class

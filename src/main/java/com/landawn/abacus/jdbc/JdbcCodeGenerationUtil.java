@@ -2189,7 +2189,7 @@ public final class JdbcCodeGenerationUtil {
         @Accessors(chain = true)
         public static class JsonXmlConfig {
             /**
-             * The naming policy for JSON/XML serialization (e.g., LOWER_CAMEL_CASE, UPPER_CASE_WITH_UNDERSCORE).
+             * The naming policy for JSON/XML serialization (e.g., {@code CAMEL_CASE}, {@code SNAKE_CASE}, {@code SCREAMING_SNAKE_CASE}).
              * Controls how Java field names are converted to JSON/XML property names.
              */
             private NamingPolicy namingPolicy;

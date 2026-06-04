@@ -178,7 +178,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param query the SQL query string
      * @param generateKeys {@code true} to retrieve auto-generated keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -195,7 +195,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param query the SQL query string
      * @param returnColumnIndexes an array of column indexes for returned keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -212,7 +212,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param query the SQL query string
      * @param returnColumnNames an array of column names for returned keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -270,7 +270,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery the SQL query string with named parameters
      * @param generateKeys {@code true} to retrieve auto-generated keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -287,7 +287,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -304,7 +304,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnNames an array of column names for returned keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -406,7 +406,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param generateKeys {@code true} to retrieve auto-generated keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -423,7 +423,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */
@@ -440,7 +440,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnNames an array of column names for returned keys
-     * @return never returns normally; this method always throws
+     * @return never returns normally
      * @throws UnsupportedOperationException always, since key generation is not applicable in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyDao}. Key generation requires write operations.
      */

@@ -647,6 +647,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntities(final T entity, final String joinEntityPropName) throws SQLException {
         loadJoinEntities(entity, joinEntityPropName, null);
@@ -703,6 +704,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
         loadJoinEntities(entities, joinEntityPropName, null);
@@ -764,6 +766,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
@@ -843,6 +846,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {

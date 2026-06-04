@@ -44,7 +44,7 @@ import com.landawn.abacus.annotation.Beta;
  * <pre>{@code
  * @Cache(capacity = 1000)
  * @RefreshCache                                   // type-level: defaults cover insert/update/delete/...
- * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+ * public interface ProductDao extends NoUpdateCrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
  *
  *     @CacheResult(liveTime = 600_000)
  *     @Query("SELECT * FROM product WHERE id = :id")

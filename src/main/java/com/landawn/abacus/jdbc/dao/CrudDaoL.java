@@ -369,7 +369,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Queries for a single non-null value of the specified type from a property of the entity.
+     * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
      * Returns an empty {@link Optional} if no record is found or if the value is {@code null}.

@@ -412,7 +412,7 @@ final class DaoImpl {
      *         <li>if the method is annotated with {@link MergedById @MergedById}, the result is a list;</li>
      *         <li>otherwise, if the last parameter is a parameterized {@code RowMapper}/{@code BiRowMapper}, the
      *             decision is based on comparing its element type with the return element type: it is non-list when
-     *             the mapper produces the whole return type, otherwise it is a list unless the return element type is
+     *             the mapper produces the whole return type, otherwise it is a list when the return element type is
      *             assignable from the mapper element type;</li>
      *         <li>otherwise, if the last parameter is a {@code ResultExtractor}/{@code BiResultExtractor}, the result
      *             is non-list;</li>

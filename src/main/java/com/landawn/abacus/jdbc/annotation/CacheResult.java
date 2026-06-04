@@ -39,7 +39,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Cache individual user lookups for 30 minutes
  *     @CacheResult(liveTime = 1800000, maxIdleTime = 600000)
  *     @Query("SELECT * FROM users WHERE id = :id")
@@ -58,7 +58,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Apply caching to all matching methods at type level
  * @CacheResult(liveTime = 600000, filter = {"find.*", "get.*"})
- * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+ * public interface ProductDao extends NoUpdateCrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
  *     // All find* and get* methods will be cached
  * }
  * }</pre>
@@ -229,7 +229,7 @@ public @interface CacheResult {
      * <pre>{@code
      * @CacheResult(liveTime = 600000, 
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     // These methods will be cached
      *     User findById(Long id);
      *     List<User> findByStatus(String status);
