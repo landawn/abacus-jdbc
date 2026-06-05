@@ -30,7 +30,7 @@ import com.landawn.abacus.util.Strings;
  * <p>The enum includes constants for widely used relational databases such as
  * H2, HSQLDB, MySQL (with specific major versions), MariaDB, PostgreSQL (with
  * specific major versions), Oracle, DB2, and SQL Server, along with generic
- * {@code _OTHERS} categories for broader compatibility.</p>
+ * {@code OTHERS} (and {@code MySQL_OTHERS}/{@code PostgreSQL_OTHERS}) categories for broader compatibility.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -251,6 +251,6 @@ public enum DBVersion {
      * @return {@code true} if this {@code DBVersion} is a PostgreSQL variant, {@code false} otherwise.
      */
     public boolean isPostgreSQL() {
-        return Strings.startsWithIgnoreCase(name(), "postgresql");
+        return Strings.startsWithIgnoreCase(name(), "PostgreSQL");
     }
 }

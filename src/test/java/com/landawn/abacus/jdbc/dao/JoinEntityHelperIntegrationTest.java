@@ -124,8 +124,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     }
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    public interface JoinUserDao
-            extends UncheckedCrudDao<JoinUser, Long, PSC, JoinUserDao>, UncheckedCrudJoinEntityHelper<JoinUser, Long, PSC, JoinUserDao> {
+    public interface JoinUserDao extends UncheckedCrudDao<JoinUser, Long, PSC, JoinUserDao>, UncheckedCrudJoinEntityHelper<JoinUser, Long, PSC, JoinUserDao> {
     }
 
     public interface JoinOrderDao extends UncheckedCrudDao<JoinOrder, Long, PSC, JoinOrderDao> {

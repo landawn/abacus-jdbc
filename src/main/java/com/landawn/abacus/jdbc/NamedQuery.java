@@ -110,7 +110,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         parameterNames = namedSql.namedParameters();
         parameterCount = namedSql.parameterCount();
 
-        if (N.size(namedSql.namedParameters()) != parameterCount) {
+        if (N.size(parameterNames) != parameterCount) {
             throw new IllegalArgumentException("Invalid named SQL: " + namedSql.originalSql());
         }
     }
@@ -1321,49 +1321,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setNString(final String parameterName, final CharSequence x) throws IllegalArgumentException, SQLException {
-        if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
-            int cnt = 0;
-
-            for (int i = 0; i < parameterCount; i++) {
-                if (parameterNames.get(i).equals(parameterName)) {
-                    setNString(i + 1, x);
-                    cnt++;
-                }
-            }
-
-            if (cnt == 0) {
-                close();
-                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
-            }
-        } else {
-            if (paramNameIndexMap == null) {
-                initParamNameIndexMap();
-            }
-
-            final IntList indexes = paramNameIndexMap.get(parameterName);
-
-            if (indexes == null) {
-                close();
-                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
-            } else {
-                if (indexes.size() == 1) {
-                    setNString(indexes.get(0), x);
-                } else if (indexes.size() == 2) {
-                    setNString(indexes.get(0), x);
-                    setNString(indexes.get(1), x);
-                } else if (indexes.size() == 3) {
-                    setNString(indexes.get(0), x);
-                    setNString(indexes.get(1), x);
-                    setNString(indexes.get(2), x);
-                } else {
-                    for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setNString(indexes.get(i), x);
-                    }
-                }
-            }
-        }
-
-        return this;
+        return setNString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
     /**
@@ -4401,61 +4359,4 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return this;
     }
 
-    //        /**
-    //         *
-    //         * @param batchParameters
-    //         * @return
-    //         * @throws SQLException the SQL exception
-    //         */
-    //        @Override
-    //        public NamedQuery addSingleBatchParameters(final Collection<?> batchParameters) throws SQLException {
-    //            checkArgNotNull(batchParameters, "batchParameters");
-    //
-    //            if (parameterCount != 1) {
-    //                try {
-    //                    close();
-    //                } catch (Exception e) {
-    //                    JdbcUtil.logger.error("Failed to close PreparedQuery", e);
-    //                }
-    //
-    //                throw new IllegalArgumentException("isSingleParameter is true but the count of parameters in query is: " + parameterCount);
-    //            }
-    //
-    //            if (N.isEmpty(batchParameters)) {
-    //                return this;
-    //            }
-    //
-    //            boolean noException = false;
-    //
-    //            try {
-    //                for (Object obj : batchParameters) {
-    //                    setObject(1, obj);
-    //
-    //                    addBatch();
-    //                }
-    //
-    //                isBatch = batchParameters.size() > 0;
-    //
-    //                noException = true;
-    //            } finally {
-    //                if (noException == false) {
-    //                    close();
-    //                }
-    //            }
-    //
-    //            return this;
-    //        }
-    //
-    //        /**
-    //         *
-    //         * @param batchParameters
-    //         * @return
-    //         * @throws SQLException the SQL exception
-    //         */
-    //        @Override
-    //        public NamedQuery addSingleBatchParameters(final Iterator<?> batchParameters) throws SQLException {
-    //            checkArgNotNull(batchParameters, "batchParameters");
-    //
-    //            return addSingleBatchParameters(Iterators.toList(batchParameters));
-    //        }
 }

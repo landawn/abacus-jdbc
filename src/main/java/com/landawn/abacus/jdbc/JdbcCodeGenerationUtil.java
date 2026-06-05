@@ -619,25 +619,9 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
             }
 
-            //    if (N.isEmpty(readOnlyFields) || N.intersection(readOnlyFields, fieldNameList).isEmpty()) {
-            //        headPart = headPart.replace("import com.landawn.abacus.annotation.ReadOnly;\n", "");
-            //    }
-            //
-            //    if (N.isEmpty(customizedFieldDbTypeMap) || N.intersection(customizedFieldDbTypeMap.keySet(), fieldNameList).isEmpty()) {
-            //        headPart = headPart.replace("import com.landawn.abacus.annotation.Type;\n", "");
-            //    }
-            //
-            //    if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getNamingPolicy() == null) {
-            //        headPart = headPart.replace("import com.landawn.abacus.util.NamingPolicy;\n", "");
-            //    }
-            //
-            //    if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getEnumerated() == null) {
-            //        headPart = headPart.replace("import com.landawn.abacus.util.EnumType;\n", "");
-            //    }
-            //
-            //    if (configToUse.getJsonXmlConfig() == null) {
-            //        headPart = headPart.replace("import com.landawn.abacus.annotation.JsonXmlConfig;\n", "");
-            //    }
+            // Note: unused imports for @ReadOnly/@Type/@JsonXmlConfig/NamingPolicy/EnumType are pruned later,
+            // after the whole class is generated, by scanning the emitted lines for the corresponding annotations
+            // (see the N.noneMatch(...) blocks near the end of this method).
 
             if (!configToUse.isGenerateBuilder()) {
                 headPart = headPart.replace("import lombok.Builder;\n", "").replace("@Builder\n", "");
@@ -726,20 +710,9 @@ public final class JdbcCodeGenerationUtil {
                 sb.append("    private ").append(columnClassName).append(" ").append(fieldName).append(";").append(LINE_SEPARATOR);
             }
 
-            //    if (idFields.size() > 0) {
-            //        throw new RuntimeException("Id fields: " + idFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
-            //                + ": with columns: " + columnNameList);
-            //    }
-            //
-            //    if (readOnlyFields.size() > 0) {
-            //        throw new RuntimeException("Read-only fields: " + readOnlyFields + " are not found in entity class: " + finalClassName + ", table: " + tableName
-            //                + ": with columns: " + columnNameList);
-            //    }
-            //
-            //    if (nonUpdatableFields.size() > 0) {
-            //        throw new RuntimeException("Non-updatable fields: " + nonUpdatableFields + " are not found in entity class: " + finalClassName + ", table: "
-            //                + tableName + ": with columns: " + columnNameList);
-            //    }
+            // Note: configured id/read-only/non-updatable field names that do not match any generated column are
+            // intentionally ignored (no validation/throw). This keeps generation lenient when the config lists
+            // fields that don't exist in the target table.
 
             if (Strings.isNotEmpty(configToUse.getAdditionalFieldsOrLines())) {
                 sb.append(LINE_SEPARATOR).append(configToUse.getAdditionalFieldsOrLines());
@@ -1011,7 +984,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the SELECT statement
-     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement
+     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Can be {@code null} or empty to include all columns
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1041,7 +1014,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the SELECT statement
-     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement
+     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Can be {@code null} or empty to include all columns
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -2180,7 +2153,7 @@ public final class JdbcCodeGenerationUtil {
          * and deserialized from JSON and XML formats. It includes settings for naming
          * conventions, field filtering, date/time formatting, and enum handling.</p>
          *
-         * <p>This feature is marked as {@code @Beta} and may be subject to changes
+         * <p>This feature is experimental and may be subject to changes
          * in future releases.</p>
          */
         @Builder

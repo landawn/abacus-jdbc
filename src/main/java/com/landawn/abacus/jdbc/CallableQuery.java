@@ -2097,7 +2097,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * and returns the first {@code ResultSet} encountered. It returns {@code null} if no result set
      * is ever produced.
      *
-     * <p>If {@link #setFetchDirection(int)} was not previously called on this query, the fetch direction
+     * <p>If {@link #setFetchDirection(FetchDirection)} was not previously called on this query, the fetch direction
      * is set to {@link ResultSet#FETCH_FORWARD} before execution.
      *
      * @return the first {@link ResultSet} produced by the procedure, or {@code null} if the procedure
@@ -3676,7 +3676,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             cstmt.clearParameters();
         } catch (final SQLException e) {
-            logger.warn(e, "Failed to reset statement");
+            logger.warn(e, "Failed to clear parameters");
         } finally {
             super.closeStatement();
         }

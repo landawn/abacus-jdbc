@@ -47,7 +47,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(SqlTransaction.class);
 
     private static final Map<String, SqlTransaction> threadTransactionMap = new ConcurrentHashMap<>();
-    // private static final Map<String, SqlTransaction> attachedThreadTransactionMap = new ConcurrentHashMap<>();
 
     private final String _id; //NOSONAR
 
@@ -81,6 +80,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     private volatile boolean _isForUpdateOnly; //NOSONAR
 
+    // One-shot "skip the next cleanup" latch. Set by commit()/rollback() once they have settled
+    // the transaction; consumed (and reset) by the first rollbackIfNotCommitted()/close() so that
+    // call becomes a no-op after an explicit commit/rollback rather than decrementing the ref count.
     private volatile boolean _isMarkedByCommitOrRollbackPreviously = false; //NOSONAR
 
     /**
@@ -259,41 +261,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     public boolean isActive() {
         return _status == Status.ACTIVE;
     }
-
-    //    /**
-    //     * Attaches this transaction to current thread.
-    //     *
-    //     */
-    //    public void attach() {
-    //        final String currentThreadName = Thread.currentThread().getName();
-    //        final String resourceId = ttid.substring(ttid.lastIndexOf('_') + 1);
-    //        final String targetTTID = currentThreadName + "_" + resourceId;
-    //
-    //        if (attachedThreadTransactionMap.containsKey(targetTTID)) {
-    //            throw new IllegalStateException("Transaction(id=" + attachedThreadTransactionMap.get(targetTTID).id()
-    //                    + ") has already been attached to current thread: " + currentThreadName);
-    //        } else if (threadTransactionMap.containsKey(targetTTID)) {
-    //            throw new IllegalStateException(
-    //                    "Transaction(id=" + threadTransactionMap.get(targetTTID).id() + ") has already been created in current thread: " + currentThreadName);
-    //        }
-    //
-    //        attachedThreadTransactionMap.put(targetTTID, this);
-    //        threadTransactionMap.put(targetTTID, this);
-    //    }
-    //
-    //    public void detach() {
-    //        final String currentThreadName = Thread.currentThread().getName();
-    //        final String resourceId = ttid.substring(ttid.lastIndexOf('_') + 1);
-    //        final String targetTTID = currentThreadName + "_" + resourceId;
-    //
-    //        if (!attachedThreadTransactionMap.containsKey(targetTTID)) {
-    //            throw new IllegalStateException(
-    //                    "Transaction(id=" + attachedThreadTransactionMap.get(targetTTID).id() + ") is not attached to current thread: " + currentThreadName);
-    //        }
-    //
-    //        threadTransactionMap.remove(targetTTID);
-    //        attachedThreadTransactionMap.remove(targetTTID);
-    //    }
 
     /**
      * Commits this transaction scope.
@@ -822,7 +789,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     /**
      * Executes the specified {@code Runnable} outside of this transaction context.
      * This method temporarily removes the transaction from the current thread,
-     * executes the runnable, and then restores the transaction.
+     * executes the runnable, and then restores the transaction (only if it was registered
+     * on this thread and is still active when {@code cmd} completes).
      *
      * <p>This is useful when you need to perform operations that should not be
      * part of the current transaction, such as logging or audit operations that
@@ -883,7 +851,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     /**
      * Executes the specified {@code Callable} outside of this transaction context.
      * This method temporarily removes the transaction from the current thread,
-     * executes the callable, and then restores the transaction.
+     * executes the callable, and then restores the transaction (only if it was registered
+     * on this thread and is still active when {@code cmd} completes).
      *
      * <p>This is useful when you need to perform operations that should not be
      * part of the current transaction and return a result, such as querying

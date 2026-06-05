@@ -108,6 +108,9 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 @SuppressWarnings({ "java:S1192", "resource" })
 public final class JoinInfo {
 
+    // Per-SqlBuilder factory functions, keyed by builder class (PSC/PAC/PLC). The Tuple4 slots are:
+    //   _1 = select(columns), _2 = selectFrom(entityClass), _3 = update(entityClass), _4 = deleteFrom(entityClass).
+    // Referenced as entry.getValue()._1.._4 throughout the constructor.
     static final Map<Class<? extends SqlBuilder>, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> sqlBuilderFuncMap = new HashMap<>();
 
     static {
@@ -223,7 +226,11 @@ public final class JoinInfo {
         referencedBeanInfo = ParserUtil.getBeanInfo(referencedEntityClass);
 
         final JoinedBy joinedByAnno = joinPropInfo.getAnnotation(JoinedBy.class);
-        final boolean cascadeDeleteDefinedInDB = true; // joinedByAnno.cascadeDeleteDefinedInDB();   // TODO should be defined/implemented on DB server side.
+        // Hard-wired to true: the cascade delete of the middle (join) table is assumed to be handled by the DB
+        // (e.g. via an ON DELETE CASCADE foreign key), so no middle-table delete SQL is emitted below (the
+        // `cascadeDeleteDefinedInDB ? null : ...` ternaries always yield null). Re-enabling client-side cascade
+        // delete would require reading joinedByAnno.cascadeDeleteDefinedInDB(). TODO: define/implement on the DB side.
+        final boolean cascadeDeleteDefinedInDB = true;
         final String joinByVal = Strings.join(joinedByAnno.value(), ", ");
 
         if (Strings.isEmpty(joinByVal)) {
@@ -840,16 +847,6 @@ public final class JoinInfo {
         return getBatchSelectSqlPlan(sbc);
     }
 
-    //    public Tuple2<String, BiParametersSetter<PreparedStatement, Object>> getSetNullSqlAndParamSetter(final Class<? extends SqlBuilder> sbc) {
-    //        final Tuple2<String, BiParametersSetter<PreparedStatement, Object>> tp = setNullSqlAndParamSetterPool.get(sbc);
-    //
-    //        if (tp == null) {
-    //            throw new IllegalArgumentException("Not supported SqlBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
-    //        }
-    //
-    //        return tp;
-    //    }
-
     /**
      * Retrieves the SQL plan for delete operations.
      * This method returns SQL statements for deleting joined entities.
@@ -988,8 +985,10 @@ public final class JoinInfo {
      * <p>The joined entities are grouped by their referenced join key and then assigned to the
      * corresponding source entities. If the join property is declared as a {@code List} and the
      * grouped value is already a {@code List}, the list is assigned directly; otherwise a new
-     * collection of the declared type is created and populated. For single-entity and map join
-     * properties, only the first (or single) matching entity is used.</p>
+     * collection of the declared type is created and populated. For a single-entity (non-collection,
+     * non-map) join property, only the first matching entity is used; for a map-valued join property,
+     * exactly one matching entity per key is expected and more than one match throws
+     * {@link IllegalArgumentException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

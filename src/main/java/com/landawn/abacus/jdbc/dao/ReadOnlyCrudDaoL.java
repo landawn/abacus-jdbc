@@ -55,7 +55,7 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * // Query operations work normally:
  * List<Report> activeReports = reportDao.list(Filters.eq("status", "ACTIVE"));
- * long count = reportDao.count(Filters.ge("created_date", startDate));
+ * int count = reportDao.count(Filters.ge("created_date", startDate));
  *
  * // All modification operations throw UnsupportedOperationException:
  * reportDao.insert(new Report());   // Throws UnsupportedOperationException

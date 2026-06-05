@@ -187,10 +187,10 @@ public @interface Query {
      *   <li>{@link OP#list} - Returns all results as a List</li>
      *   <li>{@link OP#stream} - (Deprecated) Returns results as a Stream; prefer {@link OP#DEFAULT} with a {@code Stream} return type</li>
      *   <li>{@link OP#findFirst} - Returns the first result wrapped in Optional</li>
-     *   <li>{@link OP#findOnlyOne} - Returns at most one result wrapped in {@code Optional} (empty if none); throws {@code DuplicateResultException} if more than one is found</li>
+     *   <li>{@link OP#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
      *   <li>{@link OP#exists} - Returns boolean indicating if any results exist</li>
      *   <li>{@link OP#queryForSingle} - Returns a single scalar value</li>
-     *   <li>{@link OP#queryForUnique} - Returns a unique single value wrapped in {@code Nullable} (empty if none); throws {@code DuplicateResultException} if more than one is found</li>
+     *   <li>{@link OP#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
      *   <li>{@link OP#update} - Executes UPDATE/INSERT/DELETE and returns row count</li>
      *   <li>{@link OP#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
      * </ul>

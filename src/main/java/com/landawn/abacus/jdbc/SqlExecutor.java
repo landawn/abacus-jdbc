@@ -22,7 +22,7 @@ package com.landawn.abacus.jdbc;
  * reference. The body cannot be invoked, and the class itself cannot be instantiated.</p>
  *
  * <p>The original {@code SqlExecutor} was a general-purpose JDBC helper that has since been
- * superseded by {@link AbstractQuery}, {@link PreparedQuery}, {@link NamedQuery}, and the
+ * superseded by {@link PreparedQuery}, {@link NamedQuery}, and the
  * annotation-driven DAO interfaces under {@code com.landawn.abacus.jdbc.dao}. The archived
  * source documented support for:</p>
  * <ul>

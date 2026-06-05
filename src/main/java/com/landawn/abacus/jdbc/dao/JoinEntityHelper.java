@@ -1565,15 +1565,6 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
         loadJoinEntitiesIfNull(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
-    // TODO may or may not, should or should not? undecided.
-    //    int saveWithJoinEntities(final T entity) throws SQLException;
-    //
-    //    default int batchSaveWithJoinEntities(final Collection<? extends T> entities) throws SQLException {
-    //        return batchSaveWithJoinEntities(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
-    //    }
-    //
-    //    int batchSaveWithJoinEntities(final Collection<? extends T> entity, int batchSize) throws SQLException;
-
     /**
      * Deletes all join entities of the specified type for a single entity.
      * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.
@@ -1767,6 +1758,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param joinEntityPropNames the property names of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
@@ -1872,6 +1864,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param joinEntityPropNames the property names of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {

@@ -82,7 +82,7 @@ public @interface RefreshCache {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @RefreshCache
-     * public interface UserDao {
+     * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     @Query("UPDATE users SET last_seen = NOW() WHERE id = :id")
      *     @RefreshCache(disabled = true) // Don't refresh cache for this frequent update
      *     void updateLastSeen(long userId);

@@ -2329,9 +2329,6 @@ final class DaoImpl {
 
         final Set<Method> nonDBOperationSet = N.newConcurrentHashSet();
 
-        //    final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
-        //    final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
-
         final Map<String, JoinInfo> joinBeanInfo = JoinEntityHelper.class.isAssignableFrom(daoInterface)
                 ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass, tableName)
                 : null;
@@ -2455,24 +2452,6 @@ final class DaoImpl {
                 call = (proxy, args) -> primaryDataSource;
             } else if (methodName.equals("sqlMapper") && SqlMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> newSqlMapper;
-                //    } else if (methodName.equals("cacheSql") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
-                //            && paramTypes[1].equals(String.class)) {
-                //        call = (proxy, args) -> {
-                //            sqlCache.put(N.checkArgNotEmpty((String) args[0], "key"), N.checkArgNotEmpty((String) args[1], "sql"));
-                //            return null;
-                //        };
-                //    } else if (methodName.equals("cacheSqls") && void.class.isAssignableFrom(returnType) && paramLen == 2 && paramTypes[0].equals(String.class)
-                //            && paramTypes[1].equals(Collection.class)) {
-                //        call = (proxy, args) -> {
-                //            sqlsCache.put(N.checkArgNotEmpty((String) args[0], "key"),
-                //                    ImmutableList.copyOf(N.checkArgNotEmpty((Collection<String>) args[1], "sqls")));
-                //            return null;
-                //        };
-                //    } else if (methodName.equals("getCachedSql") && String.class.isAssignableFrom(returnType) && paramLen == 1 && paramTypes[0].equals(String.class)) {
-                //        call = (proxy, args) -> sqlCache.get(args[0]);
-                //    } else if (methodName.equals("getCachedSqls") && ImmutableList.class.isAssignableFrom(returnType) && paramLen == 1
-                //            && paramTypes[0].equals(String.class)) {
-                //        call = (proxy, args) -> sqlsCache.get(args[0]);
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = StreamEx.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
@@ -4873,46 +4852,6 @@ final class DaoImpl {
 
                             return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
                         };
-
-                        //} else if (methodName.equals("delete") && paramLen == 2 && !Condition.class.isAssignableFrom(paramTypes[0])
-                        //        && OnDeleteAction.class.equals(paramTypes[1])) {
-                        //    call = (proxy, args) -> {
-                        //        final Object entity = (args[0]);
-                        //        N.checkArgNotNull(entity, "entity");
-                        //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
-                        //
-                        //        if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
-                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).setParametersFrom(entity, idParamSetterByEntity).update();
-                        //        }
-                        //
-                        //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
-                        //
-                        //        if (N.isEmpty(entityJoinInfo)) {
-                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).setParametersFrom(entity, idParamSetterByEntity).update();
-                        //        } else {
-                        //            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                        //            long result = 0;
-                        //
-                        //            try {
-                        //                Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
-                        //
-                        //                for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
-                        //                    tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
-                        //                            : propJoinInfo.getDeleteSqlPlan(sbc);
-                        //
-                        //                    result += proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
-                        //                }
-                        //
-                        //                result += proxy.prepareNamedQuery(namedDeleteByIdSQL).setParametersFrom(entity, idParamSetterByEntity).update();
-                        //
-                        //                tran.commit();
-                        //            } finally {
-                        //                tran.rollbackIfNotCommitted();
-                        //            }
-                        //
-                        //            return Numbers.toIntExact(result);
-                        //        }
-                        //    };
                     } else if ((methodName.equals("batchDelete") || methodName.equals("batchDeleteByIds")) && paramLen == 2
                             && int.class.equals(paramTypes[1])) {
 
@@ -4949,61 +4888,6 @@ final class DaoImpl {
                                 return Numbers.toIntExact(result);
                             }
                         };
-                        //    } else if (methodName.equals("batchDelete") && paramLen == 3 && OnDeleteAction.class.equals(paramTypes[1])
-                        //        && int.class.equals(paramTypes[2])) {
-                        //    final JdbcUtil.BiParametersSetter<NamedQuery, Object> paramSetter = idParamSetterByEntity;
-                        //
-                        //    call = (proxy, args) -> {
-                        //        final Collection<Object> entities = (Collection) args[0];
-                        //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
-                        //        final int batchSize = (Integer) args[2];
-                        //        N.checkArgPositive(batchSize, "batchSize");
-                        //
-                        //        if (N.isEmpty(entities)) {
-                        //            return 0;
-                        //        } else if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
-                        //            return ((CrudDao) proxy).batchDelete(entities, batchSize);
-                        //        }
-                        //
-                        //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
-                        //
-                        //        if (N.isEmpty(entityJoinInfo)) {
-                        //            return ((CrudDao) proxy).batchDelete(entities, batchSize);
-                        //        }
-                        //
-                        //        final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                        //        long result = 0;
-                        //
-                        //        try {
-                        //            try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
-                        //                result = Stream.of(entities) //
-                        //                        .splitToList(batchSize).checked() //
-                        //                        .sumLong(bp -> {
-                        //                            long tmpResult = 0;
-                        //
-                        //                            Tuple2<String, JdbcUtil.BiParametersSetter<PreparedStatement, Object>> tp = null;
-                        //
-                        //                            for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
-                        //                                tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
-                        //                                        : propJoinInfo.getDeleteSqlPlan(sbc);
-                        //
-                        //                                tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
-                        //                            }
-                        //
-                        //                            tmpResult += N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate());
-                        //
-                        //                            return tmpResult;
-                        //                        })
-                        //                        .orZero();
-                        //            }
-                        //
-                        //            tran.commit();
-                        //        } finally {
-                        //            tran.rollbackIfNotCommitted();
-                        //        }
-                        //
-                        //        return Numbers.toIntExact(result);
-                        //    };
                     } else {
                         call = (proxy, args) -> {
                             throw new UnsupportedOperationException("Unsupported operation: " + method);
@@ -5553,10 +5437,6 @@ final class DaoImpl {
                                 + "), the first parameter must be Collection. The second parameter is optional, it only can be int if it's set");
                     }
 
-                    //    final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(Integer.class) || returnType.equals(long.class)
-                    //            || returnType.equals(Long.class) || returnType.equals(boolean.class) || returnType.equals(Boolean.class)
-                    //            || returnType.equals(void.class);
-
                     final MappedByKey mappedByKeyAnno = method.getAnnotation(MappedByKey.class);
                     final String mappedByKey = mappedByKeyAnno == null ? null
                             : Strings.isNotEmpty(mappedByKeyAnno.value()) ? mappedByKeyAnno.value()
@@ -5668,32 +5548,6 @@ final class DaoImpl {
                         final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> queryFunc = createQueryFunctionByMethod(entityClass, method,
                                 mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op,
                                 isProcedure, fullClassMethodName);
-
-                        // Getting ClassCastException. Not sure why query result is being cast Dao. It seems there is a bug in JDk compiler.
-                        //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
-
-                        //    if (fetchSize <= 0) {
-                        //        if (mergedByIdAnno != null) {
-                        //            // skip
-                        //        } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
-                        //            // skip.
-                        //        } else if (op == OP.exists || isExistsQuery(method, op, fullClassMethodName) || op == OP.findFirst || op == OP.queryForSingle
-                        //                || isSingleReturnType(returnType)) {
-                        //            // skip
-                        //        } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream || op == OP.streamAll
-                        //                || isListQuery(method, returnType, op, fullClassMethodName)) {
-                        //            // skip.
-                        //        } else if (lastParamType != null && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)
-                        //                || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType))) {
-                        //            // skip.
-                        //        } else if (Stream.class.isAssignableFrom(returnType) || Dataset.class.isAssignableFrom(returnType)) {
-                        //            // skip.
-                        //        } else if (isProcedure) {
-                        //            // skip.
-                        //        } else {
-                        //            // skip.
-                        //        }
-                        //    }
 
                         call = (proxy,
                                 args) -> queryFunc.apply(
@@ -6669,11 +6523,11 @@ final class DaoImpl {
         /**
          * Constructs a new {@code QueryInfo} from annotation attributes and derived SQL properties.
          *
-         * <p>Trailing semicolons in the SQL string are automatically stripped. If {@code parsedSql} is {@code null},
+         * <p>A single trailing semicolon in the SQL string is automatically stripped. If {@code parsedSql} is {@code null},
          * the SQL string is parsed automatically. The {@code isNamedQuery} flag is derived from the presence of
          * named parameters in the parsed SQL or from the {@code fragmentContainsNamedParameters} hint.</p>
          *
-         * @param sql the raw SQL string (must not be blank); trailing semicolons are removed
+         * @param sql the raw SQL string (must not be blank); a single trailing semicolon is removed
          * @param parsedSql the pre-parsed SQL, or {@code null} to parse from {@code sql}
          * @param queryTimeout the query timeout in seconds (0 means no timeout)
          * @param fetchSize the JDBC fetch size hint (0 means use driver default)

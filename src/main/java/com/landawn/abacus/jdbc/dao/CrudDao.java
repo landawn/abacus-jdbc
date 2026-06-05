@@ -1118,13 +1118,14 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @return the saved entity (either newly inserted or updated)
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      */
     default T upsert(final T entity) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return upsert(entity, idPropNameList);
     }
@@ -1148,6 +1149,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws DuplicateResultException if more than one record matches the specified condition
      * @see Filters
      */
     @Override
@@ -1225,7 +1227,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return batchUpsert(entities, idPropNameList, batchSize);
     }
@@ -1288,23 +1290,21 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
             return new ArrayList<>();
         }
 
-        @SuppressWarnings("UnnecessaryLocalVariable")
-        final List<String> propNameListForQuery = uniquePropNamesForQuery;
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
-        final PropInfo uniquePropInfo = entityInfo.getPropInfo(propNameListForQuery.get(0));
+        final PropInfo uniquePropInfo = entityInfo.getPropInfo(uniquePropNamesForQuery.get(0));
 
         if (uniquePropInfo == null) {
-            throw new IllegalArgumentException("No property found with name: '" + propNameListForQuery.get(0) + "' in class: " + cls.getName());
+            throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(0) + "' in class: " + cls.getName());
         }
 
-        final List<PropInfo> uniquePropInfos = N.map(propNameListForQuery, entityInfo::getPropInfo);
+        final List<PropInfo> uniquePropInfos = N.map(uniquePropNamesForQuery, entityInfo::getPropInfo);
 
         for (int i = 0; i < uniquePropInfos.size(); i++) {
             if (uniquePropInfos.get(i) == null) {
-                throw new IllegalArgumentException("No property found with name: '" + propNameListForQuery.get(i) + "' in class: " + cls.getName());
+                throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(i) + "' in class: " + cls.getName());
             }
         }
 
@@ -1321,12 +1321,12 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
             return entityId;
         };
 
-        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
+        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNamesForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
 
-        final List<T> dbEntities = propNameListForQuery.size() == 1
+        final List<T> dbEntities = uniquePropNamesForQuery.size() == 1
                 ? Seq.of(entities, SQLException.class)
                         .split(batchSize)
-                        .flatmap(it -> list(Filters.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor))))
+                        .flatmap(it -> list(Filters.in(uniquePropNamesForQuery.get(0), N.map(it, singleKeyExtractor))))
                         .toList()
                 : Seq.of(entities, SQLException.class) //
                         .split(batchSize)
@@ -1350,7 +1350,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
             }
 
             if (N.notEmpty(entitiesToUpdate)) {
-                final Set<String> ignoredPropNames = N.newHashSet(propNameListForQuery);
+                final Set<String> ignoredPropNames = N.newHashSet(uniquePropNamesForQuery);
 
                 @SuppressWarnings("deprecation")
                 final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
@@ -1437,7 +1437,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
@@ -1562,7 +1562,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);

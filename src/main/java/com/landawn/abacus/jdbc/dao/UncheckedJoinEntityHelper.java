@@ -39,7 +39,7 @@ import com.landawn.abacus.util.stream.Stream;
 /**
  * The UncheckedJoinEntityHelper interface provides advanced functionality for handling entity relationships
  * and join operations in DAOs with unchecked exceptions. It enables loading of related entities and
- * managing one-to-one and one-to-many relationships declared via the {@code @JoinedBy} annotation.
+ * managing one-to-one, one-to-many, and many-to-many relationships declared via the {@code @JoinedBy} annotation.
  *
  * <p>This interface is the unchecked counterpart of {@link JoinEntityHelper}: every operation that would
  * throw {@link java.sql.SQLException} in the parent interface throws {@link UncheckedSQLException} here
@@ -52,7 +52,7 @@ import com.landawn.abacus.util.stream.Stream;
  *   <li>Batch loading for performance optimization</li>
  *   <li>Conditional loading ({@code loadJoinEntitiesIfNull})</li>
  *   <li>Parallel loading support for multiple join properties</li>
- *   <li>Cascade delete operations for related entities</li>
+ *   <li>Delete operations for related (join) entities</li>
  * </ul>
  * 
  * <p><b>Usage Examples:</b></p>
@@ -600,7 +600,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      *                       If {@code null}, all properties of the join entities are selected.
      *                       This parameter is useful for performance optimization when only
      *                       specific fields are needed
-     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy}
      */
@@ -673,7 +673,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      *                       If {@code null}, all properties of the join entities are selected.
      *                       Specifying only needed properties can significantly improve query
      *                       performance and reduce memory usage
-     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy}
      */
@@ -1716,7 +1716,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      *                           property name that exists in the entity class and is annotated
      *                           with {@code @JoinedBy}
      * @return the total count of deleted records. Returns 0 if no matching records were found
-     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy}
      */
@@ -1772,7 +1772,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      *                           with {@code @JoinedBy}
      * @return the total count of deleted records across all parent entities. Returns 0 if no
      *         matching records were found or if {@code entities} is empty
-     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy}
      */

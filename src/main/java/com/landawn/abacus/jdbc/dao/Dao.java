@@ -1009,7 +1009,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Finds exactly one record using a bi-function mapper, throwing if multiple found.
-     * Provides column labels to the mapper for more flexible processing.
+     * The mapper receives both the ResultSet and column labels.
      *
      * @param <R> the result type after applying the mapping function
      * @param cond the search condition

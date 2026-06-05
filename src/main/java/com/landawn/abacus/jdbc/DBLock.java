@@ -588,26 +588,26 @@ public final class DBLock {
 
         final LockInfo lockInfo = targetCodePool.get(target);
         final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code);
-        final boolean unLocked;
+        final boolean unlocked;
 
         try {
-            unLocked = JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
+            unlocked = JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
         } catch (final SQLException e) {
             logger.warn(e, "Failed to release DB lock(target={})", target);
             throw new UncheckedSQLException(e);
         }
 
-        if (shouldRemoveFromLocal && unLocked) {
+        if (shouldRemoveFromLocal && unlocked) {
             targetCodePool.remove(target, lockInfo);
         }
 
-        if (unLocked) {
+        if (unlocked) {
             logger.info("Released DB lock(target={})", target);
         } else {
             logger.warn("DB lock was not released(target={}); it may have expired or been released by another owner", target);
         }
 
-        return unLocked;
+        return unlocked;
     }
 
     /**

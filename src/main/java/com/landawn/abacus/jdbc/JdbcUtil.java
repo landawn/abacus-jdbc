@@ -5928,8 +5928,6 @@ public final class JdbcUtil {
             parameterValues = new Object[parameterCount];
 
             if (Beans.isBeanClass(cls)) {
-                @SuppressWarnings("UnnecessaryLocalVariable")
-                final Object entity = parameter_0;
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                 parameterTypes = new Type[parameterCount];
                 PropInfo propInfo = null;
@@ -5942,7 +5940,7 @@ public final class JdbcUtil {
                                 "No property found with name: " + namedParameters.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
                     }
 
-                    parameterValues[i] = propInfo.getPropValue(entity);
+                    parameterValues[i] = propInfo.getPropValue(parameter_0);
                     parameterTypes[i] = propInfo.dbType;
                 }
             } else if (parameter_0 instanceof Map) {
@@ -6216,8 +6214,8 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rs The ResultSet to extract data from
-     * @param offset The starting position in the ResultSet
-     * @param count The number of rows to extract
+     * @param offset The starting position in the ResultSet (0-based)
+     * @param count The maximum number of rows to extract
      * @param closeResultSet Whether to close the ResultSet after extraction
      * @return A Dataset containing the extracted data
      * @throws IllegalArgumentException if {@code rs} is {@code null} or offset/count are negative
@@ -6478,10 +6476,10 @@ public final class JdbcUtil {
      *     .forEach(user -> processUser(user));
      * }</pre>
      *
-     * @param <T> The type of the result extracted from the ResultSet
-     * @param rs The ResultSet to create a stream from
-     * @param targetClass The class of the result type. Column names from the ResultSet will be mapped to properties of this class
-     * @return A Stream of the extracted results
+     * @param <T> the type of the result extracted from the ResultSet
+     * @param rs the ResultSet to create a stream from
+     * @param targetClass the class of the result type. Column names from the ResultSet will be mapped to properties of this class
+     * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final Class<? extends T> targetClass) throws IllegalArgumentException {
@@ -8942,7 +8940,7 @@ public final class JdbcUtil {
      * @param parameter The parameter to pass to the SQL action
      * @param sqlAction The SQL action that takes a parameter and produces a result
      * @return A ContinuableFuture representing the result of the asynchronous computation
-     * @throws IllegalArgumentException if the sqlAction is {@code null}
+     * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
     public static <T, R> ContinuableFuture<R> asyncCall(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
@@ -8974,7 +8972,7 @@ public final class JdbcUtil {
      * @param parameter2 The second parameter to pass to the SQL action
      * @param sqlAction The SQL action that takes two parameters and produces a result
      * @return A ContinuableFuture representing the result of the asynchronous computation
-     * @throws IllegalArgumentException if the sqlAction is {@code null}
+     * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
     public static <T, U, R> ContinuableFuture<R> asyncCall(final T parameter1, final U parameter2,
@@ -9010,7 +9008,7 @@ public final class JdbcUtil {
      * @param parameter3 The third parameter to pass to the SQL action
      * @param sqlAction The SQL action that takes three parameters and produces a result
      * @return A ContinuableFuture representing the result of the asynchronous computation
-     * @throws IllegalArgumentException if the sqlAction is {@code null}
+     * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
     public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A parameter1, final B parameter2, final C parameter3,
@@ -9527,7 +9525,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param blob the Blob object to be converted to a String
-     * @return the String representation of the Blob content
+     * @return the String representation of the Blob content, or {@code null} if {@code blob} is {@code null}
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
     public static String blob2String(final Blob blob) throws SQLException {
@@ -9559,7 +9557,7 @@ public final class JdbcUtil {
      *
      * @param blob the Blob object to be converted to a String
      * @param charset the character encoding to use for the conversion
-     * @return the String representation of the Blob content
+     * @return the String representation of the Blob content, or {@code null} if {@code blob} is {@code null}
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
     public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
@@ -9592,7 +9590,7 @@ public final class JdbcUtil {
      *
      * @param blob the Blob object containing the data to be written
      * @param output the File object representing the output file
-     * @return the number of bytes written to the file
+     * @return the number of bytes written to the file, or {@code 0} if {@code blob} is {@code null}
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      * @throws IOException if an I/O error occurs while writing to the file
      */
@@ -9624,7 +9622,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param clob the Clob object to be converted to a String
-     * @return the String representation of the Clob content
+     * @return the String representation of the Clob content, or {@code null} if {@code clob} is {@code null}
      * @throws SQLException if a SQL exception occurs while accessing the Clob
      */
     public static String clob2String(final Clob clob) throws SQLException {
@@ -9657,7 +9655,7 @@ public final class JdbcUtil {
      *
      * @param clob the Clob object containing the data to be written
      * @param output the File object representing the output file
-     * @return the number of characters written to the file
+     * @return the number of characters written to the file, or {@code 0} if {@code clob} is {@code null}
      * @throws SQLException if a SQL exception occurs while accessing the Clob
      * @throws IOException if an I/O exception occurs while writing to the file
      */
@@ -9834,7 +9832,7 @@ public final class JdbcUtil {
     @Deprecated
     static void enableSqlLog(final boolean b, final int maxSqlLogLength) {
         final SqlLogConfig config = isSQLLogEnabled_TL.get();
-        // synchronized (isSQLLogEnabled_TL) {
+
         if (logger.isDebugEnabled() && config.isEnabled != b) {
             if (b) {
                 logger.debug("Enabled SQL logging(maxSqlLogLength={})", maxSqlLogLength);
@@ -9844,7 +9842,6 @@ public final class JdbcUtil {
         }
 
         config.set(b, maxSqlLogLength);
-        // }
     }
 
     /**
@@ -11339,7 +11336,6 @@ public final class JdbcUtil {
      * @param b {@code true} to disable, {@code false} to re-enable.
      */
     static void doNotUseSpringTransactional(final boolean b) {
-        // synchronized (isSpringTransactionalDisabled_TL) {
         if (isInSpring) {
             if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) { //NOSONAR
                 if (b) {
@@ -11353,115 +11349,8 @@ public final class JdbcUtil {
         } else {
             logger.debug("Spring framework not detected or unable to retrieve Spring transaction context");
         }
-        // }
     }
 
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
-
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
-
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
-
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
-
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
     /**
      * Check if {@code Spring Transactional} integration is disabled in the current thread.
      *
@@ -12287,7 +12176,7 @@ public final class JdbcUtil {
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if required parameters are invalid
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Executor)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */

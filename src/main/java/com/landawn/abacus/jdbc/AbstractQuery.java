@@ -4503,11 +4503,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            if (rs.next()) {
-                return OptionalChar.of(charType.get(rs, 1));
-            } else {
-                return OptionalChar.empty();
-            }
+            return rs.next() ? OptionalChar.of(charType.get(rs, 1)) : OptionalChar.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4997,7 +4993,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         return queryForSingleValue(Type.of(targetValueType));
@@ -5031,7 +5027,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <V> Nullable<V> queryForSingleValue(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5076,7 +5072,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         return queryForSingleNonNull(Type.of(targetValueType));
@@ -5115,7 +5111,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5159,7 +5155,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         return queryForUniqueValue(Type.of(targetValueType));
@@ -5198,7 +5194,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Nullable<V> queryForUniqueValue(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -5254,7 +5250,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         return queryForUniqueNonNull(Type.of(targetValueType));
@@ -5296,7 +5292,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException {
-        checkArgNotNull(targetValueType, cs.targetType);
+        checkArgNotNull(targetValueType, cs.targetValueType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -8978,6 +8974,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if entityClass or rowConsumer is null
      * @throws SQLException if a database access error occurs
      * @see RowConsumer#oneOff(Class, Consumer)
+     * @see #foreach(Consumer)
      */
     @Beta
     public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
@@ -9082,6 +9079,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #insert(RowMapper)
+     * @see #insert()
      */
     public <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
         return insert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
@@ -9391,7 +9389,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            return verifyResult(updatedRowCount, generatedKeysList);
+            return toResultTuple(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9442,7 +9440,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            return verifyResult(updatedRowCount, generatedKeysList);
+            return toResultTuple(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9457,7 +9455,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param generatedKeysList the list of generated keys
      * @return A tuple containing the update count and generated keys list
      */
-    private <U, T> Tuple2<U, List<T>> verifyResult(final U updatedRowCount, final List<T> generatedKeysList) {
+    private <U, T> Tuple2<U, List<T>> toResultTuple(final U updatedRowCount, final List<T> generatedKeysList) {
         return Tuple.of(updatedRowCount, generatedKeysList);
     }
 
@@ -9542,7 +9540,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            return verifyResult(updatedRowCount, generatedKeysList);
+            return toResultTuple(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9589,7 +9587,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            return verifyResult(updatedRowCount, generatedKeysList);
+            return toResultTuple(updatedRowCount, generatedKeysList);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9650,7 +9648,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return An array containing the number of rows affected by each update in the batch as long values
      * @throws IllegalStateException if this query is closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs or any command in the batch fails
      * @see #batchUpdate()
      * @see #largeUpdate()
      */

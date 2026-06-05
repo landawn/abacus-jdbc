@@ -3408,39 +3408,8 @@ public final class Jdbc {
             };
         }
 
-        // Removed because: The method toMap(Predicate<Object>) is ambiguous for the type Jdbc.BiRowMapper
-        //    /**
-        //     * Creates a BiRowMapper that converts rows to a Map with value filtering.
-        //     * Only values that pass the filter predicate are included in the map.
-        //     *
-        //     * <p><b>Usage Examples:</b></p>
-        //     * <pre>{@code
-        //     * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-        //     * value -> value != null  // Exclude null values
-        //     * );
-        //     * }</pre>
-        //     *
-        //     * @param valueFilter the predicate to test values
-        //     * @return a BiRowMapper that produces a filtered Map
-        //     */
-        //    static BiRowMapper<Map<String, Object>> toMap(final Predicate<Object> valueFilter) {
-        //        return (rs, columnLabels) -> {
-        //            final int columnCount = columnLabels.size();
-        //            final Map<String, Object> result = N.newHashMap(columnCount);
-        //
-        //            Object value = null;
-        //
-        //            for (int i = 1; i <= columnCount; i++) {
-        //                value = JdbcUtil.getColumnValue(rs, i);
-        //
-        //                if (valueFilter.test(value)) {
-        //                    result.put(columnLabels.get(i - 1), value);
-        //                }
-        //            }
-        //
-        //            return result;
-        //        };
-        //    }
+        // Note: a toMap(Predicate<Object> valueFilter) overload was intentionally not provided here because
+        // its signature is ambiguous with toMap(...) for the type Jdbc.BiRowMapper. Use toMap(BiPredicate, ...) below.
 
         /**
          * Creates a {@code BiRowMapper} that converts a row to a {@code Map}, including only the
@@ -5680,16 +5649,16 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Extract a single integer value (e.g., count, max, sum)
-         * int count = preparedQuery.queryForSingleNonNull(ColumnOne.GET_INT);
+         * Optional<Integer> count = preparedQuery.findOnlyOne(ColumnOne.GET_INT);
          *
          * // Extract a single string value
-         * String name = preparedQuery.queryForSingleNonNull(ColumnOne.GET_STRING);
+         * Optional<String> name = preparedQuery.findOnlyOne(ColumnOne.GET_STRING);
          *
          * // Use a type-based mapper for custom types
          * RowMapper<LocalDate> mapper = ColumnOne.get(LocalDate.class);
          *
          * // Set a single parameter by type
-         * preparedQuery.setParameters(ColumnOne.SET_INT, userId);
+         * preparedQuery.settParameters(userId, ColumnOne.SET_INT);
          * }</pre>
          *
          * @see ColumnGetter

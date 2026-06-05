@@ -196,7 +196,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -217,7 +217,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -236,7 +236,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -252,7 +252,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param propNamesToInsert the property names to include in the INSERT statement
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -271,7 +271,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -288,7 +288,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -581,7 +581,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
-     * Unlike queryForSingleValue, this method returns empty Optional for {@code null} values.
+     * Unlike {@link #queryForSingleValue(String, Object, Class)}, this method returns empty Optional for {@code null} values.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1136,7 +1136,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return upsert(entity, idPropNameList);
     }
@@ -1279,7 +1279,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return batchUpsert(entities, idPropNameList, batchSize);
     }
@@ -1340,23 +1340,21 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
             return new ArrayList<>();
         }
 
-        @SuppressWarnings("UnnecessaryLocalVariable")
-        final List<String> propNameListForQuery = uniquePropNamesForQuery;
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
-        final PropInfo uniquePropInfo = entityInfo.getPropInfo(propNameListForQuery.get(0));
+        final PropInfo uniquePropInfo = entityInfo.getPropInfo(uniquePropNamesForQuery.get(0));
 
         if (uniquePropInfo == null) {
-            throw new IllegalArgumentException("No property found with name: '" + propNameListForQuery.get(0) + "' in class: " + cls.getName());
+            throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(0) + "' in class: " + cls.getName());
         }
 
-        final List<PropInfo> uniquePropInfos = N.map(propNameListForQuery, entityInfo::getPropInfo);
+        final List<PropInfo> uniquePropInfos = N.map(uniquePropNamesForQuery, entityInfo::getPropInfo);
 
         for (int i = 0; i < uniquePropInfos.size(); i++) {
             if (uniquePropInfos.get(i) == null) {
-                throw new IllegalArgumentException("No property found with name: '" + propNameListForQuery.get(i) + "' in class: " + cls.getName());
+                throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(i) + "' in class: " + cls.getName());
             }
         }
 
@@ -1373,10 +1371,10 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
             return entityId;
         };
 
-        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
+        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNamesForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
 
-        final List<T> dbEntities = propNameListForQuery.size() == 1
-                ? Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()
+        final List<T> dbEntities = uniquePropNamesForQuery.size() == 1
+                ? Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.in(uniquePropNamesForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()
                 : Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.id2Cond(N.map(it, entityIdExtractor)))).toList();
 
         final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
@@ -1396,7 +1394,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
             }
 
             if (N.notEmpty(entitiesToUpdate)) {
-                final Set<String> ignoredPropNames = N.newHashSet(propNameListForQuery);
+                final Set<String> ignoredPropNames = N.newHashSet(uniquePropNamesForQuery);
 
                 @SuppressWarnings("deprecation")
                 final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
@@ -1482,7 +1480,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
@@ -1606,7 +1604,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
