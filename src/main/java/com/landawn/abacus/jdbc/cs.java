@@ -382,4 +382,64 @@ public final class cs { // NOSONAR
      * Parameter name for join entity property names used in join operations.
      */
     public static final String joinEntityPropName = "joinEntityPropName";
+    /**
+     * Parameter name for {@link FetchDirection} values passed to statement-configuration methods.
+     */
+    public static final String direction = "direction";
+    /**
+     * Parameter name for the one-based parameter index of a callable-statement OUT parameter.
+     */
+    public static final String parameterIndex = "parameterIndex";
+    /**
+     * Parameter name for {@code java.sql.SQLType} values used when registering OUT parameters.
+     */
+    public static final String sqlType = "sqlType";
+    /**
+     * Parameter name for a single column getter applied to every column in a row.
+     */
+    public static final String columnGetterForAll = "columnGetterForAll";
+    /**
+     * Parameter name for the function composed after another in {@code andThen} operations.
+     */
+    public static final String after = "after";
+    /**
+     * Parameter name for the other function combined in {@code and}/{@code or} operations.
+     */
+    public static final String other = "other";
+    /**
+     * Parameter name for predicates that filter values before they are placed into a map.
+     */
+    public static final String valueFilter = "valueFilter";
+    /**
+     * Parameter name for suppliers that create map instances for collecting results.
+     */
+    public static final String mapSupplier = "mapSupplier";
+    /**
+     * Parameter name for functions that convert column labels into map keys.
+     */
+    public static final String columnNameConverter = "columnNameConverter";
+    /**
+     * Parameter name for Class objects (camelCase {@code cls} form).
+     */
+    public static final String cls = "cls";
+    /**
+     * Parameter name for {@link java.nio.charset.Charset} values.
+     */
+    public static final String charset = "charset";
+    /**
+     * Parameter name for SQL query strings used by paging/streaming helpers.
+     */
+    public static final String query = "query";
+    /**
+     * Parameter name for the page size used in paginated query execution.
+     */
+    public static final String pageSize = "pageSize";
+    /**
+     * Parameter name for the DDL schema/script used to create a table.
+     */
+    public static final String schema = "schema";
+    /**
+     * Parameter name for database table names.
+     */
+    public static final String tableName = "tableName";
 }

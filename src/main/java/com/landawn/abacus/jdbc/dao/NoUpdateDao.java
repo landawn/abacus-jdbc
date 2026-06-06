@@ -143,7 +143,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(query)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareQuery(dataSource(), query);
@@ -179,7 +179,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(query)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareQuery(dataSource(), query, generateKeys);
@@ -216,7 +216,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(query)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
@@ -255,7 +255,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(query)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
@@ -278,7 +278,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -300,7 +300,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(query)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareQueryForLargeResult(dataSource(), query);
@@ -333,7 +333,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
@@ -366,7 +366,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
@@ -398,7 +398,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
@@ -431,7 +431,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
@@ -454,7 +454,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -476,7 +476,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
@@ -501,7 +501,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
@@ -533,7 +533,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
@@ -566,7 +566,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
@@ -599,7 +599,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
@@ -633,7 +633,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
-            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in this no-update DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
@@ -656,7 +656,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -674,7 +674,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default CallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -694,7 +694,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default CallableQuery prepareCallableQuery(final String query, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -712,7 +712,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     @Deprecated
     default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -729,7 +729,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @Override
     default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -746,7 +746,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @Override
     default int update(final T entity, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -764,7 +764,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @Override
     default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -781,7 +781,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @Override
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -798,7 +798,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @Override
     default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 
     /**
@@ -814,6 +814,6 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Deprecated
     @Override
     default int delete(final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
     }
 }

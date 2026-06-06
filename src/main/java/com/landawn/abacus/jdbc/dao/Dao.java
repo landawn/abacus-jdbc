@@ -2448,7 +2448,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     @Beta
     @NonDBOperation
     default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor) {
-        N.checkArgNotNull(sqlAction, cs.func);
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
         N.checkArgNotNull(executor, cs.executor);
 
         final TD dao = (TD) this;
@@ -2505,7 +2505,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     @Beta
     @NonDBOperation
     default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor) {
-        N.checkArgNotNull(sqlAction, cs.action);
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
         N.checkArgNotNull(executor, cs.executor);
 
         final TD dao = (TD) this;

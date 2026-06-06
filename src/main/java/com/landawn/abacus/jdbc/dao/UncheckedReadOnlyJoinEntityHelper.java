@@ -71,6 +71,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * @see ReadOnlyJoinEntityHelper
  * @see UncheckedSQLException
  */
+@SuppressWarnings("RedundantThrows")
 public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD extends UncheckedDao<T, SB, TD>>
         extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {
 
@@ -86,7 +87,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -101,7 +102,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -116,7 +117,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -131,7 +132,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -146,7 +147,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -163,7 +164,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -179,7 +180,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -194,7 +195,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -211,7 +212,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -228,7 +229,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -242,7 +243,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final T entity) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -257,7 +258,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -272,7 +273,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final T entity, final Executor executor) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -286,7 +287,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final Collection<T> entities) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -301,7 +302,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -316,6 +317,6 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD 
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO.");
     }
 }

@@ -3770,12 +3770,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param <T> parameter value type
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param x the object containing the parameter value, or {@code null} to set SQL {@code NULL}
-     * @param type the Type handler to use for setting the parameter
+     * @param type the Type handler to use for setting the parameter. Must not be {@code null}.
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if {@code type} is {@code null}, or the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public <T> NamedQuery setObject(final String parameterName, final T x, final Type<T> type) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(type, cs.type);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 

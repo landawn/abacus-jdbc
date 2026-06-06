@@ -2191,12 +2191,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of the object being set as a parameter
      * @param parameterIndex the 1-based index of the parameter to set
      * @param value the object to set
-     * @param type the Type handler for custom serialization
+     * @param type the Type handler for custom serialization. Must not be {@code null}.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if the type handler cannot set the value
+     * @throws IllegalArgumentException if {@code type} is {@code null} or the type handler cannot set the value
      * @throws SQLException if a database access error occurs
      */
     public <T> This setObject(final int parameterIndex, final T value, final Type<T> type) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(type, cs.type);
+
         type.set(stmt, parameterIndex, value);
 
         return (This) this;
@@ -4172,6 +4174,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setFetchDirection(final FetchDirection direction) throws SQLException {
         assertNotClosed();
 
+        checkArgNotNull(direction, cs.direction);
+
         if (defaultFetchDirection < 0) {
             defaultFetchDirection = stmt.getFetchDirection();
         }
@@ -4215,10 +4219,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .forEach(row -> processRow(row));
      * }</pre>
      *
-     * @param fetchSize the number of rows to fetch. Use 0 to let the JDBC driver choose.
+     * @param fetchSize the number of rows to fetch. Use 0 to let the JDBC driver choose. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs (including a negative {@code fetchSize} rejected by the driver)
      * @see java.sql.Statement#setFetchSize(int)
      */
     public This setFetchSize(final int fetchSize) throws SQLException {
@@ -4244,10 +4248,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .list();
      * }</pre>
      *
-     * @param max the new column size limit in bytes; zero means there is no limit
+     * @param max the new column size limit in bytes; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setMaxFieldSize(int)
      */
     public This setMaxFieldSize(final int max) throws SQLException {
@@ -4272,10 +4276,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .list();
      * }</pre>
      *
-     * @param max the new max rows limit; zero means there is no limit
+     * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setMaxRows(int)
      */
     public This setMaxRows(final int max) throws SQLException {
@@ -4300,10 +4304,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .stream();
      * }</pre>
      *
-     * @param max the new max rows limit; zero means there is no limit
+     * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setLargeMaxRows(long)
      */
     public This setLargeMaxRows(final long max) throws SQLException {
@@ -4328,10 +4332,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .list();
      * }</pre>
      *
-     * @param seconds the new query timeout limit in seconds; zero means there is no limit
+     * @param seconds the new query timeout limit in seconds; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs (including a negative {@code seconds} rejected by the driver)
      * @see java.sql.Statement#setQueryTimeout(int)
      */
     public This setQueryTimeout(final int seconds) throws SQLException {

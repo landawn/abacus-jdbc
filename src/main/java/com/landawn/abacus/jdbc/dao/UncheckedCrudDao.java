@@ -1301,6 +1301,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each record
      * @return a list of upserted entities
+     * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1562,6 +1563,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entities the collection of entities to refresh
      * @param propNamesToRefresh the properties to refresh for each entity
      * @return the count of successfully refreshed entities
+     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

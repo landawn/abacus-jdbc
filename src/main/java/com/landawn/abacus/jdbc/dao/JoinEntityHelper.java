@@ -34,6 +34,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
@@ -1206,11 +1207,15 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
-     * @throws NullPointerException if the specified {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
         final Class<?> cls = entity.getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
+
+        if (propInfo == null) {
+            throw new IllegalArgumentException("No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
+        }
 
         if (propInfo.getPropValue(entity) == null) {
             loadJoinEntities(entity, joinEntityPropName, selectPropNames);
@@ -1252,6 +1257,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
             throws SQLException {
@@ -1261,6 +1267,11 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
 
         final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
+
+        if (propInfo == null) {
+            throw new IllegalArgumentException("No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
+        }
+
         final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
 
         if (N.notEmpty(newEntities)) {

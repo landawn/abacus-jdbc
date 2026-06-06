@@ -331,6 +331,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row to the desired type
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -358,6 +359,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -399,6 +401,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -422,6 +425,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -460,6 +464,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -482,6 +487,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -527,6 +533,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -552,6 +559,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */

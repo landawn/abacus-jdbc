@@ -565,6 +565,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
@@ -593,6 +594,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
@@ -792,6 +794,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute

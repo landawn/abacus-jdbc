@@ -1238,7 +1238,7 @@ public final class JoinInfo {
 
         if (joinInfo == null) {
             throw new IllegalArgumentException(
-                    "No join property found by name '" + joinEntityPropName + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                    "No join entity property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(entityClass));
         }
 
         return joinInfo;

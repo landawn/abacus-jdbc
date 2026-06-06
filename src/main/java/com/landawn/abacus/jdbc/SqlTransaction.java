@@ -105,6 +105,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             final boolean closeConnection) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
+        N.checkArgument(ds != null || !closeConnection, "'dataSource' must not be null when 'closeConnection' is true");
 
         _id = getTransactionId(ds, creator);
         _timedId = _id + "_" + System.currentTimeMillis();
@@ -326,6 +327,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         logged and ignored rather than throwing.
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
+        N.checkArgNotNull(actionAfterCommit, cs.action);
+
         _isMarkedByCommitOrRollbackPreviously = true;
         final int refCount = decrementAndGetRef();
 
@@ -445,6 +448,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         logged and ignored rather than throwing.
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
+        N.checkArgNotNull(actionAfterRollback, cs.action);
+
         _isMarkedByCommitOrRollbackPreviously = true;
         final int refCount = decrementAndGetRef();
 

@@ -143,7 +143,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isReadOnlyQuery(query)) {
-            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in this read-only DAO");
         }
 
         return JdbcUtil.prepareQuery(dataSource(), query);
@@ -165,7 +165,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isReadOnlyQuery(query)) {
-            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in this read-only DAO");
         }
 
         return JdbcUtil.prepareQueryForLargeResult(dataSource(), query);
@@ -186,7 +186,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -203,7 +203,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -220,7 +220,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -257,7 +257,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isReadOnlyQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in this read-only DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
@@ -278,7 +278,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -295,7 +295,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -312,7 +312,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -349,7 +349,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isReadOnlyQuery(namedQuery.originalSql())) {
-            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in this read-only DAO");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
@@ -371,7 +371,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isReadOnlyQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in this read-only DAO");
         }
 
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
@@ -393,7 +393,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isReadOnlyQuery(namedQuery.originalSql())) {
-            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in this read-only DAO");
         }
 
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
@@ -414,7 +414,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -431,7 +431,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -448,7 +448,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -462,7 +462,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Deprecated
     @Override
     default void save(final T entityToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -477,7 +477,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Deprecated
     @Override
     default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -492,7 +492,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Deprecated
     @Override
     default void save(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -506,7 +506,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -521,7 +521,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -536,7 +536,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -554,7 +554,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -569,7 +569,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Deprecated
     @Override
     default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -587,6 +587,6 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @Override
     default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 }

@@ -492,7 +492,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> ResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
-            N.checkArgNotNull(after);
+            N.checkArgNotNull(after, cs.after);
 
             return rs -> after.apply(apply(rs));
         }
@@ -1081,6 +1081,8 @@ public final class Jdbc {
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor) {
+            N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
+
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor));
         }
 
@@ -1101,6 +1103,8 @@ public final class Jdbc {
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
+            N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
+
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor, prefixAndFieldNameMap));
         }
 
@@ -1249,7 +1253,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> BiResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
-            N.checkArgNotNull(after);
+            N.checkArgNotNull(after, cs.after);
 
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
         }
@@ -1751,7 +1755,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
-            N.checkArgNotNull(after);
+            N.checkArgNotNull(after, cs.after);
 
             return rs -> after.apply(apply(rs));
         }
@@ -1845,6 +1849,8 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
+            N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
+
             return new RowMapper<>() {
                 private int columnCount = -1;
 
@@ -1918,6 +1924,8 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static <C extends Collection<?>> RowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
+            N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
+
             return new RowMapper<>() {
                 private int columnCount = -1;
 
@@ -2773,7 +2781,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> BiRowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
-            N.checkArgNotNull(after);
+            N.checkArgNotNull(after, cs.after);
 
             return (rs, columnLabels) -> after.apply(apply(rs, columnLabels));
         }
@@ -3433,6 +3441,9 @@ public final class Jdbc {
          */
         static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
+            N.checkArgNotNull(valueFilter, cs.valueFilter);
+            N.checkArgNotNull(mapSupplier, cs.mapSupplier);
+
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
                 final Map<String, Object> result = mapSupplier.apply(columnCount);
@@ -3484,6 +3495,10 @@ public final class Jdbc {
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> valueFilter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
+            N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+            N.checkArgNotNull(valueFilter, cs.valueFilter);
+            N.checkArgNotNull(mapSupplier, cs.mapSupplier);
+
             return new BiRowMapper<>() {
                 private Object[] outputValuesForRowExtractor = null;
 
@@ -3567,6 +3582,9 @@ public final class Jdbc {
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
+            N.checkArgNotNull(columnNameConverter, cs.columnNameConverter);
+            N.checkArgNotNull(mapSupplier, cs.mapSupplier);
+
             return new BiRowMapper<>() {
                 private String[] keyNames = null;
 
@@ -3615,6 +3633,8 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor) {
+            N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+
             return new BiRowMapper<>() {
                 private Object[] outputValuesForRowExtractor = null;
 
@@ -3669,6 +3689,10 @@ public final class Jdbc {
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final Function<? super String, String> columnNameConverter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
+            N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+            N.checkArgNotNull(columnNameConverter, cs.columnNameConverter);
+            N.checkArgNotNull(mapSupplier, cs.mapSupplier);
+
             return new BiRowMapper<>() {
                 private Object[] outputValuesForRowExtractor = null;
                 private String[] keyNames = null;
@@ -3708,6 +3732,8 @@ public final class Jdbc {
          */
         @Beta
         static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
+            N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
+
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
                 final Object[] result = new Object[columnCount];
@@ -3742,6 +3768,8 @@ public final class Jdbc {
          */
         @Beta
         static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
+            N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
+
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
 
@@ -4393,7 +4421,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code after} is {@code null}.
          */
         default RowConsumer andThen(final Throwables.Consumer<? super ResultSet, SQLException> after) {
-            N.checkArgNotNull(after);
+            N.checkArgNotNull(after, cs.after);
 
             return rs -> {
                 accept(rs);
@@ -4621,7 +4649,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code after} is {@code null}.
          */
         default BiRowConsumer andThen(final Throwables.BiConsumer<? super ResultSet, ? super List<String>, SQLException> after) {
-            N.checkArgNotNull(after);
+            N.checkArgNotNull(after, cs.after);
 
             return (rs, cls) -> {
                 accept(rs, cls);
@@ -4852,7 +4880,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) {
-            N.checkArgNotNull(other);
+            N.checkArgNotNull(other, cs.other);
 
             return rs -> test(rs) && other.test(rs);
         }
@@ -4866,7 +4894,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default RowFilter or(final Throwables.Predicate<? super ResultSet, SQLException> other) {
-            N.checkArgNotNull(other);
+            N.checkArgNotNull(other, cs.other);
 
             return rs -> test(rs) || other.test(rs);
         }
@@ -4965,7 +4993,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
-            N.checkArgNotNull(other);
+            N.checkArgNotNull(other, cs.other);
 
             return (rs, cls) -> test(rs, cls) && other.test(rs, cls);
         }
@@ -4979,7 +5007,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default BiRowFilter or(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
-            N.checkArgNotNull(other);
+            N.checkArgNotNull(other, cs.other);
 
             return (rs, cls) -> test(rs, cls) || other.test(rs, cls);
         }
@@ -5102,7 +5130,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowExtractor createBy(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndFieldNameMap) {
-            N.checkArgument(Beans.isBeanClass(entityClassForFetch), "entityClassForFetch");
+            N.checkArgument(Beans.isBeanClass(entityClassForFetch), "{} is not a valid entity class with getter/setter methods", entityClassForFetch);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClassForFetch);
 
@@ -5592,11 +5620,13 @@ public final class Jdbc {
          * It leverages Abacus-common's {@code Type} system to determine the appropriate extraction method.
          *
          * @param <T> target type
-         * @param cls the class for which to get a {@code ColumnGetter}.
+         * @param cls the class for which to get a {@code ColumnGetter}. Must not be {@code null}.
          * @return a {@code ColumnGetter} for the specified type.
-         * @throws IllegalArgumentException if the {@code Type} resolved from {@code cls} is {@code null}.
+         * @throws IllegalArgumentException if {@code cls} is {@code null}, or the {@code Type} resolved from {@code cls} is {@code null}.
          */
         static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
+            N.checkArgNotNull(cls, cs.cls);
+
             return get(N.typeOf(cls));
         }
 
@@ -5974,6 +6004,8 @@ public final class Jdbc {
              * @return a {@code RowMapper} that performs JSON deserialization.
              */
             public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
+                N.checkArgNotNull(targetType, cs.targetType);
+
                 return rs -> N.fromJson(rs.getString(1), targetType);
             }
 
@@ -5993,6 +6025,8 @@ public final class Jdbc {
              * @return a {@code RowMapper} that performs XML deserialization.
              */
             public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) {
+                N.checkArgNotNull(targetType, cs.targetType);
+
                 return rs -> N.fromXml(rs.getString(1), targetType);
             }
 
@@ -6048,6 +6082,11 @@ public final class Jdbc {
      *
      * <p>Lombok generates a no-argument constructor, an all-arguments constructor, and standard
      * getter/setter/equals/hashCode/toString methods for the fields below.</p>
+     *
+     * <p><b>Invariant:</b> {@code parameterIndex} is 1-based and must be {@code > 0} when an OUT parameter is
+     * registered by index. This invariant is enforced only by the {@link #of(int, int)} factory; the
+     * Lombok-generated all-args constructor and {@code setParameterIndex(int)} accept any value (e.g. a
+     * placeholder {@code 0} to be set later). Prefer {@link #of(int, int)} for index-based registration.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -22,6 +22,7 @@ import java.util.List;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
@@ -549,6 +550,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad,
             final int batchSize) throws DuplicateResultException, SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result)) {
@@ -589,6 +592,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
             final int batchSize) throws DuplicateResultException, SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
@@ -635,6 +640,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities,
             final int batchSize) throws DuplicateResultException, SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {

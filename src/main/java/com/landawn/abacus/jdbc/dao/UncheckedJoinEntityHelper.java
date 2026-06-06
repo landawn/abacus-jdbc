@@ -31,6 +31,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
@@ -1179,13 +1180,17 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws NullPointerException if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
             throws UncheckedSQLException {
         final Class<?> cls = entity.getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
+
+        if (propInfo == null) {
+            throw new IllegalArgumentException("No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
+        }
 
         if (propInfo.getPropValue(entity) == null) {
             loadJoinEntities(entity, joinEntityPropName, selectPropNames);
@@ -1230,6 +1235,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -1240,6 +1246,11 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
         final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
+
+        if (propInfo == null) {
+            throw new IllegalArgumentException("No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
+        }
+
         final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
 
         if (N.notEmpty(newEntities)) {

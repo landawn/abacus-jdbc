@@ -107,6 +107,11 @@ public @interface Bind {
      * List<Order> findOrders(@Bind("customer") Customer customer, @Bind("orderStatus") String status);
      * }</pre>
      *
+     * <p><b>Empty value:</b> when {@code value} is left empty (the default) on a single scalar parameter,
+     * the annotation has no name to bind by and the argument is bound <i>positionally</i> instead. (This
+     * differs from {@code @SqlFragment}/{@code @BindList}, where an empty value is rejected, because a
+     * fragment/list placeholder has no meaningful positional fallback.)</p>
+     *
      * @return the named-parameter token to bind to (without the leading colon); empty by default
      */
     String value() default "";

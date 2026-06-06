@@ -79,7 +79,14 @@ import lombok.experimental.Accessors;
  * 
  * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
  * various aspects such as field naming conventions, type mappings, annotations, and more.</p>
- * 
+ *
+ * <p><b>Exceptions thrown by the {@code generate*Sql(...)} family:</b> in addition to the
+ * {@link UncheckedSQLException} declared on each method, every {@code generateSelectSql} /
+ * {@code generateInsertSql} / {@code generateNamedInsertSql} / {@code generateUpdateSql} /
+ * {@code generateNamedUpdateSql} overload throws {@link IllegalArgumentException} when a supplied
+ * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank, or when no columns remain for an
+ * {@code UPDATE ... SET} clause (e.g. all columns excluded).</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Generate entity class from a table
@@ -1929,6 +1936,8 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static String checkColumnName(final String columnLabel, final DBProductInfo dbProductInfo) {
+        N.checkArgNotBlank(columnLabel, cs.columnName);
+
         String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
         return CharStream.of(columnLabel).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnLabel

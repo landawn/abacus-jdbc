@@ -2538,6 +2538,8 @@ public final class JdbcUtils {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName, final int batchSize) throws SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         String selectSql = null;
         String insertSql = null;
         Connection sourceConn = null;
@@ -2621,6 +2623,8 @@ public final class JdbcUtils {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName, final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         String selectSql = null;
         String insertSql = null;
         Connection sourceConn = null;
@@ -2702,6 +2706,8 @@ public final class JdbcUtils {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize) throws SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, 0, supplierOfStmtSetterByRS.get());
     }
 
@@ -2889,6 +2895,8 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final int batchSize) throws SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         // Generate the SELECT from source first, then derive the column ordering from the
         // source's result-set metadata and use it to drive the INSERT against the target.
         // Otherwise, when source and target have the same column set but different metadata
@@ -2978,6 +2986,8 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         final String selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
         final String insertSql = generateInsertSql(targetConn, targetTableName, selectColumnNames);
 
@@ -3138,6 +3148,8 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
             final int batchSize) throws SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, 0, supplierOfStmtSetterByRS.get());
     }
 

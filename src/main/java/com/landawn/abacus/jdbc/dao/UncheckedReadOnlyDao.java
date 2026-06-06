@@ -90,7 +90,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Deprecated
     @Override
     default void save(final T entityToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -104,7 +104,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Deprecated
     @Override
     default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -118,7 +118,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Deprecated
     @Override
     default void save(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -131,7 +131,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -145,7 +145,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -159,7 +159,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -175,7 +175,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -189,7 +189,7 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Deprecated
     @Override
     default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 
     /**
@@ -205,6 +205,6 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     @Override
     default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
     }
 }

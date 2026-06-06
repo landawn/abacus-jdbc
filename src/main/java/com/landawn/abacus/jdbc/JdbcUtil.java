@@ -564,6 +564,8 @@ public final class JdbcUtil {
      * @see com.zaxxer.hikari.HikariDataSource
      */
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password) {
+        N.checkArgNotEmpty(url, cs.url);
+
         try {
             final com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
             config.setJdbcUrl(url);
@@ -615,6 +617,8 @@ public final class JdbcUtil {
      */
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password, final int minIdle,
             final int maxPoolSize) {
+        N.checkArgNotEmpty(url, cs.url);
+
         try {
             final com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
             config.setJdbcUrl(url);
@@ -661,6 +665,8 @@ public final class JdbcUtil {
      */
     @Beta
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) {
+        N.checkArgNotEmpty(url, cs.url);
+
         try {
             final com.mchange.v2.c3p0.ComboPooledDataSource cpds = new com.mchange.v2.c3p0.ComboPooledDataSource();
             cpds.setJdbcUrl(url);
@@ -710,6 +716,8 @@ public final class JdbcUtil {
     @Beta
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password, final int minPoolSize,
             final int maxPoolSize) {
+        N.checkArgNotEmpty(url, cs.url);
+
         try {
             final com.mchange.v2.c3p0.ComboPooledDataSource cpds = new com.mchange.v2.c3p0.ComboPooledDataSource();
             cpds.setJdbcUrl(url);
@@ -779,17 +787,21 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param driverClass The fully qualified name of the JDBC driver class (e.g., "com.mysql.cj.jdbc.Driver").
-     * @param url The JDBC URL for the database connection.
+     * @param driverClass The fully qualified name of the JDBC driver class (e.g., "com.mysql.cj.jdbc.Driver"). Must not be {@code null} or empty.
+     * @param url The JDBC URL for the database connection. Must not be {@code null} or empty.
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
+     * @throws IllegalArgumentException if {@code driverClass} or {@code url} is {@code null} or empty.
      * @throws RuntimeException if the specified driver class cannot be loaded (e.g., it is not on the classpath).
      * @throws UncheckedSQLException if a database access error occurs while creating the connection.
      * @see #createConnection(Class, String, String, String)
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotEmpty(driverClass, "driverClass");
+        N.checkArgNotEmpty(url, cs.url);
+
         final Class<? extends Driver> cls = ClassUtil.forName(driverClass);
 
         return createConnection(cls, url, user, password);
@@ -817,17 +829,21 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param driverClass The JDBC {@link Driver} class (e.g., {@code com.mysql.cj.jdbc.Driver.class}).
-     * @param url The JDBC URL for the database connection.
+     * @param driverClass The JDBC {@link Driver} class (e.g., {@code com.mysql.cj.jdbc.Driver.class}). Must not be {@code null}.
+     * @param url The JDBC URL for the database connection. Must not be {@code null} or empty.
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
+     * @throws IllegalArgumentException if {@code driverClass} is {@code null} or {@code url} is {@code null} or empty.
      * @throws UncheckedSQLException if a database access error occurs during connection creation.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#registerDriver(Driver)
      */
     public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotNull(driverClass, "driverClass");
+        N.checkArgNotEmpty(url, cs.url);
+
         try {
             if (registeredDriverClasses.add(driverClass)) {
                 DriverManager.registerDriver(N.newInstance(driverClass));
@@ -908,13 +924,16 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param ds The {@link javax.sql.DataSource} from which to obtain a connection.
+     * @param ds The {@link javax.sql.DataSource} from which to obtain a connection. Must not be {@code null}.
      * @return A {@link Connection} object.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}.
      * @throws UncheckedSQLException if a database access error occurs.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)
      */
-    public static Connection getConnection(final javax.sql.DataSource ds) throws UncheckedSQLException {
+    public static Connection getConnection(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotNull(ds, cs.dataSource);
+
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
                 return org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
@@ -1821,7 +1840,7 @@ public final class JdbcUtil {
      */
     public static List<String> getColumnNames(final Connection conn, final String tableName) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
-        N.checkArgNotBlank(tableName, "tableName");
+        N.checkArgNotBlank(tableName, cs.tableName);
 
         final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
         final String catalog;
@@ -3300,7 +3319,7 @@ public final class JdbcUtil {
      * @see #prepareQueryForLargeResult(Connection, String)
      */
     @Beta
-    public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
+    public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         return prepareQuery(ds, sql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -3333,7 +3352,7 @@ public final class JdbcUtil {
      * @see #prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
-    public static PreparedQuery prepareQueryForLargeResult(final Connection conn, final String sql) throws SQLException {
+    public static PreparedQuery prepareQueryForLargeResult(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         return prepareQuery(conn, sql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -4309,7 +4328,8 @@ public final class JdbcUtil {
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql)
+            throws IllegalArgumentException, SQLException {
         return prepareNamedQuery(ds, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -4342,7 +4362,8 @@ public final class JdbcUtil {
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql)
+            throws IllegalArgumentException, SQLException {
         return prepareNamedQuery(ds, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -4374,7 +4395,7 @@ public final class JdbcUtil {
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
         return prepareNamedQuery(conn, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -6331,7 +6352,7 @@ public final class JdbcUtil {
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgNotNegative(offset, cs.offset);
         N.checkArgNotNegative(count, cs.count);
         N.checkArgNotNull(filter, cs.filter);
@@ -7233,6 +7254,11 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
+        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgPositive(pageSize, cs.pageSize);
+        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
 
@@ -7292,6 +7318,11 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
+        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgPositive(pageSize, cs.pageSize);
+        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
 
@@ -7388,6 +7419,11 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgPositive(pageSize, cs.pageSize);
+        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
 
@@ -7448,6 +7484,11 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgPositive(pageSize, cs.pageSize);
+        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
 
@@ -7932,7 +7973,7 @@ public final class JdbcUtil {
      */
     public static boolean tableExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
-        N.checkArgNotBlank(tableName, "tableName");
+        N.checkArgNotBlank(tableName, cs.tableName);
 
         try {
             final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
@@ -8283,6 +8324,10 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is blank or otherwise invalid, or {@code schema} is {@code null} or empty
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotBlank(tableName, cs.tableName);
+        N.checkArgNotEmpty(schema, cs.schema);
+
         if (tableExists(conn, tableName)) {
             logger.debug("Table already exists(tableName={})", tableName);
             return false;
@@ -8329,7 +8374,7 @@ public final class JdbcUtil {
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
-        N.checkArgNotBlank(tableName, "tableName");
+        N.checkArgNotBlank(tableName, cs.tableName);
 
         final String sqlTableName;
 
@@ -9558,14 +9603,17 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param blob the Blob object to be converted to a String
-     * @param charset the character encoding to use for the conversion
+     * @param charset the character encoding to use for the conversion. Must not be {@code null} when {@code blob} is not {@code null}.
      * @return the String representation of the Blob content, or {@code null} if {@code blob} is {@code null}
+     * @throws IllegalArgumentException if {@code charset} is {@code null} (when {@code blob} is not {@code null})
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
-    public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
+    public static String blob2String(final Blob blob, final Charset charset) throws IllegalArgumentException, SQLException {
         if (blob == null) {
             return null;
         }
+
+        N.checkArgNotNull(charset, cs.charset);
 
         try {
             final long len = blob.length();

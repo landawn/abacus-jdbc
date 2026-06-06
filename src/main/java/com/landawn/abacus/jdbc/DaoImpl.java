@@ -1720,7 +1720,7 @@ final class DaoImpl {
     }
 
     private static <T extends Condition> T checkCondForPaginate(final T cond) {
-        N.checkArgNotNull(cond, "Condition for \"paginate\" can not be null");
+        N.checkArgNotNull(cond, "Condition for \"paginate\" cannot be null");
 
         if ((cond instanceof Criteria && ((Criteria) cond).getOrderBy() != null) || Strings.containsIgnoreCase(cond.toString(), " ORDER BY ")) {
             // okay, has order by
@@ -2321,6 +2321,11 @@ final class DaoImpl {
 
         final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
         final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
+
+        if (daoClassCacheAnno != null && (capacity < 0 || evictDelay < 0)) {
+            throw new UnsupportedOperationException("Invalid ('capacity', 'evictDelay'): (" + capacity + ", " + evictDelay
+                    + ") (both must be >= 0) in annotation 'Cache' on Dao interface: " + daoClassName);
+        }
 
         final Jdbc.DaoCache daoCache = inputDaoCache == null
                 ? (daoClassCacheAnno == null || daoClassCacheAnno.impl() == null) ? Jdbc.DaoCache.create(capacity, evictDelay)
@@ -4907,7 +4912,7 @@ final class DaoImpl {
                             final JoinInfo propJoinInfo = joinBeanInfo.get(joinEntityPropName);
 
                             N.checkArgument(propJoinInfo != null, "No join entity property found by name: \"{}\" in class: {}", joinEntityPropName,
-                                    entityClass);
+                                    ClassUtil.getCanonicalClassName(entityClass));
 
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSqlPlan(sbc);
@@ -6120,6 +6125,24 @@ final class DaoImpl {
                     if (!(Strings.isEmpty(transferAttr) || SUPPORTED_TRANSFER_FOR_CACHE.contains(transferAttr.toLowerCase()))) {
                         throw new UnsupportedOperationException(
                                 "Unsupported 'transfer' : " + transferAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
+                    }
+
+                    if (cacheResultAnno != null) {
+                        if (cacheResultAnno.liveTime() < 0) {
+                            throw new UnsupportedOperationException("Invalid 'liveTime': " + cacheResultAnno.liveTime()
+                                    + " (must be >= 0) in annotation 'CacheResult' on method: " + simpleClassMethodName);
+                        }
+
+                        if (cacheResultAnno.maxIdleTime() < 0) {
+                            throw new UnsupportedOperationException("Invalid 'maxIdleTime': " + cacheResultAnno.maxIdleTime()
+                                    + " (must be >= 0) in annotation 'CacheResult' on method: " + simpleClassMethodName);
+                        }
+
+                        if (cacheResultAnno.minSize() < 0 || cacheResultAnno.maxSize() < 0 || cacheResultAnno.minSize() > cacheResultAnno.maxSize()) {
+                            throw new UnsupportedOperationException(
+                                    "Invalid ('minSize', 'maxSize'): (" + cacheResultAnno.minSize() + ", " + cacheResultAnno.maxSize()
+                                            + ") (require 0 <= minSize <= maxSize) in annotation 'CacheResult' on method: " + simpleClassMethodName);
+                        }
                     }
 
                     final Function<Object, Object> cloneFunc = Strings.isEmpty(transferAttr) || "none".equalsIgnoreCase(transferAttr) ? Fn.identity() : r -> {
