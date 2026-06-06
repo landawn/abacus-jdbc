@@ -939,7 +939,7 @@ final class DaoUtil {
             return false;
         }
 
-        index += keyword.length();
+        index = skipLeadingWhitespaceAndComments(sql, index + keyword.length());
         keyword = readKeyword(sql, index);
 
         if (!"OR".equalsIgnoreCase(keyword)) {
