@@ -68,6 +68,26 @@ public class ReadOnlyDaoTest extends TestBase {
     }
 
     @Test
+    public void testPrepareQuery_RejectsMutatingCteButAllowsVerbColumnNames() throws SQLException {
+        TestReadOnlyDao dao = Mockito.mock(TestReadOnlyDao.class, Mockito.CALLS_REAL_METHODS);
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        PreparedQuery preparedQuery = Mockito.mock(PreparedQuery.class);
+        final String legalSelect = "SELECT update, insert_flag FROM audit_log";
+        final String mutatingCte = "WITH deleted_rows AS (DELETE FROM audit_log WHERE id = ? RETURNING *) SELECT * FROM deleted_rows";
+
+        Mockito.when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareQuery(dataSource, legalSelect)).thenReturn(preparedQuery);
+
+            assertSame(preparedQuery, dao.prepareQuery(legalSelect));
+        }
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery(mutatingCte));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQueryForLargeResult(mutatingCte));
+    }
+
+    @Test
     public void testPrepareNamedQuery_SelectOnly() throws SQLException {
         TestReadOnlyDao dao = Mockito.mock(TestReadOnlyDao.class, Mockito.CALLS_REAL_METHODS);
         DataSource dataSource = Mockito.mock(DataSource.class);
@@ -98,6 +118,17 @@ public class ReadOnlyDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedUpdate));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult("DELETE FROM users WHERE id = :id"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult(parsedUpdate));
+    }
+
+    @Test
+    public void testPrepareNamedQuery_RejectsParsedMutatingCte() {
+        TestReadOnlyDao dao = Mockito.mock(TestReadOnlyDao.class, Mockito.CALLS_REAL_METHODS);
+        ParsedSql parsedDeleteCte = Mockito.mock(ParsedSql.class);
+
+        Mockito.when(parsedDeleteCte.originalSql()).thenReturn("WITH x AS (DELETE FROM users WHERE id = :id RETURNING *) SELECT * FROM x");
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedDeleteCte));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult(parsedDeleteCte));
     }
 
     @Test

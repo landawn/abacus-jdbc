@@ -468,17 +468,6 @@ public final class DBLock {
         N.checkArgNotNegative(timeout, "timeout");
         N.checkArgNotNegative(retryInterval, "retryInterval");
 
-        try {
-            if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, DateUtil.currentTimestamp(),
-                    DateUtil.addMilliseconds(DateUtil.currentTimestamp(), -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
-                logger.info("Removed expired DB lock(target={})", target);
-            }
-        } catch (final Exception e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(e, "Failed to remove expired DB lock(target={})", target);
-            }
-        }
-
         final String code = Strings.uuid();
 
         Timestamp now = DateUtil.currentTimestamp();
@@ -497,6 +486,9 @@ public final class DBLock {
         logger.debug("Trying to acquire DB lock(target={}, liveTime={}, timeout={}, retryInterval={})", target, liveTime, timeout, retryInterval);
 
         do {
+            removeExpiredLock(target);
+            now = DateUtil.currentTimestamp();
+
             try {
                 if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now, now) > 0) {
                     targetCodePool.put(target, new LockInfo(code, liveTime));
@@ -538,6 +530,20 @@ public final class DBLock {
         }
 
         return null;
+    }
+
+    private void removeExpiredLock(final String target) {
+        try {
+            final Timestamp now = DateUtil.currentTimestamp();
+
+            if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, now, DateUtil.addMilliseconds(now, -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
+                logger.info("Removed expired DB lock(target={})", target);
+            }
+        } catch (final Exception e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(e, "Failed to remove expired DB lock(target={})", target);
+            }
+        }
     }
 
     /**

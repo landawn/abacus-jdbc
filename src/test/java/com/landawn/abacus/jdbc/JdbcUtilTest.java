@@ -87,6 +87,9 @@ public class JdbcUtilTest extends TestBase {
     private Blob mockBlob;
     private Clob mockClob;
 
+    private record NamedRecordParameter(String firstName, String lastName) {
+    }
+
     @BeforeEach
     @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
@@ -795,6 +798,16 @@ public class JdbcUtilTest extends TestBase {
 
         int affected = JdbcUtil.executeUpdate(mockDataSource, sql, "John", 1L);
         assertEquals(1, affected);
+    }
+
+    @Test
+    public void testSetParameters_NamedRecordParameter() throws SQLException {
+        ParsedSql parsedSql = JdbcUtil.parseSql("SELECT * FROM users WHERE first_name = :firstName AND last_name = :lastName");
+
+        JdbcUtil.setParameters(parsedSql, mockPreparedStatement, new Object[] { new NamedRecordParameter("Ada", "Lovelace") });
+
+        verify(mockPreparedStatement).setString(1, "Ada");
+        verify(mockPreparedStatement).setString(2, "Lovelace");
     }
 
     @Test
@@ -2329,6 +2342,7 @@ public class JdbcUtilTest extends TestBase {
 
         int skipped = JdbcUtil.skip(freshRs, 5L);
         assertEquals(3, skipped);
+        verify(freshRs).afterLast();
     }
 
     @Test

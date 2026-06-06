@@ -337,6 +337,17 @@ public class DBLockTest extends TestBase {
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
 
+    @Test
+    public void testLock_RemovesExpiredLockOnRetry() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 0, 1, 1);
+
+        final String code = fixture.lock.lock("resource-expired-on-retry", 200L, 100L, 1L);
+
+        assertNotNull(code);
+        assertEquals(1, targetCodePool(fixture.lock).size());
+        verify(fixture.connection, times(4)).prepareStatement(anyString());
+    }
+
     // Lock: exception during acquire, timeout expires, covering L522-L523
     @Test
     public void testLock_ExceptionThenTimeoutReturnsNull() throws Exception {

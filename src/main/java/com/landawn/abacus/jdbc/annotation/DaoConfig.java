@@ -32,7 +32,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *   <li>Automatic LIMIT clause addition for single-result queries</li>
  *   <li>ID generation behavior for insert operations</li>
  *   <li>Join condition handling with {@code null} values</li>
- *   <li>Column fetching strategies for DataSet queries</li>
+ *   <li>Column fetching strategies for Dataset queries</li>
  * </ul>
  * 
  * <p><b>Usage Examples:</b></p>
@@ -56,7 +56,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * }
  * 
  * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
- * public interface OrderDao extends CrudDao<Order, Long> {
+ * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
  *     // Framework-managed @JoinedBy joins are allowed even when the join key is null
  *     List<Order> listAllWithItems(Collection<String> selectPropNames);
  * }
@@ -85,7 +85,7 @@ public @interface DaoConfig {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(addLimitForSingleQuery = true)
-     * public interface ProductDao extends CrudDao<Product, Long> {
+     * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
      *     // Built-in Condition-based methods will have LIMIT 1 appended
      *     // when invoked through the proxy.
      * }
@@ -135,7 +135,7 @@ public @interface DaoConfig {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(callGenerateIdForInsertWithSqlIfIdNotSet = true)
-     * public interface OrderDao extends CrudDao<Order, Long> {
+     * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
      *     default void insertWithAudit(Order order) {
      *         String sql = "INSERT INTO orders (id, customer_id, total, created_by) " +
      *                     "VALUES (:id, :customerId, :total, CURRENT_USER())";
@@ -162,7 +162,7 @@ public @interface DaoConfig {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-     * public interface CustomerDao extends CrudDao<Customer, Long> {
+     * public interface CustomerDao extends CrudDao<Customer, Long, SqlBuilder.PSC, CustomerDao> {
      *     // @JoinedBy-driven joins are allowed even if the join key is null or zero
      *     List<Customer> listAllWithPreferredContacts(Collection<String> selectPropNames);
      * }
@@ -174,34 +174,34 @@ public @interface DaoConfig {
     boolean allowJoiningByNullOrDefaultValue() default false;
 
     /**
-     * Controls the default column-selection behavior of built-in {@code DataSet}-returning
+     * Controls the default column-selection behavior of built-in {@code Dataset}-returning
      * methods (e.g., {@code query(Condition)}, {@code query(Collection<String>, Condition)})
      * provided by {@code Dao}/{@code CrudDao}, when individual call sites do not override it
      * with {@link FetchColumnByEntityClass @FetchColumnByEntityClass}.
      *
      * <p>When {@code true} (default), the framework restricts the projected columns to those
-     * that map to properties on the DAO's target entity class, producing a {@code DataSet} that
+     * that map to properties on the DAO's target entity class, producing a {@code Dataset} that
      * mirrors the entity shape. When {@code false}, the underlying SELECT keeps every column
      * referenced by the SQL (useful for joins with extra columns, calculated columns, or
      * aggregations that have no corresponding entity property).</p>
      *
-     * <p>This setting only affects the framework-generated {@code DataSet} methods; SQL declared
+     * <p>This setting only affects the framework-generated {@code Dataset} methods; SQL declared
      * by {@link Query @Query} is untouched, and a method-level
      * {@link FetchColumnByEntityClass @FetchColumnByEntityClass} always wins over this default.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(fetchColumnByEntityClassForDatasetQuery = false)
-     * public interface ReportDao extends CrudDao<Report, Long> {
+     * public interface ReportDao extends CrudDao<Report, Long, SqlBuilder.PSC, ReportDao> {
      *     // Will fetch all columns including calculated ones
      *     @Query("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
      *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +
      *             "GROUP BY r.id")
-     *     DataSet getReportSummaries();
+     *     Dataset getReportSummaries();
      * }
      * }</pre>
      *
-     * @return {@code true} (default) to restrict built-in {@code DataSet} queries to entity-mapped columns;
+     * @return {@code true} (default) to restrict built-in {@code Dataset} queries to entity-mapped columns;
      *         {@code false} to retain every column referenced by the SELECT
      */
     boolean fetchColumnByEntityClassForDatasetQuery() default true;

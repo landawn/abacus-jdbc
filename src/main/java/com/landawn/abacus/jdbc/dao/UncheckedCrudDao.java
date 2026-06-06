@@ -1129,6 +1129,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return the inserted or updated entity
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      */
     @Override
     default T upsert(final T entity) throws UncheckedSQLException {
@@ -1163,6 +1164,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return the inserted or updated entity
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record matches
      */
     @Override
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
@@ -1200,6 +1202,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return the inserted or updated entity
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record matches the specified condition
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {

@@ -467,11 +467,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     /**
      * Rolls back the transaction if it has not been committed successfully.
      * This method is safe to call multiple times and will only perform a rollback
-     * if the transaction is still active or in a failed commit state.
+     * if the transaction is still active, marked for rollback, or in a failed-commit state.
      *
      * <p>This method is particularly useful in finally blocks or cleanup code
      * where you want to ensure a transaction is not left in an active state.
-     * It will do nothing if the transaction has already been committed.</p>
+     * It will do nothing if the transaction has already been committed or rolled back.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -674,7 +674,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p>When the reference count reaches zero, the transaction is removed from the thread-local map
      * and the transaction is considered complete. For counts greater than zero, the previous isolation
-     * level is restored from the stack.</p>
+     * level and for-update-only flag are restored from their stacks.</p>
      *
      * @return the new reference count after decrementing
      * @throws UncheckedSQLException if a database error occurs while restoring the isolation level

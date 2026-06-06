@@ -909,6 +909,74 @@ final class DaoUtil {
         return "INSERT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
     }
 
+    static boolean isReadOnlyQuery(final String sql) {
+        return isSelectQuery(sql) && !containsMutationQueryKeyword(sql);
+    }
+
+    static boolean isNoUpdateQuery(final String sql) {
+        if (!(isSelectQuery(sql) || isInsertQuery(sql))) {
+            return false;
+        }
+
+        return !containsQueryKeyword(sql, "UPDATE") && !containsQueryKeyword(sql, "DELETE") && !containsQueryKeyword(sql, "MERGE");
+    }
+
+    private static boolean containsMutationQueryKeyword(final String sql) {
+        return containsQueryKeyword(sql, "INSERT") || containsQueryKeyword(sql, "UPDATE") || containsQueryKeyword(sql, "DELETE")
+                || containsQueryKeyword(sql, "MERGE");
+    }
+
+    private static boolean containsQueryKeyword(final String sql, final String keywordToFind) {
+        if (Strings.isEmpty(sql)) {
+            return false;
+        }
+
+        int index = 0;
+        boolean canStartQueryKeyword = true;
+        String previousKeyword = "";
+
+        while (index < sql.length()) {
+            index = skipLeadingWhitespaceAndComments(sql, index);
+
+            if (index >= sql.length()) {
+                break;
+            }
+
+            final char ch = sql.charAt(index);
+
+            if (ch == '\'' || ch == '"' || ch == '`') {
+                index = skipQuotedLiteral(sql, index, ch);
+                canStartQueryKeyword = false;
+                continue;
+            }
+
+            if (Character.isLetter(ch)) {
+                final String token = readKeyword(sql, index);
+
+                if (canStartQueryKeyword && keywordToFind.equalsIgnoreCase(token)) {
+                    return true;
+                }
+
+                previousKeyword = token;
+                canStartQueryKeyword = false;
+                index += token.length();
+                continue;
+            }
+
+            if (ch == ';') {
+                canStartQueryKeyword = true;
+            } else if (ch == '(') {
+                canStartQueryKeyword = "AS".equalsIgnoreCase(previousKeyword) || "MATERIALIZED".equalsIgnoreCase(previousKeyword);
+            } else if (!Character.isWhitespace(ch)) {
+                canStartQueryKeyword = false;
+            }
+
+            index++;
+        }
+
+        return false;
+    }
+
     private static String getLeadingQueryKeyword(final String sql) {
         if (Strings.isEmpty(sql)) {
             return "";

@@ -7982,6 +7982,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 return executeQuery();
             } catch (final SQLException e) {
+                closeAfterExecutionIfAllowed();
                 throw new UncheckedSQLException(e);
             }
         };
@@ -7992,6 +7993,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 return JdbcUtil.execute(stmt);
             } catch (final SQLException e) {
+                closeAfterExecutionIfAllowed();
                 throw new UncheckedSQLException(e);
             }
         };
@@ -9150,10 +9152,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes a batch INSERT statement and retrieves all generated keys as Long values.
-     * 
+     * Executes a batch INSERT statement and retrieves all generated keys.
+     *
      * <p>This method uses the default single-column generated key extractor that assumes
-     * the generated keys are numeric (Long) values in the first column.</p>
+     * the generated keys are numeric values in the first column.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

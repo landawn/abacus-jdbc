@@ -1681,6 +1681,7 @@ public final class Jdbc {
          * @param <T> entity type
          * @param targetClass the class of the entities to be created
          * @return a {@code BiResultExtractor} that produces a {@code List} of entities.
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          * @see ResultExtractor#toList(Class)
          * @see BiRowMapper#to(Class)
          */
@@ -3135,7 +3136,7 @@ public final class Jdbc {
                         }
                     };
                 }
-            } else if (Beans.isBeanClass(targetClass)) {
+            } else if (Beans.isBeanClass(targetClass) || Beans.isRecordClass(targetClass)) {
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
                 return new BiRowMapper<>() {
@@ -4252,7 +4253,7 @@ public final class Jdbc {
                             return (T) m;
                         }
                     };
-                } else if (Beans.isBeanClass(targetClass))
+                } else if (Beans.isBeanClass(targetClass) || Beans.isRecordClass(targetClass))
 
                 {
                     return new BiRowMapper<>() {
@@ -5965,7 +5966,7 @@ public final class Jdbc {
              * <pre>{@code
              * // Assumes column 1 contains a JSON string like '{"id":1, "name":"John"}'
              * RowMapper<User> userMapper = ColumnOne.readJson(User.class);
-             * User user = preparedQuery.queryForSingle(userMapper).get();
+             * User user = preparedQuery.findFirst(userMapper).get();
              * }</pre>
              *
              * @param <T> target type
@@ -5984,7 +5985,7 @@ public final class Jdbc {
              * <pre>{@code
              * // Assumes column 1 contains an XML string like '<user><id>1</id><name>John</name></user>'
              * RowMapper<User> userMapper = ColumnOne.readXml(User.class);
-             * User user = preparedQuery.queryForSingle(userMapper).get();
+             * User user = preparedQuery.findFirst(userMapper).get();
              * }</pre>
              *
              * @param <T> target type

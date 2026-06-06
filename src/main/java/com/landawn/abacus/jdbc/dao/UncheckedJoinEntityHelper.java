@@ -1584,7 +1584,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
     /**
      * Deletes all join entities of the specified class related to the given entity.
-     * This performs a cascade delete operation for the specified relationship type.
+     * This deletes the join entities associated with the specified relationship type.
      * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1630,7 +1630,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
     /**
      * Deletes all join entities of the specified class for multiple entities.
-     * This performs a batch cascade delete operation.
+     * This deletes the specified join entities for each of the given entities in a batch operation.
      * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -2024,7 +2024,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
     /**
      * Deletes all join entities for a single entity.
-     * This performs a cascade delete for all relationships defined in the entity.
+     * This deletes the join entities for every join relationship defined in the entity.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2100,7 +2100,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
     /**
      * Deletes all join entities for multiple entities.
-     * This performs a batch cascade delete for all relationships.
+     * This deletes the join entities for every join relationship of each of the given entities in a batch operation.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

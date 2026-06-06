@@ -1159,6 +1159,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.executeQuery()).thenThrow(new SQLException("forced"));
         Stream<String> stream = query.stream(rs -> rs.getString(1));
         assertThrows(UncheckedSQLException.class, stream::toList);
+        verify(preparedStatement).close();
     }
 
     // createExecuteSupplier lambda: stmt.execute() throws SQLException → wrapped in UncheckedSQLException (L7715-7717)
@@ -1167,6 +1168,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.execute()).thenThrow(new SQLException("forced"));
         Stream<List<String>> stream = query.streamAllResultSets((Jdbc.ResultExtractor<List<String>>) rs -> new ArrayList<>());
         assertThrows(UncheckedSQLException.class, stream::toList);
+        verify(preparedStatement).close();
     }
 
     // batchInsert(BiRowMapper, Predicate): all IDs are null → returns empty list (L9001)

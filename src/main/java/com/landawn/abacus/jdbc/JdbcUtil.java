@@ -846,7 +846,8 @@ public final class JdbcUtil {
      * This method analyzes the URL pattern to determine which JDBC driver should be used.
      *
      * @param url the JDBC URL to analyze
-     * @return the driver class corresponding to the URL, or {@code null} if not found
+     * @return the driver class corresponding to the URL
+     * @throws IllegalArgumentException if {@code url} is empty or does not match any supported driver
      */
     private static Class<? extends Driver> getDriverClassByUrl(final String url) {
         N.checkArgNotEmpty(url, cs.url);
@@ -1727,6 +1728,7 @@ public final class JdbcUtil {
                         if (rs.last()) {
                             final int lastRow = rs.getRow();
                             skipped = Math.max(lastRow - currentRow, 0);
+                            rs.afterLast();
                         } else {
                             // Empty result set
                             skipped = 0;
@@ -3062,7 +3064,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance wrapping the custom-created statement.
-     * @throws IllegalArgumentException if any of the arguments are {@code null}.
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or any other argument is {@code null}.
      * @throws SQLException if a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
@@ -3256,7 +3258,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param stmtCreator A factory function to create the {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException if any argument is {@code null}.
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or any other argument is {@code null}.
      * @throws SQLException if a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
@@ -5927,7 +5929,7 @@ public final class JdbcUtil {
 
             parameterValues = new Object[parameterCount];
 
-            if (Beans.isBeanClass(cls)) {
+            if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                 parameterTypes = new Type[parameterCount];
                 PropInfo propInfo = null;
@@ -10373,8 +10375,7 @@ public final class JdbcUtil {
 
     /**
      * Starts a global transaction which will be shared by all in-line database queries with the same DataSource
-     * in the same thread. This includes methods like prepareQuery, prepareNamedQuery, prepareCallableQuery,
-     * and SqlExecutor operations.
+     * in the same thread. This includes methods like prepareQuery, prepareNamedQuery, and prepareCallableQuery.
      *
      * <p>Spring Transaction is supported and integrated. If a Spring transaction is already active
      * with the specified DataSource, the Connection from the Spring transaction will be used.</p>
@@ -10386,7 +10387,6 @@ public final class JdbcUtil {
      *     try {
      *         // Operations here share tranA
      *         doSomethingB();   // Shares tranA (same thread, same dataSource1)
-     *         doSomethingC();   // Uses different transaction (different dataSource2)
      *         tranA.commit();
      *     } finally {
      *         tranA.rollbackIfNotCommitted();

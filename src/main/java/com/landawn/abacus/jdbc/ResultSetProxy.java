@@ -59,7 +59,8 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p>Key features:</p>
  * <ul>
- *   <li>Automatic detection and conversion of Oracle SQL types to standard Java types</li>
+ *   <li>Automatic detection and conversion of Oracle SQL types (including {@code TIMESTAMPTZ}/{@code TIMESTAMPLTZ}) to standard Java types</li>
+ *   <li>Inline materialization of {@link Blob} values to {@code byte[]} and {@link Clob} values to {@code String}</li>
  *   <li>Performance optimization through getter strategy caching</li>
  *   <li>Transparent delegation of all {@link ResultSet} operations</li>
  *   <li>Special handling for DATE/TIMESTAMP type disambiguation</li>
@@ -440,7 +441,9 @@ final class ResultSetProxy implements ResultSet {
      * <ul>
      *   <li>Caches the appropriate getter strategy for each column on the first access that returns a non-null value</li>
      *   <li>Automatically converts Oracle-specific types ({@code oracle.sql.TIMESTAMP}, {@code oracle.sql.DATE}) to standard Java SQL types</li>
+     *   <li>Handles Oracle {@code TIMESTAMPTZ}/{@code TIMESTAMPLTZ} columns via the driver's timezone-aware conversion</li>
      *   <li>Disambiguates between {@code DATE} and {@code TIMESTAMP} types using metadata when necessary</li>
+     *   <li>Materializes {@link Blob} values to {@code byte[]} and {@link Clob} values to {@code String}</li>
      * </ul>
      *
      * <p>If the column index is non-positive or beyond the column count, or the value read is SQL
@@ -557,7 +560,9 @@ final class ResultSetProxy implements ResultSet {
      * <ul>
      *   <li>Caches the appropriate getter strategy for each column label on the first access that returns a non-null value</li>
      *   <li>Automatically converts Oracle-specific types ({@code oracle.sql.TIMESTAMP}, {@code oracle.sql.DATE}) to standard Java SQL types</li>
+     *   <li>Handles Oracle {@code TIMESTAMPTZ}/{@code TIMESTAMPLTZ} columns via the driver's timezone-aware conversion</li>
      *   <li>Disambiguates between {@code DATE} and {@code TIMESTAMP} types using metadata when necessary</li>
+     *   <li>Materializes {@link Blob} values to {@code byte[]} and {@link Clob} values to {@code String}</li>
      * </ul>
      *
      * <p>Unlike the index form, the label is always resolved to a column index via the underlying

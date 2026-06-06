@@ -21,8 +21,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Controls whether query results should be fetched based on the entity class properties
- * when the return type is a DataSet or similar structure.
+ * Controls whether query results should be fetched based on the entity class properties.
+ * This annotation may only be applied to methods whose return type is {@code Dataset}.
  * 
  * <p>When enabled (default), only columns that correspond to properties in the entity class
  * will be fetched from the result set. This provides better performance and cleaner results
@@ -37,12 +37,12 @@ import java.lang.annotation.Target;
  *     // Only fetch columns that match User class properties
  *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(true)  // This is default, can be omitted
- *     DataSet queryUsersWithDepartment();
+ *     Dataset queryUsersWithDepartment();
  *     
  *     // Fetch all columns from the query, including department_name
  *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(false)
- *     DataSet queryAllUserData();
+ *     Dataset queryAllUserData();
  *     
  *     // Assuming User class has properties: id, name, email, deptId
  *     // First method returns: id, name, email, deptId (department_name is excluded)
@@ -57,8 +57,9 @@ import java.lang.annotation.Target;
  *   <li>Optimizing performance by fetching only required columns</li>
  * </ul>
  * 
- * <p>Note: This annotation only affects methods that return DataSet or similar collection
- * types. It has no effect on methods that return entity objects directly.</p>
+ * <p>Note: This annotation may only be applied to methods whose return type is {@code Dataset}.
+ * Applying it to a method with any other return type causes an {@code IllegalArgumentException}
+ * to be thrown when the DAO is initialized.</p>
  *
  * @see DaoConfig#fetchColumnByEntityClassForDatasetQuery()
  */
@@ -73,7 +74,7 @@ public @interface FetchColumnByEntityClass {
      * <ul>
      *   <li>Only columns with matching properties in the entity class are fetched</li>
      *   <li>Provides better performance by reducing data transfer</li>
-     *   <li>Results in cleaner DataSet with only relevant columns</li>
+     *   <li>Results in cleaner Dataset with only relevant columns</li>
      * </ul>
      * 
      * <p>When {@code false}:</p>
@@ -96,7 +97,7 @@ public @interface FetchColumnByEntityClass {
      * // DAO method
      * @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
      * @FetchColumnByEntityClass(false)  // Need to fetch login_count
-     * DataSet getUserLoginStats();
+     * Dataset getUserLoginStats();
      * }</pre>
      *
      * @return {@code true} to fetch only entity columns, {@code false} to fetch all columns

@@ -96,11 +96,11 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * // many-to-many joins must use setJoinPropEntities(Collection, Map) with keys derived from
  * // the junction table, or be loaded via DaoImpl which augments the SELECT with the
  * // junction-table column for matching.
- * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(DepartmentDao.class, Department.class,
- *                                               "departments", "employees");
- * List<Department> departments = departmentDao.list();
+ * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+ *                                               "employees", "projects");
  * List<Employee> employees = employeeDao.list();
- * joinInfo.setJoinPropEntities(departments, employees);
+ * List<Project> projects = projectDao.list();
+ * joinInfo.setJoinPropEntities(employees, projects);
  * }</pre>
  *
  */

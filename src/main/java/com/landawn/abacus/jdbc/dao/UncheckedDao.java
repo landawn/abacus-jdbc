@@ -1703,6 +1703,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record matches
      */
     @Override
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
@@ -1736,6 +1737,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record matches the specified condition
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {

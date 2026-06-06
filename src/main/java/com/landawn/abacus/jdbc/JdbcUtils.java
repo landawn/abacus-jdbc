@@ -2243,7 +2243,7 @@ public final class JdbcUtils {
      * This method executes the query and streams results directly to the Writer.
      *
      * <p>This method is optimized for large result sets with appropriate cursor and fetch size settings.
-     * The Writer should be flushed after this method returns to ensure all data is written.</p>
+     * The Writer is flushed (but not closed) by this method before it returns.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -1388,7 +1388,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLXML xmlData = connection.createSQLXML();
-     * xmlData.setString("<root><data>value</data></root>");
+     * java.io.Writer writer = xmlData.setCharacterStream();
+     * writer.write("<root><data>value</data></root>");
+     * writer.close();
      * query.setSQLXML("xmlContent", xmlData);
      * }</pre>
      *

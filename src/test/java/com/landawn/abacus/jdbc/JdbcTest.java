@@ -144,6 +144,9 @@ public class JdbcTest extends TestBase {
         }
     }
 
+    public record NameRecord(String firstName, String lastName) {
+    }
+
     // ParametersSetter Tests
     @Test
     public void testParametersSetterDoNothing() throws SQLException {
@@ -3544,5 +3547,27 @@ public class JdbcTest extends TestBase {
         final Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, filter, converter, false);
 
         assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, Arrays.asList("id", "unknown_col", "age")));
+    }
+
+    @Test
+    public void testBiRowMapperTo_RecordClassMapsColumns() throws SQLException {
+        when(mockResultSet.getString(1)).thenReturn("Ada");
+        when(mockResultSet.getString(2)).thenReturn("Lovelace");
+
+        final Jdbc.BiRowMapper<NameRecord> mapper = Jdbc.BiRowMapper.to(NameRecord.class);
+        final NameRecord result = mapper.apply(mockResultSet, Arrays.asList("firstName", "lastName"));
+
+        assertEquals(new NameRecord("Ada", "Lovelace"), result);
+    }
+
+    @Test
+    public void testBiRowMapperBuilderTo_RecordClassMapsColumns() throws SQLException {
+        when(mockResultSet.getString(1)).thenReturn("Grace");
+        when(mockResultSet.getString(2)).thenReturn("Hopper");
+
+        final Jdbc.BiRowMapper<NameRecord> mapper = Jdbc.BiRowMapper.builder().getString("firstName").getString("lastName").to(NameRecord.class);
+        final NameRecord result = mapper.apply(mockResultSet, Arrays.asList("firstName", "lastName"));
+
+        assertEquals(new NameRecord("Grace", "Hopper"), result);
     }
 }

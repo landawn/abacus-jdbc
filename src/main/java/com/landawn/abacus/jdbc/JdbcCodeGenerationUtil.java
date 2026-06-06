@@ -1357,6 +1357,7 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
+            checkUpdateSetColumnLabels(columnLabelList, tableName);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ");
@@ -1417,11 +1418,15 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
-
-            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+            final List<String> updateColumnLabelList = Stream.of(columnLabelList)
                     .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
-                    .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?")
-                    .join(", ") + " WHERE " + checkColumnName(keyColumnName, dbProductInfo) + " = ?";
+                    .toList();
+
+            checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
+
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
+                    + Stream.of(updateColumnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ") + " WHERE "
+                    + checkColumnName(keyColumnName, dbProductInfo) + " = ?";
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1515,6 +1520,8 @@ public final class JdbcCodeGenerationUtil {
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
+            checkUpdateSetColumnLabels(columnLabelList, tableName);
+
             String whereSection = "";
 
             if (N.notEmpty(keyColumnNames) || Strings.isNotEmpty(whereClause)) {
@@ -1596,6 +1603,7 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
+            checkUpdateSetColumnLabels(columnLabelList, tableName);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList)
@@ -1658,11 +1666,17 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
-
-            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+            final List<String> updateColumnLabelList = Stream.of(columnLabelList)
                     .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
-                    .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
-                    .join(", ") + " WHERE " + checkColumnName(keyColumnName, dbProductInfo) + " = :" + Strings.toCamelCase(keyColumnName);
+                    .toList();
+
+            checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
+
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
+                    + Stream.of(updateColumnLabelList)
+                            .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
+                            .join(", ")
+                    + " WHERE " + checkColumnName(keyColumnName, dbProductInfo) + " = :" + Strings.toCamelCase(keyColumnName);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1750,6 +1764,8 @@ public final class JdbcCodeGenerationUtil {
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
+
+            checkUpdateSetColumnLabels(columnLabelList, tableName);
 
             String whereSection = "";
 
@@ -1896,7 +1912,7 @@ public final class JdbcCodeGenerationUtil {
 
         if (parts.length == 1) {
             return CharStream.of(parts[0]).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? parts[0]
-                    : Strings.wrap(parts[0], quote);
+                    : quoteIdentifier(parts[0], quote);
         }
 
         final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
@@ -1906,7 +1922,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append('.');
             }
 
-            sb.append(Strings.wrap(parts[i], quote));
+            sb.append(quoteIdentifier(parts[i], quote));
         }
 
         return sb.toString();
@@ -1916,11 +1932,23 @@ public final class JdbcCodeGenerationUtil {
         String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
         return CharStream.of(columnLabel).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnLabel
-                : Strings.wrap(columnLabel, quote);
+                : quoteIdentifier(columnLabel, quote);
+    }
+
+    private static String quoteIdentifier(final String identifier, final String quote) {
+        // Escape any embedded quote character by doubling it, then wrap, so identifiers containing
+        // the active quote char produce valid SQL instead of unbalanced/injectable output.
+        return Strings.wrap(identifier.replace(quote, quote + quote), quote);
     }
 
     private static List<String> checkColumnName(final List<String> columnLabelList, final DBProductInfo dbProductInfo) {
         return N.map(columnLabelList, it -> checkColumnName(it, dbProductInfo));
+    }
+
+    private static void checkUpdateSetColumnLabels(final Collection<String> columnLabelList, final String tableName) {
+        if (N.isEmpty(columnLabelList)) {
+            throw new IllegalArgumentException("No columns available for UPDATE SET clause for table: " + tableName);
+        }
     }
 
     private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {

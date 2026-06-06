@@ -469,6 +469,10 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      */
     @Beta
     default Stream<T> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) {
+        if (N.isEmpty(joinEntitiesToLoad)) {
+            return DaoUtil.getDao(this).stream(selectPropNames, cond);
+        }
+
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE) //

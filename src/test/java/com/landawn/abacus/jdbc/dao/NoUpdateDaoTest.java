@@ -67,6 +67,26 @@ public class NoUpdateDaoTest extends TestBase {
     }
 
     @Test
+    public void testPrepareQuery_RejectsUpdatingCteButAllowsInsertVerbColumnName() throws SQLException {
+        TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        PreparedQuery preparedQuery = Mockito.mock(PreparedQuery.class);
+        final String legalInsert = "INSERT INTO audit_log(update, message) VALUES (?, ?)";
+        final String updatingCte = "WITH changed AS (UPDATE demo SET name = 'x' RETURNING id) INSERT INTO audit_log(id) SELECT id FROM changed";
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareQuery(dataSource, legalInsert)).thenReturn(preparedQuery);
+
+            assertSame(preparedQuery, dao.prepareQuery(legalInsert));
+        }
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery(updatingCte));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQueryForLargeResult(updatingCte));
+    }
+
+    @Test
     public void testPrepareNamedQuery_InsertAllowed() throws SQLException {
         TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
         DataSource dataSource = Mockito.mock(DataSource.class);
@@ -185,6 +205,18 @@ public class NoUpdateDaoTest extends TestBase {
         final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
 
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("UPDATE t SET x = :x"));
+    }
+
+    @Test
+    public void testPrepareNamedQuery_RejectsParsedUpdatingCte() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final ParsedSql parsedUpdatingCte = Mockito.mock(ParsedSql.class);
+
+        when(parsedUpdatingCte.originalSql()).thenReturn("WITH changed AS (UPDATE t SET x = :x RETURNING id) INSERT INTO log(id) SELECT id FROM changed");
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedUpdatingCte));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedUpdatingCte, true));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult(parsedUpdatingCte));
     }
 
     @Test

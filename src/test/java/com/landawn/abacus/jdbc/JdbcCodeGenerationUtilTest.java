@@ -185,6 +185,54 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testGenerateSelectSql_EscapesEmbeddedBacktickInColumnName() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM demo WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("we`ird");
+
+        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "demo");
+
+        // The embedded backtick must be doubled so the generated SQL is valid (not unbalanced/injectable).
+        assertEquals("SELECT id, `we``ird` FROM demo", sql);
+    }
+
+    @Test
+    public void testGenerateSelectSql_EscapesEmbeddedDoubleQuoteInColumnName() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("15.0");
+        when(conn.prepareStatement("SELECT * FROM demo WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("we\"ird");
+
+        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "demo");
+
+        // ANSI double-quote dialect: the embedded double-quote must be doubled.
+        assertEquals("SELECT id, \"we\"\"ird\" FROM demo", sql);
+    }
+
+    @Test
     public void testGenerateSelectSql_DataSourceWrapsSQLException() throws SQLException {
         DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("connection failed"));
@@ -1376,6 +1424,34 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertNotNull(sql);
         assertTrue(sql.startsWith("UPDATE"));
         assertTrue(sql.contains("WHERE status = 'OPEN'"));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_AllColumnsExcludedFromSet_Throws() throws SQLException {
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("id", "createdAt", "status"), null));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_AllColumnsExcludedFromSet_Throws() throws SQLException {
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, List.of("id", "createdAt", "status"), null));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_SingleKeyOnlyColumn_Throws() throws SQLException {
+        when(resultSetMetaData.getColumnCount()).thenReturn(1);
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("id");
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "id"));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_SingleKeyOnlyColumn_Throws() throws SQLException {
+        when(resultSetMetaData.getColumnCount()).thenReturn(1);
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("id");
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", "id"));
     }
 
     // Exercise continue on line 481 when excludedFields match by column name (snake_case)
