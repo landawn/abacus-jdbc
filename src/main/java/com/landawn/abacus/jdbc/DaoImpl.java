@@ -350,11 +350,13 @@ final class DaoImpl {
     /**
      * Creates a {@link MethodHandle} for invoking a default interface method via {@code unreflectSpecial}.
      *
-     * <p>This method tries three strategies in order to remain compatible across JDK versions and module
+     * <p>This method tries four strategies in order to remain compatible across JDK versions and module
      * access constraints:</p>
      * <ol>
      *   <li>{@link MethodHandles#lookup()} narrowed to the declaring class with {@code unreflectSpecial} (works on
      *       most modern JDKs).</li>
+     *   <li>{@link MethodHandles#privateLookupIn(Class, MethodHandles.Lookup)} with {@code unreflectSpecial} (the
+     *       supported JDK 9+ path for private/default interface access).</li>
      *   <li>The legacy {@code MethodHandles.Lookup(Class)} private constructor accessed reflectively, used for
      *       older JDKs where the public lookup cannot reach the default method.</li>
      *   <li>{@link MethodHandles.Lookup#findSpecial(Class, String, MethodType, Class)} as a final fallback.</li>
@@ -365,7 +367,7 @@ final class DaoImpl {
      *
      * @param method the {@link Method} object representing the default interface method
      * @return a {@link MethodHandle} that can be used to invoke the default method on a proxy instance
-     * @throws UnsupportedOperationException if all three strategies fail to produce a usable handle
+     * @throws UnsupportedOperationException if all strategies fail to produce a usable handle
      */
     private static MethodHandle createMethodHandle(final Method method) {
         final Class<?> declaringClass = method.getDeclaringClass();
@@ -374,17 +376,21 @@ final class DaoImpl {
             return MethodHandles.lookup().in(declaringClass).unreflectSpecial(method, declaringClass);
         } catch (final Exception e) {
             try {
-                final Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class);
-                ClassUtil.setAccessibleQuietly(constructor, true);
-
-                return constructor.newInstance(declaringClass).in(declaringClass).unreflectSpecial(method, declaringClass);
+                return MethodHandles.privateLookupIn(declaringClass, MethodHandles.lookup()).unreflectSpecial(method, declaringClass);
             } catch (final Exception ex) {
                 try {
-                    return MethodHandles.lookup()
-                            .findSpecial(declaringClass, method.getName(), MethodType.methodType(method.getReturnType(), method.getParameterTypes()),
-                                    declaringClass);
+                    final Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class);
+                    ClassUtil.setAccessibleQuietly(constructor, true);
+
+                    return constructor.newInstance(declaringClass).in(declaringClass).unreflectSpecial(method, declaringClass);
                 } catch (final Exception exx) {
-                    throw new UnsupportedOperationException(exx);
+                    try {
+                        return MethodHandles.lookup()
+                                .findSpecial(declaringClass, method.getName(), MethodType.methodType(method.getReturnType(), method.getParameterTypes()),
+                                        declaringClass);
+                    } catch (final Exception exxx) {
+                        throw new UnsupportedOperationException(exxx);
+                    }
                 }
             }
         }
@@ -2441,7 +2447,7 @@ final class DaoImpl {
                         args[paramLen - 1] = sqls;
                     }
 
-                    return methodHandle.bindTo(proxy).invokeWithArguments(args);
+                    return methodHandle.bindTo(proxy).invokeWithArguments(args == null ? N.EMPTY_OBJECT_ARRAY : args);
                 };
             } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> asyncExecutor.getExecutor();

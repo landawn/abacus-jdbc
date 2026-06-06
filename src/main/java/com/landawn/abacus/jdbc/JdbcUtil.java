@@ -19,6 +19,8 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -8487,8 +8489,10 @@ public final class JdbcUtil {
     @Deprecated
     @Internal
     static boolean isDefaultIdPropValue(final Object value) {
-        if ((value == null) || (value instanceof Number && (((Number) value).doubleValue() == 0))) {
+        if (value == null) {
             return true;
+        } else if (value instanceof Number number) {
+            return isZeroNumber(number);
         } else if (value instanceof EntityId) {
             return N.allMatch(((EntityId) value).entrySet(), it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
         } else if (Beans.isBeanClass(value.getClass())) {
@@ -8504,6 +8508,16 @@ public final class JdbcUtil {
         }
 
         return false;
+    }
+
+    private static boolean isZeroNumber(final Number value) {
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal.compareTo(BigDecimal.ZERO) == 0;
+        } else if (value instanceof BigInteger bigInteger) {
+            return bigInteger.signum() == 0;
+        }
+
+        return value.doubleValue() == 0;
     }
 
     static <ID> boolean isAllNullIds(final List<ID> ids) {

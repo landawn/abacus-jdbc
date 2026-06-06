@@ -237,6 +237,13 @@ public class DaoImplTest extends TestBase {
         }
     }
 
+    interface NoArgDefaultMethodDao extends Dao<TestEntity, PSC, NoArgDefaultMethodDao> {
+        @NonDBOperation
+        default String greeting() {
+            return "hello";
+        }
+    }
+
     static final class StubQuery extends AbstractQuery<PreparedStatement, StubQuery> {
         private final Dataset dataset;
 
@@ -840,6 +847,13 @@ public class DaoImplTest extends TestBase {
     @Test
     public void testCreateDao_DefaultSqlSourceDoesNotLoadEmptyMapper() throws SQLException {
         assertDoesNotThrow(() -> DaoImpl.createDao(DefaultSqlSourceDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+    }
+
+    @Test
+    public void testCreateDao_InvokesNoArgDefaultMethod() throws Exception {
+        NoArgDefaultMethodDao dao = DaoImpl.createDao(NoArgDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), null, null, null);
+
+        assertEquals("hello", dao.greeting());
     }
 
     @Test

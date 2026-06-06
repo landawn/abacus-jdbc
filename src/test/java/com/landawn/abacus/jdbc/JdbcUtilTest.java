@@ -21,6 +21,8 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -177,6 +179,14 @@ public class JdbcUtilTest extends TestBase {
         assertEquals("MySQL", info.productName());
         assertEquals("5.5.5-10.11.11-MariaDB", info.productVersion());
         assertEquals(DBVersion.MariaDB, info.version());
+    }
+
+    @Test
+    public void testIsDefaultIdPropValue_BigNumberZeroDetection() {
+        assertTrue(JdbcUtil.isDefaultIdPropValue(BigDecimal.ZERO));
+        assertTrue(JdbcUtil.isDefaultIdPropValue(BigInteger.ZERO));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(new BigDecimal("1E-400")));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(BigInteger.ONE));
     }
 
     @Test

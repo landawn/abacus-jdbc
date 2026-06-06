@@ -690,6 +690,28 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(updateSql.contains("WHERE id = 42"));
     }
 
+    @Test
+    public void testConvertInsertSqlToUpdateSql_PreservesJdbcPlaceholders() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String insertSql = "INSERT INTO order_history(id, status) VALUES (?, ?)";
+        String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, insertSql, "id = ?");
+
+        assertEquals("UPDATE order_history SET id = ?, status = ? WHERE id = ?", updateSql);
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_PreservesNamedParametersAndQuotedCommas() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String insertSql = "INSERT INTO order_history(id, status, name) VALUES (:id, :status, 'A,B')";
+        String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, insertSql);
+
+        assertEquals("UPDATE order_history SET id = :id, status = :status, name = 'A,B'", updateSql);
+    }
+
     // Test generateEntityClass with customized EntityCodeConfig fields
     @Test
     public void testEntityCodeConfig_GettersAndSetters() {

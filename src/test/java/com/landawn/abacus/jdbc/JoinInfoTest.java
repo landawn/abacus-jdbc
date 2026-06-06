@@ -711,6 +711,16 @@ public class JoinInfoTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> new JoinInfo(M2MNoEqSeparatorEntity.class, "m2m_no_eq", "roles", false));
     }
 
+    @Test
+    public void testConstructor_ManyToManyJoin_MultiEqInFirstPair() {
+        assertThrows(IllegalArgumentException.class, () -> new JoinInfo(M2MMultiEqInFirstPairEntity.class, "m2m_multi_eq_first", "roles", false));
+    }
+
+    @Test
+    public void testConstructor_ManyToManyJoin_MultiEqInSecondPair() {
+        assertThrows(IllegalArgumentException.class, () -> new JoinInfo(M2MMultiEqInSecondPairEntity.class, "m2m_multi_eq_second", "roles", false));
+    }
+
     // M2M: source property name not found in entity class → L274-277
     @Test
     public void testConstructor_ManyToManyJoin_NoSrcProp() {
@@ -1862,6 +1872,54 @@ final class M2MNoEqSeparatorEntity {
     private long userId;
 
     @JoinedBy("userId, UserRoleLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
+
+    public List<RoleLookupEntity> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<RoleLookupEntity> roles) {
+        this.roles = roles;
+    }
+}
+
+// M2M join where the first pair has more than one '=' separator.
+final class M2MMultiEqInFirstPairEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.userId = extra, UserRoleLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
+
+    public List<RoleLookupEntity> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<RoleLookupEntity> roles) {
+        this.roles = roles;
+    }
+}
+
+// M2M join where the second pair has more than one '=' separator.
+final class M2MMultiEqInSecondPairEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.userId, UserRoleLink.roleId = roleId = extra")
     private List<RoleLookupEntity> roles;
 
     public long getUserId() {

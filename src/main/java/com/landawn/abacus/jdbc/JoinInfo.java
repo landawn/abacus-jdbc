@@ -260,10 +260,10 @@ public final class JoinInfo {
             final String[] left = Strings.split(joinColumnPairs[0], '=', true);
             final String[] right = Strings.split(joinColumnPairs[1], '=', true);
 
-            if (left.length < 2 || right.length < 2) {
+            if (left.length != 2 || right.length != 2) {
                 throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                         + "' in class: " + ClassUtil.getCanonicalClassName(entityClass)
-                        + ". Each pair must contain '=' separator, e.g.: 'employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId'");
+                        + ". Each pair must contain exactly one '=' separator, e.g.: 'employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId'");
             }
 
             if ((srcPropInfos[0] = entityInfo.getPropInfo(left[0])) == null) {

@@ -918,12 +918,84 @@ final class DaoUtil {
             return false;
         }
 
-        return !containsQueryKeyword(sql, "UPDATE") && !containsQueryKeyword(sql, "DELETE") && !containsQueryKeyword(sql, "MERGE");
+        return !containsQueryKeyword(sql, "UPDATE") && !containsQueryKeyword(sql, "DELETE") && !containsQueryKeyword(sql, "MERGE")
+                && !containsInsertUpdateClause(sql);
     }
 
     private static boolean containsMutationQueryKeyword(final String sql) {
         return containsQueryKeyword(sql, "INSERT") || containsQueryKeyword(sql, "UPDATE") || containsQueryKeyword(sql, "DELETE")
                 || containsQueryKeyword(sql, "MERGE");
+    }
+
+    private static boolean containsInsertUpdateClause(final String sql) {
+        return isInsertOrReplaceQuery(sql) || containsTokenSequence(sql, "DUPLICATE", "KEY", "UPDATE") || containsTokenSequence(sql, "DO", "UPDATE");
+    }
+
+    private static boolean isInsertOrReplaceQuery(final String sql) {
+        int index = skipLeadingWhitespaceAndComments(sql, 0);
+        String keyword = readKeyword(sql, index);
+
+        if (!"INSERT".equalsIgnoreCase(keyword)) {
+            return false;
+        }
+
+        index += keyword.length();
+        keyword = readKeyword(sql, index);
+
+        if (!"OR".equalsIgnoreCase(keyword)) {
+            return false;
+        }
+
+        index = skipLeadingWhitespaceAndComments(sql, index + keyword.length());
+
+        return "REPLACE".equalsIgnoreCase(readKeyword(sql, index));
+    }
+
+    private static boolean containsTokenSequence(final String sql, final String... tokens) {
+        if (Strings.isEmpty(sql) || tokens.length == 0) {
+            return false;
+        }
+
+        int index = 0;
+        int matched = 0;
+
+        while (index < sql.length()) {
+            index = skipLeadingWhitespaceAndComments(sql, index);
+
+            if (index >= sql.length()) {
+                break;
+            }
+
+            final char ch = sql.charAt(index);
+
+            if (ch == '\'' || ch == '"' || ch == '`') {
+                index = skipQuotedLiteral(sql, index, ch);
+                matched = 0;
+                continue;
+            }
+
+            if (Character.isLetter(ch)) {
+                final String token = readKeyword(sql, index);
+
+                if (tokens[matched].equalsIgnoreCase(token)) {
+                    matched++;
+
+                    if (matched == tokens.length) {
+                        return true;
+                    }
+                } else {
+                    matched = tokens[0].equalsIgnoreCase(token) ? 1 : 0;
+                }
+
+                index += token.length();
+                continue;
+            }
+
+            matched = 0;
+            index++;
+        }
+
+        return false;
     }
 
     private static boolean containsQueryKeyword(final String sql, final String keywordToFind) {

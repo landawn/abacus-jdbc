@@ -1144,6 +1144,20 @@ public class AbstractQueryTest extends TestBase {
         assertEquals(0, result.size());
     }
 
+    @Test
+    public void testBatchInsert_RowMapper_MixedDefaultIds_FiltersDefaults() throws SQLException {
+        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1, 1, 1 });
+        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
+        when(generatedKeys.next()).thenReturn(true, true, true, false);
+        when(generatedKeys.getLong(1)).thenReturn(10L, 0L, 20L);
+
+        Predicate<Object> isDefault = id -> id == null || (Long) id == 0L;
+        List<Long> result = query.batchInsert((Jdbc.RowMapper<Long>) rs -> rs.getLong(1), isDefault);
+
+        assertEquals(List.of(10L, 20L), result);
+    }
+
     // listAllResultSets(Class): no result sets → returns empty list (L6685-6709)
     @Test
     public void testListAllResultSets_Class_ReturnsEmptyList() throws SQLException {
@@ -1187,6 +1201,24 @@ public class AbstractQueryTest extends TestBase {
         Predicate<Object> isDefault = id -> id == null;
         List<?> result = query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, cols) -> null, isDefault);
         assertEquals(0, result.size());
+    }
+
+    @Test
+    public void testBatchInsert_BiRowMapper_MixedDefaultIds_FiltersDefaults() throws SQLException {
+        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1, 1, 1 });
+        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
+        when(generatedKeys.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnLabel(1)).thenReturn("id");
+        when(generatedKeys.next()).thenReturn(true, true, true, false);
+        when(generatedKeys.getLong(1)).thenReturn(10L, 0L, 20L);
+
+        Predicate<Object> isDefault = id -> id == null || (Long) id == 0L;
+        List<Long> result = query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1), isDefault);
+
+        assertEquals(List.of(10L, 20L), result);
     }
 
     @Tag("2025")

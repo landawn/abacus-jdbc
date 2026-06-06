@@ -9266,11 +9266,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
-                return new ArrayList<>();
-            }
-
-            return ids;
+            return removeDefaultIds(ids, isDefaultIdTester);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9306,14 +9302,29 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
-                return new ArrayList<>();
-            }
-
-            return ids;
+            return removeDefaultIds(ids, isDefaultIdTester);
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    private <ID> List<ID> removeDefaultIds(final List<ID> ids, final Predicate<Object> isDefaultIdTester) {
+        List<ID> result = null;
+
+        for (int i = 0, len = ids.size(); i < len; i++) {
+            final ID id = ids.get(i);
+
+            if (id == null || isDefaultIdTester.test(id)) {
+                if (result == null) {
+                    result = new ArrayList<>(len);
+                    result.addAll(ids.subList(0, i));
+                }
+            } else if (result != null) {
+                result.add(id);
+            }
+        }
+
+        return result == null ? ids : result;
     }
 
     /**

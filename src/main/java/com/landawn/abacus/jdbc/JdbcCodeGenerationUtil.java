@@ -1866,36 +1866,51 @@ public final class JdbcCodeGenerationUtil {
         final StringBuilder sb = Objectory.createStringBuilder();
 
         try {
-            int idx = Strings.indexOfIgnoreCase(insertSql, insertInto);
-            int idx2 = insertSql.indexOf('(', idx + insertIntoLen);
-            String tableName = insertSql.substring(idx + insertIntoLen, idx2).trim();
+            final int idx = Strings.indexOfIgnoreCase(insertSql, insertInto);
 
-            int idx3 = insertSql.indexOf(')', idx2 + 1);
-            String[] columnNames = N.fromJson(insertSql.substring(idx2 + 1, idx3), String[].class);
+            if (idx < 0) {
+                throw new IllegalArgumentException("Not an INSERT INTO SQL: " + insertSql);
+            }
 
-            int idx4 = insertSql.indexOf('(', idx3 + 1);
-            int idx5 = insertSql.lastIndexOf(')');
-            List<Object> values = N.fromJson(insertSql.substring(idx4 + 1, idx5), List.class);
+            final int idx2 = insertSql.indexOf('(', idx + insertIntoLen);
 
-            if (columnNames.length != values.size()) {
+            if (idx2 < 0) {
+                throw new IllegalArgumentException("Missing column list in SQL: " + insertSql);
+            }
+
+            final String tableName = insertSql.substring(idx + insertIntoLen, idx2).trim();
+            final int idx3 = findClosingParenthesis(insertSql, idx2);
+            final List<String> columnNames = splitSqlList(insertSql.substring(idx2 + 1, idx3), insertSql);
+
+            final int valuesIdx = indexOfIgnoreCase(insertSql, "VALUES", idx3 + 1);
+
+            if (valuesIdx < 0) {
+                throw new IllegalArgumentException("Missing VALUES clause in SQL: " + insertSql);
+            }
+
+            final int idx4 = insertSql.indexOf('(', valuesIdx + "VALUES".length());
+
+            if (idx4 < 0) {
+                throw new IllegalArgumentException("Missing VALUES list in SQL: " + insertSql);
+            }
+
+            final int idx5 = findClosingParenthesis(insertSql, idx4);
+            final List<String> values = splitSqlList(insertSql.substring(idx4 + 1, idx5), insertSql);
+
+            if (columnNames.size() != values.size()) {
                 throw new IllegalArgumentException(
-                        "Column count (" + columnNames.length + ") does not match value count (" + values.size() + ") in SQL: " + insertSql);
+                        "Column count (" + columnNames.size() + ") does not match value count (" + values.size() + ") in SQL: " + insertSql);
             }
 
             sb.append("UPDATE ").append(tableName).append(" SET ");
 
-            for (int i = 0, len = columnNames.length; i < len; i++) {
+            for (int i = 0, len = columnNames.size(); i < len; i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
 
-                sb.append(checkColumnName(columnNames[i], dbProductInfo));
-
-                if (values.get(i) instanceof String) {
-                    sb.append(" = '").append(N.stringOf(values.get(i)).replace("'", "''")).append('\'');
-                } else {
-                    sb.append(" = ").append(N.stringOf(values.get(i)));
-                }
+                sb.append(checkColumnName(stripIdentifierDelimiters(columnNames.get(i)), dbProductInfo));
+                sb.append(" = ").append(values.get(i));
             }
 
             if (Strings.isNotEmpty(whereClause)) {
@@ -1911,6 +1926,152 @@ public final class JdbcCodeGenerationUtil {
         } finally {
             Objectory.recycle(sb);
         }
+    }
+
+    private static int indexOfIgnoreCase(final String str, final String target, final int fromIndex) {
+        for (int i = Math.max(0, fromIndex), max = str.length() - target.length(); i <= max; i++) {
+            if (str.regionMatches(true, i, target, 0, target.length())) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex) {
+        int parenthesisDepth = 0;
+        char quote = 0;
+        boolean inBracketIdentifier = false;
+
+        for (int i = openingParenthesisIndex, len = sql.length(); i < len; i++) {
+            final char ch = sql.charAt(i);
+
+            if (quote != 0) {
+                if (ch == quote) {
+                    if (i + 1 < len && sql.charAt(i + 1) == quote) {
+                        i++;
+                    } else {
+                        quote = 0;
+                    }
+                }
+            } else if (inBracketIdentifier) {
+                if (ch == ']') {
+                    if (i + 1 < len && sql.charAt(i + 1) == ']') {
+                        i++;
+                    } else {
+                        inBracketIdentifier = false;
+                    }
+                }
+            } else if (ch == '\'' || ch == '"' || ch == '`') {
+                quote = ch;
+            } else if (ch == '[') {
+                inBracketIdentifier = true;
+            } else if (ch == '(') {
+                parenthesisDepth++;
+            } else if (ch == ')') {
+                parenthesisDepth--;
+
+                if (parenthesisDepth == 0) {
+                    return i;
+                }
+            }
+        }
+
+        throw new IllegalArgumentException("Unclosed parenthesis in SQL: " + sql);
+    }
+
+    private static List<String> splitSqlList(final String sqlList, final String insertSql) {
+        final List<String> result = new ArrayList<>();
+        final StringBuilder token = Objectory.createStringBuilder();
+        int parenthesisDepth = 0;
+        char quote = 0;
+        boolean inBracketIdentifier = false;
+
+        try {
+            for (int i = 0, len = sqlList.length(); i < len; i++) {
+                final char ch = sqlList.charAt(i);
+
+                if (quote != 0) {
+                    token.append(ch);
+
+                    if (ch == quote) {
+                        if (i + 1 < len && sqlList.charAt(i + 1) == quote) {
+                            token.append(sqlList.charAt(++i));
+                        } else {
+                            quote = 0;
+                        }
+                    }
+                } else if (inBracketIdentifier) {
+                    token.append(ch);
+
+                    if (ch == ']') {
+                        if (i + 1 < len && sqlList.charAt(i + 1) == ']') {
+                            token.append(sqlList.charAt(++i));
+                        } else {
+                            inBracketIdentifier = false;
+                        }
+                    }
+                } else if (ch == '\'' || ch == '"' || ch == '`') {
+                    quote = ch;
+                    token.append(ch);
+                } else if (ch == '[') {
+                    inBracketIdentifier = true;
+                    token.append(ch);
+                } else if (ch == '(') {
+                    parenthesisDepth++;
+                    token.append(ch);
+                } else if (ch == ')') {
+                    if (parenthesisDepth == 0) {
+                        throw new IllegalArgumentException("Unmatched closing parenthesis in SQL: " + insertSql);
+                    }
+
+                    parenthesisDepth--;
+                    token.append(ch);
+                } else if (ch == ',' && parenthesisDepth == 0) {
+                    addSqlListToken(result, token, insertSql);
+                } else {
+                    token.append(ch);
+                }
+            }
+
+            if (quote != 0 || inBracketIdentifier || parenthesisDepth != 0) {
+                throw new IllegalArgumentException("Unclosed SQL token in SQL: " + insertSql);
+            }
+
+            addSqlListToken(result, token, insertSql);
+        } finally {
+            Objectory.recycle(token);
+        }
+
+        return result;
+    }
+
+    private static void addSqlListToken(final List<String> result, final StringBuilder token, final String insertSql) {
+        final String value = token.toString().trim();
+
+        if (value.length() == 0) {
+            throw new IllegalArgumentException("Empty item in SQL list: " + insertSql);
+        }
+
+        result.add(value);
+        token.setLength(0);
+    }
+
+    private static String stripIdentifierDelimiters(final String identifier) {
+        final String trimmed = identifier.trim();
+
+        if (trimmed.length() >= 2) {
+            final char first = trimmed.charAt(0);
+            final char last = trimmed.charAt(trimmed.length() - 1);
+
+            if ((first == '"' && last == '"') || (first == '`' && last == '`')) {
+                return trimmed.substring(1, trimmed.length() - 1).replace(String.valueOf(first) + first, String.valueOf(first));
+            } else if (first == '[' && last == ']') {
+                return trimmed.substring(1, trimmed.length() - 1).replace("]]", "]");
+            }
+        }
+
+        return trimmed;
     }
 
     private static String checkTableName(final String tableName, final DBProductInfo dbProductInfo) {

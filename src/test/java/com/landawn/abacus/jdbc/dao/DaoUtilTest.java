@@ -522,6 +522,25 @@ public class DaoUtilTest extends TestBase {
         assertTrue(DaoUtil.isInsertQuery("WITH cte AS (MERGE INTO t USING s ON t.id=s.id WHEN MATCHED THEN UPDATE SET x=1) INSERT INTO t2 SELECT * FROM cte"));
     }
 
+    @Test
+    public void testIsNoUpdateQuery_AllowsPlainInsertAndDoNothing() {
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(id, message) VALUES (1, 'created')"));
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO NOTHING"));
+    }
+
+    @Test
+    public void testIsNoUpdateQuery_RejectsInsertConflictUpdateClauses() {
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = VALUES(name)"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OR REPLACE INTO users(id, name) VALUES (1, 'a')"));
+    }
+
+    @Test
+    public void testIsNoUpdateQuery_IgnoresQuotedConflictUpdateText() {
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON DUPLICATE KEY UPDATE name = VALUES(name)')"));
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON CONFLICT DO UPDATE')"));
+    }
+
     // Backtick-quoted identifiers in WITH clause exercises quote-type branch (line 941)
     @Test
     public void testIsSelectQuery_CteWithBacktickQuotes() {
