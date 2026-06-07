@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
 
+import com.landawn.abacus.exception.UncheckedInterruptedException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
@@ -504,13 +505,18 @@ public final class DBLock {
                 lastException = e;
             }
 
-            if (retryInterval > 0) {
-                N.sleep(retryInterval);
-            } else {
-                N.sleep(1); // Minimum 1ms delay to prevent tight spin loop
+            boolean interruptedDuringSleep = false;
+
+            try {
+                // Minimum 1ms delay to prevent a tight spin loop when retryInterval is 0.
+                N.sleep(retryInterval > 0 ? retryInterval : 1);
+            } catch (final UncheckedInterruptedException e) {
+                // N.sleep restores the interrupt flag and rethrows on interruption; route it through the
+                // same clean-cancellation path below instead of letting it escape lock() as a RuntimeException.
+                interruptedDuringSleep = true;
             }
 
-            if (Thread.interrupted()) {
+            if (interruptedDuringSleep || Thread.interrupted()) {
                 // Preserve the interrupt flag so callers up the stack can detect the cancellation.
                 Thread.currentThread().interrupt();
                 logger.warn("Interrupted while acquiring DB lock(target={}, attempts={})", target, attempts + 1);

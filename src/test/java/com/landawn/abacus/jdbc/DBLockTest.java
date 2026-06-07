@@ -440,13 +440,31 @@ public class DBLockTest extends TestBase {
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
 
-    // NOTE (interrupt-flag preservation in lock()): when Thread.interrupted() is observed inside the
-    // retry loop, lock() now re-asserts the interrupt flag (Thread.currentThread().interrupt())
-    // before returning null, consistent with close(). A deterministic unit test is not feasible:
-    // reaching that branch requires the interrupt to arrive in the narrow window *outside* N.sleep
-    // (N.sleep wraps an interrupt-during-sleep into an UncheckedException that propagates out of
-    // lock() before the check is reached), which depends on thread-scheduling timing and would be
-    // flaky. This matches the pre-existing untestable note below.
+    // Interrupt-flag preservation in lock(): an interrupt that arrives while the retry loop is blocked in
+    // N.sleep must NOT escape lock() as a RuntimeException. N.sleep restores the interrupt flag and rethrows
+    // an UncheckedInterruptedException on interruption; lock() now catches it and routes it through the same
+    // clean-cancellation path that returns null with the flag preserved. Before the fix this exception escaped
+    // lock() uncaught, so the deliberate Thread.interrupted() handling block was dead code for that (dominant)
+    // timing. This is made deterministic by pre-setting the interrupt flag so the first N.sleep throws at once.
+    @Test
+    public void testLock_InterruptedDuringSleep_ReturnsNullAndPreservesInterruptFlag() throws Exception {
+        // removeExpiredLock -> 0, lockSQL -> 0 so the lock is never acquired and the loop reaches N.sleep.
+        final LockFixture fixture = newLockFixture(0, 0);
+
+        assertFalse(Thread.interrupted(), "precondition: interrupt flag must be clear");
+        Thread.currentThread().interrupt();
+
+        try {
+            final String code = fixture.lock.lock("resource-interrupt", 10_000L, 5_000L, 1_000L);
+
+            assertNull(code, "lock() must return null when interrupted during the retry sleep, not throw");
+            assertTrue(Thread.currentThread().isInterrupted(), "lock() must preserve the interrupt flag on cancellation");
+            assertEquals(0, targetCodePool(fixture.lock).size());
+        } finally {
+            // Always clear the interrupt flag for subsequent tests, regardless of assertion outcome.
+            Thread.interrupted();
+        }
+    }
 
     // Live in-memory H2 DB exercises the real constructor (table creation, dead-lock cleanup,
     // refresh-task scheduling — DBLock L188-221) and the scheduled refresh task body
@@ -492,8 +510,6 @@ public class DBLockTest extends TestBase {
     //       fails the CREATE TABLE / metadata calls)
     // TODO: L263-266 / L270-273 — refresh-task SQLException / generic catch branches (require the
     //       refresh connection to fail mid-cycle)
-    // TODO: L518-L520 — Thread.interrupted() during lock acquire (requires precise thread
-    //       interruption timing; see NOTE above)
     // TODO: L516 — attempts >= maxAttempts loop exit (requires impractical number of iterations)
 
     private static Unsafe unsafe() throws Exception {
