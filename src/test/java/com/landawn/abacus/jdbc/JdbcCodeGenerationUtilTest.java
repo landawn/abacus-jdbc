@@ -92,6 +92,26 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertEquals("INSERT INTO order_history(id, created_at) VALUES (?, ?)", sql);
     }
 
+    // Excluding every column must fail fast with IllegalArgumentException instead of emitting malformed SQL
+    // (mirrors the existing guard in the UPDATE family).
+    @Test
+    public void testGenerateSelectSql_AllColumnsExcluded_Throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", List.of("id", "created_at", "status"), null));
+    }
+
+    @Test
+    public void testGenerateInsertSql_AllColumnsExcluded_Throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateInsertSql(connection, "order_history", List.of("id", "created_at", "status")));
+    }
+
+    @Test
+    public void testGenerateNamedInsertSql_AllColumnsExcluded_Throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history", List.of("id", "created_at", "status")));
+    }
+
     @Test
     public void testGenerateSelectSql_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
         final Connection conn = Mockito.mock(Connection.class);

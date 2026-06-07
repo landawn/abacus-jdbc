@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.DisplayName;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -45,17 +43,16 @@ import java.util.function.Supplier;
 
 import javax.sql.DataSource;
 
-import com.landawn.abacus.exception.UncheckedSQLException;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.ReadOnly;
-import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.annotation.Transient;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.OutParam;
 import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
@@ -1057,7 +1054,7 @@ public class JdbcUtilTest extends TestBase {
             assertNotNull(ex.getCause());
             verify(mockResultSet).close();
         } finally {
-            iter.close();
+            iter.closeResource();
         }
     }
 

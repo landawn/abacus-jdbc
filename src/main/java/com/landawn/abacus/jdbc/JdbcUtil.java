@@ -6610,7 +6610,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public void close() {
+            public void closeResource() {
                 if (isClosed) {
                     return;
                 }
@@ -6697,7 +6697,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public void close() {
+            public void closeResource() {
                 if (isClosed) {
                     return;
                 }
@@ -6822,7 +6822,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public void close() {
+            public void closeResource() {
                 if (isClosed) {
                     return;
                 }
@@ -7057,7 +7057,7 @@ public final class JdbcUtil {
         final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return Stream.just(supplier)
-                .onClose(() -> supplier.get().close())
+                .onClose(() -> supplier.get().closeResource())
                 .flatMap(it -> Stream.of(it.get()))
                 .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
     }
@@ -7104,7 +7104,7 @@ public final class JdbcUtil {
         final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
 
         return Stream.just(supplier)
-                .onClose(() -> supplier.get().close())
+                .onClose(() -> supplier.get().closeResource())
                 .flatMap(it -> Stream.of(it.get()))
                 .map(Fn.ff(rs -> extractAndCloseResultSet(rs, resultExtractor)));
     }
@@ -7171,7 +7171,7 @@ public final class JdbcUtil {
             private boolean isClosed = false;
 
             @Override
-            public void close() {
+            public void closeResource() {
                 if (isClosed) {
                     return;
                 }

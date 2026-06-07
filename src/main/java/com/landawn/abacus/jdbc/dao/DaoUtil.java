@@ -1056,6 +1056,13 @@ final class DaoUtil {
 
         int index = skipLeadingWhitespaceAndComments(sql, 0);
 
+        // A query may be wrapped in one or more leading parentheses, e.g. "(SELECT 1)" or
+        // "(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)". Skip past those so the leading verb
+        // (SELECT/INSERT/...) is still recognized instead of being classified as no leading keyword.
+        while (index < sql.length() && sql.charAt(index) == '(') {
+            index = skipLeadingWhitespaceAndComments(sql, index + 1);
+        }
+
         if (index >= sql.length()) {
             return "";
         }

@@ -1041,6 +1041,8 @@ public final class JdbcCodeGenerationUtil {
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
+            checkColumnLabels(columnLabelList, tableName);
+
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ",
                     " FROM " + checkTableName(tableName, dbProductInfo) + (Strings.isEmpty(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
         } catch (final SQLException e) {
@@ -1172,6 +1174,8 @@ public final class JdbcCodeGenerationUtil {
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
+            checkColumnLabels(columnLabelList, tableName);
+
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
@@ -1302,6 +1306,8 @@ public final class JdbcCodeGenerationUtil {
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
+
+            checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
@@ -2118,6 +2124,13 @@ public final class JdbcCodeGenerationUtil {
     private static void checkUpdateSetColumnLabels(final Collection<String> columnLabelList, final String tableName) {
         if (N.isEmpty(columnLabelList)) {
             throw new IllegalArgumentException("No columns available for UPDATE SET clause for table: " + tableName);
+        }
+    }
+
+    private static void checkColumnLabels(final Collection<String> columnLabelList, final String tableName) {
+        if (N.isEmpty(columnLabelList)) {
+            throw new IllegalArgumentException("No columns available to generate the SQL statement for table: " + tableName
+                    + " (all columns were excluded?)");
         }
     }
 

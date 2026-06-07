@@ -2691,7 +2691,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -2764,7 +2764,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -2851,7 +2851,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -2949,7 +2949,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -3361,7 +3361,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -3436,7 +3436,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -3514,7 +3514,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -3596,7 +3596,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -3694,7 +3694,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();

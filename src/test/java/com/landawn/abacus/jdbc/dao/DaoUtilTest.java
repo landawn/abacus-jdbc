@@ -558,6 +558,38 @@ public class DaoUtilTest extends TestBase {
         assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT x FROM (SELECT 1 AS x) sub WHERE x > 0) SELECT * FROM cte"));
     }
 
+    // A query wrapped in leading parentheses must still be classified by its leading verb.
+    // Regression for getLeadingQueryKeyword treating a leading '(' as "no keyword".
+    @Test
+    public void testIsSelectQuery_LeadingParenthesis() {
+        assertTrue(DaoUtil.isSelectQuery("(SELECT 1)"));
+        assertTrue(DaoUtil.isSelectQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
+        assertTrue(DaoUtil.isSelectQuery("((SELECT 1))"));
+        assertTrue(DaoUtil.isSelectQuery("  ( SELECT 1 )"));
+        assertTrue(DaoUtil.isSelectQuery("-- comment\n(SELECT 1)"));
+        assertTrue(DaoUtil.isSelectQuery("/* block */ (SELECT id FROM users)"));
+        // Still not a SELECT when the wrapped verb is something else.
+        assertFalse(DaoUtil.isSelectQuery("(UPDATE t SET x = 1)"));
+    }
+
+    @Test
+    public void testIsReadOnlyQuery_LeadingParenthesis() {
+        assertTrue(DaoUtil.isReadOnlyQuery("(SELECT 1)"));
+        assertTrue(DaoUtil.isReadOnlyQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
+    }
+
+    @Test
+    public void testIsNoUpdateQuery_LeadingParenthesis() {
+        assertTrue(DaoUtil.isNoUpdateQuery("(SELECT 1)"));
+        assertTrue(DaoUtil.isNoUpdateQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
+    }
+
+    @Test
+    public void testIsInsertQuery_LeadingParenthesis() {
+        assertTrue(DaoUtil.isInsertQuery("(INSERT INTO t VALUES (1))"));
+        assertFalse(DaoUtil.isInsertQuery("(SELECT 1)"));
+    }
+
     // getEntityJoinInfo delegation (line 1097)
     @Test
     public void testGetEntityJoinInfo() {

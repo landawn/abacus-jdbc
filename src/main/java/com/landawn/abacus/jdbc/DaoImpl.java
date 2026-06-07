@@ -6401,13 +6401,16 @@ final class DaoImpl {
                 if (isAnnotatedRefreshResult) {
                     hasRefreshCache.set(true);
                 }
-            }
 
-            // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
-            if ((hasRefreshCache.get() || hasCacheResult.get()) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
-                throw new UnsupportedOperationException(
-                        "Cache is only supported for the methods declared NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for method: "
-                                + fullClassMethodName);
+                // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
+                // Base this check on the current method's own annotation flags (not the cumulative atomics): the loop runs
+                // in parallel, so reading the shared flags here could report an unrelated method in the message and be
+                // non-deterministic about which method is named.
+                if ((isAnnotatedRefreshResult || isAnnotatedCacheResult) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
+                    throw new UnsupportedOperationException(
+                            "Cache is only supported for the methods declared NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for method: "
+                                    + fullClassMethodName);
+                }
             }
 
             methodInvokerMap.put(method, call);

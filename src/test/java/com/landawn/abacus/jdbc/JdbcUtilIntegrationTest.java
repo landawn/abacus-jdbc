@@ -25,10 +25,10 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalInt;
+import com.landawn.abacus.util.stream.ObjIteratorEx;
 
 /**
  * Integration coverage for {@link JdbcUtil}'s query/transaction execution paths against a
@@ -247,8 +247,8 @@ public class JdbcUtilIntegrationTest extends TestBase {
                 assertThrows(java.util.NoSuchElementException.class, iter::next);
 
                 // close() is idempotent.
-                iter.close();
-                iter.close();
+                iter.closeResource();
+                iter.closeResource();
             }
         } finally {
             try (Connection c = hsqlDs.getConnection();
@@ -278,7 +278,7 @@ public class JdbcUtilIntegrationTest extends TestBase {
 
             assertFalse(iter.hasNext());
             assertThrows(java.util.NoSuchElementException.class, iter::next);
-            iter.close();
+            iter.closeResource();
         }
     }
 }

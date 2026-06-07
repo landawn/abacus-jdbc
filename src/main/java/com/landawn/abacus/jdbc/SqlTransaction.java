@@ -440,7 +440,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * this method marks the transaction for rollback ({@link Status#MARKED_ROLLBACK}). The actual rollback
      * occurs when the outermost transaction completes (reference count reaches 0).</p>
      *
-     * @param actionAfterRollback the action to be executed after the rollback; for a nested scope the rollback (and thus this action) is deferred to the outermost scope. Must not be {@code null}
+     * @param actionAfterRollback the action to be executed after the rollback completes in this (outermost) scope; for a nested scope the rollback is deferred to the outermost scope and this action is <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE},
      *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. If this transaction
@@ -723,6 +723,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                         _conn.setTransactionIsolation(_isolationLevel.intValue());
                     }
                 } catch (final SQLException e) {
+                    // Capture the level we failed to restore to before resetting the field below,
+                    // otherwise the log would report the (rolled-back) inner level instead of the target.
+                    final IsolationLevel failedTargetIsolationLevel = _isolationLevel;
                     // Restore both stacks AND fields symmetrically.
                     if (isolationPoppedFromStack) {
                         _isolationLevelStack.push(_isolationLevel);
@@ -732,7 +735,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     }
                     _isolationLevel = preIsolationLevel;
                     _isForUpdateOnly = preIsForUpdateOnly;
-                    logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, _isolationLevel);
+                    logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, failedTargetIsolationLevel);
                     throw new UncheckedSQLException(e);
                 }
             }

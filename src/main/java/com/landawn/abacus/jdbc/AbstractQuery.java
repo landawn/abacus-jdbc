@@ -5518,7 +5518,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -5591,7 +5591,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -5669,7 +5669,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -5726,7 +5726,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -6981,7 +6981,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -7036,7 +7036,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -7090,7 +7090,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -7147,7 +7147,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
@@ -7208,7 +7208,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 if (iter != null) {
-                    iter.close();
+                    iter.closeResource();
                 }
             } finally {
                 closeAfterExecutionIfAllowed();
