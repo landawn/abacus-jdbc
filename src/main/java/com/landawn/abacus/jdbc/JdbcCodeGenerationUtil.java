@@ -2333,7 +2333,7 @@ public final class JdbcCodeGenerationUtil {
         /**
          * Whether to generate an inner interface containing field name constants.
          * The interface is named {@code x} (see {@link JdbcCodeGenerationUtil#X}) and contains
-         * {@code String} constants for each field name, providing type-safe field references.
+         * {@code String} constants for each field name, providing compile-time-safe field-name references.
          * Default is {@code false}.
          */
         private boolean generateFieldNameTable;

@@ -852,7 +852,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
-     * @return an Optional containing the non-null mapped value, or empty if no match found
+     * @return an Optional containing the non-null mapped value, or empty if no match found or value is null
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Condition, Class)
      */
@@ -925,7 +925,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
-     * @return an Optional containing the unique non-null mapped value, or empty if no match found
+     * @return an Optional containing the unique non-null mapped value, or empty if no match found or value is null
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Condition, Class)

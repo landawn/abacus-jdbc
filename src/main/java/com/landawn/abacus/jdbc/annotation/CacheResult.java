@@ -144,7 +144,7 @@ public @interface CacheResult {
     /**
      * Specifies the minimum size requirement for caching results.
      * Results with fewer elements than this value will not be cached.
-     * The size is the element count for a {@code Collection} or {@code DataSet} result;
+     * The size is the element count for a {@code Collection} or {@code Dataset} result;
      * any other (scalar) result is treated as a single element of size {@code 1}.
      *
      * <p>This is useful to avoid caching overhead for very small result sets
@@ -165,7 +165,7 @@ public @interface CacheResult {
     /**
      * Specifies the maximum size limit for caching results.
      * Results with more elements than this value will not be cached.
-     * The size is the element count for a {@code Collection} or {@code DataSet} result;
+     * The size is the element count for a {@code Collection} or {@code Dataset} result;
      * any other (scalar) result is treated as a single element of size {@code 1}.
      *
      * <p>This prevents memory issues from caching very large result sets

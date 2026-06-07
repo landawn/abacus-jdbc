@@ -898,6 +898,7 @@ public final class Jdbc {
          * @param <T> list element type
          * @param rowMapper the function to map each row to an element
          * @return a {@code ResultExtractor} that produces a {@code List}
+         * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
          */
         static <T> ResultExtractor<List<T>> toList(final RowMapper<? extends T> rowMapper) {
             return toList(RowFilter.ALWAYS_TRUE, rowMapper);
@@ -1627,6 +1628,7 @@ public final class Jdbc {
          * @param <T> list element type
          * @param rowMapper the function to map each row to an element
          * @return a {@code BiResultExtractor} that produces a {@code List}
+         * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
          */
         static <T> BiResultExtractor<List<T>> toList(final BiRowMapper<? extends T> rowMapper) {
             return toList(BiRowFilter.ALWAYS_TRUE, rowMapper);

@@ -6335,7 +6335,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType the class to map the result row to
      * @return The first result mapped to the specified type, or {@code null} if no result is found
-     * @throws IllegalArgumentException if targetType is null
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6358,7 +6358,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns the first result extracted by the specified {@code RowMapper}.
      * 
-     * <p>Similar to {@link #findFirst(RowMapper)}, but returns {@code null} instead of an empty Optional when no result is found.</p>
+     * <p>Similar to {@link #findFirst(Jdbc.RowMapper)}, but returns {@code null} instead of an empty Optional when no result is found.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

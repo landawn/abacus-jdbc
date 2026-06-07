@@ -105,8 +105,8 @@ public @interface RefreshCache {
      *
      * @return array of filter patterns for method names that should trigger cache refresh;
      *         the default targets common write methods such as {@code update}, {@code delete},
-     *         {@code insert}, {@code save}, {@code add}, {@code remove}, {@code upsert},
-     *         {@code execute} and their {@code batch*} variants
+     *         {@code deleteById}, {@code insert}, {@code save}, {@code add}, {@code remove},
+     *         {@code upsert}, {@code execute} and their {@code batch*} variants
      */
     String[] filter() default { "update", "delete", "deleteById", "insert", "save", "add", "remove", "upsert", "batchUpdate", "batchDelete", "batchDeleteByIds",
             "batchInsert", "batchSave", "batchAdd", "batchRemove", "batchUpsert", "execute" };

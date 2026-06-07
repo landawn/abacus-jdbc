@@ -740,8 +740,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * Retrieves the entity with the specified ID. Returns the entity directly or {@code null} if not found.
-     * Unlike {@link #get(Object)}, this method returns the entity directly instead of wrapping it in an {@code Optional}.
+     * Retrieves an entity by its ID, returning {@code null} if not found.
+     * Unlike {@link #get(Object)}, the entity is returned directly rather than wrapped in an {@link Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1144,8 +1144,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Performs an upsert operation: inserts the entity if it doesn't exist based on the specified unique properties, otherwise updates the existing entity.
-     * If no record matches the unique properties, inserts the entity.
-     * Otherwise, updates the existing record.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
