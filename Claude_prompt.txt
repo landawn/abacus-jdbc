@@ -3,12 +3,12 @@
 
 Use multiple agents to fix all javadoc issues reported by running: mvn javadoc:javadoc.
 
-Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java for performance improvements. 
+Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java for performance improvements.
 Fix/implement all performance improvements you have found, and add or run unit tests for the fixes to existing test classes.
 
 -- ==========================================================
 
-Review all public methods in the classes located under foler: ./src/main/java/ for naming convention consistency, and provide suggestions for design and method naming improvements. 
+Review all public methods in the classes located under foler: ./src/main/java/ for naming convention consistency, and provide suggestions for design and method naming improvements.
 
 -- ==========================================================
 
@@ -33,7 +33,7 @@ Use multiple agents to perform a thorough deep line by line review for all the c
 
 Are you sure you have identified and fixed all the bugs? Perform a thorough deep review again.
 
--- ========================================================== 
+-- ==========================================================
 
 
 Use multiple agents to perform a thorough deep line by line review for javadocs in all the classes under folder: ./src/main/java to improve/correct existing javadocs
@@ -138,12 +138,12 @@ Step 2 — Use multiple agents to thoroughly review the implementation of all pu
 More Javadoc enhancement and fixing Tasks
 -- ==========================================================
 
-Step 1 - Use multiple agents to apply below template to all sample/example in javadoc in all classes in folder: ./src/main/java/ 
+Step 1 - Use multiple agents to apply below template to all sample/example in javadoc in all classes in folder: ./src/main/java/
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Sample codes
      * }</pre>
-	 
+
 Step 2 - Replace below sample/example template in Javadoc
      * <pre>
      * Sample codes
@@ -223,11 +223,11 @@ Requirements:
 
 
 	3) Remember, type parameters are the generic placeholders defined using angle brackets (< and >). They appear in two main places:
-		a) After the class name, for example: 
+		a) After the class name, for example:
 				class Traverser<T>
 				class Pair<L, R>
 
-		b) Before the method’s return type, for example: 
+		b) Before the method’s return type, for example:
 			public <U, E extends Exception> U map()
 
 		c) Note that a declaration like below. Uses a type parameter (E), but does not define one.
@@ -238,20 +238,20 @@ Requirements:
 
 -- ==========================================================
 
-1, Scan all test classes under ./src/test/java and remove duplicate unit tests. 
+1, Scan all test classes under ./src/test/java and remove duplicate unit tests.
    You may find and reuse the scripts generated before in folder: ./tools. Improve it if needed.
 
 	A duplicate is defined as any test method that:
-	- Tests the same method with identical or equivalent inputs and assertions as another test method, 
+	- Tests the same method with identical or equivalent inputs and assertions as another test method,
 	  whether in the same class or across different test classes
 	- Has a different name but identical or functionally equivalent body
 	- Is an exact copy-paste of another test method
 
 	Rules:
 	- When duplicates are found, keep the most complete/descriptive version and remove the rest
-	- If duplicates are split across multiple files, consolidate into the canonical test class 
+	- If duplicates are split across multiple files, consolidate into the canonical test class
 	  (e.g. tests for Foo.java belong in FooTest.java) before removing the duplicate
-	- Do not remove tests that cover the same method but with meaningfully different inputs, 
+	- Do not remove tests that cover the same method but with meaningfully different inputs,
 	  edge cases, or assertions — those are distinct tests and must be preserved
 	- After removal, confirm the remaining test suite still compiles and all retained tests are valid
 	- don't modify classes directly under package: com.landawn.abacus. Only modify test classes in its sub-packages.
@@ -262,13 +262,13 @@ Requirements:
 
 	Rules:
 	- For each source class Foo.java, all test methods covering its methods must live in FooTest.java
-	- If test methods for Foo.java are currently scattered across multiple test classes 
+	- If test methods for Foo.java are currently scattered across multiple test classes
 	  (e.g. FooTest.java, FooUtilTest.java, MiscTest.java), move them all into FooTest.java
 	- Preserve the original test method names and bodies when moving; do not alter test logic
 	- After moving, delete any test class that has become empty
 	- Resolve any import or package declaration issues introduced by the moves
 	- Do not merge unrelated test classes — only consolidate by source-class ownership
-	- If ownership of a test method is ambiguous (it tests behavior spanning multiple classes), 
+	- If ownership of a test method is ambiguous (it tests behavior spanning multiple classes),
 	  use your best judgment and add a comment explaining the placement
 	- don't modify classes directly under package: com.landawn.abacus. Only modify test classes in its sub-packages.
 	- Once the task is completed. save the scripts used in this tasks. Don't delete them. I may run the same tasks again later. so the scripts could be reused.
@@ -277,21 +277,21 @@ Requirements:
    You may find and reuse the scripts generated before in folder: ./tools. Improve it if needed.
 
 	Rules:
-	- Any test method with no assertions (i.e. it only invokes code but never verifies output) 
+	- Any test method with no assertions (i.e. it only invokes code but never verifies output)
 	  must be updated to assert the expected outcome
-	- Use org.junit.jupiter.api.Assertions (JUnit 6) — e.g. assertEquals, assertNotNull, 
+	- Use org.junit.jupiter.api.Assertions (JUnit 6) — e.g. assertEquals, assertNotNull,
 	  assertTrue, assertThrows, assertDoesNotThrow
-	- Assertions must verify meaningful behavior: return values, state changes, thrown exceptions, 
+	- Assertions must verify meaningful behavior: return values, state changes, thrown exceptions,
 	  or side effects — not trivially assert (true) or (obj != null) without reason
-	- For void methods, assert observable side effects (e.g. collection size changed, 
+	- For void methods, assert observable side effects (e.g. collection size changed,
 	  field was mutated, expected exception was thrown)
 	- For methods expected to throw, replace try/catch blocks with assertThrows(...)
 	- Do not remove or weaken any assertion that already exists
 	- Add a brief inline comment if the intent of a new assertion is not self-evident from context
 	- don't modify classes directly under package: com.landawn.abacus. Only modify test classes in its sub-packages.
 	- Once the task is completed. save the scripts used in this tasks. Don't delete them. I may run the same tasks again later. so the scripts could be reused.
-	
-	
+
+
 
 
 ================================================================================
@@ -480,8 +480,8 @@ CONSTRAINTS
 
 
 
-Read the Eclipse-generated HTML coverage reports located in ./report/coverage/260321/ batch by batch.
-Each batch contains 20 HTML files, ordered by highest "Missed Instructions" first (start with the classes that have the most uncovered instructions). 
+Read the Eclipse-generated HTML coverage reports located in ./report/coverage/260606/ batch by batch.
+Each batch contains 20 HTML files, ordered by highest "Missed Instructions" first (start with the classes that have the most uncovered instructions).
 For each class report in the batch:
 
   - Identify the lines that are not covered by existing tests.
@@ -506,7 +506,7 @@ The newly added unit tests must follow the requirements below:
     from the method name.
 
   - Use methods from Suppliers and IntFunctions to create Supplier and IntFunction instances for input parameters whenever appropriate.
-  
+
   - Avoid using size()/length() > 0 or < 0 in assertions. When possible, use assertEquals(expectedSizeOrLength, size()/length()) instead.
 
   - Before adding a test method, check whether a method with the same name already

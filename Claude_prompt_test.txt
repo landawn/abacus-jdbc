@@ -1,7 +1,7 @@
 
 ---
 TASK: Read the Eclipse-generated HTML coverage reports located in ./report/coverage/260606/ batch by batch.
-Each batch contains 20 HTML files, ordered by highest "Missed Instructions" first (start with the classes that have the most uncovered instructions). 
+Each batch contains 20 HTML files, ordered by highest "Missed Instructions" first (start with the classes that have the most uncovered instructions).
 For each class report in the batch:
 
   - Identify the lines that are not covered by existing tests.
@@ -26,7 +26,7 @@ The newly added unit tests must follow the requirements below:
     from the method name.
 
   - Use methods from Suppliers and IntFunctions to create Supplier and IntFunction instances for input parameters whenever appropriate.
-  
+
   - Avoid using size()/length() > 0 or < 0 in assertions. When possible, use assertEquals(expectedSizeOrLength, size()/length()) instead.
 
   - Before adding a test method, check whether a method with the same name already
