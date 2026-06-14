@@ -1,4 +1,58 @@
 
+  ---
+  Goal: Multi-agent, line-by-line review of every class under ./src/main/java, producing (a) confirmed bug fixes, (b) Javadoc/comment corrections, and (c) logging improvements.
+  These three workstreams have very different risk levels — apply the rigor bar defined for each.
+
+  Orchestration
+  - Divide the tree by package/class-group into batches. Spawn review agents per batch; run independent batches in parallel.
+  - Each agent inspects related callers, tests, sibling classes, primitive/generated variants, and analogous implementations before concluding.
+  - Sub-agents propose; the main agent edits. The main agent consolidates findings, removes duplicates, ensures fixes are consistent across variants, and is the only one to
+  apply code edits and re-verify them. No two agents edit the same file.
+  - Maintain a ledger at scripts/review_<YYYY-MM-DD>/state.md: per-batch status (pending/in-review/fixed/clean), each finding with severity + confidence, and what was verified.
+  Update it as you go so the pass is resumable after interruption. [env]
+  - Triage every finding by severity (low/med/high/critical) and confidence (suspected/likely/confirmed).
+
+  Workstream 1 — Bug fixes (high risk)
+  - Hunt: correctness bugs, edge cases, API-contract violations, null-handling, resource leaks, concurrency races, overflow/saturation, regression risks.
+  - "Confirmed" = reproduced by a failing unit test OR traced by the main agent with concrete input→output. A sub-agent's claim is a lead, not a confirmation — personally trace
+  it before fixing. Verify any example values the agent cites (they are sometimes wrong).
+  - Fix confirmed bugs only. Preserve existing public APIs and current behavior unless a confirmed bug requires the change; note any behavior change explicitly.
+  - For every code fix: add/update a regression test in the existing relevant test class, run that test (show RED→GREEN), then move on.
+  - Treat tests as the source of truth. Do not "fix" intentional design (e.g., methods that throw by design); if unsure, flag rather than change.
+
+  Workstream 2 — Javadoc/comments (comment-only, no behavior change)
+  - Accuracy: prose matches actual behavior; @param/@return/@throws match the real signature, names, return type, and thrown exceptions. Flag stale/copy-paste/contradictory
+  descriptions; missing/extra/misnamed @param; @return on void or missing on non-void; undocumented or wrong @throws; broken/wrong {@link}/@see.
+  - Clarity: fix confusing phrasing, typos, incomplete sentences, and descriptions that merely restate the method name.
+  - Consistency: terminology, phrasing, tag order, formatting. Special attention to cross-variant divergence (CharTuple vs LongTuple, primitive variants, arity variants) —
+  analogous members should document the same concept with the same wording.
+  - For abnormal/unexpected behavior, add a note starting with <p><b>&#9888;.
+  - Verify any code in {@code} examples compiles and produces the stated output before trusting it.
+
+  Workstream 3 — Logging (string-only, no behavior change)
+  - Correct level for each message; expensive message construction is guarded or parameterized (no eager string concat in hot/disabled paths).
+  - Messages are clear, specific, and actionable; include relevant identifiers; no restating the obvious.
+  - No secrets/credentials/PII in logs; no log-and-throw duplication; no swallowed exceptions logged without context.
+
+  Build & test protocol [env]
+  - Build offline: mvn -o clean compile. The suite runs with testFailureIgnore — trust the Tests run: … Failures: … Errors: line, not BUILD SUCCESS.
+  - Clear stale surefire reports and check exit codes before reading results — stale green reports have masked test-compile failures before.
+  - Known non-regressions: httpbin/live-HTTP tests fail offline; ParallelIteratorShortStreamTest.testFlatmapCollection is flaky. Don't chase these.
+  - Run targeted tests per changed area as you go; run the full suite once after all fixes. A sub-agent's narrow RED/GREEN does not substitute for the authoritative full-suite
+  run.
+
+  Final report
+  - Code fixes (with severity/confidence) and the bug each addresses.
+  - Javadoc/comment fixes (counts by class/area).
+  - Logging fixes.
+  - Tests added/updated.
+  - Targeted test commands + results; full-suite command + result (the Tests run line).
+  - Remaining unfixed findings with severity, confidence, and rationale.
+  - Path to the scripts/review_<date>/ ledger.
+
+
+==============================================================================================================================================
+
 -- ==========================================================
 
 Use multiple agents to fix all javadoc issues reported by running: mvn javadoc:javadoc.
@@ -10,15 +64,9 @@ Fix/implement all performance improvements you have found, and add or run unit t
 
 Review all public methods in the classes located under foler: ./src/main/java/ for naming convention consistency, and provide suggestions for design and method naming improvements.
 
--- ==========================================================
 
-Use multiple agents to perform a thorough deep line by line review for classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes. For each class, following below steps:
+==============================================================================================================================================
 
-✢ Reviewing xxx.java with multiple agents
-     ◻ Deep multi-agent review of xxx.java
-     ◻ Triage xxx findings and fix bugs
-     ◻ Add tests for xxx fixes
-     ◻ Run full test suite
 
 Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.
 
