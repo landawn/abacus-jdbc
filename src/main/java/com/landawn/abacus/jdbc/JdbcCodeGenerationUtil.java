@@ -76,7 +76,7 @@ import lombok.experimental.Accessors;
  * Utility class for generating JDBC-related code including entity classes and SQL statements.
  * This class provides methods to automatically generate entity classes from database tables,
  * as well as generate common SQL statements (SELECT, INSERT, UPDATE) for database operations.
- * 
+ *
  * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
  * various aspects such as field naming conventions, type mappings, annotations, and more.</p>
  *
@@ -84,20 +84,20 @@ import lombok.experimental.Accessors;
  * {@link UncheckedSQLException} declared on each method, every {@code generateSelectSql} /
  * {@code generateInsertSql} / {@code generateNamedInsertSql} / {@code generateUpdateSql} /
  * {@code generateNamedUpdateSql} overload throws {@link IllegalArgumentException} when a supplied
- * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank, or when no columns remain for an
- * {@code UPDATE ... SET} clause (e.g. all columns excluded).</p>
+ * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank, or when no columns remain to build
+ * the statement (e.g. all columns were excluded).</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Generate entity class from a table
  * DataSource ds = getDataSource();
  * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "user_table");
- * 
+ *
  * // Generate SQL statements
  * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "user_table");
  * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "user_table");
  * }</pre>
- * 
+ *
  * @see CodeGenerationUtil
  * @see EntityCodeConfig
  */
@@ -215,7 +215,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class for the specified table using default configuration.
      * The generated class includes Lombok annotations, field mappings, and JPA/Abacus annotations.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -235,7 +235,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class for the specified table with custom configuration.
      * The configuration allows customization of field naming, type conversion, annotations, and more.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * EntityCodeConfig config = EntityCodeConfig.builder()
@@ -265,7 +265,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class using a custom SQL query to determine the entity structure.
      * This method allows using complex queries (e.g., joins, views) to define the entity.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT u.id, u.name, p.profile_data FROM users u JOIN profiles p ON u.id = p.user_id";
@@ -285,7 +285,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class using a custom SQL query and configuration.
      * This method provides maximum flexibility by allowing both custom queries and configuration.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM user_view WHERE 1=0";
@@ -317,7 +317,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class for the specified table using an existing database connection.
      * This method is useful when you already have an open connection and want to avoid creating a new one.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -337,7 +337,7 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an entity class for the specified table using an existing connection and custom configuration.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * EntityCodeConfig config = EntityCodeConfig.builder()
@@ -361,7 +361,7 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an entity class using an existing connection and a custom SQL query.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT id, name, email FROM users WHERE 1=0";
@@ -381,7 +381,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class using an existing connection, custom SQL query, and configuration.
      * This is the most flexible method, allowing full control over all aspects of entity generation.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM complex_view WHERE 1=0";
@@ -946,7 +946,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a SELECT SQL statement for the specified table using an existing connection.
      * Column names containing special characters are properly escaped with backticks (MySQL/MariaDB)
      * or double quotes (other databases).
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -979,7 +979,7 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates a SELECT SQL statement for the specified table, excluding certain columns and applying a WHERE clause.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1008,7 +1008,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table using an existing connection,
      * excluding certain columns and applying a WHERE clause.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -1080,7 +1080,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an INSERT SQL statement for the specified table using an existing connection.
      * Column names that contain characters other than ASCII letters, digits, or underscores are quoted
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -1211,12 +1211,12 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a named INSERT SQL statement for the specified table using an existing connection.
      * Column names with underscores are converted to camelCase for parameter names.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "user_settings");
-     *     // Returns: "INSERT INTO user_settings(user_id, theme_preference, notification_enabled) 
+     *     // Returns: "INSERT INTO user_settings(user_id, theme_preference, notification_enabled)
      *     //           VALUES (:userId, :themePreference, :notificationEnabled)"
      * }
      * }</pre>
@@ -1274,7 +1274,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a named INSERT SQL statement for the specified table using an existing connection,
      * excluding certain columns. Column names with underscores are converted to camelCase for parameter names.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -1346,7 +1346,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an UPDATE SQL statement for the specified table using an existing connection.
      * The generated SQL includes all columns in the SET clause with positional parameters.
      * Note: Users should append an appropriate WHERE clause before executing.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -1382,7 +1382,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1407,7 +1407,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -1452,7 +1452,7 @@ public final class JdbcCodeGenerationUtil {
      * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns
      * and those used in WHERE conditions), uses positional parameters (?) for all values,
      * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1590,7 +1590,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a named UPDATE SQL statement for the specified table using an existing connection.
      * Column names with underscores are converted to camelCase for parameter names.
      * Note: Users should append an appropriate WHERE clause before executing.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -1630,7 +1630,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1655,7 +1655,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
@@ -1825,6 +1825,7 @@ public final class JdbcCodeGenerationUtil {
      * @param insertSql the INSERT SQL statement to convert
      * @return an UPDATE SQL statement derived from the INSERT statement
      * @throws IllegalArgumentException if the INSERT SQL is null/empty, invalid, or cannot be converted
+     * @throws UncheckedSQLException if a database access error occurs while resolving the database product info
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql) {
@@ -1843,8 +1844,8 @@ public final class JdbcCodeGenerationUtil {
      *   <li>Column names that contain characters other than ASCII letters, digits, or underscores are quoted
      *       (with backticks for MySQL/MariaDB, or double quotes for other databases) based on the
      *       {@link DBProductInfo} resolved from {@code ds}.</li>
-     *   <li>String values are rendered as single-quoted SQL literals; embedded single quotes are escaped by doubling.</li>
-     *   <li>All other value types are rendered using {@link com.landawn.abacus.util.N#stringOf(Object)}.</li>
+     *   <li>Value tokens are copied verbatim from the parsed {@code VALUES} list; they are not re-quoted,
+     *       re-escaped, or otherwise transformed (the supplied INSERT is assumed to already contain valid SQL literals).</li>
      *   <li>The WHERE clause is appended only when {@code whereClause} is non-empty.</li>
      *   <li>All parsing and SQL assembly failures are converted to {@link IllegalArgumentException}.</li>
      * </ul>
@@ -1861,6 +1862,7 @@ public final class JdbcCodeGenerationUtil {
      * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). May be null/empty.
      * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
      * @throws IllegalArgumentException if the INSERT SQL is null/empty, invalid, or cannot be converted
+     * @throws UncheckedSQLException if a database access error occurs while resolving the database product info
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause) {
@@ -2129,8 +2131,7 @@ public final class JdbcCodeGenerationUtil {
 
     private static void checkColumnLabels(final Collection<String> columnLabelList, final String tableName) {
         if (N.isEmpty(columnLabelList)) {
-            throw new IllegalArgumentException("No columns available to generate the SQL statement for table: " + tableName
-                    + " (all columns were excluded?)");
+            throw new IllegalArgumentException("No columns available to generate the SQL statement for table: " + tableName + " (all columns were excluded?)");
         }
     }
 

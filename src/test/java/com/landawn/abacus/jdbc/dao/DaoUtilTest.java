@@ -1,5 +1,9 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static com.landawn.abacus.query.Dsl.PAC;
+import static com.landawn.abacus.query.Dsl.PLC;
+import static com.landawn.abacus.query.Dsl.PSB;
+import static com.landawn.abacus.query.Dsl.PSC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,32 +26,29 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.function.Function;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
-
 public class DaoUtilTest extends TestBase {
 
-    interface TestCrudJoinDao extends CrudDao<Object, Long, PSC, TestCrudJoinDao>, CrudJoinEntityHelper<Object, Long, PSC, TestCrudJoinDao> {
+    interface TestCrudJoinDao extends CrudDao<Object, Long, TestCrudJoinDao>, CrudJoinEntityHelper<Object, Long, TestCrudJoinDao> {
     }
 
     interface TestUncheckedCrudJoinDao
-            extends UncheckedCrudDao<Object, Long, PSC, TestUncheckedCrudJoinDao>, UncheckedCrudJoinEntityHelper<Object, Long, PSC, TestUncheckedCrudJoinDao> {
+            extends UncheckedCrudDao<Object, Long, TestUncheckedCrudJoinDao>, UncheckedCrudJoinEntityHelper<Object, Long, TestUncheckedCrudJoinDao> {
     }
 
-    interface TestJoinHelperOnly extends JoinEntityHelper<Object, PSC, TestDao> {
+    interface TestJoinHelperOnly extends JoinEntityHelper<Object, TestDao> {
     }
 
-    interface TestUncheckedJoinHelperOnly extends UncheckedJoinEntityHelper<Object, PSC, TestUncheckedDao> {
+    interface TestUncheckedJoinHelperOnly extends UncheckedJoinEntityHelper<Object, TestUncheckedDao> {
     }
 
-    interface TestDao extends Dao<Object, PSC, TestDao> {
+    interface TestDao extends Dao<Object, TestDao> {
     }
 
-    interface TestUncheckedDao extends UncheckedDao<Object, PSC, TestUncheckedDao> {
+    interface TestUncheckedDao extends UncheckedDao<Object, TestUncheckedDao> {
     }
 
     @Test
@@ -309,7 +310,7 @@ public class DaoUtilTest extends TestBase {
     }
 
     // CrudJoinEntityHelper without CrudDao — exercises the throw branch (line 277-278).
-    interface OnlyCrudJoinHelper extends CrudJoinEntityHelper<Object, Long, PSC, TestCrudJoinDao> {
+    interface OnlyCrudJoinHelper extends CrudJoinEntityHelper<Object, Long, TestCrudJoinDao> {
     }
 
     @Test
@@ -319,7 +320,7 @@ public class DaoUtilTest extends TestBase {
     }
 
     // UncheckedCrudJoinEntityHelper without UncheckedCrudDao — exercises throw branch (line 386-387).
-    interface OnlyUncheckedCrudJoinHelper extends UncheckedCrudJoinEntityHelper<Object, Long, PSC, TestUncheckedCrudJoinDao> {
+    interface OnlyUncheckedCrudJoinHelper extends UncheckedCrudJoinEntityHelper<Object, Long, TestUncheckedCrudJoinDao> {
     }
 
     @Test
@@ -376,22 +377,23 @@ public class DaoUtilTest extends TestBase {
         }
     }
 
-    interface PscDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PSC, PscDao> {
+    interface PscDao extends Dao<DemoBean, PscDao> {
     }
 
-    interface PacDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PAC, PacDao> {
+    interface PacDao extends Dao<DemoBean, PacDao> {
     }
 
-    interface PlcDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PLC, PlcDao> {
+    interface PlcDao extends Dao<DemoBean, PlcDao> {
     }
 
-    interface PsbDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PSB, PsbDao> {
+    interface PsbDao extends Dao<DemoBean, PsbDao> {
     }
 
     @Test
     public void testGetDaoPreparedQueryFunc_Psc() {
         final PscDao dao = Mockito.mock(PscDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PSC);
 
         final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
         assertNotNull(pair._1);
@@ -402,6 +404,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_Pac() {
         final PacDao dao = Mockito.mock(PacDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PAC);
 
         final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
         assertNotNull(pair._1);
@@ -412,6 +415,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_Plc() {
         final PlcDao dao = Mockito.mock(PlcDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PLC);
 
         final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
         assertNotNull(pair._1);
@@ -422,6 +426,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_Psb() {
         final PsbDao dao = Mockito.mock(PsbDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PSB);
 
         final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
         assertNotNull(pair._1);
@@ -434,6 +439,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_PscApply_BuildsRealSql() throws SQLException {
         final PscDao dao = Mockito.mock(PscDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PSC);
         final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
         final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
         final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
@@ -611,6 +617,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_PscApplyWithSelectProps() throws SQLException {
         final PscDao dao = Mockito.mock(PscDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PSC);
         final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
         final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
         final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
@@ -639,6 +646,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_PacApply() throws SQLException {
         final PacDao dao = Mockito.mock(PacDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PAC);
         final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
         final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
         final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
@@ -666,6 +674,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_PlcApply() throws SQLException {
         final PlcDao dao = Mockito.mock(PlcDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PLC);
         final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
         final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
         final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
@@ -693,6 +702,7 @@ public class DaoUtilTest extends TestBase {
     public void testGetDaoPreparedQueryFunc_PsbApply() throws SQLException {
         final PsbDao dao = Mockito.mock(PsbDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PSB);
         final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
         final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
         final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
@@ -715,22 +725,16 @@ public class DaoUtilTest extends TestBase {
         assertNotNull(nq);
     }
 
-    // getDaoPreparedQueryFunc with a non-standard SqlBuilder type parameter exercises the else / throw branch (line 728).
-    static abstract class CustomSqlBuilder extends com.landawn.abacus.query.SqlBuilder {
-        CustomSqlBuilder() {
-            super(com.landawn.abacus.util.NamingPolicy.NO_CHANGE, SQLPolicy.PARAMETERIZED_SQL);
-        }
-    }
-
-    interface CustomDao extends Dao<DemoBean, CustomSqlBuilder, CustomDao> {
+    interface CustomDao extends Dao<DemoBean, CustomDao> {
     }
 
     @Test
-    public void testGetDaoPreparedQueryFunc_NonStandardSqlBuilder_Throws() {
+    public void testGetDaoPreparedQueryFunc_CustomSqlBuilder() {
         final CustomDao dao = Mockito.mock(CustomDao.class);
         Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        Mockito.when(dao.dsl()).thenReturn(PSB);
 
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.getDaoPreparedQueryFunc(dao));
+        assertNotNull(DaoUtil.getDaoPreparedQueryFunc(dao));
     }
 
     // Shell-comment (#) in skipLeadingWhitespaceAndComments exercises the continue at line 1019.

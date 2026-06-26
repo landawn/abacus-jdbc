@@ -18,7 +18,7 @@ import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -32,7 +32,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 
 public class CrudDaoLTest extends TestBase {
 
-    interface TestCrudDaoL extends CrudDaoL<TestEntity, PSC, TestCrudDaoL> {
+    interface TestCrudDaoL extends CrudDaoL<TestEntity, TestCrudDaoL> {
     }
 
     static final class TestEntity {

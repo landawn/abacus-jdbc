@@ -37,7 +37,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Throwables;
@@ -46,7 +46,7 @@ import com.landawn.abacus.util.u.Optional;
 
 public class DaoTest extends TestBase {
 
-    interface TestDao extends Dao<TestEntity, PSC, TestDao> {
+    interface TestDao extends Dao<TestEntity, TestDao> {
     }
 
     static final class TestEntity {
@@ -642,7 +642,7 @@ public class DaoTest extends TestBase {
         }
     }
 
-    interface NoIdDao extends Dao<NoIdEntity, PSC, NoIdDao> {
+    interface NoIdDao extends Dao<NoIdEntity, NoIdDao> {
     }
 
     @Test

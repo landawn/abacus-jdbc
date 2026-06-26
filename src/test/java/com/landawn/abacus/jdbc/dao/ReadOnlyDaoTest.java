@@ -1,6 +1,9 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -16,11 +19,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 
 public class ReadOnlyDaoTest extends TestBase {
 
-    interface TestReadOnlyDao extends ReadOnlyDao<TestEntity, PSC, TestReadOnlyDao> {
+    interface TestReadOnlyDao extends ReadOnlyDao<TestEntity, TestReadOnlyDao> {
     }
 
     static final class TestEntity {
@@ -38,7 +40,7 @@ public class ReadOnlyDaoTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(3, ReadOnlyDao.class.getTypeParameters().length);
+        assertEquals(2, ReadOnlyDao.class.getTypeParameters().length);
     }
 
     @Test

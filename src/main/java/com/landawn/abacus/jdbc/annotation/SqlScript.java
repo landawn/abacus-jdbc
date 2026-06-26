@@ -42,7 +42,7 @@ import java.lang.annotation.Target;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *
  *     @SqlScript
  *     String sql_listUserWithBiggerId =

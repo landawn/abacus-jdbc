@@ -22,7 +22,6 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -48,26 +47,24 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends UncheckedCrudDaoL<User, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends UncheckedCrudDaoL<User, UserDao> {
  *     // Inherits all UncheckedCrudDao methods with Long ID type
  *     // Plus convenience methods that accept primitive long
  * }
  *
  * // Usage with primitive long
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
  * Optional<User> user = userDao.get(123L);   // Can use primitive long
  * userDao.deleteById(456L);   // More convenient than Long.valueOf(456)
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}/{@code PAC}/{@code PLC}/{@code PSB})
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedCrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
-        extends UncheckedCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
+public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> extends UncheckedCrudDao<T, Long, TD>, CrudDaoL<T, TD> {
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
@@ -184,7 +181,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Queries for a long value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty {@code OptionalLong} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong totalBytes = userDao.queryForLong("storageUsed", 123L);
@@ -204,7 +201,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Queries for a float value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty {@code OptionalFloat} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalFloat rating = userDao.queryForFloat("averageRating", 123L);
@@ -224,7 +221,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Queries for a double value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty {@code OptionalDouble} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble balance = userDao.queryForDouble("accountBalance", 123L);
@@ -243,7 +240,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForString("email", 123L);
@@ -265,7 +262,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a Date value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", 123L);
@@ -284,7 +281,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a Time value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Time> startTime = userDao.queryForTime("workStartTime", 123L);
@@ -303,7 +300,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Timestamp> lastLogin = userDao.queryForTimestamp("lastLoginTime", 123L);
@@ -322,7 +319,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = userDao.queryForBytes("profileImage", 123L);
@@ -365,7 +362,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty {@code Optional} if no record is found or if the value is {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", 123L, String.class);
@@ -387,11 +384,11 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a single non-null value using a custom row mapper.
      * This is a convenience method that accepts a primitive long ID.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<UserStatus> status = userDao.queryForSingleNonNull(
-     *     "statusCode", 
+     *     "statusCode",
      *     123L,
      *     rs -> UserStatus.fromCode(rs.getString(1))
      * );
@@ -416,7 +413,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p>This method ensures that at most one record matches the query.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> uniqueCode = userDao.queryForUniqueValue("code", 123L, String.class);
@@ -441,7 +438,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * This is a convenience method that accepts a primitive long ID.
      * Throws {@link DuplicateResultException} if more than one record is found.
      * Returns an empty {@code Optional} if no record is found or the value is {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Integer> level = userDao.queryForUniqueNonNull("level", 123L, Integer.class);
@@ -465,7 +462,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Queries for a unique non-null result using a custom row mapper.
      * This is a convenience method that accepts a primitive long ID.
      * Throws {@link DuplicateResultException} if more than one record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Permission> perm = userDao.queryForUniqueNonNull(
@@ -576,7 +573,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Checks if an entity with the specified ID exists.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.exists(123L)) {
@@ -598,7 +595,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Checks if an entity with the specified ID does not exist.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.notExists(123L)) {
@@ -619,7 +616,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Updates a single property value for the entity with the specified ID.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int updated = userDao.update("status", "ACTIVE", 123L);
@@ -640,14 +637,14 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Updates multiple properties for the entity with the specified ID.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("email", "newemail@example.com");
      * updates.put("phone", "555-1234");
      * updates.put("modifiedDate", new Date());
-     * 
+     *
      * int updated = userDao.update(updates, 123L);
      * }</pre>
      *
@@ -664,7 +661,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Deletes the entity with the specified ID.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int deleted = userDao.deleteById(123L);

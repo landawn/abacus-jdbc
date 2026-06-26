@@ -1,9 +1,12 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,12 +17,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 
 public class UncheckedCrudJoinEntityHelperLTest extends TestBase {
 
     interface TestUncheckedCrudJoinDaoL
-            extends UncheckedCrudDaoL<TestEntity, PSC, TestUncheckedCrudJoinDaoL>, UncheckedCrudJoinEntityHelperL<TestEntity, PSC, TestUncheckedCrudJoinDaoL> {
+            extends UncheckedCrudDaoL<TestEntity, TestUncheckedCrudJoinDaoL>, UncheckedCrudJoinEntityHelperL<TestEntity, TestUncheckedCrudJoinDaoL> {
     }
 
     static final class TestEntity {
@@ -42,7 +44,7 @@ public class UncheckedCrudJoinEntityHelperLTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(3, UncheckedCrudJoinEntityHelperL.class.getTypeParameters().length);
+        assertEquals(2, UncheckedCrudJoinEntityHelperL.class.getTypeParameters().length);
     }
 
     @Test

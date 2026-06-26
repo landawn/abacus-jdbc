@@ -15,8 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.query.SqlBuilder;
-
 /**
  * Read-only helper for join entity operations in CRUD DAOs with {@code Long} primary keys.
  * This interface combines {@link ReadOnlyCrudJoinEntityHelper} and {@link CrudJoinEntityHelperL}
@@ -29,12 +27,12 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support for Long IDs
- * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelperL<User, SqlBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelperL<User, UserReadOnlyDao> {
  *     // Can read join entities (e.g., user roles, permissions)
  *     // Cannot delete join entities
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
  *
  * // Get user by primitive long ID with join entities
  * Optional<User> user = userDao.get(123L, Order.class);
@@ -53,15 +51,12 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the companion {@link CrudDaoL} type (with {@code Long} primary key) that owns
  *             this helper, used for fluent method chaining and access to CRUD operations
  * @see ReadOnlyCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see CrudDaoL
  */
-public interface ReadOnlyCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, TD>>
-        extends ReadOnlyCrudJoinEntityHelper<T, Long, SB, TD>, CrudJoinEntityHelperL<T, SB, TD> {
+public interface ReadOnlyCrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends ReadOnlyCrudJoinEntityHelper<T, Long, TD>, CrudJoinEntityHelperL<T, TD> {
 
 }

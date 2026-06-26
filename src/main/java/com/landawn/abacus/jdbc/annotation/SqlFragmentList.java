@@ -49,7 +49,7 @@ import java.lang.annotation.Target;
  *
  * <p><b>Caller-selected projection columns:</b></p>
  * <pre>{@code
- * public interface UserDao extends Dao<User, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends Dao<User, UserDao> {
  *
  *     @Query("SELECT {cols} FROM users WHERE active = TRUE")
  *     List<Map<String, Object>> projectActive(

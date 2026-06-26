@@ -115,7 +115,7 @@ public final class SpringApplicationContext {
     /**
      * Retrieves a bean from the Spring ApplicationContext by its type.
      * This method returns a single bean of the specified type if exactly one exists in the context.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource dataSource = springAppContext.getBean(DataSource.class);
@@ -126,7 +126,7 @@ public final class SpringApplicationContext {
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
      * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean of the given type exists
      * @throws org.springframework.beans.factory.NoUniqueBeanDefinitionException if more than one bean of the given type exists
-     * 
+     *
      * @see ApplicationContext#getBean(Class)
      */
     public <T> T getBean(final Class<T> requiredType) {

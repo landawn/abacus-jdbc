@@ -32,7 +32,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.Dates;
-import com.landawn.abacus.util.Dates.DateUtil;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.MoreExecutors;
 import com.landawn.abacus.util.N;
@@ -244,8 +243,8 @@ public final class DBLock {
                                 continue;
                             }
 
-                            final Timestamp now = DateUtil.currentTimestamp();
-                            final Timestamp expiry = DateUtil.createTimestamp(now.getTime() + info.liveTime);
+                            final Timestamp now = Dates.currentTimestamp();
+                            final Timestamp expiry = Dates.createTimestamp(now.getTime() + info.liveTime);
 
                             final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code);
 
@@ -424,8 +423,8 @@ public final class DBLock {
      * <p>This is the most flexible {@code lock} method. It tries to acquire the lock by inserting
      * a new record into the lock table. If the initial attempt fails (meaning another process
      * holds the lock), it will repeatedly retry after {@code retryInterval} milliseconds until
-     * the total {@code timeout} is reached. Before entering the acquisition loop, it removes
-     * any expired locks for the target to reduce stale lock contention.</p>
+     * the total {@code timeout} is reached. Before each acquisition attempt, it removes any expired
+     * locks for the target to reduce stale lock contention.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -471,7 +470,7 @@ public final class DBLock {
 
         final String code = Strings.uuid();
 
-        Timestamp now = DateUtil.currentTimestamp();
+        Timestamp now = Dates.currentTimestamp();
         final long nowTime = now.getTime();
         final long endTime = (timeout > Long.MAX_VALUE - nowTime) ? Long.MAX_VALUE : nowTime + timeout;
         int attempts = 0;
@@ -488,10 +487,10 @@ public final class DBLock {
 
         do {
             removeExpiredLock(target);
-            now = DateUtil.currentTimestamp();
+            now = Dates.currentTimestamp();
 
             try {
-                if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now, now) > 0) {
+                if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, Dates.createTimestamp(now.getTime() + liveTime), now, now) > 0) {
                     targetCodePool.put(target, new LockInfo(code, liveTime));
 
                     logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
@@ -523,7 +522,7 @@ public final class DBLock {
                 return null;
             }
 
-            now = DateUtil.currentTimestamp();
+            now = Dates.currentTimestamp();
             attempts++;
         } while (endTime > now.getTime() && attempts < maxAttempts);
 
@@ -540,9 +539,9 @@ public final class DBLock {
 
     private void removeExpiredLock(final String target) {
         try {
-            final Timestamp now = DateUtil.currentTimestamp();
+            final Timestamp now = Dates.currentTimestamp();
 
-            if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, now, DateUtil.addMilliseconds(now, -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
+            if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, now, Dates.addMilliseconds(now, -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
                 logger.info("Removed expired DB lock(target={})", target);
             }
         } catch (final Exception e) {

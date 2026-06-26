@@ -48,7 +48,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * // Type-level: every method in the DAO is monitored, with a relaxed 5-second budget.
  * @PerfLog(minExecutionTimeForSql = 1000,
  *          minExecutionTimeForOperation = 5000)
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *
  *     // Method-level override: this hot path uses a tighter threshold and shorter logs.
  *     @PerfLog(minExecutionTimeForSql = 100,
@@ -76,10 +76,10 @@ public @interface PerfLog {
     /**
      * Specifies the minimum execution time threshold (in milliseconds) for logging SQL performance.
      * SQL statements that execute faster than this threshold will not be logged.
-     * 
+     *
      * <p>This helps filter out fast queries and focus on potentially problematic slow queries.
      * Set a lower value to capture more queries or a higher value to only log the slowest ones.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(minExecutionTimeForSql = 200) // Log SQLs taking 200ms or more
@@ -93,10 +93,10 @@ public @interface PerfLog {
     /**
      * Specifies the maximum length of SQL statements in performance logs.
      * SQL statements longer than this limit will be truncated to prevent excessive log sizes.
-     * 
+     *
      * <p>This is useful for maintaining readable logs when dealing with complex queries
      * or queries with large parameter lists.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(maxSqlLogLength = 500) // Truncate SQL to 500 characters
@@ -110,16 +110,16 @@ public @interface PerfLog {
     /**
      * Specifies the minimum execution time threshold (in milliseconds) for logging DAO method performance.
      * DAO operations that complete faster than this threshold will not be logged.
-     * 
+     *
      * <p>This threshold is typically set higher than {@link #minExecutionTimeForSql()} since DAO operations
      * may include multiple SQL executions, result processing, and business logic.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(minExecutionTimeForOperation = 5000) // Log operations taking 5 seconds or more
      * void processLargeBatchUpdate(List<Order> orders);
      * }</pre>
-     * 
+     *
      * @return the minimum execution time in milliseconds for DAO operation logging
      */
     long minExecutionTimeForOperation() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000

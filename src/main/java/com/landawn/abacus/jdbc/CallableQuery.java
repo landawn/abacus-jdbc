@@ -65,7 +65,7 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * A wrapper class for {@link CallableStatement} that provides a fluent API for executing stored procedures
  * and handling OUT parameters. This class extends {@link AbstractQuery} and provides comprehensive support
  * for calling database stored procedures with both IN and OUT parameters.
- * 
+ *
  * <p>The backing {@code CallableStatement} is closed by default after any execution methods
  * (which will trigger the backing {@code CallableStatement} to be executed, for example,
  * query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/..),
@@ -215,7 +215,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a Boolean value.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Boolean isManager = getManagerStatus();   // might return null
@@ -239,7 +239,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a byte value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setByte("statusCode", (byte) 1);
@@ -259,7 +259,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a Byte value.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Byte level = getUserLevel();   // might return null
@@ -283,7 +283,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a short value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setShort("departmentId", (short) 100);
@@ -303,7 +303,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a Short value.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Short quantity = getOrderQuantity();   // might return null
@@ -327,7 +327,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to an int value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt("employeeId", 1001);
@@ -347,7 +347,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to an Integer value.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Integer managerId = getManagerId();   // might return null for CEO
@@ -371,7 +371,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a long value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setLong("accountNumber", 1234567890L);
@@ -391,7 +391,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a Long value.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Long transactionId = getTransactionId();   // might return null
@@ -429,7 +429,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
-     * @throws ArithmeticException if the BigInteger value is outside the range of a long
+     * @throws ArithmeticException if the BigInteger value is outside the range of a long.
+     *         When this is thrown the underlying statement is also closed.
      */
     public CallableQuery setLong(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
@@ -451,7 +452,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a float value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setFloat("discountRate", 0.15f);
@@ -471,7 +472,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a Float value.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Float temperature = getTemperature();   // might return null
@@ -497,7 +498,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a double value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setDouble("salary", 75000.50);
@@ -517,7 +518,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a Double value.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Double price = getProductPrice();   // might return null
@@ -542,7 +543,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a BigDecimal value.
      * This method is typically used for precise decimal values like currency amounts.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigDecimal amount = new BigDecimal("123.45");
@@ -563,7 +564,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a BigInteger value as a BigDecimal for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigValue = new BigInteger("12345678901234567890");
@@ -638,7 +639,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a CharSequence value as a String for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringBuilder sb = new StringBuilder("Hello World");
@@ -656,7 +657,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a char value as a String for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString("grade", 'A');
@@ -674,7 +675,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a Character value as a String for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Character initial = getMiddleInitial();   // might return null
@@ -694,7 +695,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a BigInteger value as a String for the specified parameter.
      * The BigInteger is converted to its decimal string representation.
      * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger serialNumber = new BigInteger("123456789012345");
@@ -719,7 +720,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a national character string value.
      * This method is used for NCHAR, NVARCHAR, and LONGNVARCHAR parameters.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setNString("unicodeName", "名前");
@@ -738,7 +739,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a java.sql.Date value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Date birthDate = java.sql.Date.valueOf("1990-01-15");
@@ -781,7 +782,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a LocalDate value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalDate today = LocalDate.now();
@@ -801,7 +802,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a java.sql.Time value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Time startTime = java.sql.Time.valueOf("09:00:00");
@@ -843,7 +844,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a LocalTime value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalTime meetingTime = LocalTime.of(14, 30);
@@ -863,7 +864,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a java.sql.Timestamp value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Timestamp timestamp = new java.sql.Timestamp(System.currentTimeMillis());
@@ -883,7 +884,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a java.util.Date value as a java.sql.Timestamp for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date now = new java.util.Date();
@@ -903,7 +904,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a LocalDateTime value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalDateTime eventTime = LocalDateTime.now();
@@ -924,7 +925,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to a ZonedDateTime value.
      * The ZonedDateTime is converted to an Instant and then to a Timestamp.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ZonedDateTime zonedTime = ZonedDateTime.now();
@@ -945,7 +946,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to an OffsetDateTime value.
      * The OffsetDateTime is converted to an Instant and then to a Timestamp.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OffsetDateTime offsetTime = OffsetDateTime.now();
@@ -966,7 +967,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to an Instant value.
      * The Instant is converted to a Timestamp.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Instant instant = Instant.now();
@@ -987,7 +988,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a byte array for the specified parameter.
      * This method is typically used for BINARY, VARBINARY, or LONGVARBINARY data.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * byte[] imageData = loadImageData();
@@ -1008,7 +1009,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an ASCII stream for the specified parameter.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream asciiStream = new FileInputStream("data.txt");
@@ -1028,7 +1029,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets an ASCII stream for the specified parameter with a specified length.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream asciiStream = new FileInputStream("data.txt");
@@ -1051,7 +1052,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a binary stream for the specified parameter.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream binaryStream = new FileInputStream("image.jpg");
@@ -1071,7 +1072,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a binary stream for the specified parameter with a specified length.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream binaryStream = new FileInputStream("document.pdf");
@@ -1094,7 +1095,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a character stream for the specified parameter.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new FileReader("article.txt");
@@ -1114,7 +1115,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a character stream for the specified parameter with a specified length.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Large text content...");
@@ -1136,7 +1137,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a national character stream for the specified parameter.
      * This method is used for NCHAR, NVARCHAR, and LONGNVARCHAR columns.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Unicode text content");
@@ -1156,7 +1157,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a national character stream for the specified parameter with a specified length.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Unicode text with special characters");
@@ -1177,7 +1178,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a Blob object for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = connection.createBlob();
@@ -1199,7 +1200,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a Blob value using an InputStream for the specified parameter.
      * The data will be read from the stream as needed until end-of-file is reached.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream imageStream = new FileInputStream("photo.jpg");
@@ -1219,7 +1220,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a Blob value using an InputStream with a specified length for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * File file = new File("document.pdf");
@@ -1241,7 +1242,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a Clob object for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = connection.createClob();
@@ -1263,7 +1264,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a Clob value using a Reader for the specified parameter.
      * The data will be read from the Reader as needed until end-of-file is reached.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new FileReader("article.txt");
@@ -1283,7 +1284,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a Clob value using a Reader with a specified length for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String content = "Long article content...";
@@ -1306,7 +1307,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an NClob object for the specified parameter.
      * NClob is used for storing national character large objects.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * NClob nclob = connection.createNClob();
@@ -1328,7 +1329,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an NClob value using a Reader for the specified parameter.
      * The data will be read from the Reader as needed until end-of-file is reached.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Unicode text content");
@@ -1348,7 +1349,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets an NClob value using a Reader with a specified length for the specified parameter.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String unicodeContent = "Unicode content with special characters";
@@ -1370,7 +1371,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a URL value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * URL website = new URL("https://www.example.com");
@@ -1391,7 +1392,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an SQLXML object for the specified parameter.
      * SQLXML is used for storing XML data in the database.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLXML xmlData = connection.createSQLXML();
@@ -1415,7 +1416,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a RowId object for the specified parameter.
      * RowId represents the address of a row in a database table.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowId rowId = resultSet.getRowId("ROWID");
@@ -1486,7 +1487,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets an object value for the specified parameter with a specified SQL type and scale.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject("price", 123.456789, Types.DECIMAL, 2);   // Scale to 2 decimal places
@@ -1510,7 +1511,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets multiple parameters from a Map where keys are parameter names and values are parameter values.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> params = new HashMap<>();
@@ -1548,18 +1549,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets multiple parameters for this CallableQuery by extracting values from an entity object.
      * This method uses reflection to retrieve property values from the entity based on the specified
      * parameter names, making it convenient for mapping entity properties to stored procedure parameters.
-     * 
+     *
      * <p>The method uses the bean information of the entity class to extract property values.
      * Each parameter name in the list should correspond to a property name in the entity object.
      * The appropriate database type is automatically determined based on the property type.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Employee employee = new Employee();
      * employee.setId(1001);
      * employee.setName("John Doe");
      * employee.setDepartment("Sales");
-     * 
+     *
      * List<String> paramNames = Arrays.asList("id", "name", "department");
      * query.setParameters(employee, paramNames)
      *      .execute();
@@ -1607,10 +1608,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a parameter as an OUT parameter with the specified SQL type.
      * This method is used to indicate that a parameter in the stored procedure is an OUTPUT
      * parameter that will return a value after execution.
-     * 
+     *
      * <p>OUT parameters must be registered before the statement is executed. The SQL type
      * specified should match the type of data the stored procedure will return for this parameter.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 100)                          // IN parameter
@@ -1644,10 +1645,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a parameter as an OUT parameter with the specified SQL type and scale.
      * This method is typically used for numeric types (like DECIMAL or NUMERIC) where you need
      * to specify the number of digits after the decimal point.
-     * 
+     *
      * <p>The scale parameter is particularly important for fixed-point numeric types to ensure
      * proper precision when retrieving the OUT parameter value.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 1001)
@@ -1682,10 +1683,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a parameter as an OUT parameter with a user-defined SQL type name.
      * This method is used for database-specific types, user-defined types (UDTs), or
      * when you need to specify the exact SQL type name for proper type mapping.
-     * 
+     *
      * <p>The typeName parameter should be the fully-qualified SQL type name, which may
      * include the schema name if required by the database.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For a user-defined type
@@ -1720,7 +1721,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a named parameter as an OUT parameter with the specified SQL type.
      * This method is used with stored procedures that have named parameters, providing
      * better code readability compared to index-based parameter registration.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString("employeeName", "John Doe")
@@ -1751,7 +1752,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a named parameter as an OUT parameter with the specified SQL type and scale.
      * This method combines the benefits of named parameters with scale specification for
      * numeric types that require precision control.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt("productId", 100)
@@ -1784,7 +1785,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a named parameter as an OUT parameter with a user-defined SQL type name.
      * This method is ideal for working with complex database types using named parameters
      * for better code maintainability.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For Oracle object types
@@ -1813,7 +1814,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Registers a parameter as an OUT parameter using the JDBC 4.2 {@link SQLType} interface.
      * This method provides type-safe parameter registration using the standard SQL type enumeration.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Jdbc.OutParamResult result = query.setString(1, "input_value")
@@ -1846,7 +1847,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Registers a parameter as an OUT parameter using {@link SQLType} with scale specification.
      * This method combines the type safety of SQLType with scale control for numeric types.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.registerOutParameter(1, JDBCType.DECIMAL, 2)  // For money
@@ -1878,7 +1879,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Registers a parameter as an OUT parameter using {@link SQLType} with a user-defined type name.
      * This method provides type-safe registration for complex or vendor-specific SQL types.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.registerOutParameter(1, JDBCType.STRUCT, "SCHEMA.CUSTOM_TYPE")
@@ -1911,7 +1912,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Registers a named parameter as an OUT parameter using the JDBC 4.2 {@link SQLType} interface.
      * This method combines the readability of named parameters with type-safe SQL type specification.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString("inputParam", "value")
@@ -1941,7 +1942,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Registers a named parameter as an OUT parameter using {@link SQLType} with scale specification.
      * This method is ideal for numeric types that require both name-based access and precision control.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt("orderId", 12345)
@@ -1974,7 +1975,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a named parameter as an OUT parameter using {@link SQLType} with a user-defined type name.
      * This method provides the most flexible parameter registration, combining named parameters,
      * type-safe SQL types, and custom type names.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt("customerId", 100)
@@ -2007,11 +2008,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers multiple OUT parameters using a functional interface approach.
      * This method allows for more complex registration logic and is useful when you need
      * to register multiple parameters based on dynamic conditions.
-     * 
+     *
      * <p>The provided {@link Jdbc.ParametersSetter} receives this CallableQuery instance,
      * allowing it to call multiple {@code registerOutParameter} methods. If an exception
      * occurs during registration, the statement is automatically closed.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.registerOutParameters(q -> {
@@ -2087,7 +2088,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs during parameter registration.
      */
     public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> register)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
         checkArgNotNull(register, cs.register);
 
         boolean noException = false;
@@ -2184,10 +2185,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and applies the provided function to the executed CallableStatement.
      * This method provides direct access to the CallableStatement after execution, allowing for
      * custom result processing logic.
-     * 
+     *
      * <p>The statement will be closed after the function is applied unless
      * {@link #closeAfterExecution(boolean)} has been called with {@code false}.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = query.executeThenApply(stmt -> {
@@ -2212,10 +2213,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and applies the provided bi-function to the executed CallableStatement
      * and a boolean indicating whether the first result is a ResultSet.
-     * 
+     *
      * <p>This method provides more detailed control over result processing by indicating the type
      * of the first result returned by the stored procedure.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Object result = query.executeThenApply((stmt, isResultSet) -> {
@@ -2246,30 +2247,30 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and applies the provided tri-function to process the results
      * with full access to the CallableStatement, OUT parameters, and result type information.
-     * 
+     *
      * <p>This method provides the most comprehensive access to stored procedure results, including
      * the executed statement, registered OUT parameters, and information about the first result type.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> results = query.executeThenApply(
      *     (stmt, outParams, isResultSet) -> {
      *         Map<String, Object> map = new HashMap<>();
-     *         
+     *
      *         // Process OUT parameters
      *         for (Jdbc.OutParam param : outParams) {
      *             if (param.getParameterName() != null) {
-     *                 map.put(param.getParameterName(), 
+     *                 map.put(param.getParameterName(),
      *                         stmt.getObject(param.getParameterName()));
      *             }
      *         }
-     *         
+     *
      *         // Process result set if available
      *         if (isResultSet) {
      *             ResultSet rs = stmt.getResultSet();
      *             // Add result set data to map
      *         }
-     *         
+     *
      *         return map;
      *     }
      * );
@@ -2306,13 +2307,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and applies the provided consumer to the executed CallableStatement.
      * This method is useful when you need to perform side effects with the statement but don't need
      * to return a value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.executeThenAccept(stmt -> {
      *     // Log execution details
      *     logger.info("Warnings: " + stmt.getWarnings());
-     *     
+     *
      *     // Process multiple result sets
      *     boolean hasResults = true;
      *     while (hasResults) {
@@ -2337,10 +2338,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and applies the provided bi-consumer to the executed CallableStatement
      * and a boolean indicating the result type.
-     * 
+     *
      * <p>This method is similar to {@link #executeThenApply(Throwables.BiFunction)} but is used
      * for side effects rather than returning a value.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.executeThenAccept((stmt, isResultSet) -> {
@@ -2368,21 +2369,21 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and applies the provided tri-consumer for processing with
      * full access to all execution results.
-     * 
+     *
      * <p>This method provides comprehensive access to the execution results for side-effect
      * operations without returning a value.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.executeThenAccept((stmt, outParams, isResultSet) -> {
      *     // Log OUT parameters
      *     for (Jdbc.OutParam param : outParams) {
      *         if (param.getParameterName() != null) {
-     *             logger.info(param.getParameterName() + ": " + 
+     *             logger.info(param.getParameterName() + ": " +
      *                        stmt.getObject(param.getParameterName()));
      *         }
      *     }
-     *     
+     *
      *     // Process first result
      *     if (isResultSet) {
      *         ResultSet rs = stmt.getResultSet();
@@ -2419,10 +2420,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and retrieves all OUT parameter values.
      * This method is used when you only need the OUT parameters and don't need to process
      * any result sets returned by the procedure.
-     * 
+     *
      * <p>The returned {@link Jdbc.OutParamResult} provides convenient methods to retrieve
      * OUT parameter values by index or name with appropriate type conversion.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call calculate_totals(?, ?, ?)}");
@@ -2462,10 +2463,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and returns both the first result set (as a Dataset) and OUT parameters.
      * This is a convenience method that uses the default Dataset result extractor.
-     * 
+     *
      * <p>The result set is fully loaded into memory as a {@link Dataset}, which provides
      * a convenient API for working with tabular data.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Dataset, Jdbc.OutParamResult> result = query.queryAndGetOutParameters();
@@ -2495,10 +2496,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and returns both the first result set and OUT parameters,
      * using a custom ResultExtractor to process the result set.
-     * 
+     *
      * <p>This method provides flexibility in how the result set is processed and converted
      * to the desired type. The ResultExtractor has full access to the ResultSet for custom processing.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract to a custom summary object
@@ -2548,19 +2549,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and returns both the first result set and OUT parameters,
      * using a BiResultExtractor that has access to both the ResultSet and column labels.
-     * 
+     *
      * <p>The BiResultExtractor receives the column labels as a second parameter, which can be
      * useful for dynamic result processing or validation.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<Map<String, List<Object>>, Jdbc.OutParamResult> result = 
+     * Tuple2<Map<String, List<Object>>, Jdbc.OutParamResult> result =
      *     query.queryAndGetOutParameters((rs, columnLabels) -> {
      *         Map<String, List<Object>> columnData = new HashMap<>();
      *         for (String label : columnLabels) {
      *             columnData.put(label, new ArrayList<>());
      *         }
-     *         
+     *
      *         while (rs.next()) {
      *             for (String label : columnLabels) {
      *                 columnData.get(label).add(rs.getObject(label));
@@ -2602,10 +2603,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and returns all result sets as Datasets along with OUT parameters.
      * This method is useful for procedures that return multiple result sets.
-     * 
+     *
      * <p>Each result set is converted to a {@link Dataset} and collected in a list. The method
      * processes all available result sets, not just the first one.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<List<Dataset>, Jdbc.OutParamResult> results =
@@ -2636,15 +2637,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Executes the stored procedure and returns all result sets along with OUT parameters,
      * using a custom ResultExtractor to process each result set.
-     * 
+     *
      * <p>This method processes all result sets returned by the stored procedure, applying
      * the same ResultExtractor to each one. The extractor should not save or return the
      * ResultSet itself as it will be closed after processing.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract row counts from multiple result sets
-     * Tuple2<List<Integer>, Jdbc.OutParamResult> results = 
+     * Tuple2<List<Integer>, Jdbc.OutParamResult> results =
      *     query.queryAllResultSetsAndGetOutParameters(rs -> {
      *         int count = 0;
      *         while (rs.next()) {
@@ -2652,7 +2653,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         }
      *         return count;
      *     });
-     * 
+     *
      * List<Integer> rowCounts = results._1;
      * System.out.println("Result sets returned: " + rowCounts.size());
      * for (int i = 0; i < rowCounts.size(); i++) {
@@ -2703,11 +2704,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns all result sets along with any OUT parameters.
      * This method is designed for stored procedures that return multiple result sets, allowing
      * you to process each result set with a custom extractor while also retrieving OUT parameters.
-     * 
+     *
      * <p>Each result set is processed sequentially using the provided {@code BiResultExtractor},
      * which has access to both the {@code ResultSet} and column labels. The result sets are
      * automatically closed after extraction.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stored procedure that returns customer orders and order items as separate result sets
@@ -2776,11 +2777,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns the first two result sets along with OUT parameters.
      * This method is optimized for stored procedures that return exactly two result sets,
      * allowing different extractors for each result set for type-safe processing.
-     * 
+     *
      * <p>If the stored procedure returns fewer than two result sets, the corresponding
      * result values will be {@code null}. If more than two result sets are returned,
      * only the first two are processed.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Procedure returns summary and detail records as separate result sets
@@ -2844,7 +2845,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             // If the procedure produced more than two result sets (or trailing update counts), they
             // remain buffered in the cstmt and would cause stale OUT params on SQL Server / Oracle.
-            // iter.close() only releases the cached RS in the iterator's holder, not buffered results.
+            // iter.closeResource() only releases the cached RS in the iterator's holder, not buffered results.
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -2863,25 +2864,25 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns the first three result sets along with OUT parameters.
      * This method is optimized for stored procedures that return exactly three result sets,
      * with type-safe extraction for each result set using different extractors.
-     * 
+     *
      * <p>If the stored procedure returns fewer than three result sets, the corresponding
      * result values will be {@code null}. If more than three result sets are returned,
      * only the first three are processed.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex report procedure with multiple result sets
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call generate_quarterly_report(?, ?)}")) {
      *     query.setInt(1, year)
      *          .setInt(2, quarter);
-     *     
-     *     Tuple4<Summary, List<Revenue>, List<Expense>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple4<Summary, List<Revenue>, List<Expense>, Jdbc.OutParamResult> result =
      *         query.query3ResultSetsAndGetOutParameters(
      *             (rs, labels) -> extractSummary(rs),        // Summary data
      *             (rs, labels) -> extractRevenueList(rs),    // Revenue details
      *             (rs, labels) -> extractExpenseList(rs)     // Expense details
      *         );
-     *     
+     *
      *     Summary summary = result._1;
      *     List<Revenue> revenues = result._2;
      *     List<Expense> expenses = result._3;
@@ -2942,7 +2943,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             // If the procedure produced more than three result sets (or trailing update counts),
             // they remain buffered in the cstmt and would cause stale OUT params on SQL Server /
-            // Oracle. iter.close() only releases the iterator's cached RS, not buffered results.
+            // Oracle. iter.closeResource() only releases the iterator's cached RS, not buffered results.
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -2961,7 +2962,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns the first result set as a list of objects
      * along with any OUT parameters. This is a convenience method that automatically maps
      * each row to the specified target type using reflection.
-     * 
+     *
      * <p>The mapping uses the following rules:</p>
      * <ul>
      *   <li>Column names are matched to property names (case-insensitive)</li>
@@ -2969,20 +2970,20 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *   <li>Properties annotated with {@code @Transient} are ignored</li>
      *   <li>Column name mapping can be customized using {@code @Column} annotation</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Simple stored procedure returning employees
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call find_employees_by_dept(?, ?)}")) {
      *     query.setString(1, "Engineering")
      *          .registerOutParameter(2, Types.INTEGER);   // employee count
-     *     
-     *     Tuple2<List<Employee>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<Employee>, Jdbc.OutParamResult> result =
      *         query.listAndGetOutParameters(Employee.class);
-     *     
+     *
      *     List<Employee> employees = result._1;
      *     int count = result._2.getOutParamValue(2);
-     *     
+     *
      *     employees.forEach(emp -> System.out.println(emp.getName()));
      *     System.out.println("Total employees: " + count);
      * }
@@ -3013,19 +3014,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns the first result set as a list of objects
      * along with any OUT parameters. Each row is mapped using the provided {@code RowMapper},
      * giving you full control over the mapping process.
-     * 
+     *
      * <p>The {@code RowMapper} receives the {@code ResultSet} positioned at each row and
      * should extract the data to create an instance of type T. This method is useful when
      * you need custom mapping logic that cannot be achieved with automatic mapping.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for complex types
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_product_inventory(?, ?)}")) {
      *     query.setString(1, warehouseCode)
      *          .registerOutParameter(2, Types.DECIMAL);   // total value
-     *     
-     *     Tuple2<List<ProductInfo>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<ProductInfo>, Jdbc.OutParamResult> result =
      *         query.listAndGetOutParameters(rs -> {
      *             ProductInfo info = new ProductInfo();
      *             info.setId(rs.getLong("product_id"));
@@ -3034,7 +3035,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *             info.setLastUpdated(rs.getTimestamp("last_updated").toInstant());
      *             return info;
      *         });
-     *     
+     *
      *     List<ProductInfo> products = result._1;
      *     BigDecimal totalValue = result._2.getOutParamValue(2);
      * }
@@ -3083,25 +3084,25 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns a filtered result set as a list along with OUT parameters.
      * This method allows you to filter rows before mapping, which can improve performance
      * when you only need a subset of the returned data.
-     * 
+     *
      * <p>The {@code RowFilter} is applied before the {@code RowMapper}, so rows that don't
      * match the filter criteria are skipped entirely, avoiding unnecessary object creation.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter and map only active accounts with balance > 1000
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_all_accounts(?)}")) {
      *     query.registerOutParameter(1, Types.INTEGER);   // total count
-     *     
-     *     Tuple2<List<Account>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<Account>, Jdbc.OutParamResult> result =
      *         query.listAndGetOutParameters(
      *             rs -> rs.getBoolean("is_active") && rs.getBigDecimal("balance").compareTo(new BigDecimal("1000")) > 0,
      *             rs -> new Account(rs.getLong("id"), rs.getString("name"), rs.getBigDecimal("balance"))
      *         );
-     *     
+     *
      *     List<Account> premiumAccounts = result._1;
      *     int totalAccounts = result._2.getOutParamValue(1);
-     *     
+     *
      *     System.out.println("Premium accounts: " + premiumAccounts.size() + " of " + totalAccounts);
      * }
      * }</pre>
@@ -3151,18 +3152,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns the first result set as a list along with OUT parameters.
      * Uses a {@code BiRowMapper} that receives both the {@code ResultSet} and column labels,
      * providing more context for complex mapping scenarios.
-     * 
+     *
      * <p>The column labels list is retrieved once and reused for all rows, making this method
      * efficient when you need column metadata for mapping decisions.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Dynamic mapping based on column presence
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_customer_data(?, ?)}")) {
      *     query.setInt(1, customerId)
      *          .registerOutParameter(2, Types.VARCHAR);   // status
-     *     
-     *     Tuple2<List<Map<String, Object>>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<Map<String, Object>>, Jdbc.OutParamResult> result =
      *         query.listAndGetOutParameters((rs, columnLabels) -> {
      *             Map<String, Object> row = new HashMap<>();
      *             for (String label : columnLabels) {
@@ -3170,7 +3171,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *             }
      *             return row;
      *         });
-     *     
+     *
      *     List<Map<String, Object>> data = result._1;
      *     String status = result._2.getOutParamValue(2);
      * }
@@ -3219,10 +3220,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns a filtered result set as a list along with OUT parameters.
      * Uses both a {@code BiRowFilter} and {@code BiRowMapper} that receive the {@code ResultSet}
      * and column labels, allowing for sophisticated filtering and mapping logic.
-     * 
+     *
      * <p>This method is ideal for complex scenarios where both filtering and mapping decisions
      * depend on column metadata or when you need to handle dynamic result set structures.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter based on dynamic columns and map accordingly
@@ -3230,8 +3231,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setString(1, searchTerm)
      *          .setInt(2, maxResults)
      *          .registerOutParameter(3, Types.INTEGER);   // total matches
-     *     
-     *     Tuple2<List<Product>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<Product>, Jdbc.OutParamResult> result =
      *         query.listAndGetOutParameters(
      *             (rs, labels) -> {
      *                 // Only include products with a discount if the column exists
@@ -3250,7 +3251,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 return p;
      *             }
      *         );
-     *     
+     *
      *     List<Product> discountedProducts = result._1;
      *     int totalMatches = result._2.getOutParamValue(3);
      * }
@@ -3303,23 +3304,23 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Each result set is automatically mapped to the specified target type using reflection.
      * This is the simplest way to handle stored procedures that return multiple result sets
      * of the same type.
-     * 
+     *
      * <p>Each result set is processed independently and added to the returned list in the order
      * they are returned by the stored procedure. Empty result sets will result in empty lists.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stored procedure that returns multiple employee groups
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_employees_by_categories(?)}")) {
      *     query.registerOutParameter(1, Types.INTEGER);   // total count
-     *     
-     *     Tuple2<List<List<Employee>>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<List<Employee>>, Jdbc.OutParamResult> result =
      *         query.listAllResultSetsAndGetOutParameters(Employee.class);
-     *     
+     *
      *     List<Employee> managers = result._1.get(0);     // First result set
      *     List<Employee> developers = result._1.get(1);   // Second result set
      *     List<Employee> interns = result._1.get(2);      // Third result set
-     *     
+     *
      *     int totalCount = result._2.getOutParamValue(1);
      *     System.out.println("Total employees: " + totalCount);
      * }
@@ -3373,18 +3374,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns all result sets as lists along with OUT parameters.
      * Each result set is mapped using the provided {@code RowMapper}, giving you full control
      * over how each row in each result set is converted to objects.
-     * 
+     *
      * <p>The same {@code RowMapper} is applied to all result sets, so this method is best used
      * when all result sets have the same structure or when the mapper can handle variations.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process multiple result sets with custom mapping
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call generate_reports(?, ?)}")) {
      *     query.setDate(1, reportDate)
      *          .registerOutParameter(2, Types.VARCHAR);   // report status
-     *     
-     *     Tuple2<List<List<ReportRow>>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<List<ReportRow>>, Jdbc.OutParamResult> result =
      *         query.listAllResultSetsAndGetOutParameters(rs -> {
      *             ReportRow row = new ReportRow();
      *             row.setCategory(rs.getString("category"));
@@ -3392,11 +3393,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *             row.setPercentage(rs.getDouble("percentage"));
      *             return row;
      *         });
-     *     
+     *
      *     List<ReportRow> salesReport = result._1.get(0);
      *     List<ReportRow> inventoryReport = result._1.get(1);
      *     List<ReportRow> expenseReport = result._1.get(2);
-     *     
+     *
      *     String status = result._2.getOutParamValue(2);
      * }
      * }</pre>
@@ -3448,18 +3449,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns all filtered result sets as lists along with OUT parameters.
      * Each result set is filtered using the provided {@code RowFilter} before mapping with the {@code RowMapper}.
      * This allows you to selectively process rows across multiple result sets.
-     * 
+     *
      * <p>The same filter and mapper are applied to all result sets. Rows that don't pass the filter
      * are skipped entirely, which can significantly improve performance when processing large result sets.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter and process only significant transactions across multiple accounts
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_all_transactions(?, ?)}")) {
      *     query.setDate(1, startDate)
      *          .registerOutParameter(2, Types.INTEGER);   // total transactions
-     *     
-     *     Tuple2<List<List<Transaction>>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<List<Transaction>>, Jdbc.OutParamResult> result =
      *         query.listAllResultSetsAndGetOutParameters(
      *             rs -> rs.getBigDecimal("amount").compareTo(new BigDecimal("1000")) >= 0,
      *             rs -> new Transaction(
@@ -3468,12 +3469,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 rs.getTimestamp("transaction_date")
      *             )
      *         );
-     *     
+     *
      *     // Each list contains only transactions >= $1000
      *     List<Transaction> checkingTransactions = result._1.get(0);
      *     List<Transaction> savingsTransactions = result._1.get(1);
      *     List<Transaction> creditTransactions = result._1.get(2);
-     *     
+     *
      *     int totalTransactions = result._2.getOutParamValue(2);
      * }
      * }</pre>
@@ -3526,22 +3527,22 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Executes the stored procedure and returns all result sets as lists along with OUT parameters.
      * Uses a {@code BiRowMapper} that receives both the {@code ResultSet} and column labels for
      * each result set, enabling dynamic mapping based on result set structure.
-     * 
+     *
      * <p>This method is particularly useful when different result sets have different structures
      * but can be mapped to the same target type, or when mapping logic depends on column metadata.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Handle result sets with varying columns
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_hierarchical_data(?)}")) {
      *     query.setString(1, rootId);
-     *     
-     *     Tuple2<List<List<Node>>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<List<Node>>, Jdbc.OutParamResult> result =
      *         query.listAllResultSetsAndGetOutParameters((rs, labels) -> {
      *             Node node = new Node();
      *             node.setId(rs.getString("id"));
      *             node.setName(rs.getString("name"));
-     *             
+     *
      *             // Different result sets may have different attributes
      *             if (labels.contains("parent_id")) {
      *                 node.setParentId(rs.getString("parent_id"));
@@ -3552,10 +3553,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *             if (labels.contains("children_count")) {
      *                 node.setChildrenCount(rs.getInt("children_count"));
      *             }
-     *             
+     *
      *             return node;
      *         });
-     *     
+     *
      *     List<Node> rootNodes = result._1.get(0);
      *     List<Node> childNodes = result._1.get(1);
      *     List<Node> leafNodes = result._1.get(2);
@@ -3609,18 +3610,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Uses both a {@code BiRowFilter} and {@code BiRowMapper} that receive the {@code ResultSet} and
      * column labels, providing maximum flexibility for filtering and mapping across multiple result sets
      * with potentially different structures.
-     * 
+     *
      * <p>This is the most powerful list method, allowing you to handle complex scenarios where
      * each result set may have different columns and require different filtering/mapping logic
      * based on those columns.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex filtering and mapping across heterogeneous result sets
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call analyze_customer_360(?)}")) {
      *     query.setLong(1, customerId);
-     *     
-     *     Tuple2<List<List<CustomerData>>, Jdbc.OutParamResult> result = 
+     *
+     *     Tuple2<List<List<CustomerData>>, Jdbc.OutParamResult> result =
      *         query.listAllResultSetsAndGetOutParameters(
      *             (rs, labels) -> {
      *                 // Filter based on available columns
@@ -3634,11 +3635,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *             (rs, labels) -> {
      *                 CustomerData data = new CustomerData();
      *                 data.setType(determineTypeFromColumns(labels));
-     *                 
+     *
      *                 // Map common fields
      *                 if (labels.contains("id")) data.setId(rs.getLong("id"));
      *                 if (labels.contains("value")) data.setValue(rs.getBigDecimal("value"));
-     *                 
+     *
      *                 // Map type-specific fields
      *                 if (labels.contains("order_date")) {
      *                     data.setDate(rs.getTimestamp("order_date"));
@@ -3647,11 +3648,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                     data.setDate(rs.getTimestamp("interaction_date"));
      *                     data.setDescription(rs.getString("interaction_type"));
      *                 }
-     *                 
+     *
      *                 return data;
      *             }
      *         );
-     *     
+     *
      *     List<CustomerData> orders = result._1.get(0);
      *     List<CustomerData> interactions = result._1.get(1);
      *     List<CustomerData> preferences = result._1.get(2);

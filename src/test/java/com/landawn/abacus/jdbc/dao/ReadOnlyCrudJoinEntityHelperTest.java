@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,7 @@ public class ReadOnlyCrudJoinEntityHelperTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(4, ReadOnlyCrudJoinEntityHelper.class.getTypeParameters().length);
+        assertEquals(3, ReadOnlyCrudJoinEntityHelper.class.getTypeParameters().length);
     }
 
     @Test

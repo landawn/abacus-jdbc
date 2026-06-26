@@ -31,15 +31,15 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * Handlers provide AOP-like functionality to intercept and modify the behavior
  * of DAO method invocations, useful for cross-cutting concerns like logging,
  * performance monitoring, security checks, or result transformation.
- * 
+ *
  * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
- * 
+ *
  * <p>Handlers can be applied at two levels:</p>
  * <ul>
  *   <li><strong>Method level:</strong> Applies only to the specific annotated method</li>
  *   <li><strong>Type level:</strong> Applies to all methods in the DAO interface (with filtering options)</li>
  * </ul>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Custom handler implementation
@@ -54,24 +54,24 @@ import com.landawn.abacus.jdbc.dao.Dao;
  *         logger.info("Method completed: " + methodSignature._1.getName());
  *     }
  * }
- * 
+ *
  * // Apply handler to entire DAO
  * @Handler(type = LoggingHandler.class)
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // All methods will be intercepted by LoggingHandler
  * }
- * 
+ *
  * // Apply handler to specific method
- * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
+ * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
  *     @Handler(type = PerformanceHandler.class)
  *     @Query("SELECT * FROM orders WHERE total > :amount")
  *     List<Order> findLargeOrders(@Bind("amount") BigDecimal amount);
  * }
- * 
+ *
  * // Multiple handlers with filtering
  * @Handler(type = LoggingHandler.class, filter = {"find.*", "query.*"})
  * @Handler(type = CacheHandler.class, filter = {"get.*", "find.*"})
- * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+ * public interface ProductDao extends CrudDao<Product, Long, ProductDao> {
  *     // Methods matching filters will be intercepted
  * }
  * }</pre>
@@ -100,7 +100,7 @@ public @interface Handler {
      * <pre>{@code
      * // Register handler instances at startup (e.g., HandlerFactory.register("auditHandler", new AuditHandler(...)))
      * @Handler(qualifier = "auditHandler")
-     * public interface ConfigDao extends CrudDao<Config, Long, SqlBuilder.PSC, ConfigDao> {
+     * public interface ConfigDao extends CrudDao<Config, Long, ConfigDao> {
      *     // The handler registered under "auditHandler" will be applied
      * }
      * }</pre>
@@ -112,14 +112,14 @@ public @interface Handler {
     /**
      * Specifies the handler implementation class.
      * The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
-     * 
+     *
      * <p>The handler lifecycle methods are called in this order:</p>
      * <ol>
      *   <li>{@code beforeInvoke()} - Before the actual method invocation</li>
      *   <li>Actual DAO method execution</li>
      *   <li>{@code afterInvoke()} - After the method completes (whether successfully or with an exception)</li>
      * </ol>
-     * 
+     *
      * <p>Example handler implementation:</p>
      * <pre>{@code
      * public class SecurityHandler implements Jdbc.Handler<UserDao> {
@@ -152,12 +152,12 @@ public @interface Handler {
      * Multiple patterns are combined with OR logic.</p>
      *
      * <p>This filter is ignored when the annotation is applied at the method level.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(type = ReadOnlyHandler.class, filter = {"find.*", "get.*", "query.*"})
      * @Handler(type = AuditHandler.class, filter = {"save.*", "update.*", "delete.*"})
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     // Read methods will use ReadOnlyHandler
      *     // Write methods will use AuditHandler
      * }
@@ -170,14 +170,14 @@ public @interface Handler {
     /**
      * Specifies whether this handler should only be applied to external invocations of the DAO.
      * When {@code true}, the handler will not be triggered for internal method calls within the DAO.
-     * 
+     *
      * <p>This is useful for handlers that should only apply when the DAO is called from
      * outside code, not when DAO methods call each other internally.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(type = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     @Query("SELECT * FROM users WHERE id = :id")
      *     User findById(@Bind("id") Long id);
      *
@@ -186,7 +186,7 @@ public @interface Handler {
      *         return user != null && user.isActive() ? user : null;
      *     }
      * }
-     * 
+     *
      * // External call
      * User user = userDao.findById(123L);   // TransactionHandler IS applied here
      * }</pre>

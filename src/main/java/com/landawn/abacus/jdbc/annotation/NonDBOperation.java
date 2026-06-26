@@ -24,14 +24,14 @@ import java.lang.annotation.Target;
  * Marks methods in DAO interfaces that should not be treated as database operations.
  * When a method is annotated with {@code @NonDBOperation}, the framework will bypass
  * all database-related processing for that method.
- * 
+ *
  * <p>Methods annotated with {@code @NonDBOperation} will have the following behaviors disabled:</p>
  * <ul>
  *   <li>No {@code Handler} interceptors will be applied</li>
  *   <li>No SQL or performance logging will be performed</li>
  *   <li>No {@code @Transactional} annotations will be processed</li>
  * </ul>
- * 
+ *
  * <p>The framework's built-in DAO base interfaces ({@code Dao}, {@code CrudDao},
  * {@code NoUpdateDao}, etc.) already carry {@code @NonDBOperation} on the utility/accessor
  * methods they declare, including (non-exhaustive):</p>
@@ -49,20 +49,20 @@ import java.lang.annotation.Target;
  * <p>Apply {@code @NonDBOperation} to your own {@code default} or {@code static} DAO methods
  * whenever they should be excluded from the DAO proxy's database-related processing (handlers,
  * SQL/perf logging, transactional weaving).</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // This method will be processed as a database operation
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);
- *     
+ *
  *     // This method will NOT be processed as a database operation
  *     @NonDBOperation
  *     default String generateCacheKey(Long userId) {
  *         return "user_" + userId;
  *     }
- *     
+ *
  *     // Utility method that doesn't interact with database
  *     @NonDBOperation
  *     default boolean isValidEmail(String email) {

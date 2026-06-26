@@ -24,7 +24,6 @@ import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * Strictly read-only DAO that permits only {@code SELECT} queries.
@@ -64,11 +63,11 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO for viewing data
- * public interface CustomerViewDao extends ReadOnlyDao<Customer, SqlBuilder.PSC, CustomerViewDao> {
+ * public interface CustomerViewDao extends ReadOnlyDao<Customer, CustomerViewDao> {
  *     // Custom query methods can be added
  * }
  *
- * CustomerViewDao dao = JdbcUtil.createDao(CustomerViewDao.class, dataSource);
+ * CustomerViewDao dao = JdbcUtil.createDao(CustomerViewDao.class, dataSource, Dsl.PSC);
  *
  * // Supported operations - all work fine:
  *
@@ -103,15 +102,13 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see NoUpdateDao
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
+public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateDao<T, TD> {
 
     /**
      * Prepares a SQL query for execution, restricted to {@code SELECT} statements only.

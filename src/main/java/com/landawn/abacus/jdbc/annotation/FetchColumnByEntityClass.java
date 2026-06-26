@@ -23,40 +23,40 @@ import java.lang.annotation.Target;
 /**
  * Controls whether query results should be fetched based on the entity class properties.
  * This annotation may only be applied to methods whose return type is {@code Dataset}.
- * 
+ *
  * <p>When enabled (default), only columns that correspond to properties in the entity class
  * will be fetched from the result set. This provides better performance and cleaner results
  * by avoiding unnecessary data retrieval.</p>
- * 
+ *
  * <p>When disabled, all columns from the query result will be fetched, regardless of whether
  * they have corresponding properties in the entity class.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Only fetch columns that match User class properties
  *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(true)  // This is default, can be omitted
  *     Dataset queryUsersWithDepartment();
- *     
+ *
  *     // Fetch all columns from the query, including department_name
  *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(false)
  *     Dataset queryAllUserData();
- *     
+ *
  *     // Assuming User class has properties: id, name, email, deptId
  *     // First method returns: id, name, email, deptId (department_name is excluded)
  *     // Second method returns: id, name, email, deptId, department_name
  * }
  * }</pre>
- * 
+ *
  * <p>This annotation is particularly useful when:</p>
  * <ul>
  *   <li>Working with complex joins that return extra columns</li>
  *   <li>You need to fetch calculated columns or aggregations not in the entity</li>
  *   <li>Optimizing performance by fetching only required columns</li>
  * </ul>
- * 
+ *
  * <p>Note: This annotation may only be applied to methods whose return type is {@code Dataset}.
  * Applying it to a method with any other return type causes an {@code IllegalArgumentException}
  * to be thrown when the DAO is initialized.</p>
@@ -69,21 +69,21 @@ public @interface FetchColumnByEntityClass {
 
     /**
      * Specifies whether to fetch only columns that match entity class properties.
-     * 
+     *
      * <p>When {@code true} (default):</p>
      * <ul>
      *   <li>Only columns with matching properties in the entity class are fetched</li>
      *   <li>Provides better performance by reducing data transfer</li>
      *   <li>Results in cleaner Dataset with only relevant columns</li>
      * </ul>
-     * 
+     *
      * <p>When {@code false}:</p>
      * <ul>
      *   <li>All columns from the query result are fetched</li>
      *   <li>Useful when you need additional calculated or joined columns</li>
      *   <li>May include columns that don't map to entity properties</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Entity class
@@ -93,7 +93,7 @@ public @interface FetchColumnByEntityClass {
      *     private String email;
      *     // Getters and setters
      * }
-     * 
+     *
      * // DAO method
      * @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
      * @FetchColumnByEntityClass(false)  // Need to fetch login_count

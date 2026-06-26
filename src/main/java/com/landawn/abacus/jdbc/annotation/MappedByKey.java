@@ -26,20 +26,20 @@ import java.util.Map;
  * Transforms query results into a Map structure where each result row is keyed by a specified field.
  * This annotation is useful when you need to quickly lookup entities by a unique identifier
  * or when you want to group results by a specific field value.
- * 
+ *
  * <p>The annotation extracts the value of the specified key field from each result row
  * and uses it as the map key. If multiple rows have the same key value, the last row
  * will overwrite previous ones; use {@link MergedById} when you need to combine
  * one-to-many rows into a single entity instead.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Map users by their ID
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     @MappedByKey(keyName = "id")
  *     Map<Long, User> findUsersByStatus(@Bind("status") String status);
- *     
+ *
  *     // Map users by email (assuming email is unique)
  *     @Query("SELECT * FROM users WHERE created_date > :date")
  *     @MappedByKey(keyName = "email")
@@ -49,18 +49,18 @@ import java.util.Map;
  *     @Query("SELECT * FROM users WHERE department = :dept")
  *     @MappedByKey(keyName = "id", mapClass = java.util.LinkedHashMap.class)
  *     Map<Long, User> findUsersByDepartment(@Bind("dept") String dept);
- *     
+ *
  *     // Map with composite objects
  *     @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
  *     @MappedByKey(keyName = "id")
  *     Map<Long, Map<String, Object>> getUserLoginStats();
  * }
- * 
+ *
  * // Usage example
  * Map<Long, User> usersById = userDao.findUsersByStatus("ACTIVE");
  * User user = usersById.get(123L);   // Quick lookup by ID
  * }</pre>
- * 
+ *
  * <p>Important considerations:</p>
  * <ul>
  *   <li>The key field must exist in the query results</li>
@@ -101,7 +101,7 @@ public @interface MappedByKey {
     /**
      * Specifies the name of the field to use as the map key.
      * This field must exist in the query result set.
-     * 
+     *
      * <p>The field value is extracted from each result row and used as the key
      * in the resulting map. The field can be:</p>
      * <ul>
@@ -109,19 +109,19 @@ public @interface MappedByKey {
      *   <li>An entity property name (if using entity mapping)</li>
      *   <li>An alias defined in the SQL query</li>
      * </ul>
-     * 
+     *
      * <p>Examples:</p>
      * <pre>{@code
      * // Using database column name
      * @Query("SELECT user_id, user_name, email FROM users")
      * @MappedByKey(keyName = "user_id")
      * Map<Long, Map<String, Object>> getUsers();
-     * 
+     *
      * // Using entity property name
      * @Query("SELECT * FROM products WHERE category = :category")
      * @MappedByKey(keyName = "productCode")  // Maps to product_code column
      * Map<String, Product> getProductsByCategory(@Bind("category") String category);
-     * 
+     *
      * // Using SQL alias
      * @Query("SELECT id, name, price * 0.9 as discounted_price FROM products")
      * @MappedByKey(keyName = "discounted_price")
@@ -135,7 +135,7 @@ public @interface MappedByKey {
     /**
      * Specifies the Map implementation class to use for the result.
      * The class must have a no-argument constructor.
-     * 
+     *
      * <p>Common implementations:</p>
      * <ul>
      *   <li>{@link HashMap} (default) - No ordering, best performance</li>
@@ -143,19 +143,19 @@ public @interface MappedByKey {
      *   <li>{@link java.util.TreeMap} - Sorted by key</li>
      *   <li>{@link java.util.concurrent.ConcurrentHashMap} - Thread-safe</li>
      * </ul>
-     * 
+     *
      * <p>Examples:</p>
      * <pre>{@code
      * // Maintain insertion order
      * @Query("SELECT * FROM users ORDER BY created_date")
      * @MappedByKey(keyName = "id", mapClass = LinkedHashMap.class)
      * LinkedHashMap<Long, User> getUsersInCreationOrder();
-     * 
+     *
      * // Sorted by key
      * @Query("SELECT * FROM products")
      * @MappedByKey(keyName = "productCode", mapClass = TreeMap.class)
      * TreeMap<String, Product> getProductsSortedByCode();
-     * 
+     *
      * // Thread-safe map
      * @Query("SELECT * FROM config")
      * @MappedByKey(keyName = "key", mapClass = ConcurrentHashMap.class)

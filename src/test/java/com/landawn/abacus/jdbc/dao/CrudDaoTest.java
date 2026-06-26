@@ -19,21 +19,21 @@ import org.mockito.Mockito;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Optional;
 
 public class CrudDaoTest extends TestBase {
 
-    interface TestCrudDao extends CrudDao<TestEntity, Long, PSC, TestCrudDao> {
+    interface TestCrudDao extends CrudDao<TestEntity, Long, TestCrudDao> {
     }
 
     static final class TestEntity {
     }
 
-    interface IdentifiedCrudDao extends CrudDao<IdentifiedEntity, Long, PSC, IdentifiedCrudDao> {
+    interface IdentifiedCrudDao extends CrudDao<IdentifiedEntity, Long, IdentifiedCrudDao> {
     }
 
-    interface IdAnnotatedCrudDao extends CrudDao<IdAnnotatedEntity, Long, PSC, IdAnnotatedCrudDao> {
+    interface IdAnnotatedCrudDao extends CrudDao<IdAnnotatedEntity, Long, IdAnnotatedCrudDao> {
     }
 
     static final class IdAnnotatedEntity {
@@ -368,7 +368,7 @@ public class CrudDaoTest extends TestBase {
         }
     }
 
-    interface NoIdCrudDao extends CrudDao<NoIdEntity, Long, PSC, NoIdCrudDao> {
+    interface NoIdCrudDao extends CrudDao<NoIdEntity, Long, NoIdCrudDao> {
     }
 
     @Test

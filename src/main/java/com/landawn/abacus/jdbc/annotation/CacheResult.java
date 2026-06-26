@@ -27,29 +27,29 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * Enables method-level result caching for DAO query methods.
  * This annotation provides fine-grained control over caching behavior, including
  * time-to-live, idle timeout, size restrictions, and serialization strategies.
- * 
+ *
  * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
  *
  * <p>Consider carefully whether caching at the DAO layer is appropriate for your use case,
  * as it can lead to stale data issues if not managed properly.</p>
- * 
+ *
  * <p>The cache key is automatically generated based on the method name and parameters.
  * Results are cached after the first execution and returned from cache for subsequent
  * calls with the same parameters until the cache expires or is invalidated.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
  *     // Cache individual user lookups for 30 minutes
  *     @CacheResult(liveTime = 1800000, maxIdleTime = 600000)
  *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(@Bind("id") Long id);
- *     
+ *
  *     // Cache list results with size restrictions
  *     @CacheResult(liveTime = 300000, minSize = 1, maxSize = 100)
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);
- *     
+ *
  *     // Use Kryo serialization for complex objects
  *     @CacheResult(liveTime = 3600000, transfer = "kryo")
  *     @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
@@ -58,11 +58,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Apply caching to all matching methods at type level
  * @CacheResult(liveTime = 600000, filter = {"find.*", "get.*"})
- * public interface ProductDao extends NoUpdateCrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+ * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
  *     // All find* and get* methods will be cached
  * }
  * }</pre>
- * 
+ *
  * <p>Cache invalidation strategies:</p>
  * <ul>
  *   <li>Time-based: Entries expire after {@code liveTime} milliseconds</li>
@@ -84,7 +84,7 @@ public @interface CacheResult {
      * Disables caching when set to {@code true}.
      * This allows temporarily disabling cache without removing the annotation,
      * useful for debugging or testing.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @CacheResult(disabled = true)  // Temporarily disable for debugging
@@ -100,7 +100,7 @@ public @interface CacheResult {
      * Specifies the maximum time (in milliseconds) a cached entry can live.
      * After this time expires, the entry is removed from cache and the next
      * request will execute the query again.
-     * 
+     *
      * <p>Common time duration values:</p>
      * <ul>
      *   <li>5 minutes: {@code 300000}</li>
@@ -108,7 +108,7 @@ public @interface CacheResult {
      *   <li>1 hour: {@code 3600000}</li>
      *   <li>24 hours: {@code 86400000}</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Cache for 15 minutes
@@ -125,10 +125,10 @@ public @interface CacheResult {
      * Specifies the maximum idle time (in milliseconds) for a cached entry.
      * If an entry is not accessed within this time, it expires and is removed.
      * This is useful for frequently accessed data that should expire if unused.
-     * 
+     *
      * <p>The entry expires when either {@code liveTime} or {@code maxIdleTime}
      * is exceeded, whichever comes first.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Expire if not accessed for 10 minutes
@@ -149,7 +149,7 @@ public @interface CacheResult {
      *
      * <p>This is useful to avoid caching overhead for very small result sets
      * that are cheap to query.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only cache if result has at least 10 items
@@ -170,7 +170,7 @@ public @interface CacheResult {
      *
      * <p>This prevents memory issues from caching very large result sets
      * and ensures predictable memory usage.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Don't cache if result has more than 1000 items
@@ -186,24 +186,24 @@ public @interface CacheResult {
     /**
      * Specifies the serialization strategy for cache storage and retrieval.
      * This determines how objects are copied when stored in or retrieved from cache.
-     * 
+     *
      * <p>Available options:</p>
      * <ul>
      *   <li>{@code "none"} (default) - No serialization, stores direct references</li>
      *   <li>{@code "kryo"} - Uses Kryo for fast binary serialization</li>
      *   <li>{@code "json"} - Uses JSON for human-readable serialization</li>
      * </ul>
-     * 
+     *
      * <p>Serialization provides isolation between cached objects and application code,
      * preventing unintended modifications to cached data.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Use Kryo for deep copying complex objects
      * @CacheResult(transfer = "kryo")
      * @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
      * UserProfile getComplexProfile(@Bind("userId") Long userId);
-     * 
+     *
      * // Use JSON for debugging/logging friendly format
      * @CacheResult(transfer = "json")
      * @Query("SELECT * FROM audit_logs WHERE id = :id")
@@ -224,17 +224,17 @@ public @interface CacheResult {
      * Multiple patterns are combined with OR logic.</p>
      *
      * <p>This filter is ignored when the annotation is applied at the method level.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @CacheResult(liveTime = 600000, 
+     * @CacheResult(liveTime = 600000,
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})
-     * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
      *     // These methods will be cached
      *     User findById(Long id);
      *     List<User> findByStatus(String status);
      *     User getByEmail(String email);
-     *     
+     *
      *     // These methods will NOT be cached
      *     void updateUser(User user);
      *     int deleteById(Long id);

@@ -1,6 +1,8 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -10,12 +12,11 @@ import java.util.concurrent.Executor;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.query.SqlBuilder;
 
 public class UncheckedReadOnlyJoinEntityHelperTest extends TestBase {
 
-    private interface DummyUncheckedReadOnlyJoinEntityHelper extends UncheckedDao<Object, SqlBuilder.PSC, DummyUncheckedReadOnlyJoinEntityHelper>,
-            UncheckedReadOnlyJoinEntityHelper<Object, SqlBuilder.PSC, DummyUncheckedReadOnlyJoinEntityHelper> {
+    private interface DummyUncheckedReadOnlyJoinEntityHelper extends UncheckedDao<Object, DummyUncheckedReadOnlyJoinEntityHelper>,
+            UncheckedReadOnlyJoinEntityHelper<Object, DummyUncheckedReadOnlyJoinEntityHelper> {
     }
 
     private final DummyUncheckedReadOnlyJoinEntityHelper helper = createDefaultMethodProxy(DummyUncheckedReadOnlyJoinEntityHelper.class);
@@ -37,7 +38,7 @@ public class UncheckedReadOnlyJoinEntityHelperTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(3, UncheckedReadOnlyJoinEntityHelper.class.getTypeParameters().length);
+        assertEquals(2, UncheckedReadOnlyJoinEntityHelper.class.getTypeParameters().length);
     }
 
     @Test

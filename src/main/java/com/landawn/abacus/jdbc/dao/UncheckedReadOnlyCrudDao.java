@@ -20,7 +20,6 @@ import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only CRUD DAO interface that provides only query operations without any insert, update, or delete capabilities.
@@ -37,11 +36,11 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudDao<User, Long, SqlBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudDao<User, Long, UserReadOnlyDao> {
  *     // Only query methods available, no insert/update/delete
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, readOnlyDataSource);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, readOnlyDataSource, Dsl.PSC);
  *
  * // Query operations work without checked exception handling:
  * Optional<User> user = userDao.get(userId);
@@ -65,16 +64,14 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedReadOnlyDao
  * @see UncheckedNoUpdateCrudDao
  * @see ReadOnlyCrudDao
  */
 @Beta
-public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends UncheckedReadOnlyCrudDao<T, ID, SB, TD>>
-        extends UncheckedReadOnlyDao<T, SB, TD>, UncheckedNoUpdateCrudDao<T, ID, SB, TD>, ReadOnlyCrudDao<T, ID, SB, TD> {
+public interface UncheckedReadOnlyCrudDao<T, ID, TD extends UncheckedReadOnlyCrudDao<T, ID, TD>>
+        extends UncheckedReadOnlyDao<T, TD>, UncheckedNoUpdateCrudDao<T, ID, TD>, ReadOnlyCrudDao<T, ID, TD> {
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.

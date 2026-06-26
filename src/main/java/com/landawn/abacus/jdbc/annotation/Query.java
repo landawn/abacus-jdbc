@@ -141,7 +141,7 @@ public @interface Query {
      * <pre>{@code
      * // In DAO interface
      * @SqlSource("user-queries.xml")
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     @Query(id = "findUsersByComplexCriteria")
      *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria);
      *
@@ -478,7 +478,7 @@ public @interface Query {
     /**
      * Indicates whether the SQL statement contains template variables defined by the {@link SqlFragment} or {@link SqlFragmentList} annotations
      * that will be replaced with query fragments containing named parameters.
-     * 
+     *
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding records with dynamic conditions containing named parameters
@@ -949,7 +949,7 @@ public @interface Query {
     //     *
     //     * <p>Basic examples:</p>
     //     * <pre>{@code
-    //     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+    //     * public interface UserDao extends CrudDao<User, Long, UserDao> {
     //     *     // Default: throws checked SQLException
     //     *     @Query("SELECT * FROM users WHERE id = :id")
     //     *     User findById(@Bind("id") long id) throws SQLException;

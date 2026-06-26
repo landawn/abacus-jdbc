@@ -13,6 +13,8 @@
  */
 package com.landawn.abacus.samples;
 
+import static com.landawn.abacus.query.Dsl.NSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import static com.landawn.abacus.samples.JdbcTest.dataSource;
 import static com.landawn.abacus.samples.JdbcTest.userDao;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,8 +31,6 @@ import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SqlBuilder.NSC;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.type.Type;

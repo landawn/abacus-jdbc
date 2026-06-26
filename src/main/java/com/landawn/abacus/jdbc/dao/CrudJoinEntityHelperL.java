@@ -20,7 +20,6 @@ import java.util.Collection;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -28,10 +27,10 @@ import com.landawn.abacus.util.u.Optional;
  * A specialized interface for CRUD operations with join entity support that uses {@code Long} as the ID type.
  * This interface extends {@link CrudJoinEntityHelper} and provides convenience methods that accept primitive {@code long} values
  * in addition to the {@code Long} object methods inherited from the parent interface.
- * 
+ *
  * <p>This interface is designed to work with entities that have relationships defined using the {@code @JoinedBy} annotation.
  * It automatically handles the loading of related entities when retrieving records from the database.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Entity
@@ -43,23 +42,22 @@ import com.landawn.abacus.util.u.Optional;
  *     @JoinedBy("id=Order.userId")
  *     private List<Order> orders;
  * }
- * 
- * public interface UserDao extends CrudJoinEntityHelperL<User, SqlBuilder.PSC, UserDao> {
+ *
+ * public interface UserDao extends CrudDaoL<User, UserDao>, CrudJoinEntityHelperL<User, UserDao> {
  *     // Inherits join entity methods with Long ID type
  * }
- * 
+ *
  * // Usage
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
- * 
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ *
  * // Get user with orders loaded
  * Optional<User> user = userDao.get(123L, Order.class);
- * 
+ *
  * // Get user with all joined entities loaded
  * Optional<User> userWithAll = userDao.get(123L, true);
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the companion {@link CrudDaoL} type (with {@code Long} primary key) that owns
  *             this helper, used for fluent method chaining and access to CRUD operations
  *
@@ -67,7 +65,7 @@ import com.landawn.abacus.util.u.Optional;
  * @see CrudJoinEntityHelper
  * @see CrudDaoL
  */
-public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudJoinEntityHelper<T, Long, SB, TD> {
+public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends CrudJoinEntityHelper<T, Long, TD> {
 
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities.

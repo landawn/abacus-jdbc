@@ -13,6 +13,7 @@
  */
 package com.landawn.abacus.samples;
 
+import static com.landawn.abacus.query.Dsl.SCSB;
 import static com.landawn.abacus.samples.JdbcTest.dataSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -23,7 +24,6 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig;
-import com.landawn.abacus.query.SqlBuilder.SCSB;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;

@@ -51,7 +51,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
+ * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
  *
  *     // Default: REQUIRED + database-default isolation.
  *     @Transactional
@@ -87,7 +87,7 @@ public @interface Transactional {
     /**
      * Specifies the transaction propagation behavior.
      * This determines how the method participates in existing transactions.
-     * 
+     *
      * <p>Common propagation behaviors:</p>
      * <ul>
      *   <li>{@link Propagation#REQUIRED} (default) - Join existing transaction or create new one</li>
@@ -97,17 +97,17 @@ public @interface Transactional {
      *   <li>{@link Propagation#NOT_SUPPORTED} - Execute non-transactionally, suspend existing</li>
      *   <li>{@link Propagation#NEVER} - Execute non-transactionally, fail if transaction exists</li>
      * </ul>
-     * 
+     *
      * <p>Example scenarios:</p>
      * <pre>{@code
      * // Main business operation - needs transaction
      * @Transactional(propagation = Propagation.REQUIRED)
      * void processOrder(Order order) { ... }
-     * 
+     *
      * // Audit logging - independent transaction
      * @Transactional(propagation = Propagation.REQUIRES_NEW)
      * void logActivity(String activity) { ... }
-     * 
+     *
      * // Read operation - works with or without transaction
      * @Transactional(propagation = Propagation.SUPPORTS)
      * User getUser(long id) { ... }
@@ -121,7 +121,7 @@ public @interface Transactional {
     /**
      * Specifies the transaction isolation level.
      * This controls how the transaction interacts with other concurrent transactions.
-     * 
+     *
      * <p>Isolation levels (from least to most restrictive):</p>
      * <ul>
      *   <li>{@link IsolationLevel#DEFAULT} - Use database default (usually READ_COMMITTED)</li>
@@ -130,22 +130,22 @@ public @interface Transactional {
      *   <li>{@link IsolationLevel#REPEATABLE_READ} - Prevents dirty and non-repeatable reads</li>
      *   <li>{@link IsolationLevel#SERIALIZABLE} - Highest isolation, prevents all phenomena</li>
      * </ul>
-     * 
+     *
      * <p>Choose isolation level based on your consistency requirements:</p>
      * <pre>{@code
      * // Financial transactions need high isolation
      * @Transactional(isolation = IsolationLevel.SERIALIZABLE)
      * void transferFunds(Account from, Account to, BigDecimal amount) { ... }
-     * 
+     *
      * // Reporting can tolerate some inconsistency
      * @Transactional(isolation = IsolationLevel.READ_UNCOMMITTED)
      * List<Report> generateReports() { ... }
-     * 
+     *
      * // Most business operations use default
      * @Transactional(isolation = IsolationLevel.DEFAULT)
      * void updateUserProfile(User user) { ... }
      * }</pre>
-     * 
+     *
      * <p><strong>Note:</strong> Higher isolation levels may impact performance due to
      * increased locking. Choose the lowest level that meets your consistency requirements.</p>
      *

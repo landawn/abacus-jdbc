@@ -19,13 +19,13 @@ import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedCrudJoinEntityHelperTest extends TestBase {
 
-    interface TestUncheckedCrudJoinDao extends UncheckedCrudDao<TestEntity, Long, PSC, TestUncheckedCrudJoinDao>,
-            UncheckedCrudJoinEntityHelper<TestEntity, Long, PSC, TestUncheckedCrudJoinDao> {
+    interface TestUncheckedCrudJoinDao
+            extends UncheckedCrudDao<TestEntity, Long, TestUncheckedCrudJoinDao>, UncheckedCrudJoinEntityHelper<TestEntity, Long, TestUncheckedCrudJoinDao> {
     }
 
     static final class TestEntity {

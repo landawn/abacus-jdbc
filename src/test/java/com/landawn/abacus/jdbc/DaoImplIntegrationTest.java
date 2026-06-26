@@ -30,7 +30,7 @@ import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -103,7 +103,7 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
-    public interface UserAccountDao extends CrudDao<UserAccount, Long, PSC, UserAccountDao> {
+    public interface UserAccountDao extends CrudDao<UserAccount, Long, UserAccountDao> {
     }
 
     @Table("type_probe")
@@ -166,7 +166,7 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
-    public interface TypeProbeDao extends CrudDao<TypeProbe, Long, PSC, TypeProbeDao> {
+    public interface TypeProbeDao extends CrudDao<TypeProbe, Long, TypeProbeDao> {
     }
 
     private DataSource ds;
@@ -199,8 +199,8 @@ public class DaoImplIntegrationTest extends TestBase {
                     + "VALUES (1, 'A', DATE '2020-01-15', TIME '10:30:00', TIMESTAMP '2020-01-15 10:30:00', X'0102')");
         }
 
-        dao = JdbcUtil.createDao(UserAccountDao.class, ds);
-        typeDao = JdbcUtil.createDao(TypeProbeDao.class, ds);
+        dao = JdbcUtil.createDao(UserAccountDao.class, ds, PSC);
+        typeDao = JdbcUtil.createDao(TypeProbeDao.class, ds, PSC);
     }
 
     @AfterAll
@@ -383,14 +383,14 @@ public class DaoImplIntegrationTest extends TestBase {
     // A malformed DAO interface is rejected at creation time.
     @Test
     public void testCreateDao_InvalidEntityId_Throws() {
-        assertThrows(Exception.class, () -> JdbcUtil.createDao(NoIdBadDao.class, ds).insert(new NoIdBad()));
+        assertThrows(Exception.class, () -> JdbcUtil.createDao(NoIdBadDao.class, ds, PSC).insert(new NoIdBad()));
     }
 
     // A custom @Query UPDATE method declared with a WRAPPER return type (Integer/Long/Boolean) must dispatch into
     // the update path at OP.DEFAULT. Regression: DaoImpl#isUpdateReturnType used to be primitive-only, so
     // wrapper returns silently fell through to "Unsupported sql annotation", even though the error message and
     // the result converter both explicitly advertised wrapper support.
-    public interface WrapperReturnDao extends CrudDao<UserAccount, Long, PSC, WrapperReturnDao> {
+    public interface WrapperReturnDao extends CrudDao<UserAccount, Long, WrapperReturnDao> {
         @Query("UPDATE user_account SET age = ? WHERE id = ?")
         Integer bumpAgeReturnInteger(int newAge, long id) throws SQLException;
 
@@ -403,7 +403,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
     @Test
     public void testCustomQuery_WrapperReturnTypes_DispatchToUpdatePath() throws SQLException {
-        final WrapperReturnDao wrapDao = JdbcUtil.createDao(WrapperReturnDao.class, ds);
+        final WrapperReturnDao wrapDao = JdbcUtil.createDao(WrapperReturnDao.class, ds, PSC);
         final Long id = dao.insert(newUser("Wrap", "Return", 10));
 
         // Integer return — receives row-affected count converted via Numbers::toIntExact.
@@ -442,7 +442,7 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
-    public interface NoIdBadDao extends CrudDao<NoIdBad, Long, PSC, NoIdBadDao> {
+    public interface NoIdBadDao extends CrudDao<NoIdBad, Long, NoIdBadDao> {
     }
 
     // Regression: the @Transactional + @SqlLogEnabled/@PerfLog wrapper used to call
@@ -450,7 +450,7 @@ public class DaoImplIntegrationTest extends TestBase {
     // thread-locals. If beginTransaction itself threw (e.g., the DataSource went down between the
     // SqlLog mutation and the connection acquisition), the thread-locals were never restored,
     // leaking the annotation's settings into all subsequent calls on the same thread.
-    public interface TxLeakDao extends CrudDao<UserAccount, Long, PSC, TxLeakDao> {
+    public interface TxLeakDao extends CrudDao<UserAccount, Long, TxLeakDao> {
         @com.landawn.abacus.jdbc.annotation.Transactional
         @com.landawn.abacus.jdbc.annotation.SqlLogEnabled(value = true, maxSqlLogLength = 4242)
         @com.landawn.abacus.jdbc.annotation.PerfLog(minExecutionTimeForSql = 7777L, minExecutionTimeForOperation = 8888L)
@@ -468,7 +468,7 @@ public class DaoImplIntegrationTest extends TestBase {
                     + "last_name VARCHAR(64), " + "age INT, " + "active BOOLEAN)");
         }
 
-        final TxLeakDao txDao = JdbcUtil.createDao(TxLeakDao.class, scratchDs);
+        final TxLeakDao txDao = JdbcUtil.createDao(TxLeakDao.class, scratchDs, PSC);
 
         // Snapshot the thread-local SQL-log + perf-log state before the failed call.
         final boolean priorSqlLogEnabled = JdbcUtil.isSqlLogEnabled();
@@ -590,7 +590,7 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     // Custom @Query SELECT/COUNT/DELETE methods with scalar, entity-list, and int return types.
-    public interface CustomQueryDao extends CrudDao<UserAccount, Long, PSC, CustomQueryDao> {
+    public interface CustomQueryDao extends CrudDao<UserAccount, Long, CustomQueryDao> {
         @Query("SELECT first_name FROM user_account WHERE id = ?")
         String firstNameById(long id) throws SQLException;
 
@@ -606,7 +606,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
     @Test
     public void testCustomQueryMethods() throws SQLException {
-        final CustomQueryDao cqDao = JdbcUtil.createDao(CustomQueryDao.class, ds);
+        final CustomQueryDao cqDao = JdbcUtil.createDao(CustomQueryDao.class, ds, PSC);
         final Long id = dao.insert(newUser("Cust", "Query", 40));
         dao.insert(newUser("Cust2", "Query", 50));
 
@@ -653,14 +653,14 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     // @Query with a named parameter bound via @Bind drives the named-SQL custom-method dispatch.
-    public interface BindDao extends CrudDao<UserAccount, Long, PSC, BindDao> {
+    public interface BindDao extends CrudDao<UserAccount, Long, BindDao> {
         @Query("SELECT first_name FROM user_account WHERE age = :age")
         String firstNameByAge(@com.landawn.abacus.jdbc.annotation.Bind("age") int age) throws SQLException;
     }
 
     @Test
     public void testBindNamedQuery() throws SQLException {
-        final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds);
+        final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds, PSC);
         dao.insert(newUser("Bind", "Me", 77));
 
         assertEquals("Bind", bindDao.firstNameByAge(77));

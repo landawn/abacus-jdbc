@@ -33,7 +33,6 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Beans;
@@ -62,7 +61,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * UncheckedDao<User, SqlBuilder.PSC, UserDao> userDao = ...;
+ * UncheckedDao<User, UserDao> userDao = ...;
  * User user = new User("John", "Doe");
  * userDao.save(user);
  *
@@ -70,14 +69,12 @@ import com.landawn.abacus.util.u.OptionalShort;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (typically one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.jdbc.dao.Dao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
+public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, TD> {
 
     /**
      * Saves (inserts) the specified entity to the database.
@@ -100,7 +97,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Saves the specified entity with only the specified properties.
      * Properties not included in {@code propNamesToSave} will not be persisted.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("John", "Doe");
@@ -117,7 +114,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Saves the entity using a named insert SQL statement. The SQL statement should contain
      * named parameters that will be populated from the entity properties.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (first_name, last_name) VALUES (:firstName, :lastName)";
@@ -135,7 +132,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Batch saves the specified entities to the database using the default batch size.
      * This method is more efficient than saving entities one by one.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(
@@ -157,7 +154,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Batch saves the specified entities to the database using the specified batch size.
      * The entities will be saved in batches to improve performance.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getLargeUserList();
@@ -174,7 +171,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Batch saves the specified entities with only the specified properties using the default batch size.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getUserList();
@@ -193,7 +190,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Batch saves the specified entities with only the specified properties using the specified batch size.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getLargeUserList();
@@ -211,7 +208,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Batch saves entities using a named insert SQL statement with the default batch size.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (first_name, last_name) VALUES (:firstName, :lastName)";
@@ -232,7 +229,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Batch saves entities using a named insert SQL statement with the specified batch size.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (first_name, last_name) VALUES (:firstName, :lastName)";
@@ -252,7 +249,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Checks if any records exist that match the specified condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * boolean hasActiveUsers = userDao.exists(Filters.eq("status", "ACTIVE"));
@@ -269,7 +266,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Checks if no records exist that match the specified condition.
      * This is the logical opposite of {@link #exists(Condition)}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * boolean noInactiveUsers = userDao.notExists(Filters.eq("status", "INACTIVE"));
@@ -288,7 +285,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Counts the number of records that match the specified condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int activeUserCount = userDao.count(Filters.eq("status", "ACTIVE"));
@@ -303,7 +300,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds and returns the first record that matches the specified condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.findFirst(Filters.eq("email", "john@example.com"));
@@ -318,11 +315,11 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds the first record matching the condition and maps it using the provided row mapper.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> name = userDao.findFirst(
-     *     Filters.eq("id", 1), 
+     *     Filters.eq("id", 1),
      *     rs -> rs.getString("firstName") + " " + rs.getString("lastName")
      * );
      * }</pre>
@@ -340,7 +337,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Finds the first record matching the condition and maps it using the provided bi-row mapper.
      * The bi-row mapper receives both the result set and a list of column labels.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Map<String, Object>> result = userDao.findFirst(
@@ -367,7 +364,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds the first record matching the condition, selecting only the specified properties.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.findFirst(
@@ -386,7 +383,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds the first record matching the condition with selected properties and maps it using the row mapper.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> email = userDao.findFirst(
@@ -410,7 +407,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds the first record matching the condition with selected properties and maps it using the bi-row mapper.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<UserInfo> info = userDao.findFirst(
@@ -569,7 +566,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalBoolean} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = userDao.queryForBoolean("isActive", Filters.eq("id", 1));
@@ -589,7 +586,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalChar} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = userDao.queryForChar("grade", Filters.eq("studentId", 12345));
@@ -606,7 +603,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalByte} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalByte level = userDao.queryForByte("userLevel", Filters.eq("id", 1));
@@ -623,7 +620,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalShort} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalShort age = userDao.queryForShort("age", Filters.eq("username", "john_doe"));
@@ -640,7 +637,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalInt} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt count = userDao.queryForInt("loginCount", Filters.eq("email", "user@example.com"));
@@ -657,7 +654,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalLong} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong totalBytes = userDao.queryForLong("totalStorageUsed", Filters.eq("id", 1));
@@ -674,7 +671,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalFloat} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalFloat rating = userDao.queryForFloat("averageRating", Filters.eq("productId", 100));
@@ -691,7 +688,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code OptionalDouble} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble balance = userDao.queryForDouble("accountBalance", Filters.eq("accountId", 12345));
@@ -708,7 +705,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a {@code Nullable<String>} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForString("email", Filters.eq("username", "john_doe"));
@@ -728,7 +725,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a {@code Nullable<java.sql.Date>} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", Filters.eq("id", 1));
@@ -745,7 +742,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a {@code Nullable<java.sql.Time>} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Time> startTime = userDao.queryForTime("workStartTime", Filters.eq("employeeId", 100));
@@ -762,7 +759,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a {@code Nullable<java.sql.Timestamp>} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Timestamp> lastLogin = userDao.queryForTimestamp("lastLoginTime", Filters.eq("username", "john_doe"));
@@ -779,7 +776,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a {@code Nullable<byte[]>} describing the value in the first row/column if it exists.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = userDao.queryForBytes("avatarImage", Filters.eq("userId", 1));
@@ -797,7 +794,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists,
      * converted to the specified target type.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = userDao.queryForSingleValue("price", Filters.eq("productId", 100), BigDecimal.class);
@@ -818,7 +815,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Returns an {@code Optional} describing the non-null value in the first row/column if it exists.
      * Unlike {@link #queryForSingleValue(String, Condition, Class)}, this method returns an empty {@code Optional} for {@code null} values.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", Filters.eq("id", 1), String.class);
@@ -838,11 +835,11 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code Optional} describing the non-null value mapped by the row mapper.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<UserStatus> status = userDao.queryForSingleNonNull(
-     *     "status", 
+     *     "status",
      *     Filters.eq("id", 1),
      *     rs -> UserStatus.valueOf(rs.getString(1))
      * );
@@ -863,7 +860,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists.
      * Throws {@code DuplicateResultException} if more than one record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> uniqueCode = userDao.queryForUniqueValue("code", Filters.eq("type", "ADMIN"), String.class);
@@ -885,12 +882,12 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Returns an {@code Optional} describing the unique non-null value in the first row/column.
      * Throws {@code DuplicateResultException} if more than one record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Integer> uniqueLevel = userDao.queryForUniqueNonNull(
-     *     "level", 
-     *     Filters.eq("badge", "GOLD"), 
+     *     "level",
+     *     Filters.eq("badge", "GOLD"),
      *     Integer.class
      * );
      * }</pre>
@@ -911,7 +908,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper.
      * Throws {@code DuplicateResultException} if more than one record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Permission> permission = userDao.queryForUniqueNonNull(
@@ -936,7 +933,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Executes a query and returns the results as a Dataset containing all matching records.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset activeUsers = userDao.query(Filters.eq("status", "ACTIVE"));
@@ -952,7 +949,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Executes a query selecting only specified properties and returns the results as a Dataset.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset userEmails = userDao.query(
@@ -997,7 +994,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Executes a query with selected properties and processes the result set using the result extractor.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> names = userDao.query(
@@ -1026,7 +1023,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Executes a query and processes the result set using the bi-result extractor which receives column labels.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Map<String, Object>> results = userDao.query(
@@ -1056,7 +1053,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Executes a query with selected properties and processes using the bi-result extractor.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * double avgAge = userDao.query(
@@ -1087,7 +1084,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a list of all entities matching the specified condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> activeUsers = userDao.list(Filters.eq("status", "ACTIVE"));
@@ -1102,7 +1099,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a list of results mapped by the provided row mapper for records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> emails = userDao.list(
@@ -1122,7 +1119,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a list of results mapped by the bi-row mapper for records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<UserDTO> users = userDao.list(
@@ -1143,7 +1140,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Returns a filtered list of results mapped by the row mapper for records matching the condition.
      * Only rows that pass the row filter will be mapped and included in the result.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> premiumUsers = userDao.list(
@@ -1165,7 +1162,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a filtered list using bi-row filter and bi-row mapper for records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Account> accounts = userDao.list(
@@ -1187,7 +1184,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a list of entities with only selected properties for records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(
@@ -1206,7 +1203,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a list of mapped results with selected properties for records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> fullNames = userDao.list(
@@ -1228,7 +1225,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a list of mapped results using bi-row mapper with selected properties.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<UserInfo> infos = userDao.list(
@@ -1251,7 +1248,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a filtered and mapped list with selected properties for records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<PremiumUser> premiumUsers = userDao.list(
@@ -1276,7 +1273,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a filtered and mapped list using bi-filters and bi-mappers with selected properties.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<ValidatedUser> users = userDao.list(
@@ -1302,7 +1299,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Returns a list of values for a single property from records matching the condition.
      * This is a convenience method for selecting a single column.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> emails = userDao.list("email", Filters.eq("newsletter", true));
@@ -1325,7 +1322,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a list of mapped values for a single property from records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<UserStatus> statuses = userDao.list(
@@ -1350,7 +1347,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a filtered list of mapped values for a single property from records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<BigDecimal> highPrices = userDao.list(
@@ -1378,7 +1375,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Iterates through all records matching the condition and processes each row with the row consumer.
      * This method is useful for processing large result sets without loading all data into memory.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1396,7 +1393,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Iterates through records using a bi-row consumer that receives column labels.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1418,7 +1415,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Iterates through filtered records matching the condition.
      * Only rows that pass the filter will be processed by the consumer.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1438,7 +1435,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Iterates through filtered records using bi-row filter and bi-row consumer.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1458,7 +1455,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Iterates through records with selected properties matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1478,7 +1475,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Iterates through records with selected properties using a bi-row consumer.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1498,7 +1495,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Iterates through filtered records with selected properties.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1521,7 +1518,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Iterates through filtered records with selected properties using bi-row filter and consumer.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
@@ -1600,7 +1597,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Updates a single property value for all records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int updated = userDao.update("status", "INACTIVE", Filters.lt("lastLogin", thirtyDaysAgo));
@@ -1622,7 +1619,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Updates multiple properties for all records matching the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
@@ -1669,14 +1666,14 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Updates records matching the condition with specified properties from the entity.
      * Only the properties listed in propNamesToUpdate will be updated.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User updates = new User();
      * updates.setEmail("newemail@example.com");
      * updates.setPhone("555-1234");
      * updates.setAddress("123 Main St");   // This won't be updated
-     * 
+     *
      * int updated = userDao.update(
      *     updates,
      *     Arrays.asList("email", "phone"),  // Only update these fields
@@ -1696,12 +1693,12 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Executes an upsert operation: inserts the entity if no record matches the unique properties,
      * otherwise updates the existing record.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("john@example.com", "John", "Doe");
      * user.setLastLogin(new Date());
-     * 
+     *
      * // Upsert based on email being unique
      * User result = userDao.upsert(user, Arrays.asList("email"));
      * }</pre>
@@ -1726,13 +1723,13 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     /**
      * Executes an upsert operation: inserts the entity if no record matches the condition,
      * otherwise updates the existing record.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setEmail("john@example.com");
      * user.setScore(100);
-     * 
+     *
      * // Custom condition for upsert
      * User result = userDao.upsert(user, Filters.and(
      *     Filters.eq("email", user.getEmail()),
@@ -1759,14 +1756,13 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
             return entity;
         } else {
             final Class<?> cls = entity.getClass();
-            @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
-                Beans.copyInto(entity, dbEntity);
+                Beans.mergeInto(entity, dbEntity);
                 update(dbEntity, cond);
             } else {
-                Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
                 final Condition idCond = Filters.allEqual(dbEntity, idPropNameList);
                 update(dbEntity, idCond);
             }
@@ -1777,7 +1773,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Deletes all records that match the specified condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Delete all inactive users

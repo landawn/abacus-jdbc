@@ -30,7 +30,6 @@ import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Throwables;
 
@@ -68,11 +67,11 @@ import com.landawn.abacus.util.Throwables;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a no-update DAO for append-only audit logs
- * public interface AuditLogDao extends NoUpdateDao<AuditLog, SqlBuilder.PSC, AuditLogDao> {
+ * public interface AuditLogDao extends NoUpdateDao<AuditLog, AuditLogDao> {
  *     // Custom read methods
  * }
  *
- * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
+ * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource, Dsl.PSC);
  *
  * // Supported operations - all work fine:
  *
@@ -110,15 +109,13 @@ import com.landawn.abacus.util.Throwables;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see Dao
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
+public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD> {
     /**
      * Prepares a SQL query for execution, restricted to {@code SELECT} and {@code INSERT} statements.
      * Creates a {@link PreparedQuery} that can be executed multiple times with different parameters.
@@ -278,7 +275,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("Custom statement creators are not supported in a no-update DAO.");
     }
 
     /**
@@ -454,7 +451,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("Custom statement creators are not supported in a no-update DAO.");
     }
 
     /**
@@ -656,7 +653,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("Custom statement creators are not supported in a no-update DAO.");
     }
 
     /**
@@ -674,7 +671,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default CallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("Callable queries are not supported in a no-update DAO.");
     }
 
     /**
@@ -694,7 +691,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @Override
     default CallableQuery prepareCallableQuery(final String query, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("Callable queries are not supported in a no-update DAO.");
     }
 
     /**

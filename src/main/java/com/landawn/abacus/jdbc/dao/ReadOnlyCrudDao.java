@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * Completely read-only CRUD DAO that prevents all data modification operations.
@@ -54,11 +53,11 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO for reporting
- * public interface ReportDao extends ReadOnlyCrudDao<Report, Long, SqlBuilder.PSC, ReportDao> {
+ * public interface ReportDao extends ReadOnlyCrudDao<Report, Long, ReportDao> {
  *     // Custom query methods can be added
  * }
  *
- * ReportDao reportDao = JdbcUtil.createDao(ReportDao.class, dataSource);
+ * ReportDao reportDao = JdbcUtil.createDao(ReportDao.class, dataSource, Dsl.PSC);
  *
  * // Supported operations - all work fine:
  *
@@ -99,8 +98,6 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyDao
  * @see NoUpdateCrudDao
@@ -108,8 +105,7 @@ import com.landawn.abacus.query.SqlBuilder;
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOnlyCrudDao<T, ID, SB, TD>>
-        extends ReadOnlyDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD> {
+public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> extends ReadOnlyDao<T, TD>, NoUpdateCrudDao<T, ID, TD> {
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.

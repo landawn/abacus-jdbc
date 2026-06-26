@@ -15,16 +15,11 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.lang.reflect.WildcardType;
+import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,17 +35,9 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.AbstractQueryBuilder.SP;
-import com.landawn.abacus.query.SqlBuilder;
-import com.landawn.abacus.query.SqlBuilder.NAC;
-import com.landawn.abacus.query.SqlBuilder.NLC;
-import com.landawn.abacus.query.SqlBuilder.NSB;
-import com.landawn.abacus.query.SqlBuilder.NSC;
-import com.landawn.abacus.query.SqlBuilder.PAC;
-import com.landawn.abacus.query.SqlBuilder.PLC;
-import com.landawn.abacus.query.SqlBuilder.PSB;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import com.landawn.abacus.query.Dsl;
+import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.ExceptionUtil;
@@ -259,25 +246,24 @@ final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class UserDaoImpl implements CrudDao<User, Long, PSC, UserDaoImpl>,
-     *                              CrudJoinEntityHelper<User, Long, PSC, UserDaoImpl> {
+     * class UserDaoImpl implements CrudDao<User, Long, UserDaoImpl>,
+     *                              CrudJoinEntityHelper<User, Long, UserDaoImpl> {
      *     // ... implementation
      * }
      *
      * UserDaoImpl dao = new UserDaoImpl();
-     * CrudDao<User, Long, PSC, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
+     * CrudDao<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
      * // Successfully casts to CrudDao
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the CrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to CrudDao
      * @throws UnsupportedOperationException if the DAO does not implement CrudDao interface
      */
-    static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> TD getCrudDao(final CrudJoinEntityHelper<T, ID, SB, TD> dao) {
+    static <T, ID, TD extends CrudDao<T, ID, TD>> TD getCrudDao(final CrudJoinEntityHelper<T, ID, TD> dao) {
         if (dao instanceof CrudDao) {
             return (TD) dao;
         } else {
@@ -296,24 +282,23 @@ final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class ProductDaoImpl implements Dao<Product, PSC, ProductDaoImpl>,
-     *                                 JoinEntityHelper<Product, PSC, ProductDaoImpl> {
+     * class ProductDaoImpl implements Dao<Product, ProductDaoImpl>,
+     *                                 JoinEntityHelper<Product, ProductDaoImpl> {
      *     // ... implementation
      * }
      *
      * ProductDaoImpl dao = new ProductDaoImpl();
-     * Dao<Product, PSC, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
+     * Dao<Product, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
      * // Successfully casts to Dao
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the JoinEntityHelper instance to cast
      * @return the DAO instance cast to Dao
      * @throws UnsupportedOperationException if the DAO does not implement Dao interface
      */
-    static <T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> TD getDao(final JoinEntityHelper<T, SB, TD> dao) {
+    static <T, TD extends Dao<T, TD>> TD getDao(final JoinEntityHelper<T, TD> dao) {
         if (dao instanceof Dao) {
             return (TD) dao;
         } else {
@@ -332,24 +317,23 @@ final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class ProductDaoImpl implements UncheckedDao<Product, PSC, ProductDaoImpl>,
-     *                                 UncheckedJoinEntityHelper<Product, PSC, ProductDaoImpl> {
+     * class ProductDaoImpl implements UncheckedDao<Product, ProductDaoImpl>,
+     *                                 UncheckedJoinEntityHelper<Product, ProductDaoImpl> {
      *     // ... implementation
      * }
      *
      * ProductDaoImpl dao = new ProductDaoImpl();
-     * UncheckedDao<Product, PSC, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
+     * UncheckedDao<Product, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
      * // Successfully casts to UncheckedDao
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the UncheckedJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedDao
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedDao interface
      */
-    static <T, SB extends SqlBuilder, TD extends UncheckedDao<T, SB, TD>> TD getDao(final UncheckedJoinEntityHelper<T, SB, TD> dao) {
+    static <T, TD extends UncheckedDao<T, TD>> TD getDao(final UncheckedJoinEntityHelper<T, TD> dao) {
         if (dao instanceof UncheckedDao) {
             return (TD) dao;
         } else {
@@ -368,25 +352,24 @@ final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class UserDaoImpl implements UncheckedCrudDao<User, Long, PSC, UserDaoImpl>,
-     *                              UncheckedCrudJoinEntityHelper<User, Long, PSC, UserDaoImpl> {
+     * class UserDaoImpl implements UncheckedCrudDao<User, Long, UserDaoImpl>,
+     *                              UncheckedCrudJoinEntityHelper<User, Long, UserDaoImpl> {
      *     // ... implementation
      * }
      *
      * UserDaoImpl dao = new UserDaoImpl();
-     * UncheckedCrudDao<User, Long, PSC, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
+     * UncheckedCrudDao<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
      * // Successfully casts to UncheckedCrudDao
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the UncheckedCrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedCrudDao
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudDao interface
      */
-    static <T, ID, SB extends SqlBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>> TD getCrudDao(final UncheckedCrudJoinEntityHelper<T, ID, SB, TD> dao) {
+    static <T, ID, TD extends UncheckedCrudDao<T, ID, TD>> TD getCrudDao(final UncheckedCrudJoinEntityHelper<T, ID, TD> dao) {
         if (dao instanceof UncheckedCrudDao) {
             return (TD) dao;
         } else {
@@ -582,17 +565,6 @@ final class DaoUtil {
         return result;
     }
 
-    /**
-     * Cache of resolved SqlBuilder subclasses for DAO interfaces.
-     * <p>
-     * Query builder type depends only on interface generic metadata, so it can be safely cached per DAO class.
-     * Prepared/Named query lambdas themselves are created per DAO instance to avoid accidentally capturing
-     * another DAO's DataSource/entity metadata.
-     * </p>
-     */
-    @SuppressWarnings("rawtypes")
-    static final Map<Class<? extends Dao>, Class<? extends SqlBuilder>> daoSqlBuilderClassPool = new ConcurrentHashMap<>();
-
     // getDaoPreparedQueryFunc(dao) is called on every prepareQuery(Collection,Condition) /
     // prepareNamedQuery(Collection,Condition) path. The returned Tuple2 (and the 6 closures it
     // wraps) are bound to the specific DAO instance (dataSource()/targetEntityClass()), so it is
@@ -606,9 +578,8 @@ final class DaoUtil {
      * Creates query preparation functions for a given DAO instance.
      * <p>
      * This method returns a tuple containing two functions: one for creating PreparedQuery instances
-     * and one for creating NamedQuery instances. The functions are determined based on the SqlBuilder
-     * type parameter of the DAO interface (PSC, PAC, PLC, or PSB). SqlBuilder type lookup is cached
-     * by DAO class, while returned functions are instance-bound to avoid cross-DAO state leakage.
+     * and one for creating NamedQuery instances. The functions are determined from the {@link Dsl}
+     * configured on the DAO instance and are instance-bound to avoid cross-DAO state leakage.
      * </p>
      * <p>
      * The returned functions can be used to build and prepare SQL queries based on select property
@@ -618,7 +589,7 @@ final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get the query preparation functions for a DAO
-     * Dao<User, PSC, UserDao> userDao = ...;
+     * Dao<User, UserDao> userDao = ...;
      * Tuple2<BiFunction, BiFunction> funcs = DaoUtil.getDaoPreparedQueryFunc(userDao);
      *
      * // Use the PreparedQuery function
@@ -634,8 +605,7 @@ final class DaoUtil {
      *
      * @param dao the DAO instance for which to get query preparation functions
      * @return a tuple containing two bi-functions: the first for creating {@link PreparedQuery} instances,
-     *         the second for creating {@link NamedQuery} instances; defaults to {@code PSC}/{@code NSC}
-     *         when the DAO's {@code SB} type parameter cannot be resolved
+     *         the second for creating {@link NamedQuery} instances
      */
     @SuppressWarnings("rawtypes")
     static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(
@@ -646,8 +616,8 @@ final class DaoUtil {
     @SuppressWarnings("rawtypes")
     private static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> computeDaoPreparedQueryFunc(
             final Dao dao) {
-        final Class<? extends Dao> daoInterface = dao.getClass();
-        final Class<? extends SqlBuilder> sbc = daoSqlBuilderClassPool.computeIfAbsent(daoInterface, DaoUtil::getDaoSqlBuilderClass);
+        final Dsl dsl = dao.dsl();
+        final Dsl namedDsl = namedDsl(dsl);
 
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = dao.targetEntityClass();
@@ -692,151 +662,55 @@ final class DaoUtil {
             return query;
         };
 
-        if (PSC.class.isAssignableFrom(sbc)) {
-            return Tuple.of((selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? PSC.selectFrom(targetEntityClass) : PSC.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
+        return Tuple.of((selectPropNames, cond) -> {
+            final SP sp = (selectPropNames == null ? dsl.selectFrom(targetEntityClass) : dsl.select(selectPropNames).from(targetEntityClass)).append(cond)
+                    .build();
 
-                return prepareQueryFunc.apply(dao.dataSource(), sp);
-            }, (selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? NSC.selectFrom(targetEntityClass) : NSC.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
+            return prepareQueryFunc.apply(dao.dataSource(), sp);
+        }, (selectPropNames, cond) -> {
+            final SP sp = (selectPropNames == null ? namedDsl.selectFrom(targetEntityClass) : namedDsl.select(selectPropNames).from(targetEntityClass))
+                    .append(cond)
+                    .build();
 
-                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-            });
-        } else if (PAC.class.isAssignableFrom(sbc)) {
-            return Tuple.of((selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? PAC.selectFrom(targetEntityClass) : PAC.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
-
-                return prepareQueryFunc.apply(dao.dataSource(), sp);
-            }, (selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? NAC.selectFrom(targetEntityClass) : NAC.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
-
-                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-            });
-        } else if (PLC.class.isAssignableFrom(sbc)) {
-            return Tuple.of((selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? PLC.selectFrom(targetEntityClass) : PLC.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
-
-                return prepareQueryFunc.apply(dao.dataSource(), sp);
-            }, (selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? NLC.selectFrom(targetEntityClass) : NLC.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
-
-                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-            });
-        } else if (PSB.class.isAssignableFrom(sbc)) {
-            return Tuple.of((selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? PSB.selectFrom(targetEntityClass) : PSB.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
-
-                return prepareQueryFunc.apply(dao.dataSource(), sp);
-            }, (selectPropNames, cond) -> {
-                final SP sp = (selectPropNames == null ? NSB.selectFrom(targetEntityClass) : NSB.select(selectPropNames).from(targetEntityClass)).append(cond)
-                        .build();
-
-                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-            });
-        } else {
-            throw new IllegalArgumentException("SqlBuilder type parameter must be SqlBuilder.PSC/PAC/PLC/PSB, but was: " + sbc);
-        }
+            return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
+        });
     }
 
-    private static Class<? extends SqlBuilder> getDaoSqlBuilderClass(final Class<?> daoInterface) {
-        final Deque<Type> typesToScan = new ArrayDeque<>();
-        final HashSet<Type> visited = new HashSet<>();
-        typesToScan.add(daoInterface);
-
-        while (!typesToScan.isEmpty()) {
-            final Type type = typesToScan.pollFirst();
-
-            if (type == null || !visited.add(type)) {
-                continue;
-            }
-
-            final Class<? extends SqlBuilder> sbc = findSqlBuilderClassFromDaoType(type);
-
-            if (sbc != null) {
-                return sbc;
-            }
-
-            if (type instanceof final Class<?> cls) {
-                final Type genericSuperClass = cls.getGenericSuperclass();
-
-                if (genericSuperClass != null && genericSuperClass != Object.class) {
-                    typesToScan.add(genericSuperClass);
-                }
-
-                typesToScan.addAll(Array.asList(cls.getGenericInterfaces()));
-            } else if (type instanceof final ParameterizedType parameterizedType) {
-                typesToScan.add(parameterizedType.getRawType());
-            }
+    private static Dsl namedDsl(final Dsl dsl) {
+        if (dsl == Dsl.NSB || dsl == Dsl.NSC || dsl == Dsl.NAC || dsl == Dsl.NLC) {
+            return dsl;
+        } else if (dsl == Dsl.PSB) {
+            return Dsl.NSB;
+        } else if (dsl == Dsl.PSC) {
+            return Dsl.NSC;
+        } else if (dsl == Dsl.PAC) {
+            return Dsl.NAC;
+        } else if (dsl == Dsl.PLC) {
+            return Dsl.NLC;
         }
 
-        return PSC.class;
+        return dslWithPolicy(dsl, "NAMED_SQL");
     }
 
-    @SuppressWarnings("unchecked")
-    private static Class<? extends SqlBuilder> findSqlBuilderClassFromDaoType(final Type type) {
-        if (!(type instanceof final ParameterizedType parameterizedType)) {
-            return null;
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static Dsl dslWithPolicy(final Dsl dsl, final String sqlPolicyName) {
+        final SqlDialect sqlDialect = dsl.sqlDialect();
+        final Object dialectBuilder = SqlDialect.builder()
+                .productInfo(sqlDialect.productInfo())
+                .namingPolicy(sqlDialect.namingPolicy())
+                .identifierQuote(sqlDialect.identifierQuote());
+
+        try {
+            final Class<? extends Enum> sqlPolicyClass = (Class<? extends Enum>) Class.forName("com.landawn.abacus.query.AbstractQueryBuilder$SQLPolicy");
+            final Method sqlPolicyMethod = dialectBuilder.getClass().getDeclaredMethod("sqlPolicy", sqlPolicyClass);
+            final Method buildMethod = dialectBuilder.getClass().getDeclaredMethod("build");
+            ClassUtil.setAccessibleQuietly(sqlPolicyMethod, true);
+            ClassUtil.setAccessibleQuietly(buildMethod, true);
+            sqlPolicyMethod.invoke(dialectBuilder, Enum.valueOf(sqlPolicyClass, sqlPolicyName));
+            return Dsl.forDialect((SqlDialect) buildMethod.invoke(dialectBuilder));
+        } catch (final ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to create Dsl with SQL policy: " + sqlPolicyName, e);
         }
-
-        if (!(parameterizedType.getRawType() instanceof final Class<?> rawType)) {
-            return null;
-        }
-
-        if (!(Dao.class.isAssignableFrom(rawType) || CrudDao.class.isAssignableFrom(rawType) || UncheckedDao.class.isAssignableFrom(rawType))) {
-            return null;
-        }
-
-        for (final Type typeArgument : parameterizedType.getActualTypeArguments()) {
-            final Class<? extends SqlBuilder> sbc = toSqlBuilderClass(typeArgument);
-
-            if (sbc != null) {
-                return sbc;
-            }
-        }
-
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Class<? extends SqlBuilder> toSqlBuilderClass(final Type type) {
-        if (type instanceof final Class<?> cls) {
-            return SqlBuilder.class.isAssignableFrom(cls) && cls != SqlBuilder.class ? (Class<? extends SqlBuilder>) cls : null;
-        }
-
-        if (type instanceof final ParameterizedType parameterizedType) {
-            return toSqlBuilderClass(parameterizedType.getRawType());
-        }
-
-        if (type instanceof final WildcardType wildcardType) {
-            for (final Type upperBound : wildcardType.getUpperBounds()) {
-                final Class<? extends SqlBuilder> sbc = toSqlBuilderClass(upperBound);
-
-                if (sbc != null) {
-                    return sbc;
-                }
-            }
-
-            return null;
-        }
-
-        if (type instanceof final TypeVariable<?> typeVariable) {
-            for (final Type bound : typeVariable.getBounds()) {
-                final Class<? extends SqlBuilder> sbc = toSqlBuilderClass(bound);
-
-                if (sbc != null) {
-                    return sbc;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**

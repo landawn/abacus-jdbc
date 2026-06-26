@@ -27,14 +27,13 @@ import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.jdbc.dao.DaoUtil;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedJoinEntityHelperTest extends TestBase {
 
-    interface TestUncheckedJoinDao
-            extends UncheckedDao<TestEntity, PSC, TestUncheckedJoinDao>, UncheckedJoinEntityHelper<TestEntity, PSC, TestUncheckedJoinDao> {
+    interface TestUncheckedJoinDao extends UncheckedDao<TestEntity, TestUncheckedJoinDao>, UncheckedJoinEntityHelper<TestEntity, TestUncheckedJoinDao> {
     }
 
     static final class TestEntity {

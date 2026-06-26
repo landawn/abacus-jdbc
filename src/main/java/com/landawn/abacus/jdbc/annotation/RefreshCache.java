@@ -44,7 +44,7 @@ import com.landawn.abacus.annotation.Beta;
  * <pre>{@code
  * @Cache(capacity = 1000)
  * @RefreshCache                                   // type-level: defaults cover insert/update/delete/...
- * public interface ProductDao extends NoUpdateCrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+ * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
  *
  *     @CacheResult(liveTime = 600_000)
  *     @Query("SELECT * FROM product WHERE id = :id")
@@ -71,27 +71,27 @@ public @interface RefreshCache {
 
     /**
      * Specifies whether cache refresh is disabled for the annotated element.
-     * 
+     *
      * <p>This is useful for:</p>
      * <ul>
      *   <li>Excluding specific methods from triggering cache refresh</li>
      *   <li>Operations that don't affect cached query results (e.g., audit logging)</li>
      *   <li>High-frequency updates where immediate consistency isn't required</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @RefreshCache
-     * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
      *     @Query("UPDATE users SET last_seen = NOW() WHERE id = :id")
      *     @RefreshCache(disabled = true) // Don't refresh cache for this frequent update
      *     void updateLastSeen(long userId);
-     *     
+     *
      *     @Query("UPDATE users SET email = :email WHERE id = :id")
      *     void updateEmail(long userId, String email);   // Will refresh cache
      * }
      * }</pre>
-     * 
+     *
      * @return {@code true} to disable cache refresh, {@code false} to enable it (default).
      */
     boolean disabled() default false;

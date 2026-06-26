@@ -28,8 +28,9 @@ public enum OP {
      * Checks whether any records exist that match the query criteria.
      * Returns a {@code boolean} indicating the existence of matching records.
      *
-     * <p>This operation is optimized for existence checks and typically translates to
-     * a query with {@code LIMIT 1} or uses an {@code EXISTS} clause internally for better performance.</p>
+     * <p>The supplied query is executed as-is and {@code true} is returned as soon as it yields at least one
+     * row (the result set is not fully read). The framework does not add a {@code LIMIT} or {@code EXISTS}
+     * clause, so write the SQL to be efficient for existence checks (e.g. {@code SELECT 1 ... LIMIT 1}).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -296,7 +297,7 @@ public enum OP {
      * <pre>{@code
      * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT
      * List<User> getAllUsers();      // Framework infers OP.list
-     * 
+     *
      * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT
      * int deleteUser(long id);                  // Framework infers OP.update
      * }</pre>

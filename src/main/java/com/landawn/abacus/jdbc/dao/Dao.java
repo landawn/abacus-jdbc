@@ -44,10 +44,10 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.type.Type;
@@ -74,7 +74,7 @@ import com.landawn.abacus.util.stream.Stream;
  * The {@code Dao} interface provides a comprehensive data access abstraction layer for database operations.
  * It serves as a base interface for creating type-safe, SQL-based data access objects with support for
  * both traditional JDBC operations and modern functional programming patterns.
- * 
+ *
  * <h2>Key Features:</h2>
  * <ul>
  *   <li>Type-safe database operations with compile-time checking</li>
@@ -84,17 +84,17 @@ import com.landawn.abacus.util.stream.Stream;
  *   <li>Transaction management integration</li>
  *   <li>Flexible query building with Condition API</li>
  * </ul>
- * 
+ *
  * <h2>Performance Tips:</h2>
  * <ul>
  *   <li>Avoid unnecessary/repeated database calls</li>
  *   <li>Only fetch the columns you need or update the columns you want</li>
  *   <li>Proper indexing is a key factor in many database performance issues</li>
  * </ul>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     @Query("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
  *     void insertWithId(User user) throws SQLException;
  *
@@ -111,10 +111,10 @@ import com.landawn.abacus.util.stream.Stream;
  * }
  *
  * // Usage
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
  * User user = userDao.getFirstAndLastNameBy(123L);
  * }</pre>
- * 
+ *
  * <p><b>Transaction Example:</b></p>
  * <pre>{@code
  * final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
@@ -128,7 +128,6 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the self-type parameter for fluent API support; must be the concrete sub-DAO interface
  *
  * @see JdbcUtil#createDao(Class, DataSource)
@@ -140,7 +139,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
+public interface Dao<T, TD extends Dao<T, TD>> {
 
     /**
      * Retrieves the underlying data source used by this DAO for database connections.
@@ -166,6 +165,14 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      */
     @NonDBOperation
     SqlMapper sqlMapper();
+
+    /**
+     * Retrieves the SQL builder DSL configured for this DAO.
+     *
+     * @return the SQL builder DSL used to generate framework SQL for this DAO
+     */
+    @NonDBOperation
+    Dsl dsl();
 
     /**
      * Retrieves the class object representing the entity type managed by this DAO.
@@ -278,7 +285,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery(
-     *     "INSERT INTO users (name) VALUES (?)", 
+     *     "INSERT INTO users (name) VALUES (?)",
      *     new String[] {"id", "created_at"}
      * );
      * }</pre>
@@ -1289,8 +1296,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> balance = dao.queryForSingleValue(
-     *     "balance", 
-     *     Filters.eq("account_id", 123), 
+     *     "balance",
+     *     Filters.eq("account_id", 123),
      *     BigDecimal.class
      * );
      * }</pre>
@@ -1312,8 +1319,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> email = dao.queryForSingleNonNull(
-     *     "email", 
-     *     Filters.eq("id", 123), 
+     *     "email",
+     *     Filters.eq("id", 123),
      *     String.class
      * );
      * }</pre>
@@ -1716,7 +1723,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> upperNames = dao.list(
-     *     "name", 
+     *     "name",
      *     Filters.isNotNull("name"),
      *     rs -> rs.getString(1).toUpperCase()
      * );
@@ -1962,7 +1969,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *     100,
      *     (query, lastPageResult) -> {
      *         if (lastPageResult != null && lastPageResult.size() > 0) {
-     *             long lastId = lastPageResult.getLong(lastPageResult.size() - 1, "id");
+     *             long lastId = (Long) N.lastOrNullIfEmpty(lastPageResult.getColumn("id"));
      *             query.setLong(1, lastId);
      *         }
      *     }
@@ -2286,7 +2293,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * user.setEmail("new@example.com");
      * user.setPhone("555-1234");
      * int count = dao.update(
-     *     user, 
+     *     user,
      *     Arrays.asList("email", "phone"),
      *     Filters.eq("id", userId)
      * );
@@ -2337,12 +2344,12 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * User user = new User();
      * user.setEmail("john@example.com");
      * user.setStatus("ACTIVE");
-     * 
+     *
      * Condition cond = Filters.and(
      *     Filters.eq("email", user.getEmail()),
      *     Filters.eq("deleted", false)
      * );
-     * 
+     *
      * User saved = dao.upsert(user, cond);
      * }</pre>
      *
@@ -2364,14 +2371,13 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
             return entity;
         } else {
             final Class<?> cls = entity.getClass();
-            @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
-                Beans.copyInto(entity, dbEntity);
+                Beans.mergeInto(entity, dbEntity);
                 update(dbEntity, cond);
             } else {
-                Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
                 final Condition idCond = Filters.allEqual(dbEntity, idPropNameList);
                 update(dbEntity, idCond);
             }
@@ -2403,11 +2409,11 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<List<User>> future = dao.asyncCall(d -> 
+     * ContinuableFuture<List<User>> future = dao.asyncCall(d ->
      *     d.list(Filters.eq("status", "ACTIVE"))
      * );
-     * 
-     * future.thenAccept(users -> 
+     *
+     * future.thenAccept(users ->
      *     users.forEach(System.out::println)
      * );
      * }</pre>
@@ -2432,7 +2438,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
-     * 
+     *
      * ContinuableFuture<Integer> future = dao.asyncCall(
      *     d -> d.update("status", "PROCESSED", Filters.eq("status", "PENDING")),
      *     customExecutor
@@ -2488,11 +2494,11 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
-     * 
+     *
      * dao.asyncRun(
      *     d -> d.save(generateDailyReport()),
      *     scheduler
-     * ).thenRunAsync(() -> 
+     * ).thenRunAsync(() ->
      *     System.out.println("Report saved")
      * );
      * }</pre>

@@ -5984,10 +5984,9 @@ public final class Jdbc {
              * @param type the {@code Type} of the value in the first column; must not be {@code null}
              * @return a {@code RowMapper} for the specified type
              */
-            @SuppressWarnings("cast")
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
                 final RowMapper<T> rowMapper = rs -> type.get(rs, 1);
-                return (RowMapper<T>) rowMapperPool.computeIfAbsent(type, k -> rowMapper);
+                return rowMapperPool.computeIfAbsent(type, k -> rowMapper);
             }
 
             /**
@@ -6168,7 +6167,7 @@ public final class Jdbc {
     }
 
     /**
-     * An immutable container for the values of output parameters produced by a stored procedure
+     * A container for the values of output parameters produced by a stored procedure
      * execution. Values can be retrieved by their 1-based parameter index or by parameter name,
      * depending on how the underlying {@link OutParam} was registered.
      *
@@ -6608,13 +6607,12 @@ public final class Jdbc {
          * }</pre>
          *
          * @param <T> proxy type
-         * @param <E> exception type that action can throw
          * @param beforeInvokeAction the action to perform before the method is called.
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}.
          */
-        public static <T, E extends RuntimeException> Handler<T> create(
-                final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction)
+        public static <T> Handler<T> create(
+                final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> beforeInvokeAction)
                 throws IllegalArgumentException {
             N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction);
 
@@ -6641,13 +6639,12 @@ public final class Jdbc {
          * }</pre>
          *
          * @param <T> proxy type
-         * @param <E> exception type that action can throw
          * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception).
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}.
          */
-        public static <T, E extends RuntimeException> Handler<T> create(
-                final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
+        public static <T> Handler<T> create(
+                final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> afterInvokeAction)
                 throws IllegalArgumentException {
             N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction);
 

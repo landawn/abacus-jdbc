@@ -25,25 +25,25 @@ import java.lang.annotation.Target;
  * This annotation enables the use of named parameters (e.g., {@code :paramName})
  * in SQL statements, providing better readability and maintainability compared
  * to positional parameters.
- * 
+ *
  * <p>The annotation can bind:</p>
  * <ul>
  *   <li>Simple types (String, Integer, Date, etc.)</li>
  *   <li>Entity objects (properties are accessible via dot notation)</li>
  *   <li>Complex nested objects</li>
  * </ul>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Simple parameter binding
  *     @Query("SELECT * FROM users WHERE email = :email")
  *     User findByEmail(@Bind("email") String email);
- *     
+ *
  *     // Multiple parameters
  *     @Query("SELECT * FROM users WHERE status = :status AND age >= :minAge")
  *     List<User> findActiveAdults(@Bind("status") String status, @Bind("minAge") int minAge);
- *     
+ *
  *     // Binding entity properties
  *     @Query("SELECT * FROM users WHERE first_name = :user.firstName AND last_name = :user.lastName")
  *     List<User> findByName(@Bind("user") User user);
@@ -53,7 +53,7 @@ import java.lang.annotation.Target;
  *     void updateAddress(@Bind("userId") Long userId, @Bind("addr") Address address);
  * }
  * }</pre>
- * 
+ *
  * <p>When the method has a single bean/record/Map parameter, named placeholders are bound directly
  * to its properties without {@code @Bind}. When there are multiple parameters in a named query,
  * each parameter must carry an {@code @Bind} (or another binding annotation):</p>
@@ -109,8 +109,9 @@ public @interface Bind {
      *
      * <p><b>Empty value:</b> when {@code value} is left empty (the default) on a single scalar parameter,
      * the annotation has no name to bind by and the argument is bound <i>positionally</i> instead. (This
-     * differs from {@code @SqlFragment}/{@code @BindList}, where an empty value is rejected, because a
-     * fragment/list placeholder has no meaningful positional fallback.)</p>
+     * differs from {@code @SqlFragment}/{@code @BindList}, where an empty value falls back to the method
+     * parameter name &mdash; which requires compiling with the {@code -parameters} flag &mdash; rather than
+     * binding positionally.)</p>
      *
      * @return the named-parameter token to bind to (without the leading colon); empty by default
      */

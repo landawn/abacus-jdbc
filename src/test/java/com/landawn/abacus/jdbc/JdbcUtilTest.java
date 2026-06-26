@@ -1831,7 +1831,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testSetIdExtractorForDao() {
-        interface TestDao extends CrudDao<Object, Long, SqlBuilder, TestDao> {
+        interface TestDao extends CrudDao<Object, Long, TestDao> {
         }
 
         RowMapper<Long> extractor = rs -> rs.getLong(1);
@@ -1842,7 +1842,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testSetIdExtractorForDaoWithBiRowMapper() {
-        interface TestDao extends CrudDao<Object, Long, SqlBuilder, TestDao> {
+        interface TestDao extends CrudDao<Object, Long, TestDao> {
         }
 
         BiRowMapper<Long> extractor = (rs, labels) -> rs.getLong(1);
@@ -1855,7 +1855,7 @@ public class JdbcUtilTest extends TestBase {
     //    public void testCreateDao() {
     //        interface TestDao extends Dao {}
     //
-    //        TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource);
+    //        TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource, PSC);
     //        assertNotNull(dao);
     //    }
     //
@@ -1864,7 +1864,7 @@ public class JdbcUtilTest extends TestBase {
     //        interface TestDao extends Dao {}
     //        SqlMapper sqlMapper = mock(SqlMapper.class);
     //
-    //        TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource, sqlMapper);
+    //        TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource, PSC, sqlMapper);
     //        assertNotNull(dao);
     //    }
     //
@@ -1874,7 +1874,7 @@ public class JdbcUtilTest extends TestBase {
     //        ExecutorService executor = Executors.newSingleThreadExecutor();
     //
     //        try {
-    //            TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource, executor);
+    //            TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource, PSC, executor);
     //            assertNotNull(dao);
     //        } finally {
     //            executor.shutdown();
@@ -1885,7 +1885,7 @@ public class JdbcUtilTest extends TestBase {
     //    public void testCreateDaoWithTableName() {
     //        interface TestDao extends Dao {}
     //
-    //        TestDao dao = JdbcUtil.createDao(TestDao.class, "custom_table", mockDataSource);
+    //        TestDao dao = JdbcUtil.createDao(TestDao.class, "custom_table", mockDataSource, PSC);
     //        assertNotNull(dao);
     //    }
 

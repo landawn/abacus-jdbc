@@ -31,13 +31,13 @@ import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.jdbc.dao.DaoUtil;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
 public class JoinEntityHelperTest extends TestBase {
 
-    interface TestJoinDao extends Dao<TestEntity, PSC, TestJoinDao>, JoinEntityHelper<TestEntity, PSC, TestJoinDao> {
+    interface TestJoinDao extends Dao<TestEntity, TestJoinDao>, JoinEntityHelper<TestEntity, TestJoinDao> {
     }
 
     static final class TestEntity {

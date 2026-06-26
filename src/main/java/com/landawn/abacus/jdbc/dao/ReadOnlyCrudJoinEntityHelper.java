@@ -15,8 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.query.SqlBuilder;
-
 /**
  * Read-only helper for join entity operations in CRUD DAOs.
  * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link CrudJoinEntityHelper}
@@ -30,11 +28,11 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only CRUD DAO with join entity support
- * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelper<User, Long, UserReadOnlyDao> {
  *     // Inherits both CRUD read operations and join entity loading
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
  *
  * // Get user by ID with join entities loaded
  * Optional<User> user = userDao.get(1L, Order.class);
@@ -53,15 +51,12 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the type of the entity's primary key
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the companion {@link CrudDao} type that owns this helper (used for fluent
  *             method chaining and access to CRUD operations)
  * @see ReadOnlyJoinEntityHelper
  * @see CrudJoinEntityHelper
  * @see CrudDao
  */
-public interface ReadOnlyCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>>
-        extends ReadOnlyJoinEntityHelper<T, SB, TD>, CrudJoinEntityHelper<T, ID, SB, TD> {
+public interface ReadOnlyCrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> extends ReadOnlyJoinEntityHelper<T, TD>, CrudJoinEntityHelper<T, ID, TD> {
 
 }

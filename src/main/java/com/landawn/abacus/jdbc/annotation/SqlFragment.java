@@ -42,7 +42,7 @@ import java.lang.annotation.Target;
  *
  * <p><b>Whitelisted table / schema substitution:</b></p>
  * <pre>{@code
- * public interface UserDao extends Dao<User, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends Dao<User, UserDao> {
  *
  *     @Query("SELECT * FROM {schema}.{table} WHERE id = :id")
  *     User findById(

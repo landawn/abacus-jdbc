@@ -18,7 +18,6 @@ package com.landawn.abacus.jdbc.dao;
 import java.util.Collection;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only DAO interface that provides only query operations without any write capabilities.
@@ -45,11 +44,11 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface ReportDao extends UncheckedReadOnlyDao<Report, SqlBuilder.PSC, ReportDao> {
+ * public interface ReportDao extends UncheckedReadOnlyDao<Report, ReportDao> {
  *     // Only query methods are available
  * }
  *
- * ReportDao dao = JdbcUtil.createDao(ReportDao.class, readOnlyDataSource);
+ * ReportDao dao = JdbcUtil.createDao(ReportDao.class, readOnlyDataSource, Dsl.PSC);
  *
  * // These operations work - note no checked exception handling needed:
  * List<Report> reports = dao.list(Filters.between("date", startDate, endDate));
@@ -70,15 +69,12 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateDao
  * @see ReadOnlyDao
  */
 @Beta
-public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends UncheckedReadOnlyDao<T, SB, TD>>
-        extends UncheckedNoUpdateDao<T, SB, TD>, ReadOnlyDao<T, SB, TD> {
+public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>> extends UncheckedNoUpdateDao<T, TD>, ReadOnlyDao<T, TD> {
 
     /**
      * Unsupported save operation that always throws {@link UnsupportedOperationException}.

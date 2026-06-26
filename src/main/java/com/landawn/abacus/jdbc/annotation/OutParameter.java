@@ -102,7 +102,7 @@ public @interface OutParameter {
     /**
      * Specifies the SQL type of the output parameter.
      * This must be one of the constants defined in {@link java.sql.Types}.
-     * 
+     *
      * <p>Common SQL types include:</p>
      * <ul>
      *   <li>{@link Types#VARCHAR} - String values</li>
@@ -113,9 +113,9 @@ public @interface OutParameter {
      *   <li>{@link Types#CLOB} - Character large objects</li>
      *   <li>{@link Types#BLOB} - Binary large objects</li>
      * </ul>
-     * 
+     *
      * <p>The SQL type must match the actual type of the output parameter in the stored procedure.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @OutParameter(name = "message", sqlType = Types.VARCHAR)

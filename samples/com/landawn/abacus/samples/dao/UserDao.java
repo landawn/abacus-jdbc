@@ -13,6 +13,8 @@
  */
 package com.landawn.abacus.samples.dao;
 
+import static com.landawn.abacus.query.Dsl.PSC;
+
 import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -43,8 +45,6 @@ import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SqlBuilder;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.ImmutableList;
@@ -60,7 +60,7 @@ import com.landawn.abacus.util.stream.Stream;
 @DaoConfig(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
 @SqlSource("./samples/userSqlMapper.xml")
 // @SqlLogEnabled(true)
-public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao>, JoinEntityHelper<User, SqlBuilder.PSC, UserDao> {
+public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<User, UserDao> {
 
     @NonDBOperation
     @Override

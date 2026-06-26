@@ -37,7 +37,6 @@ import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
@@ -55,7 +54,7 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.stream.Stream.StreamEx;
+import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity management.
@@ -67,12 +66,12 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Custom query methods can be added here
  * }
  *
  * // Usage
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
  * User user = new User("John", "Doe");
  * Long id = userDao.insert(user);
  * Optional<User> retrieved = userDao.get(id);
@@ -80,8 +79,6 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (typically one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the self-type of the DAO for fluent interface support
  *
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
@@ -93,7 +90,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
+public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD> {
 
     /**
      * Returns a {@link Jdbc.BiRowMapper} that extracts the ID from a database row.
@@ -191,7 +188,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Inserts an entity using a custom named SQL insert statement.
      * The SQL should use named parameters that match the entity's property names.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (name, email, status) VALUES (:name, :email, 'ACTIVE')";
@@ -231,7 +228,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Performs batch insert of multiple entities with a specified batch size.
      * Large collections will be processed in batches of the specified size.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = loadUsers();                      // 10000 users
@@ -334,7 +331,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
      * Returns an empty {@code OptionalBoolean} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = userDao.queryForBoolean("isActive", userId);
@@ -354,7 +351,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
      * Returns an empty {@code OptionalChar} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = studentDao.queryForChar("grade", studentId);
@@ -408,7 +405,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
      * Returns an empty {@code OptionalInt} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt age = userDao.queryForInt("age", userId);
@@ -426,7 +423,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
      * Returns an empty {@code OptionalLong} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong lastLoginTime = userDao.queryForLong("lastLoginTimestamp", userId);
@@ -462,7 +459,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
      * Returns an empty {@code OptionalDouble} if no record is found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble balance = accountDao.queryForDouble("balance", accountId);
@@ -480,7 +477,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
      * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForString("email", userId);
@@ -498,7 +495,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a Date value from a single property of the entity with the specified ID.
      * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", userId);
@@ -534,7 +531,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
      * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<Timestamp> lastModified = userDao.queryForTimestamp("lastModified", userId);
@@ -553,7 +550,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * Queries for a byte array value from a single property of the entity with the specified ID.
      * Returns a {@code Nullable} containing the value, which can be {@code null} if the database value is {@code null}.
      * This is typically used for BLOB data.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = userDao.queryForBytes("avatarImage", userId);
@@ -571,7 +568,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
      * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> salary = userDao.queryForSingleValue("salary", userId, BigDecimal.class);
@@ -591,7 +588,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
      * Returns an empty {@code Optional} if no record is found or if the value is {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> username = userDao.queryForSingleNonNull("username", userId, String.class);
@@ -634,7 +631,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p>This method ensures that at most one record matches the query.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForUniqueValue("email", userId, String.class);
@@ -875,7 +872,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Checks if an entity with the specified ID exists in the database.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.exists(userId)) {
@@ -952,7 +949,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Updates only specified properties of an existing entity.
      * This is useful when you want to update only certain fields.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
@@ -1124,7 +1121,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
-        @SuppressWarnings("deprecation")
         final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return upsert(entity, idPropNameList);
@@ -1164,13 +1160,12 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
             return entity;
         } else {
             final Class<?> cls = entity.getClass();
-            @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
-                Beans.copyInto(entity, dbEntity);
+                Beans.mergeInto(entity, dbEntity);
             } else {
-                Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
             }
 
             update(dbEntity);
@@ -1226,7 +1221,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
-        @SuppressWarnings("deprecation")
         final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return batchUpsert(entities, idPropNameList, batchSize);
@@ -1330,11 +1324,11 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
                         .toList()
                 : Seq.of(entities, SQLException.class) //
                         .split(batchSize)
-                        .flatmap(it -> list(Filters.id2Cond(N.map(it, entityIdExtractor))))
+                        .flatmap(it -> list(Filters.idToCond(N.map(it, entityIdExtractor))))
                         .toList();
 
-        final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
-        final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());
+        final Map<Object, T> dbIdEntityMap = Stream.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
+        final Map<Boolean, List<T>> map = Stream.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());
         final List<T> entitiesToUpdate = map.get(true);
         final List<T> entitiesToInsert = map.get(false);
 
@@ -1352,15 +1346,14 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
             if (N.notEmpty(entitiesToUpdate)) {
                 final Set<String> ignoredPropNames = N.newHashSet(uniquePropNamesForQuery);
 
-                @SuppressWarnings("deprecation")
                 final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
                 if (N.notEmpty(idPropNameList)) {
                     ignoredPropNames.addAll(idPropNameList);
                 }
 
-                final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> Beans.copyInto(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
+                final List<T> dbEntitiesToUpdate = Stream.of(entitiesToUpdate)
+                        .map(it -> Beans.mergeInto(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
                         .toList();
 
                 batchUpdate(dbEntitiesToUpdate, batchSize);
@@ -1431,7 +1424,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
      */
-    @SuppressWarnings("deprecation")
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
@@ -1448,7 +1440,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         if (dbEntity == null) {
             return false;
         } else {
-            Beans.copyInto(dbEntity, entity, propNamesToRefresh);
+            Beans.mergeInto(dbEntity, entity, propNamesToRefresh);
 
             return true;
         }
@@ -1551,7 +1543,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null}/empty or {@code batchSize} is not positive
      */
-    @SuppressWarnings("deprecation")
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -1566,7 +1557,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
-        final Map<ID, List<T>> idEntityMap = StreamEx.of(entities).groupTo(idExtractorFunc, Fn.identity());
+        final Map<ID, List<T>> idEntityMap = Stream.of(entities).groupTo(idExtractorFunc, Fn.identity());
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
         final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
@@ -1580,7 +1571,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
                 if (N.notEmpty(matchingEntities)) {
                     for (final T entity : matchingEntities) {
-                        Beans.copyInto(dbEntity, entity, propNamesToRefresh);
+                        Beans.mergeInto(dbEntity, entity, propNamesToRefresh);
                     }
                 }
 

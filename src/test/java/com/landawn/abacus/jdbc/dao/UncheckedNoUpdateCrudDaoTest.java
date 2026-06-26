@@ -1,6 +1,8 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -10,12 +12,11 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 public class UncheckedNoUpdateCrudDaoTest extends TestBase {
 
-    private interface DummyUncheckedNoUpdateCrudDao extends UncheckedNoUpdateCrudDao<Object, String, SqlBuilder.PSC, DummyUncheckedNoUpdateCrudDao> {
+    private interface DummyUncheckedNoUpdateCrudDao extends UncheckedNoUpdateCrudDao<Object, String, DummyUncheckedNoUpdateCrudDao> {
     }
 
     private final DummyUncheckedNoUpdateCrudDao dao = createDefaultMethodProxy(DummyUncheckedNoUpdateCrudDao.class);
@@ -42,7 +43,7 @@ public class UncheckedNoUpdateCrudDaoTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(4, UncheckedNoUpdateCrudDao.class.getTypeParameters().length);
+        assertEquals(3, UncheckedNoUpdateCrudDao.class.getTypeParameters().length);
     }
 
     @Test

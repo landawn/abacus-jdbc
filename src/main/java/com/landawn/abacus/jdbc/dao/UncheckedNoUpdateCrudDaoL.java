@@ -19,7 +19,6 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A no-update CRUD DAO interface specialized for entities whose primary key type is {@link Long},
@@ -38,11 +37,11 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface EventLogDao extends UncheckedNoUpdateCrudDaoL<EventLog, SqlBuilder.PSC, EventLogDao> {
+ * public interface EventLogDao extends UncheckedNoUpdateCrudDaoL<EventLog, EventLogDao> {
  *     // Can insert and query, but not update/delete
  * }
  *
- * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);
+ * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource, Dsl.PSC);
  *
  * // These operations work with primitive long:
  * Long id = dao.insert(new EventLog("User logged in"));
@@ -56,16 +55,14 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateCrudDao
  * @see UncheckedCrudDaoL
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends UncheckedNoUpdateCrudDaoL<T, SB, TD>>
-        extends UncheckedNoUpdateCrudDao<T, Long, SB, TD>, UncheckedCrudDaoL<T, SB, TD> {
+public interface UncheckedNoUpdateCrudDaoL<T, TD extends UncheckedNoUpdateCrudDaoL<T, TD>>
+        extends UncheckedNoUpdateCrudDao<T, Long, TD>, UncheckedCrudDaoL<T, TD> {
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.

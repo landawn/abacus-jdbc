@@ -18,8 +18,6 @@ package com.landawn.abacus.jdbc.dao;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 
-import com.landawn.abacus.query.SqlBuilder;
-
 /**
  * Read-only helper for join entity operations in DAOs.
  * This interface extends {@link JoinEntityHelper} but overrides all mutation methods to throw
@@ -45,12 +43,12 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support
- * public interface UserReadOnlyDao extends ReadOnlyJoinEntityHelper<User, SqlBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends ReadOnlyJoinEntityHelper<User, UserReadOnlyDao> {
  *     // All load operations work normally
  *     // All delete operations throw UnsupportedOperationException
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
  *
  * // Supported operations - all work fine:
  *
@@ -76,8 +74,6 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the companion {@link Dao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
  * @see JoinEntityHelper
@@ -85,7 +81,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings("RedundantThrows")
-public interface ReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+public interface ReadOnlyJoinEntityHelper<T, TD extends Dao<T, TD>> extends JoinEntityHelper<T, TD> {
 
     /**
      * Unsupported delete operation that always throws {@link UnsupportedOperationException} in read-only mode.

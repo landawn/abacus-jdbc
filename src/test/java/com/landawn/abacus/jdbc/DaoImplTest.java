@@ -39,7 +39,7 @@ import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.NoUpdateDao;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
@@ -85,7 +85,7 @@ public class DaoImplTest extends TestBase {
         }
     }
 
-    interface IdOnlyCrudDao extends CrudDao<IdOnlyEntity, Long, PSC, IdOnlyCrudDao> {
+    interface IdOnlyCrudDao extends CrudDao<IdOnlyEntity, Long, IdOnlyCrudDao> {
     }
 
     interface MergedDao {
@@ -100,12 +100,12 @@ public class DaoImplTest extends TestBase {
     }
 
     @SqlSource
-    interface DefaultSqlSourceDao extends Dao<TestEntity, PSC, DefaultSqlSourceDao> {
+    interface DefaultSqlSourceDao extends Dao<TestEntity, DefaultSqlSourceDao> {
         @Query("select * from test")
         List<TestEntity> list() throws SQLException;
     }
 
-    interface AmbiguousOutParameterDao extends Dao<TestEntity, PSC, AmbiguousOutParameterDao> {
+    interface AmbiguousOutParameterDao extends Dao<TestEntity, AmbiguousOutParameterDao> {
         @Query(value = "{call test_proc(?)}", isProcedure = true, op = OP.executeAndGetOutParameters)
         @OutParameter(name = "out", position = 1, sqlType = Types.INTEGER)
         Jdbc.OutParamResult call();
@@ -120,7 +120,7 @@ public class DaoImplTest extends TestBase {
     // used to fail at proxy creation time because the Stream-return guard rejected anything other
     // than OP.stream / OP.DEFAULT — even though the OP.streamAll dispatch branch (procedure path)
     // was explicitly written to handle it.
-    interface StreamAllProcedureDao extends Dao<TestEntity, PSC, StreamAllProcedureDao> {
+    interface StreamAllProcedureDao extends Dao<TestEntity, StreamAllProcedureDao> {
         @Query(value = "call test_proc()", isProcedure = true, op = OP.streamAll)
         com.landawn.abacus.util.stream.Stream<Dataset> streamAll();
     }
@@ -133,13 +133,13 @@ public class DaoImplTest extends TestBase {
     interface Marker {
     }
 
-    interface BaseDao<T> extends Dao<T, PSC, BaseDao<T>> {
+    interface BaseDao<T> extends Dao<T, BaseDao<T>> {
     }
 
     interface ReorderedGenericDao extends Marker, BaseDao<TestEntity> {
     }
 
-    interface InvalidRowFilterPositionDao extends Dao<TestEntity, PSC, InvalidRowFilterPositionDao> {
+    interface InvalidRowFilterPositionDao extends Dao<TestEntity, InvalidRowFilterPositionDao> {
         @Query("select * from test")
         List<TestEntity> findByFilter(Jdbc.RowFilter rowFilter);
     }
@@ -237,7 +237,7 @@ public class DaoImplTest extends TestBase {
         }
     }
 
-    interface NoArgDefaultMethodDao extends Dao<TestEntity, PSC, NoArgDefaultMethodDao> {
+    interface NoArgDefaultMethodDao extends Dao<TestEntity, NoArgDefaultMethodDao> {
         @NonDBOperation
         default String greeting() {
             return "hello";
@@ -345,7 +345,7 @@ public class DaoImplTest extends TestBase {
 
     @Test
     void testCreateDaoWithReorderedGenericInterfaces() throws Exception {
-        ReorderedGenericDao dao = DaoImpl.createDao(ReorderedGenericDao.class, null, mockDataSourceForDaoCreation(), null, null, null);
+        ReorderedGenericDao dao = DaoImpl.createDao(ReorderedGenericDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
         assertNotNull(dao);
         // Verify the proxy implements both the DAO interface and the Marker interface
         assertTrue(dao instanceof BaseDao, "Should implement BaseDao");
@@ -356,7 +356,7 @@ public class DaoImplTest extends TestBase {
 
     @Test
     void testCreateDaoWithIdOnlyEntityDoesNotBuildEmptyUpdateSql() throws Exception {
-        IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, mockDataSourceForDaoCreation(), null, null, null);
+        IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
 
         assertNotNull(dao);
         assertEquals(0, dao.update(new IdOnlyEntity()));
@@ -365,7 +365,7 @@ public class DaoImplTest extends TestBase {
     @Test
     void testCreateDaoRejectsRowFilterInUnsupportedPosition() throws Exception {
         assertThrows(UnsupportedOperationException.class,
-                () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+                () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
     }
 
     // Regression: @Query(isProcedure=true, op=OP.streamAll) Stream<Dataset> proc()
@@ -375,7 +375,7 @@ public class DaoImplTest extends TestBase {
     @Test
     void testCreateDaoAcceptsStreamAllForProcedure() throws Exception {
         StreamAllProcedureDao dao = assertDoesNotThrow(
-                () -> DaoImpl.createDao(StreamAllProcedureDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+                () -> DaoImpl.createDao(StreamAllProcedureDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
         assertNotNull(dao);
     }
 
@@ -513,7 +513,7 @@ public class DaoImplTest extends TestBase {
 
     @CacheResult
     @RefreshCache
-    interface CacheDisabledOverrideDao extends com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao<TestEntity, PSC, CacheDisabledOverrideDao> {
+    interface CacheDisabledOverrideDao extends com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao<TestEntity, CacheDisabledOverrideDao> {
         // No @NonDBOperation: must reach the proxy's cache wrapper so the resolution logic actually runs.
         @CacheResult(disabled = true)
         default String findCached() {
@@ -567,7 +567,7 @@ public class DaoImplTest extends TestBase {
             }
         };
 
-        CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), null, recordingCache, null);
+        CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, recordingCache, null);
 
         // Method explicitly disabled — must NOT consult the cache or write to it.
         assertEquals("fresh-result", dao.findCached());
@@ -611,7 +611,7 @@ public class DaoImplTest extends TestBase {
             }
         };
 
-        CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), null, recordingCache, null);
+        CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, recordingCache, null);
         assertEquals("refresh-result", dao.updateData());
         assertEquals(0, updateCount.get(), "Disabled @RefreshCache method must not invalidate the cache");
     }
@@ -846,12 +846,12 @@ public class DaoImplTest extends TestBase {
 
     @Test
     public void testCreateDao_DefaultSqlSourceDoesNotLoadEmptyMapper() throws SQLException {
-        assertDoesNotThrow(() -> DaoImpl.createDao(DefaultSqlSourceDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+        assertDoesNotThrow(() -> DaoImpl.createDao(DefaultSqlSourceDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
     }
 
     @Test
     public void testCreateDao_InvokesNoArgDefaultMethod() throws Exception {
-        NoArgDefaultMethodDao dao = DaoImpl.createDao(NoArgDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), null, null, null);
+        NoArgDefaultMethodDao dao = DaoImpl.createDao(NoArgDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
 
         assertEquals("hello", dao.greeting());
     }
@@ -860,7 +860,7 @@ public class DaoImplTest extends TestBase {
     public void testCreateDao_RejectsOutParameterWithNameAndPosition() throws SQLException {
         DataSource ds = mockDataSourceForDaoCreation();
 
-        assertThrows(UnsupportedOperationException.class, () -> DaoImpl.createDao(AmbiguousOutParameterDao.class, null, ds, null, null, null));
+        assertThrows(UnsupportedOperationException.class, () -> DaoImpl.createDao(AmbiguousOutParameterDao.class, null, ds, PSC, null, null, null));
     }
 
     @Test
@@ -916,14 +916,14 @@ public class DaoImplTest extends TestBase {
         DataSource ds2 = mockDataSourceForDaoCreation();
 
         // Create a real DAO bound to ds1 — registers it in DaoImpl.daoPool keyed on ds1's identity.
-        IdOnlyCrudDao daoForDs1 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds1, null, null, null);
+        IdOnlyCrudDao daoForDs1 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds1, PSC, null, null, null);
 
         // Poison joinEntityDaoPool with daoForDs1 under the key that would be computed for ds2 + IdOnlyEntity.
         // The cache-hit path used to return daoForDs1; the fix forces fall-through when ds doesn't match.
         java.lang.reflect.Field poolField = DaoImpl.class.getDeclaredField("joinEntityDaoPool");
         poolField.setAccessible(true);
         @SuppressWarnings("unchecked")
-        Map<String, Dao<?, ?, ?>> pool = (Map<String, Dao<?, ?, ?>>) poolField.get(null);
+        Map<String, Dao<?, ?>> pool = (Map<String, Dao<?, ?>>) poolField.get(null);
 
         String poisonedKey = com.landawn.abacus.util.ClassUtil.getCanonicalClassName(IdOnlyEntity.class) + "_" + System.identityHashCode(ds2);
         pool.put(poisonedKey, daoForDs1);
@@ -933,7 +933,7 @@ public class DaoImplTest extends TestBase {
             m.setAccessible(true);
 
             // Create a real DAO bound to ds2 so the fall-through scan can find it.
-            IdOnlyCrudDao daoForDs2 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds2, null, null, null);
+            IdOnlyCrudDao daoForDs2 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds2, PSC, null, null, null);
 
             Object resolved = m.invoke(null, IdOnlyEntity.class, ds2, daoForDs2);
 

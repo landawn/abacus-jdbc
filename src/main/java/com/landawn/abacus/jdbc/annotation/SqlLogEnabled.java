@@ -43,7 +43,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Method-level: hide a query that prints sensitive payment data.
- * public interface PaymentDao extends CrudDao<Payment, Long, SqlBuilder.PSC, PaymentDao> {
+ * public interface PaymentDao extends CrudDao<Payment, Long, PaymentDao> {
  *     @SqlLogEnabled(false)
  *     @Query("SELECT * FROM payment_card WHERE id = :id")
  *     Payment findById(@Bind("id") Long id);
@@ -55,7 +55,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * // Type-level: log only the write methods, truncated to 2 KB.
  * @SqlLogEnabled(value = true, maxSqlLogLength = 2048,
  *                filter = { "insert", "update", "delete", "save", "remove" })
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> { ... }
+ * public interface UserDao extends CrudDao<User, Long, UserDao> { ... }
  * }</pre>
  *
  * @see PerfLog
@@ -67,7 +67,7 @@ public @interface SqlLogEnabled {
 
     /**
      * Specifies whether SQL logging is enabled or disabled.
-     * 
+     *
      * <p>When set to {@code true}, SQL statements will be logged for the annotated scope; when set to
      * {@code false}, SQL logging is disabled for that scope. This element defaults to {@code true},
      * meaning a bare {@code @SqlLogEnabled} turns logging on for the scope it is placed on &mdash; it
@@ -75,19 +75,19 @@ public @interface SqlLogEnabled {
      * is present at all, logging follows the global default configured on {@link JdbcUtil}. A method-level
      * {@code @SqlLogEnabled} still takes precedence over a type-level one (see the type-level
      * documentation).</p>
-     * 
+     *
      * <p>This is useful for:</p>
      * <ul>
      *   <li>Temporarily disabling logging for specific methods</li>
      *   <li>Excluding sensitive queries from logs</li>
      *   <li>Reducing log volume for high-frequency operations</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @SqlLogEnabled(true)  // Explicitly enable logging
      * List<User> findAll();
-     * 
+     *
      * @SqlLogEnabled(false) // Disable logging for sensitive data
      * List<PaymentInfo> findPaymentDetails();
      * }</pre>
@@ -108,12 +108,12 @@ public @interface SqlLogEnabled {
      *   <li>Queries with large IN clauses</li>
      *   <li>Statements with embedded large text or binary data</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @SqlLogEnabled(maxSqlLogLength = 500)
      * void insertBatchData(List<Data> largeDataset);
-     * 
+     *
      * @SqlLogEnabled(maxSqlLogLength = 2048) // Allow longer logs for complex queries
      * List<Report> generateComplexReport();
      * }</pre>

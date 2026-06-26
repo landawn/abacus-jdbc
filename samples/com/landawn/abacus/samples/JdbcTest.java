@@ -13,6 +13,8 @@
  */
 package com.landawn.abacus.samples;
 
+import static com.landawn.abacus.query.Dsl.NSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,8 +38,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SqlBuilder.NSC;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.samples.dao.AddressDao;
 import com.landawn.abacus.samples.dao.DeviceDao;
 import com.landawn.abacus.samples.dao.EmployeeDao;
@@ -78,22 +78,22 @@ public class JdbcTest {
 
     static final DataSource dataSource = JdbcUtil.createHikariDataSource("jdbc:h2:~/test", "sa", "");
     static final DataSource dataSource2 = JdbcUtil.createC3p0DataSource("jdbc:h2:~/test", "sa", "");
-    static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
-    static final UserDao userDao12 = JdbcUtil.createDao(UserDao.class, "user2", dataSource);
-    static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
-    static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource);
-    static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
-    static final UncheckedUserDaoL uncheckedUserDao2 = JdbcUtil.createDao(UncheckedUserDaoL.class, dataSource);
-    static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
-    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
+    static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, PSC);
+    static final UserDao userDao12 = JdbcUtil.createDao(UserDao.class, "user2", dataSource, PSC);
+    static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource, PSC);
+    static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource, PSC);
+    static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource, PSC);
+    static final UncheckedUserDaoL uncheckedUserDao2 = JdbcUtil.createDao(UncheckedUserDaoL.class, dataSource, PSC);
+    static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource, PSC);
+    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource, PSC);
 
-    static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource);
-    static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource);
-    static final EmployeeProjectDao employeeProjectDao = JdbcUtil.createDao(EmployeeProjectDao.class, dataSource);
-    static final EmployeeProjectDao2 employeeProjectDao2 = JdbcUtil.createDao(EmployeeProjectDao2.class, dataSource);
+    static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource, PSC);
+    static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource, PSC);
+    static final EmployeeProjectDao employeeProjectDao = JdbcUtil.createDao(EmployeeProjectDao.class, dataSource, PSC);
+    static final EmployeeProjectDao2 employeeProjectDao2 = JdbcUtil.createDao(EmployeeProjectDao2.class, dataSource, PSC);
 
-    static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
-    static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
+    static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource, PSC);
+    static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource, PSC);
 
     // static final SqlExecutor sqlExecutor = new SqlExecutor(dataSource);
 
@@ -228,7 +228,7 @@ public class JdbcTest {
         final String query1 = NSC.selectFrom(User.class).where(Filters.lt("id", 0)).build().query();
         final String query2 = NSC.selectFrom(User.class).where(Filters.gt("id", 200)).build().query();
 
-        final Tuple2<Dataset, Dataset> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
+        final Tuple2<Dataset, Dataset> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concatNullToEmpty(query1, "; ", query2))
                 .setInt(1, 10)
                 .setInt(2, 300)
                 .query2ResultSets(BiResultExtractor.TO_DATASET, BiResultExtractor.TO_DATASET);
@@ -556,7 +556,7 @@ public class JdbcTest {
     public void perf_test_createDAO() {
         Profiler.run(1, 1, 3, () -> {
             for (int i = 0; i < 100; i++) {
-                JdbcUtil.createDao(AddressDao.class, dataSource);
+                JdbcUtil.createDao(AddressDao.class, dataSource, PSC);
             }
         }).printResult();
     }

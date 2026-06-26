@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.concurrent.Executor;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only interface for managing join entity relationships in database operations without checked exceptions.
@@ -40,12 +39,12 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with unchecked exceptions
- * public interface UserReadOnlyDao extends UncheckedReadOnlyJoinEntityHelper<User, SqlBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends UncheckedReadOnlyJoinEntityHelper<User, UserReadOnlyDao> {
  *     // All load operations work normally with unchecked exceptions
  *     // All delete operations will throw UnsupportedOperationException
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
  *
  * // Read operations work fine - no checked exceptions
  * User user = userDao.gett(1L);
@@ -64,7 +63,6 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB})
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedDao}
  *
  * @see UncheckedJoinEntityHelper
@@ -72,8 +70,8 @@ import com.landawn.abacus.query.SqlBuilder;
  * @see UncheckedSQLException
  */
 @SuppressWarnings("RedundantThrows")
-public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD extends UncheckedDao<T, SB, TD>>
-        extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {
+public interface UncheckedReadOnlyJoinEntityHelper<T, TD extends UncheckedDao<T, TD>>
+        extends UncheckedJoinEntityHelper<T, TD>, ReadOnlyJoinEntityHelper<T, TD> {
 
     /**
      * Unsupported delete operation that always throws {@link UnsupportedOperationException} in read-only mode.

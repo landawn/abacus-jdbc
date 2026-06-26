@@ -20,12 +20,12 @@ import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Optional;
 
 public class CrudJoinEntityHelperTest extends TestBase {
 
-    interface TestCrudJoinDao extends CrudDao<TestEntity, Long, PSC, TestCrudJoinDao>, CrudJoinEntityHelper<TestEntity, Long, PSC, TestCrudJoinDao> {
+    interface TestCrudJoinDao extends CrudDao<TestEntity, Long, TestCrudJoinDao>, CrudJoinEntityHelper<TestEntity, Long, TestCrudJoinDao> {
     }
 
     static final class TestEntity {

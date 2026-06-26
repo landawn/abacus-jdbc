@@ -1,12 +1,17 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,14 +27,13 @@ import org.mockito.Mockito;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedDaoTest extends TestBase {
 
-    private interface TestUncheckedDao extends UncheckedDao<TestEntity, SqlBuilder.PSC, TestUncheckedDao> {
+    private interface TestUncheckedDao extends UncheckedDao<TestEntity, TestUncheckedDao> {
     }
 
     public static final class TestEntity {
@@ -74,7 +78,7 @@ public class UncheckedDaoTest extends TestBase {
         }
     }
 
-    private interface IdentifiedUncheckedDao extends UncheckedDao<IdentifiedEntity, SqlBuilder.PSC, IdentifiedUncheckedDao> {
+    private interface IdentifiedUncheckedDao extends UncheckedDao<IdentifiedEntity, IdentifiedUncheckedDao> {
     }
 
     @Test
@@ -89,7 +93,7 @@ public class UncheckedDaoTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(3, UncheckedDao.class.getTypeParameters().length);
+        assertEquals(2, UncheckedDao.class.getTypeParameters().length);
     }
 
     @Test

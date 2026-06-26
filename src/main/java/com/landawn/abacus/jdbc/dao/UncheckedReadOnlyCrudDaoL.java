@@ -17,7 +17,6 @@ package com.landawn.abacus.jdbc.dao;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only CRUD DAO interface that uses {@code Long} as the ID type with unchecked exception handling.
@@ -39,11 +38,11 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends UncheckedReadOnlyCrudDaoL<User, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends UncheckedReadOnlyCrudDaoL<User, UserDao> {
  *     // Additional query methods can be added here
  * }
  *
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
  *
  * // Read operations work normally with primitive long
  * Optional<User> user = userDao.get(123L);
@@ -56,14 +55,12 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedReadOnlyCrudDao
  * @see UncheckedNoUpdateCrudDaoL
  * @see UncheckedSQLException
  */
 @Beta
-public interface UncheckedReadOnlyCrudDaoL<T, SB extends SqlBuilder, TD extends UncheckedReadOnlyCrudDaoL<T, SB, TD>>
-        extends UncheckedReadOnlyCrudDao<T, Long, SB, TD>, UncheckedNoUpdateCrudDaoL<T, SB, TD> {
+public interface UncheckedReadOnlyCrudDaoL<T, TD extends UncheckedReadOnlyCrudDaoL<T, TD>>
+        extends UncheckedReadOnlyCrudDao<T, Long, TD>, UncheckedNoUpdateCrudDaoL<T, TD> {
 }

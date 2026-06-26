@@ -28,7 +28,7 @@ import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -124,10 +124,10 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     }
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    public interface JoinUserDao extends UncheckedCrudDao<JoinUser, Long, PSC, JoinUserDao>, UncheckedCrudJoinEntityHelper<JoinUser, Long, PSC, JoinUserDao> {
+    public interface JoinUserDao extends UncheckedCrudDao<JoinUser, Long, JoinUserDao>, UncheckedCrudJoinEntityHelper<JoinUser, Long, JoinUserDao> {
     }
 
-    public interface JoinOrderDao extends UncheckedCrudDao<JoinOrder, Long, PSC, JoinOrderDao> {
+    public interface JoinOrderDao extends UncheckedCrudDao<JoinOrder, Long, JoinOrderDao> {
     }
 
     /** Same-thread executor so the deprecated parallel overloads run deterministically. */
@@ -147,8 +147,8 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
             st.execute("CREATE TABLE IF NOT EXISTS join_order (id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT, amount DOUBLE)");
         }
 
-        userDao = JdbcUtil.createDao(JoinUserDao.class, ds);
-        orderDao = JdbcUtil.createDao(JoinOrderDao.class, ds);
+        userDao = JdbcUtil.createDao(JoinUserDao.class, ds, PSC);
+        orderDao = JdbcUtil.createDao(JoinOrderDao.class, ds, PSC);
     }
 
     @AfterAll

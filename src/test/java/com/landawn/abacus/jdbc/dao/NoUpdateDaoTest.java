@@ -26,13 +26,13 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Throwables;
 
 public class NoUpdateDaoTest extends TestBase {
 
-    interface TestNoUpdateDao extends NoUpdateDao<TestEntity, PSC, TestNoUpdateDao> {
+    interface TestNoUpdateDao extends NoUpdateDao<TestEntity, TestNoUpdateDao> {
     }
 
     static final class TestEntity {

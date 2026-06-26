@@ -50,11 +50,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * methods when {@code @CacheResult} is applied at the type level) will have their results cached
  * according to the specified configuration. The cache key is automatically derived from the
  * fully-qualified method name and the serialized parameters.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Cache(capacity = 1000, evictDelay = 60000) // Run eviction sweep every 60 seconds
- * public interface CountryDao extends NoUpdateCrudDao<Country, String, SqlBuilder.PSC, CountryDao> {
+ * public interface CountryDao extends NoUpdateCrudDao<Country, String, CountryDao> {
  *     // Results will be cached when annotated with @CacheResult
  *     @CacheResult
  *     @Query("SELECT * FROM countries WHERE continent = :continent")
@@ -63,7 +63,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Using custom cache implementation
  * @Cache(capacity = 500, evictDelay = 30000, impl = MyCustomDaoCache.class)
- * public interface ConfigDao extends ReadOnlyDao<Config, SqlBuilder.PSC, ConfigDao> {
+ * public interface ConfigDao extends ReadOnlyDao<Config, ConfigDao> {
  *     // Query results cached with custom implementation
  * }
  * }</pre>
@@ -88,11 +88,11 @@ public @interface Cache {
      * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_CAPACITY} (1000 entries), which is
      * typically suitable for most use cases. For DAOs handling large amounts
      * of frequently accessed data, consider increasing this value.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Cache(capacity = 5000) // Large cache for frequently accessed data
-     * public interface ProductDao extends NoUpdateCrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+     * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
      *     // Methods here
      * }
      * }</pre>
@@ -123,7 +123,7 @@ public @interface Cache {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Cache(evictDelay = 60000) // Sweep expired entries every 60 seconds
-     * public interface CurrencyDao extends ReadOnlyDao<Currency, SqlBuilder.PSC, CurrencyDao> {
+     * public interface CurrencyDao extends ReadOnlyDao<Currency, CurrencyDao> {
      *     // Methods here
      * }
      * }</pre>
@@ -140,7 +140,7 @@ public @interface Cache {
      * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which is backed by a
      * keyed object pool with TTL and idle-time-based eviction. You can provide
      * a custom implementation for specialized caching requirements.</p>
-     * 
+     *
      * <p>Example custom cache implementation:</p>
      * <pre>{@code
      * public class MyCustomDaoCache extends Jdbc.DefaultDaoCache {
@@ -158,7 +158,7 @@ public @interface Cache {
      *
      * // Usage
      * @Cache(impl = MyCustomDaoCache.class)
-     * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
      *     // Methods here
      * }
      * }</pre>

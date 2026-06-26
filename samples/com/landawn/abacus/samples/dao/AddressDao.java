@@ -14,8 +14,7 @@
 package com.landawn.abacus.samples.dao;
 
 import com.landawn.abacus.jdbc.dao.CrudDaoL;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.samples.entity.Address;
 
-public interface AddressDao extends CrudDaoL<Address, SqlBuilder.PSC, AddressDao> {
+public interface AddressDao extends CrudDaoL<Address, AddressDao> {
 }

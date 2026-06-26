@@ -15,8 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.query.SqlBuilder;
-
 /**
  * A specialized interface that combines read-only operations with join entity support for CRUD DAOs with unchecked exceptions.
  * This interface provides functionality to read entities along with their related entities through joins,
@@ -35,11 +33,11 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only CRUD DAO with join entity support
- * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudJoinEntityHelper<User, Long, UserReadOnlyDao> {
  *     // Inherits read-only CRUD and join entity operations with unchecked exceptions
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
  *
  * // Fetch a user with their orders - no checked exceptions
  * Optional<User> userWithOrders = userDao.get(123L, Order.class);
@@ -68,12 +66,11 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB})
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityHelper
  * @see UncheckedCrudDao
  */
-public interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
-        extends UncheckedReadOnlyJoinEntityHelper<T, SB, TD>, UncheckedCrudJoinEntityHelper<T, ID, SB, TD> {
+public interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
+        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedCrudJoinEntityHelper<T, ID, TD> {
 }

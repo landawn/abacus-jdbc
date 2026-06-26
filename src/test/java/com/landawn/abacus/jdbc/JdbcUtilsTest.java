@@ -217,6 +217,22 @@ public class JdbcUtilsTest extends TestBase {
     }
 
     @Test
+    public void testImportDataColumnTypeMapInvalidKeyIsRejectedEvenForEmptyDataset() throws SQLException {
+        // Regression: a columnTypeMap key that is not a column of the dataset must be rejected per the documented
+        // contract (@throws IllegalArgumentException), even when the dataset is empty. Previously the validation
+        // lived inside the per-row setter, which is never invoked for an empty dataset, so the bad key slipped through.
+        final Map<String, Type> columnTypeMap = new HashMap<>();
+        columnTypeMap.put("nonexistent_column", N.typeOf(String.class));
+
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(0);
+
+        final String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtils.importData(mockDataset, mockConnection, insertSql, columnTypeMap));
+    }
+
+    @Test
     public void testImportDataWithCustomStmtSetter() throws SQLException {
         // Setup
         Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, (String) row[0]);

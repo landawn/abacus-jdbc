@@ -1,6 +1,8 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -9,11 +11,10 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.query.SqlBuilder;
 
 public class NoUpdateCrudDaoLTest extends TestBase {
 
-    private interface DummyNoUpdateCrudDaoL extends NoUpdateCrudDaoL<Object, SqlBuilder.PSC, DummyNoUpdateCrudDaoL> {
+    private interface DummyNoUpdateCrudDaoL extends NoUpdateCrudDaoL<Object, DummyNoUpdateCrudDaoL> {
     }
 
     private final DummyNoUpdateCrudDaoL dao = createDefaultMethodProxy(DummyNoUpdateCrudDaoL.class);
@@ -35,7 +36,7 @@ public class NoUpdateCrudDaoLTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(3, NoUpdateCrudDaoL.class.getTypeParameters().length);
+        assertEquals(2, NoUpdateCrudDaoL.class.getTypeParameters().length);
     }
 
     @Test

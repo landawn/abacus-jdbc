@@ -16,6 +16,7 @@
 
 package com.landawn.abacus.jdbc;
 
+import static com.landawn.abacus.query.Dsl.PSC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -36,8 +37,7 @@ import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.query.SqlBuilder.MSC;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.BiFunction;
@@ -48,7 +48,7 @@ import com.landawn.abacus.util.function.IntFunction;
 public class JoinInfoTest extends TestBase {
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface UserDao extends Dao<UserEntity, PSC, UserDao> {
+    interface UserDao extends Dao<UserEntity, UserDao> {
     }
 
     public static final class UserEntity {
@@ -128,7 +128,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC);
         assertNotNull(plan);
         // SQL should contain the referenced table
         String sql = plan._1.apply(null);
@@ -139,7 +139,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan_WithColumns() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC);
         String sql = plan._1.apply(Arrays.asList("id", "userId"));
         assertNotNull(sql);
         assertTrue(sql.contains("SELECT"));
@@ -149,7 +149,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> batchPlan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> batchPlan = joinInfo.getBatchSelectSqlPlan(PSC);
         assertNotNull(batchPlan);
         String sql = batchPlan._1.apply(null, 3);
         assertNotNull(sql);
@@ -159,7 +159,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan_PACBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(com.landawn.abacus.query.SqlBuilder.PAC.class);
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(Dsl.PAC);
         assertNotNull(plan);
         String sql = plan._1.apply(null);
         assertNotNull(sql);
@@ -167,11 +167,11 @@ public class JoinInfoTest extends TestBase {
 
     // Entity with 2-column join (exercises srcPropInfos.length == 2 code path)
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface OrderItemDao extends Dao<OrderItemEntity, PSC, OrderItemDao> {
+    interface OrderItemDao extends Dao<OrderItemEntity, OrderItemDao> {
     }
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface UserRoleUserDao extends Dao<UserRoleUserEntity, PSC, UserRoleUserDao> {
+    interface UserRoleUserDao extends Dao<UserRoleUserEntity, UserRoleUserDao> {
     }
 
     public static final class OrderItemEntity {
@@ -246,7 +246,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan_TwoColumnJoin() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item", "details");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC);
         assertNotNull(plan);
         String sql = plan._1.apply(null);
         assertNotNull(sql);
@@ -255,7 +255,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_TwoColumnJoin() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item", "details");
-        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         assertNotNull(plan);
         String sql = plan._1.apply(null, 2);
         assertNotNull(sql);
@@ -274,7 +274,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_ManyToManyJoin() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
-        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
 
         assertNotNull(plan);
 
@@ -289,7 +289,7 @@ public class JoinInfoTest extends TestBase {
     @SuppressWarnings("deprecation")
     public void testGetSelectSqlBuilderAndParamSetter_Deprecated() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlBuilderAndParamSetter(PSC.class);
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlBuilderAndParamSetter(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1.apply(null));
     }
@@ -299,7 +299,7 @@ public class JoinInfoTest extends TestBase {
     @SuppressWarnings("deprecation")
     public void testGetBatchSelectSqlBuilderAndParamSetter_Deprecated() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlBuilderAndParamSetter(PSC.class);
+        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlBuilderAndParamSetter(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1.apply(null, 2));
     }
@@ -308,7 +308,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetDeleteSqlPlan() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple3<String, String, ?> plan = joinInfo.getDeleteSqlPlan(PSC.class);
+        Tuple3<String, String, ?> plan = joinInfo.getDeleteSqlPlan(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1);
         assertTrue(plan._1.contains("DELETE"));
@@ -319,7 +319,7 @@ public class JoinInfoTest extends TestBase {
     @SuppressWarnings("deprecation")
     public void testGetDeleteSqlAndParamSetter_Deprecated() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple3<String, String, ?> plan = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
+        Tuple3<String, String, ?> plan = joinInfo.getDeleteSqlAndParamSetter(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1);
     }
@@ -328,7 +328,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetDeleteSqlPlan_ManyToManyJoin() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
-        Tuple3<String, String, ?> plan = joinInfo.getDeleteSqlPlan(PSC.class);
+        Tuple3<String, String, ?> plan = joinInfo.getDeleteSqlPlan(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1);
         assertTrue(joinInfo.isManyToManyJoin());
@@ -338,7 +338,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchDeleteSqlPlan() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1.apply(3));
         assertTrue(plan._1.apply(3).contains("DELETE"));
@@ -349,7 +349,7 @@ public class JoinInfoTest extends TestBase {
     @SuppressWarnings("deprecation")
     public void testGetBatchDeleteSqlBuilderAndParamSetter_Deprecated() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlBuilderAndParamSetter(PSC.class);
+        Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlBuilderAndParamSetter(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1.apply(2));
     }
@@ -358,14 +358,14 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.getSelectSqlPlan(MSC.class));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.getSelectSqlPlan(Dsl.PSB));
     }
 
     // Test that getBatchSelectSqlPlan throws for unsupported SqlBuilder
     @Test
     public void testGetBatchSelectSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.getBatchSelectSqlPlan(MSC.class));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.getBatchSelectSqlPlan(Dsl.PSB));
     }
 
     // Test setJoinPropEntities populates join properties
@@ -658,7 +658,7 @@ public class JoinInfoTest extends TestBase {
     }
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface SingleJoinDao extends Dao<SingleJoinEntity, PSC, SingleJoinDao> {
+    interface SingleJoinDao extends Dao<SingleJoinEntity, SingleJoinDao> {
     }
 
     // Test constructor with empty @JoinedBy value throws
@@ -773,7 +773,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan_ManyToMany_WithColumnsMissingRefProp() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC);
         // Pass column names that do NOT include the referenced prop (roleId)
         String sql = plan._1.apply(List.of("name"));
         assertNotNull(sql);
@@ -784,7 +784,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan_ManyToMany_WithColumnsIncludingRefProp() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC);
         // Pass column names that include roleId (the referenced prop)
         String sql = plan._1.apply(List.of("roleId", "name"));
         assertNotNull(sql);
@@ -795,25 +795,25 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetDeleteSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.getDeleteSqlPlan(MSC.class));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.getDeleteSqlPlan(Dsl.PSB));
     }
 
     // getBatchDeleteSqlPlan throws on unsupported SqlBuilder (L894)
     @Test
     public void testGetBatchDeleteSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.getBatchDeleteSqlPlan(MSC.class));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.getBatchDeleteSqlPlan(Dsl.PSB));
     }
 
     // getJoinPropValue throws when join value is null/default and allowJoiningByNullOrDefaultValue=false (L1026-1028)
-    interface UserStrictDao extends Dao<UserEntity, PSC, UserStrictDao> {
+    interface UserStrictDao extends Dao<UserEntity, UserStrictDao> {
     }
 
     @Test
     public void testParamSetter_NullJoinValue_NotAllowed_Throws() {
         // UserStrictDao has no @DaoConfig allowJoiningByNullOrDefaultValue -> defaults to false.
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserStrictDao.class, UserEntity.class, "user_entity_strict", "orders");
-        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC);
         final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
         final UserEntity entity = new UserEntity();
         entity.setUserId(0L); // 0 is the default for long → triggers the "not allowed" path
@@ -823,15 +823,15 @@ public class JoinInfoTest extends TestBase {
 
     // setJoinPropEntities for a non-List collection prop (Set) (L978-981)
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface SetUserDao extends Dao<SetUserEntity, PSC, SetUserDao> {
+    interface SetUserDao extends Dao<SetUserEntity, SetUserDao> {
     }
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = false)
-    interface AllowFalseDao extends Dao<UserEntity, PSC, AllowFalseDao> {
+    interface AllowFalseDao extends Dao<UserEntity, AllowFalseDao> {
     }
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface CollectionUserDao extends Dao<CollectionUserEntity, PSC, CollectionUserDao> {
+    interface CollectionUserDao extends Dao<CollectionUserEntity, CollectionUserDao> {
     }
 
     public static final class CollectionUserEntity {
@@ -894,7 +894,7 @@ public class JoinInfoTest extends TestBase {
 
     // setJoinPropEntities for Map property (L988-991)
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface MapUserDao extends Dao<MapUserEntity, PSC, MapUserDao> {
+    interface MapUserDao extends Dao<MapUserEntity, MapUserDao> {
     }
 
     public static final class MapUserEntity {
@@ -956,7 +956,7 @@ public class JoinInfoTest extends TestBase {
         entity.setOrderId(10L);
         entity.setProductId(20L);
 
-        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC);
         plan._2.accept(stmt, entity);
 
         // Two parameter slots should have been set.
@@ -976,7 +976,7 @@ public class JoinInfoTest extends TestBase {
         e2.setProductId(4L);
 
         final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> batchPlan = joinInfo
-                .getBatchSelectSqlPlan(PSC.class);
+                .getBatchSelectSqlPlan(PSC);
         batchPlan._2.accept(stmt, List.of(e1, e2));
 
         org.mockito.Mockito.verify(stmt).setLong(1, 1L);
@@ -995,8 +995,7 @@ public class JoinInfoTest extends TestBase {
         entity.setProductId(8L);
 
         // The set-null plan exposes a Tuple3<setNullSql, paramSetter, ...>; just confirm we can invoke the param setter.
-        final Tuple3<String, ?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo
-                .getDeleteSqlPlan(PSC.class);
+        final Tuple3<String, ?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getDeleteSqlPlan(PSC);
         // Use deleteSql plan param setter for 2-column entity (L538-547 path).
         plan._3.accept(stmt, entity);
 
@@ -1006,7 +1005,7 @@ public class JoinInfoTest extends TestBase {
 
     // 3-column composite key — exercises srcPropInfos.length == 3 branch (L671-683)
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface ThreeColParentDao extends Dao<ThreeColParent, PSC, ThreeColParentDao> {
+    interface ThreeColParentDao extends Dao<ThreeColParent, ThreeColParentDao> {
     }
 
     public static final class ThreeColParent {
@@ -1100,7 +1099,7 @@ public class JoinInfoTest extends TestBase {
 
     // 4-column composite key — exercises srcPropInfos.length > 3 branch (L685-702)
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface FourColParentDao extends Dao<FourColParent, PSC, FourColParentDao> {
+    interface FourColParentDao extends Dao<FourColParent, FourColParentDao> {
     }
 
     public static final class FourColParent {
@@ -1223,8 +1222,7 @@ public class JoinInfoTest extends TestBase {
         p.setD(40L);
 
         // Param setter for >2-column branch (L562-570).
-        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo
-                .getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         plan._2.accept(stmt, List.of(p));
 
         org.mockito.Mockito.verify(stmt).setLong(1, 10L);
@@ -1259,7 +1257,7 @@ public class JoinInfoTest extends TestBase {
         final UserRoleUserEntity entity = new UserRoleUserEntity();
         entity.setUserId(42L);
 
-        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC);
         plan._2.accept(stmt, entity);
 
         org.mockito.Mockito.verify(stmt).setLong(1, 42L);
@@ -1275,8 +1273,7 @@ public class JoinInfoTest extends TestBase {
         final UserRoleUserEntity e2 = new UserRoleUserEntity();
         e2.setUserId(2L);
 
-        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo
-                .getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         plan._2.accept(stmt, List.of(e1, e2));
 
         org.mockito.Mockito.verify(stmt).setLong(1, 1L);
@@ -1287,7 +1284,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetSelectSqlPlan_ManyToMany_NullColumns() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_null", "roles");
-        final Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        final Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC);
         final String sql = plan._1.apply(null);
         assertNotNull(sql);
         assertTrue(sql.contains("SELECT"));
@@ -1297,7 +1294,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_ManyToMany_NullColumns() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bnull", "roles");
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         final String sql = plan._1.apply(null, 2);
         assertNotNull(sql);
         assertTrue(sql.contains("JOIN"));
@@ -1307,7 +1304,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_ManyToMany_ColumnsNotIncludingRefProp() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bref", "roles");
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         final String sql = plan._1.apply(List.of("name"), 2);
         assertNotNull(sql);
         assertTrue(sql.contains("JOIN"));
@@ -1317,7 +1314,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_DirectJoin_SizeOne() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_s1", "orders");
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         final String sql = plan._1.apply(null, 1);
         assertNotNull(sql);
         assertTrue(sql.contains("SELECT"));
@@ -1327,7 +1324,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_DirectJoin_ColumnsMissingRefProp() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_cmr", "orders");
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         final String sql = plan._1.apply(List.of("id"), 2);
         assertNotNull(sql);
         assertTrue(sql.contains("SELECT"));
@@ -1337,7 +1334,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_DirectJoin_ColumnsIncludingRefProp() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_cir", "orders");
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         final String sql = plan._1.apply(List.of("userId"), 2);
         assertNotNull(sql);
         assertTrue(sql.contains("SELECT"));
@@ -1347,7 +1344,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchDeleteSqlPlan_DirectJoin_SizeOne() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_bd1", "orders");
-        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC);
         final String sql = plan._1.apply(1);
         assertNotNull(sql);
         assertTrue(sql.contains("DELETE"));
@@ -1357,7 +1354,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchDeleteSqlPlan_ManyToMany_SizeOne() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bd1", "roles");
-        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC);
         final String sql = plan._1.apply(1);
         assertNotNull(sql);
         assertTrue(sql.contains("DELETE"));
@@ -1367,7 +1364,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchDeleteSqlPlan_ManyToMany_SizeMultiple() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bd3", "roles");
-        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC);
         final String sql = plan._1.apply(3);
         assertNotNull(sql);
         assertTrue(sql.contains("DELETE"));
@@ -1383,8 +1380,7 @@ public class JoinInfoTest extends TestBase {
         final UserEntity e2 = new UserEntity();
         e2.setUserId(20L);
 
-        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo
-                .getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         plan._2.accept(stmt, List.of(e1, e2));
 
         org.mockito.Mockito.verify(stmt).setLong(1, 10L);
@@ -1399,7 +1395,7 @@ public class JoinInfoTest extends TestBase {
         final UserEntity entity = new UserEntity();
         entity.setUserId(5L);
 
-        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC);
         plan._2.accept(stmt, entity);
 
         org.mockito.Mockito.verify(stmt).setLong(1, 5L);
@@ -1490,7 +1486,7 @@ public class JoinInfoTest extends TestBase {
     // ---- Three-column direct join: exercises the srcPropInfos.length > 2 param-setter branch (JoinInfo L526-530) ----
 
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface ThreeColDao extends Dao<ThreeColEntity, PSC, ThreeColDao> {
+    interface ThreeColDao extends Dao<ThreeColEntity, ThreeColDao> {
     }
 
     public static final class ThreeColEntity {
@@ -1576,8 +1572,7 @@ public class JoinInfoTest extends TestBase {
         entity.setBId(22L);
         entity.setCId(33L);
 
-        final Tuple3<String, String, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo
-                .getDeleteSqlPlan(PSC.class);
+        final Tuple3<String, String, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getDeleteSqlPlan(PSC);
         assertNotNull(plan);
         plan._3.accept(stmt, entity);
 
@@ -1597,7 +1592,7 @@ public class JoinInfoTest extends TestBase {
         entity.setCId(3L);
 
         final Tuple2<Function<Collection<String>, String>, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo
-                .getSelectSqlPlan(PSC.class);
+                .getSelectSqlPlan(PSC);
         plan._2.accept(stmt, entity);
 
         org.mockito.Mockito.verify(stmt).setLong(1, 1L);
@@ -1610,7 +1605,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchDeleteSqlPlan_ManyToMany_MiddleBuilderIsNull() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_mid1", "roles");
-        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC);
         assertNotNull(plan);
         assertNotNull(plan._1.apply(2));
         // cascadeDeleteDefinedInDB is hardcoded true, so the middle-delete builder is null.
@@ -1638,7 +1633,7 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetBatchSelectSqlPlan_PLC_ManyToMany_BuildsCorrectSql() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_plc_m2m", "roles");
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(com.landawn.abacus.query.SqlBuilder.PLC.class);
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(Dsl.PLC);
         assertNotNull(plan);
         final String sql = plan._1.apply(null, 2);
         assertNotNull(sql);
@@ -1659,7 +1654,7 @@ public class JoinInfoTest extends TestBase {
     // fixtures all collide (UserRoleLink.roleId vs RoleLookupEntity.roleId), so only the true branch
     // was covered before.
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-    interface UserPermDao extends Dao<UserPermEntity, PSC, UserPermDao> {
+    interface UserPermDao extends Dao<UserPermEntity, UserPermDao> {
     }
 
     @Test
@@ -1667,7 +1662,7 @@ public class JoinInfoTest extends TestBase {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserPermDao.class, UserPermEntity.class, "user_perm_entity", "perms");
         assertTrue(joinInfo.isManyToManyJoin());
 
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC);
         assertNotNull(plan);
 
         // Eager-built batchSelectAllLeftSql already ran the L422 (false) branch during construction;

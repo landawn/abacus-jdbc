@@ -81,9 +81,9 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.AbstractQueryBuilder.SP;
+import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.SqlOperation;
 import com.landawn.abacus.type.Type;
@@ -2802,16 +2802,16 @@ public final class JdbcUtil {
      *                                  .setLong(1, userId).findFirst(User.class);
      * if (user.isPresent()) {
      *     System.out.println("Found: " + user.get().getName());
-     * } 
+     * }
      *
-     * // Query with multiple parameters returning a list 
+     * // Query with multiple parameters returning a list
      * List<Order> orders = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE customer_id = ? AND status = ? AND order_date > ?")
      *         .setLong(1, customerId)
      *         .setString(2, "PENDING")
      *         .setDate(3, Date.valueOf(lastWeek))
      *         .list(Order.class);
      *
-     *  orders.forEach(order -> System.out.println("Order #" + order.getId())); 
+     *  orders.forEach(order -> System.out.println("Order #" + order.getId()));
      *
      * // Reusing the same PreparedQuery with different parameters
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
@@ -2898,7 +2898,7 @@ public final class JdbcUtil {
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
-     * <pre>{@code  
+     * <pre>{@code
      * Optional<Long> newUserId = JdbcUtil.prepareQuery(dataSource,
      *         "INSERT INTO users (first_name, last_name) VALUES (?, ?)", true).setString(1, "John")
      *                                     .setString(2, "Doe")
@@ -2906,7 +2906,7 @@ public final class JdbcUtil {
      *
      * if (newUserId.isPresent()) {
      *     System.out.println("New user created with ID: " + newUserId.get());
-     * } 
+     * }
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -3116,7 +3116,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using a provided {@link Connection}. 
+     * Prepares a SQL query using a provided {@link Connection}.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
      *
@@ -3651,7 +3651,7 @@ public final class JdbcUtil {
      * Prepares a named SQL query using the provided Connection and named SQL string.
      *
      * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
@@ -4410,7 +4410,7 @@ public final class JdbcUtil {
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code CallableQuery} is closed.
      * </p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Jdbc.OutParamResult outResult = JdbcUtil.prepareCallableQuery(dataSource,
@@ -4423,7 +4423,7 @@ public final class JdbcUtil {
      * String name = outResult.getOutParamValue(2);
      * Date createdDate = outResult.getOutParamValue(3);
      * }</pre>
-     * 
+     *
      * @param ds The DataSource to use for the query
      * @param sql The SQL string for the stored procedure call
      * @return A CallableQuery object representing the prepared callable SQL query
@@ -5170,7 +5170,7 @@ public final class JdbcUtil {
     /**
      * Executes a batch SQL update using the provided DataSource with default batch size.
      * The default batch size is {@link #DEFAULT_BATCH_SIZE}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Object[]> batchParams = Arrays.asList(
@@ -5178,8 +5178,8 @@ public final class JdbcUtil {
      *     new Object[] {"Jane", 30},
      *     new Object[] {"Bob", 35}
      * );
-     * int totalRows = JdbcUtil.executeBatchUpdate(dataSource, 
-     *     "INSERT INTO users (name, age) VALUES (?, ?)", 
+     * int totalRows = JdbcUtil.executeBatchUpdate(dataSource,
+     *     "INSERT INTO users (name, age) VALUES (?, ?)",
      *     batchParams);
      * }</pre>
      *
@@ -6081,7 +6081,7 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet starting from the specified offset and up to the specified count.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
@@ -6143,7 +6143,7 @@ public final class JdbcUtil {
      * RowExtractor emailNormalizer = RowExtractor.builder()
      *              // normalize email is at index 2
      *              .get(2, (rs, col) -> rs.getString(col).toLowerCase()).build();
-     * 
+     *
      * Dataset normalizedData = JdbcUtil.extractData(rs, emailNormalizer);
      * }</pre>
      *
@@ -6370,6 +6370,7 @@ public final class JdbcUtil {
         }
     }
 
+    @SuppressWarnings("deprecation")
     static Dataset extractResultSetToDataset(final ResultSet rs, final int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean checkDateType) throws SQLException {
         final ResultSetMetaData rsmd = rs.getMetaData();
@@ -6491,7 +6492,7 @@ public final class JdbcUtil {
     /**
      * Creates a stream from the provided ResultSet, mapping each row to the specified target class.
      * It's the user's responsibility to close the ResultSet after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
@@ -6518,7 +6519,7 @@ public final class JdbcUtil {
      * Creates a stream from the provided ResultSet using the specified RowMapper.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * {@code JdbcUtil.stream(resultSet, rowMapper).onClose(Fn.closeQuietly(resultSet))...}
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowMapper<String> nameMapper = rs -> rs.getString("name");
@@ -6628,7 +6629,7 @@ public final class JdbcUtil {
      * Creates a stream from the provided ResultSet using the specified RowFilter and RowMapper.
      * Only rows that pass the filter will be included in the stream.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowFilter ageFilter = rs -> rs.getInt("age") > 18;
@@ -6715,7 +6716,7 @@ public final class JdbcUtil {
      * Creates a stream from the provided ResultSet using the specified BiRowMapper.
      * BiRowMapper receives both the ResultSet and column labels, allowing for more flexible mapping.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiRowMapper<Map<String, Object>> mapMapper = (rs, columnLabels) -> {
@@ -6840,7 +6841,7 @@ public final class JdbcUtil {
      * Creates a stream from the provided ResultSet using the specified BiRowFilter and BiRowMapper.
      * Both the filter and mapper receive the ResultSet and column labels for maximum flexibility.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiRowFilter hasNonNullValues = (rs, columnLabels) -> {
@@ -6849,11 +6850,11 @@ public final class JdbcUtil {
      *     }
      *     return false;
      * };
-     * BiRowMapper<String> csvMapper = (rs, columnLabels) -> 
+     * BiRowMapper<String> csvMapper = (rs, columnLabels) ->
      *     columnLabels.stream()
      *         .map(label -> rs.getString(label))
      *         .collect(Collectors.joining(","));
-     * 
+     *
      * JdbcUtil.stream(resultSet, hasNonNullValues, csvMapper)
      *     .onClose(Fn.closeQuietly(resultSet))
      *     .forEach(csvRow -> System.out.println(csvRow));
@@ -6927,7 +6928,7 @@ public final class JdbcUtil {
      * Creates a stream from the provided ResultSet using the specified column index.
      * This is useful when you only need values from a single column.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all names from the first column
@@ -6956,7 +6957,7 @@ public final class JdbcUtil {
      * Creates a stream from the provided ResultSet using the specified column name.
      * This is useful when you only need values from a single column identified by name.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all email addresses
@@ -7003,7 +7004,7 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream of Dataset.
      * This is useful when executing stored procedures that return multiple result sets.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}");
@@ -7027,7 +7028,7 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided ResultExtractor.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultExtractor<List<String>> namesExtractor = rs -> {
@@ -7037,7 +7038,7 @@ public final class JdbcUtil {
      *     }
      *     return names;
      * };
-     * 
+     *
      * JdbcUtil.streamAllResultSets(stmt, namesExtractor)
      *     .onClose(Fn.closeQuietly(stmt))
      *     .forEach(namesList -> System.out.println("Found " + namesList.size() + " names"));
@@ -7066,7 +7067,7 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided BiResultExtractor which also receives column labels.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiResultExtractor<Map<String, List<Object>>> columnarExtractor = (rs, columnLabels) -> {
@@ -7081,11 +7082,11 @@ public final class JdbcUtil {
      *     }
      *     return columns;
      * };
-     * 
+     *
      * JdbcUtil.streamAllResultSets(stmt, columnarExtractor)
      *     .onClose(Fn.closeQuietly(stmt))
      *     .forEach(columnsMap -> {
-     *         columnsMap.forEach((col, values) -> 
+     *         columnsMap.forEach((col, values) ->
      *             System.out.println(col + ": " + values.size() + " values"));
      *     });
      * }</pre>
@@ -7189,7 +7190,7 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
      * This method is useful for processing large result sets in manageable chunks.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 1000";
@@ -7222,7 +7223,7 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided ResultExtractor.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM orders WHERE order_date > ? ORDER BY order_id LIMIT 500";
@@ -7233,7 +7234,7 @@ public final class JdbcUtil {
      *     }
      *     return orders;
      * };
-     * 
+     *
      * JdbcUtil.queryByPage(dataSource, query, 500, (preparedQuery, previousOrders) -> {
      *     if (previousOrders == null) {
      *         preparedQuery.setDate(1, startDate);
@@ -8006,11 +8007,7 @@ public final class JdbcUtil {
             final DatabaseMetaData metadata = conn.getMetaData();
             final String schemaToUse = schema == null ? conn.getSchema() : schema;
 
-            if (tableExists(metadata, catalog, schemaToUse, table)) {
-                return true;
-            }
-
-            if (schema == null && tableExists(metadata, catalog, null, table)) {
+            if (tableExists(metadata, catalog, schemaToUse, table) || (schema == null && tableExists(metadata, catalog, null, table))) {
                 return true;
             }
 
@@ -8520,11 +8517,11 @@ public final class JdbcUtil {
         return value.doubleValue() == 0;
     }
 
-    static <ID> boolean isAllNullIds(final List<ID> ids) {
+    static boolean isAllNullIds(final List<?> ids) {
         return isAllNullIds(ids, defaultIdTester);
     }
 
-    static <ID> boolean isAllNullIds(final List<ID> ids, final Predicate<Object> isDefaultIdTester) {
+    static boolean isAllNullIds(final List<?> ids, final Predicate<Object> isDefaultIdTester) {
         return N.notEmpty(ids) && ids.stream().allMatch(isDefaultIdTester);
     }
 
@@ -8619,7 +8616,7 @@ public final class JdbcUtil {
     //     * @throws IllegalArgumentException if the SQL action is {@code null}.
     //     */
     //    @Beta
-    //    public static <R> R call(final Callable<R> sqlAction) throws IllegalArgumentException {
+    //    public static <R> R call(final Callable<? extends R> sqlAction) throws IllegalArgumentException {
     //        N.checkArgNotNull(sqlAction, s.sqlAction);
     //
     //        try {
@@ -8828,10 +8825,10 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, status, 
+     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, status,
      *     (id, st) -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
      * );
-     * 
+     *
      * future.thenRunAsync(() -> System.out.println("Status updated"));
      * }</pre>
      *
@@ -8864,7 +8861,7 @@ public final class JdbcUtil {
      *                         st, uid, oid);
      *     }
      * );
-     * 
+     *
      * future.thenRunAsync(() -> System.out.println("Order status updated"));
      * }</pre>
      *
@@ -8906,7 +8903,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) throws IllegalArgumentException {
+    public static <R> ContinuableFuture<R> asyncCall(final Callable<? extends R> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         return asyncExecutor.execute(sqlAction);
@@ -8936,8 +8933,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
-    public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<R1> sqlAction1, final Callable<R2> sqlAction2)
-            throws IllegalArgumentException {
+    public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<? extends R1> sqlAction1,
+            final Callable<? extends R2> sqlAction2) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, cs.sqlAction1);
         N.checkArgNotNull(sqlAction2, cs.sqlAction2);
 
@@ -8957,7 +8954,7 @@ public final class JdbcUtil {
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT SUM(total) FROM orders").queryForSingleValue(BigDecimal.class).orElse(BigDecimal.ZERO),
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM products WHERE stock < ?").setInt(1, 10).list(Product.class)
      *     );
-     * 
+     *
      * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRunAsync(() -> {
      *     System.out.println("All queries completed");
      * });
@@ -8973,8 +8970,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
-    public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<R1> sqlAction1,
-            final Callable<R2> sqlAction2, final Callable<R3> sqlAction3) throws IllegalArgumentException {
+    public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<? extends R1> sqlAction1,
+            final Callable<? extends R2> sqlAction2, final Callable<? extends R3> sqlAction3) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, cs.sqlAction1);
         N.checkArgNotNull(sqlAction2, cs.sqlAction2);
         N.checkArgNotNull(sqlAction3, cs.sqlAction3);
@@ -9022,7 +9019,7 @@ public final class JdbcUtil {
      *     (uid, st) -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE user_id = ? AND status = ?")
      *                          .setLong(1, uid).setString(2, st).list(Order.class)
      * );
-     * 
+     *
      * future.thenAccept(orders -> System.out.println("Found " + orders.size() + " orders"));
      * }</pre>
      *
@@ -9056,7 +9053,7 @@ public final class JdbcUtil {
      *         .setDate(1, start).setDate(2, end).setString(3, cat)
      *         .queryForSingleValue(BigDecimal.class).orElse(BigDecimal.ZERO)
      * );
-     * 
+     *
      * future.thenAccept(total -> System.out.println("Total sales: " + total));
      * }</pre>
      *
@@ -9269,12 +9266,12 @@ public final class JdbcUtil {
      *     stmt.registerOutParameter(2, Types.VARCHAR);
      *     stmt.registerOutParameter(3, Types.INTEGER);
      *     stmt.execute();
-     *     
+     *
      *     List<OutParam> outParams = Arrays.asList(
      *         OutParam.of(2, Types.VARCHAR),
      *         OutParam.of(3, Types.INTEGER)
      *     );
-     *     
+     *
      *     OutParamResult result = JdbcUtil.getOutParameters(stmt, outParams);
      *     String name = (String) result.getOutParamValue(2);
      *     Integer age = (Integer) result.getOutParamValue(3);
@@ -9965,7 +9962,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * JdbcUtil.enableSqlLog();
      * // SQL operations here will be logged
-     * 
+     *
      * JdbcUtil.disableSqlLog();
      * // SQL operations here will NOT be logged
      * }</pre>
@@ -10014,7 +10011,8 @@ public final class JdbcUtil {
 
         final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
 
-        if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
+        if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0
+                && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
             sql = sqlExtractor.apply(stmt);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
@@ -10145,7 +10143,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * // Log SQL statements that take more than 1 second, with longer log length
      * JdbcUtil.setMinExecutionTimeForSqlPerfLog(1000, 2048);
-     * 
+     *
      * // Disable performance logging
      * JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
      * }</pre>
@@ -10240,7 +10238,7 @@ public final class JdbcUtil {
      * @return the result of the callable
      * @throws E if the callable throws an exception
      */
-    public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<R, E> sqlAction) throws E {
+    public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws E {
         if (isSqlLogEnabled()) {
             final int savedMaxSqlLogLength = isSQLLogEnabled_TL.get().maxSqlLogLength;
             disableSqlLog();
@@ -10454,7 +10452,7 @@ public final class JdbcUtil {
      *         tranA.rollbackIfNotCommitted();
      *     }
      * }
-     * 
+     *
      * public void doSomethingB() {
      *     final SqlTransaction tranB = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);
      *     try {
@@ -10562,7 +10560,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param <T> the type of the result returned by the callable
+     * @param <R> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
      * @param ds the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
      * @param cmd the callable to execute within the transaction, must not be {@code null}
@@ -10573,13 +10571,13 @@ public final class JdbcUtil {
      * @see #beginTransaction(javax.sql.DataSource)
      */
     @Beta
-    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
+    public static <R, E extends Throwable> R callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
             throws IllegalArgumentException, E {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
-        T result = null;
+        R result = null;
 
         try {
             result = cmd.call();
@@ -10816,7 +10814,7 @@ public final class JdbcUtil {
      *     tokenStore.generateAndPersist(userId));
      * }</pre>
      *
-     * @param <T> the type of the result returned by the callable
+     * @param <R> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
      * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
      *           suspended, must not be {@code null}
@@ -10829,7 +10827,7 @@ public final class JdbcUtil {
      * @see SqlTransaction#callOutsideTransaction(Throwables.Callable)
      */
     @Beta
-    public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
+    public static <R, E extends Throwable> R callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
             throws IllegalArgumentException, E {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
@@ -11136,7 +11134,7 @@ public final class JdbcUtil {
      * String token = JdbcUtil.callNotInStartedTransaction(dataSource, () -> tokenStore.generate());
      * }</pre>
      *
-     * @param <T> the type of the result returned by the callable
+     * @param <R> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
      * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
      *           suspended, must not be {@code null}
@@ -11148,7 +11146,7 @@ public final class JdbcUtil {
      */
     @Deprecated
     @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
+    public static <R, E extends Throwable> R callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
             throws IllegalArgumentException, E {
         return callOutsideTransaction(ds, cmd);
     }
@@ -11376,7 +11374,7 @@ public final class JdbcUtil {
      * @see #runWithoutUsingSpringTransaction(Throwables.Runnable)
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      */
-    public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<R, E> sqlAction) throws E {
+    public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<? extends R, E> sqlAction) throws E {
         if (isSpringTransactionalNotUsed()) {
             return sqlAction.call();
         } else {
@@ -11574,7 +11572,6 @@ public final class JdbcUtil {
      *
      * @param <T> the entity type managed by the DAO
      * @param <ID> the ID type returned by the extractor
-     * @param <SB> the {@link SqlBuilder} type used by the DAO
      * @param <TD> the concrete {@link CrudDao} subtype
      * @param daoInterface the DAO interface class, must not be {@code null}
      * @param idExtractor the {@link RowMapper} used to read the generated key(s) from the generated-keys
@@ -11582,8 +11579,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code idExtractor} is {@code null}
      * @see #setIdExtractorForDao(Class, BiRowMapper)
      */
-    public static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
+    public static <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface,
+            final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(idExtractor, cs.idExtractor);
 
@@ -11615,7 +11612,6 @@ public final class JdbcUtil {
      *
      * @param <T> the entity type managed by the DAO
      * @param <ID> the ID type returned by the extractor
-     * @param <SB> the {@link SqlBuilder} type used by the DAO
      * @param <TD> the concrete {@link CrudDao} subtype
      * @param daoInterface the DAO interface class, must not be {@code null}
      * @param idExtractor the {@link BiRowMapper} used to read the generated key(s) from the
@@ -11624,8 +11620,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code idExtractor} is {@code null}
      * @see #setIdExtractorForDao(Class, RowMapper)
      */
-    public static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
-            final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
+    public static <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface,
+            final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(idExtractor, cs.idExtractor);
 
@@ -11655,7 +11651,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Define a DAO interface extending CrudDao or Dao
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     // Automatic CRUD methods are inherited:
      *     // - save(User user)
      *     // - batchSave(Collection<User> users)
@@ -11677,7 +11673,7 @@ public final class JdbcUtil {
      * }
      *
      * // Create and use the DAO
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
      *
      * // Use inherited CRUD operations
      * User newUser = new User("john@example.com", "John Doe");
@@ -11714,7 +11710,7 @@ public final class JdbcUtil {
      * <p><b>Advanced DAO Features:</b></p>
      * <pre>{@code
      * // Define a DAO with complex queries
-     * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
+     * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
      *     // Aggregate queries
      *     @Query("SELECT COUNT(*) FROM orders WHERE status = ?")
      *     long countByStatus(String status);
@@ -11731,7 +11727,7 @@ public final class JdbcUtil {
      *     CompletableFuture<Optional<Order>> findByIdAsync(Long id);
      * }
      *
-     * OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource);
+     * OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource, Dsl.PSC);
      *
      * // Use aggregate queries
      * long pendingCount = orderDao.countByStatus("PENDING");
@@ -11822,7 +11818,12 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
-        return createDao(daoInterface, ds, JdbcUtil.asyncExecutor.getExecutor());
+        return createDao(daoInterface, ds, Dsl.PSC);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder) {
+        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
@@ -11832,7 +11833,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SqlMapper sqlMapper = SqlMapper.load("sql/user-queries.xml");
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper);
      * }</pre>
      *
      * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
@@ -11854,7 +11855,12 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper) {
-        return createDao(daoInterface, ds, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
+        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper) {
+        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
@@ -11879,11 +11885,11 @@ public final class JdbcUtil {
      * // A non-null DaoCache is only allowed for NoUpdateDao / NoUpdateCrudDao interfaces
      * // (e.g. UserReadDao extends NoUpdateCrudDao<User, Long, ...>):
      * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, sqlMapper, cache);
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, Dsl.PSC, sqlMapper, cache);
      *
      * // For a regular (mutating) Dao/CrudDao, pass null — a non-null cache would throw
      * // UnsupportedOperationException for a non-NoUpdate interface:
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, null);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper, null);
      * }</pre>
      *
      * @param <TD> the type of the DAO
@@ -11894,6 +11900,8 @@ public final class JdbcUtil {
      * @return a DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
+     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
+     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
      * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
@@ -11901,7 +11909,14 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
             final Jdbc.DaoCache daoCache) {
-        return createDao(daoInterface, ds, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
+        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper, daoCache);
+    }
+
+    @Deprecated
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper,
+            final Jdbc.DaoCache daoCache) {
+        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
@@ -11911,7 +11926,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService executor = Executors.newFixedThreadPool(10);
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, executor);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, executor);
      * CompletableFuture<List<User>> future = userDao.findAllAsync();
      * }</pre>
      *
@@ -11935,7 +11950,12 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Executor executor) {
-        return createDao(daoInterface, ds, null, executor);
+        return createDao(daoInterface, ds, Dsl.PSC, executor);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final Executor executor) {
+        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, null, null, executor);
     }
 
     /**
@@ -11946,7 +11966,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * SqlMapper sqlMapper = SqlMapper.load("sql/queries.xml");
      * ExecutorService executor = Executors.newCachedThreadPool();
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, executor);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper, executor);
      * }</pre>
      *
      * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
@@ -11970,7 +11990,13 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
             final Executor executor) {
-        return createDao(daoInterface, ds, sqlMapper, null, executor);
+        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper, executor);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper,
+            final Executor executor) {
+        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, null, executor);
     }
 
     /**
@@ -11994,11 +12020,11 @@ public final class JdbcUtil {
      *
      * // Cache requires a NoUpdate DAO; size it with create(capacity, evictDelayMillis).
      * Jdbc.DaoCache cache = Jdbc.DaoCache.create(1000, 3000);
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, sqlMapper, cache, executor);
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, Dsl.PSC, sqlMapper, cache, executor);
      *
      * // For a mutating Dao/CrudDao, pass null cache (a non-null cache throws
      * // UnsupportedOperationException for non-NoUpdate interfaces):
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, null, executor);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper, null, executor);
      * }</pre>
      *
      * @param <TD> the type of the DAO
@@ -12010,6 +12036,8 @@ public final class JdbcUtil {
      * @return a DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
+     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
+     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
      * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper, Executor)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
@@ -12017,7 +12045,14 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
             final Jdbc.DaoCache daoCache, final Executor executor) {
-        return DaoImpl.createDao(daoInterface, null, ds, sqlMapper, daoCache, executor);
+        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper, daoCache, executor);
+    }
+
+    @Deprecated
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper,
+            final Jdbc.DaoCache daoCache, final Executor executor) {
+        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, daoCache, executor);
     }
 
     /**
@@ -12027,7 +12062,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Entity class is "User" but table is "app_users"
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "app_users", dataSource);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "app_users", dataSource, Dsl.PSC);
      * }</pre>
      *
      * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
@@ -12049,7 +12084,13 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds) {
-        return createDao(daoInterface, targetTableName, ds, JdbcUtil.asyncExecutor.getExecutor());
+        return createDao(daoInterface, targetTableName, ds, Dsl.PSC);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
+            final Dsl sqlBuilder) {
+        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
@@ -12059,7 +12100,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SqlMapper sqlMapper = SqlMapper.load("sql/legacy-queries.xml");
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, Dsl.PSC, sqlMapper);
      * }</pre>
      *
      * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
@@ -12083,7 +12124,13 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
             final SqlMapper sqlMapper) {
-        return createDao(daoInterface, targetTableName, ds, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
+        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
+            final SqlMapper sqlMapper) {
+        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
@@ -12105,10 +12152,10 @@ public final class JdbcUtil {
      *
      * // Cache is only honored for NoUpdateDao / NoUpdateCrudDao interfaces:
      * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "legacy_users", dataSource, sqlMapper, cache);
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "legacy_users", dataSource, Dsl.PSC, sqlMapper, cache);
      *
      * // Regular CrudDao on an overridden table — pass null cache:
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper, null);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, Dsl.PSC, sqlMapper, null);
      * }</pre>
      *
      * @param <TD> the type of the DAO
@@ -12120,6 +12167,8 @@ public final class JdbcUtil {
      * @return a DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
+     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
+     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
      * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
@@ -12127,7 +12176,14 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
             final SqlMapper sqlMapper, final Jdbc.DaoCache daoCache) {
-        return createDao(daoInterface, targetTableName, ds, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
+        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper, daoCache);
+    }
+
+    @Deprecated
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
+            final SqlMapper sqlMapper, final Jdbc.DaoCache daoCache) {
+        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
@@ -12137,7 +12193,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool customPool = new ForkJoinPool(20);
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, customPool);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, Dsl.PSC, customPool);
      * }</pre>
      *
      * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
@@ -12161,7 +12217,13 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
             final Executor executor) {
-        return createDao(daoInterface, targetTableName, ds, null, executor);
+        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, executor);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
+            final Executor executor) {
+        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, null, null, executor);
     }
 
     /**
@@ -12172,7 +12234,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * SqlMapper sqlMapper = SqlMapper.load("sql/custom-queries.xml");
      * ExecutorService executor = Executors.newWorkStealingPool();
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, sqlMapper, executor);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, Dsl.PSC, sqlMapper, executor);
      * }</pre>
      *
      * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
@@ -12197,7 +12259,13 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
             final SqlMapper sqlMapper, final Executor executor) {
-        return createDao(daoInterface, targetTableName, ds, sqlMapper, null, executor);
+        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper, executor);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
+            final SqlMapper sqlMapper, final Executor executor) {
+        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, null, executor);
     }
 
     /**
@@ -12222,11 +12290,11 @@ public final class JdbcUtil {
      *
      * // Cache is only honored for NoUpdateDao / NoUpdateCrudDao interfaces:
      * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "users_2024", dataSource, sqlMapper, cache, executor);
+     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "users_2024", dataSource, Dsl.PSC, sqlMapper, cache, executor);
      *
      * // Regular mutating CrudDao — pass null cache (a non-null cache throws
      * // UnsupportedOperationException for non-NoUpdate interfaces):
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, sqlMapper, null, executor);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, Dsl.PSC, sqlMapper, null, executor);
      * }</pre>
      *
      * @param <TD> the type of the DAO
@@ -12239,6 +12307,8 @@ public final class JdbcUtil {
      * @return a DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
+     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
+     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
      * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Executor)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
@@ -12246,7 +12316,14 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
             final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
-        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlMapper, cache, executor);
+        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper, cache, executor);
+    }
+
+    @Deprecated
+    @SuppressWarnings("rawtypes")
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
+            final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
+        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, cache, executor);
     }
 
     @SuppressWarnings("unused")
@@ -12327,7 +12404,7 @@ public final class JdbcUtil {
      * // Use a custom cache implementation
      * Map<String, Object> cacheMap = new LRUMap<>(1000);
      * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
-     * 
+     *
      * JdbcUtil.openDaoCacheOnCurrentThread(cache);
      * try {
      *     // DAO operations use the custom cache

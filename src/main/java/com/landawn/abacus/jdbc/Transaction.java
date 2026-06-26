@@ -31,10 +31,10 @@ public interface Transaction {
      * Returns the unique identifier of this transaction.
      * The identifier is typically generated when the transaction is created and remains
      * constant throughout the transaction's lifecycle.
-     * 
+     *
      * <p>This ID can be useful for logging, debugging, and tracking transaction flow
      * in distributed systems.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String transactionId = transaction.id();
@@ -50,7 +50,7 @@ public interface Transaction {
      * The isolation level determines how and when changes made by this transaction become
      * visible to other concurrent transactions, controlling the trade-off between performance
      * and consistency.
-     * 
+     *
      * <p>Common isolation levels include:</p>
      * <ul>
      *   <li>{@code READ_UNCOMMITTED} - allows dirty reads</li>
@@ -58,7 +58,7 @@ public interface Transaction {
      *   <li>{@code REPEATABLE_READ} - prevents dirty and non-repeatable reads</li>
      *   <li>{@code SERIALIZABLE} - prevents dirty reads, non-repeatable reads, and phantom reads</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * IsolationLevel level = transaction.isolationLevel();
@@ -75,7 +75,7 @@ public interface Transaction {
      * Returns the current status of this transaction.
      * The status indicates the current state in the transaction lifecycle,
      * such as whether it's active, committed, or rolled back.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Status status = transaction.status();
@@ -93,10 +93,10 @@ public interface Transaction {
      * Checks if this transaction is currently active.
      * A transaction is considered active if it has been started but not yet
      * committed or rolled back.
-     * 
+     *
      * <p>This is a convenience method equivalent to checking if the status
      * equals {@link Status#ACTIVE}.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (transaction.isActive()) {
@@ -113,11 +113,11 @@ public interface Transaction {
      * Commits the current transaction, making all changes permanent.
      * After a successful commit, the transaction is no longer active and cannot
      * be used for further operations.
-     * 
+     *
      * <p>If the commit fails, the transaction transitions to {@link Status#FAILED_COMMIT}
      * and an exception is thrown. Implementations may additionally attempt an automatic
      * rollback after a failed commit.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try {
@@ -141,10 +141,10 @@ public interface Transaction {
      * Rolls back the current transaction, undoing all changes made within
      * the transaction scope. After a successful rollback, the transaction
      * is no longer active and cannot be used for further operations.
-     * 
+     *
      * <p>If the rollback fails, the transaction status will be set to
      * {@link Status#FAILED_ROLLBACK} and an exception will be thrown.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try {
@@ -168,17 +168,17 @@ public interface Transaction {
      * Rolls back the transaction if it has not been committed successfully.
      * This method is safe to call multiple times and will only perform a rollback
      * if the transaction is still active or in a failed commit state.
-     * 
+     *
      * <p>This method is particularly useful in finally blocks or cleanup code
      * where you want to ensure a transaction is not left in an active state.</p>
-     * 
+     *
      * <p>The method will attempt rollback in the following states:</p>
      * <ul>
      *   <li>{@link Status#ACTIVE} - Normal rollback</li>
      *   <li>{@link Status#MARKED_ROLLBACK} - Completes the rollback</li>
      *   <li>{@link Status#FAILED_COMMIT} - Attempts to rollback after failed commit</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Transaction txn = JdbcUtil.beginTransaction(dataSource);

@@ -896,7 +896,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         been opened on this thread for the same id and was not closed. If {@code cmd} itself
      *         throws, this condition is instead attached as a suppressed exception.
      */
-    public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<R, E> cmd) throws E {
+    public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd) throws E {
         synchronized (_outsideTxLock) { //NOSONAR
             final boolean wasRegistered = threadTransactionMap.remove(_id, this);
 
@@ -1009,7 +1009,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @deprecated replaced by {@link #callOutsideTransaction(Throwables.Callable)}
      */
     @Deprecated
-    public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<R, E> cmd) throws E {
+    public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<? extends R, E> cmd) throws E {
         return callOutsideTransaction(cmd);
     }
 

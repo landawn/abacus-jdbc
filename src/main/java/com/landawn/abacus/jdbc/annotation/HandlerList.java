@@ -30,24 +30,24 @@ import java.lang.annotation.Target;
  * {@link Handler#type() type} to a {@code Jdbc.Handler} instance, then composes them into an
  * <em>onion-style</em> interceptor chain around the actual DAO call: outer handlers see the
  * invocation first on the way in and last on the way out (see "Execution flow" below).</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Handler(type = LoggingHandler.class)
  * @Handler(type = SecurityHandler.class)
  * @Handler(type = CacheHandler.class, filter = {"find.*", "get.*"})
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // All three handlers will be applied according to their configurations
  * }
  * }</pre>
- * 
+ *
  * <p>The handlers are executed in the order they are declared:</p>
  * <ol>
  *   <li>{@code beforeInvoke()} is called in declaration order.</li>
  *   <li>{@code afterInvoke()} is called in reverse declaration order.</li>
  *   <li>This creates a nested interception pattern.</li>
  * </ol>
- * 
+ *
  * <p>Execution flow example with three handlers A, B, C:</p>
  * <pre>
  * A.beforeInvoke()
@@ -92,7 +92,7 @@ public @interface HandlerList {
      * @Handler(type = LoggingHandler.class)
      * @Handler(type = SecurityHandler.class)
      * @Handler(type = CacheHandler.class)
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     // The compiler wraps these in a HandlerList annotation
      * }
      * }</pre>

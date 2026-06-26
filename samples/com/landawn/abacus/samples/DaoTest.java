@@ -13,6 +13,7 @@
  */
 package com.landawn.abacus.samples;
 
+import static com.landawn.abacus.query.Dsl.PSC;
 import static com.landawn.abacus.samples.JdbcTest.addressDao;
 import static com.landawn.abacus.samples.JdbcTest.dataSource;
 import static com.landawn.abacus.samples.JdbcTest.deviceDao;
@@ -50,7 +51,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.samples.entity.Address;

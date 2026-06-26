@@ -26,14 +26,14 @@ import com.landawn.abacus.annotation.JoinedBy;
  * Merges multiple result rows into single entities based on ID fields.
  * This annotation is particularly useful for handling one-to-many relationships
  * where a SQL join produces multiple rows for each parent entity.
- * 
+ *
  * <p>When a query with joins returns multiple rows for the same entity (due to
  * one-to-many relationships), this annotation automatically merges those rows
  * into a single entity with nested collections.</p>
- * 
+ *
  * <p>The merging is performed based on the entity's ID field(s). Rows with the
  * same ID are combined into one entity, with collection properties populated from the multiple rows.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Entity classes
@@ -44,15 +44,15 @@ import com.landawn.abacus.annotation.JoinedBy;
  *     private List<Device> devices;  // One-to-many relationship
  *     // getters and setters
  * }
- * 
+ *
  * public class Device {
  *     private Long id;
  *     private String model;
  *     // getters and setters
  * }
- * 
+ *
  * // DAO interface
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Query returns multiple rows per user (one per device)
  *     @Query("SELECT u.id, u.first_name as firstName, u.last_name as lastName, " +
  *             "d.id as 'devices.id', d.model as 'devices.model' " +
@@ -60,21 +60,21 @@ import com.landawn.abacus.annotation.JoinedBy;
  *             "WHERE u.id IN ({ids})")
  *     @MergedById
  *     List<User> findUsersWithDevices(@BindList("ids") List<Long> ids);
- *     
+ *
  *     // Result: Each User object will have its devices list populated
  * }
- * 
+ *
  * // Usage
  * List<User> users = userDao.findUsersWithDevices(Arrays.asList(1L, 2L, 3L));
  * // Each user will have all their devices in the devices list
  * }</pre>
- * 
+ *
  * <p>Column naming conventions for nested properties:</p>
  * <ul>
  *   <li>Use dot notation: {@code 'devices.id'}, {@code 'devices.model'}</li>
  *   <li>Or use nested aliases in query results</li>
  * </ul>
- * 
+ *
  * <p>The annotation supports:</p>
  * <ul>
  *   <li>Single ID field (most common case)</li>
@@ -84,7 +84,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  *   <li>Multiple levels of nesting</li>
  *   <li>Both LEFT and INNER joins</li>
  * </ul>
- * 
+ *
  * <p>Important notes:</p>
  * <ul>
  *   <li>The query must include the ID field(s) in the SELECT clause</li>

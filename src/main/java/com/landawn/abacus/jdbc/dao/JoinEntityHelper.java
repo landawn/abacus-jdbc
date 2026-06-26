@@ -31,7 +31,6 @@ import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
@@ -44,13 +43,13 @@ import com.landawn.abacus.util.stream.Stream;
 /**
  * Interface for handling join entities in database operations. This helper provides methods to load and delete
  * related entities that are joined to a main entity through foreign key relationships.
- * 
+ *
  * <p>The interface supports both eager and lazy loading of join entities, allowing for efficient data retrieval
  * strategies. It also provides parallel execution capabilities for performance optimization when dealing with
  * multiple join operations.</p>
- * 
+ *
  * <p>Join entities are typically defined using the {@code @JoinedBy} annotation on entity properties.</p>
- * 
+ *
  * <p><b>Example usage:</b></p>
  * <pre>{@code
  * // Define entities with join relationships
@@ -71,14 +70,13 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}/{@code PAC}/{@code PLC}/{@code PSB})
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
+public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
     /**
      * Retrieves the class type of the target DAO interface.
      * Internal use only.
@@ -156,7 +154,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
 
     /**
      * Finds the first entity that matches the specified condition and loads multiple types of join entities.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first user with both orders and addresses loaded
@@ -186,7 +184,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
 
     /**
      * Finds the first entity that matches the specified condition, optionally loading all join entities.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first user with all join entities loaded
@@ -244,7 +242,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Finds the only entity that matches the specified condition and loads multiple types of join entities.
      * Throws an exception if more than one entity matches the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find the only user with specific ID and load multiple join entities
@@ -276,7 +274,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Finds the only entity that matches the specified condition, optionally loading all join entities.
      * Throws an exception if more than one entity matches the condition.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find the only active user and load all their join entities
@@ -435,7 +433,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     @Beta
     default Stream<T> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
         return DaoUtil.getDao(this)
-                .stream(selectPropNames, cond) // 
+                .stream(selectPropNames, cond) //
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE)
                 .onEach(batchEntities -> {
                     try {
@@ -641,7 +639,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a single entity by property name.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -698,7 +696,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a collection of entities by property name.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.eq("country", "US"));
@@ -760,7 +758,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a single entity by property names.
      * Each property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -786,7 +784,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a single entity with optional parallel execution.
      * When parallel execution is enabled, join entities are loaded concurrently for better performance.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -812,7 +810,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a single entity using a custom executor for parallel execution.
      * This method provides fine-grained control over the threading behavior.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
@@ -841,7 +839,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a collection of entities by property names.
      * Each property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.eq("accountType", "premium"));
@@ -866,7 +864,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a collection of entities with optional parallel execution.
      * When parallel execution is enabled, different join entity types are loaded concurrently.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.in("id", userIds));
@@ -892,7 +890,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a collection of entities using a custom executor for parallel execution.
      * This method provides fine-grained control over the threading behavior when loading multiple join entity types.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newCachedThreadPool();
@@ -921,7 +919,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a single entity.
      * This method loads all properties annotated with {@code @JoinedBy} in the entity class.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -940,7 +938,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a single entity with optional parallel execution.
      * When parallel execution is enabled, all join entities are loaded concurrently for better performance.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -965,7 +963,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a single entity using a custom executor for parallel execution.
      * This method provides fine-grained control over the threading behavior when loading all join entities.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool customPool = new ForkJoinPool(8);
@@ -986,7 +984,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a collection of entities.
      * This method loads all properties annotated with {@code @JoinedBy} in the entity class for each entity.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.eq("status", "active"));
@@ -1009,7 +1007,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a collection of entities with optional parallel execution.
      * When parallel execution is enabled, different join entity types are loaded concurrently.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.in("id", largeUserIdList));
@@ -1034,7 +1032,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a collection of entities using a custom executor for parallel execution.
      * This method provides fine-grained control over the threading behavior when loading all join entities.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService batchExecutor = Executors.newWorkStealingPool();
@@ -1175,7 +1173,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a single entity by property name only if the property is currently {@code null}.
      * This method is useful for lazy loading specific join properties.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
@@ -1194,7 +1192,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a single entity by property name only if the property is currently {@code null},
      * with specific property selection.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
@@ -1225,7 +1223,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a collection of entities by property name only if the property is currently {@code null}.
      * Only entities with {@code null} values for the specified property will have their join entities loaded.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
@@ -1244,7 +1242,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a collection of entities by property name only if the property is currently {@code null},
      * with specific property selection.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
@@ -1282,7 +1280,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a single entity by property names only if they are currently {@code null}.
      * Only properties with {@code null} values will have their join entities loaded.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
@@ -1307,7 +1305,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a single entity only if they are currently {@code null},
      * with optional parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
@@ -1333,7 +1331,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a single entity only if they are currently {@code null},
      * using a custom executor for parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService lazyLoadExecutor = Executors.newFixedThreadPool(3);
@@ -1363,7 +1361,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a collection of entities by property names only if they are currently {@code null}.
      * Only properties with {@code null} values will have their join entities loaded.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
@@ -1388,7 +1386,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a collection of entities only if they are currently {@code null},
      * with optional parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
@@ -1415,7 +1413,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads multiple join entities for a collection of entities only if they are currently {@code null},
      * using a custom executor for parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService batchLazyLoader = Executors.newWorkStealingPool();
@@ -1445,7 +1443,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a single entity only if they are currently {@code null}.
      * This method checks all properties annotated with {@code @JoinedBy} and loads only those that are {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
@@ -1464,7 +1462,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a single entity only if they are currently {@code null},
      * with optional parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
@@ -1489,7 +1487,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a single entity only if they are currently {@code null},
      * using a custom executor for parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newCachedThreadPool();
@@ -1510,7 +1508,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a collection of entities only if they are currently {@code null}.
      * This method checks all properties annotated with {@code @JoinedBy} and loads only those that are {@code null}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
@@ -1533,7 +1531,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a collection of entities only if they are currently {@code null},
      * with optional parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
@@ -1558,7 +1556,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Loads all join entities for a collection of entities only if they are currently {@code null},
      * using a custom executor for parallel execution.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService batchExecutor = Executors.newWorkStealingPool();
@@ -1761,7 +1759,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes multiple join entities for a single entity by property names.
      * This operation is performed within a transaction when multiple properties are specified.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -1867,7 +1865,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes multiple join entities for a collection of entities by property names.
      * This operation is performed within a transaction when multiple properties are specified.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.eq("accountStatus", "terminated"));
@@ -1910,7 +1908,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes multiple join entities for a collection of entities with optional parallel execution.
      * Note: Parallel execution may not complete within a single transaction.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getBulkUsersForDeletion();
@@ -1939,7 +1937,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes multiple join entities for a collection of entities using a custom executor for parallel execution.
      * Note: This operation cannot be completed within a single transaction when executed in multiple threads.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService bulkDeleteExecutor = Executors.newWorkStealingPool();
@@ -1972,7 +1970,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes all join entities for a single entity.
      * This deletes all entities referenced by properties annotated with {@code @JoinedBy}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -1992,7 +1990,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes all join entities for a single entity with optional parallel execution.
      * Note: Parallel execution may not complete within a single transaction.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.get(1L).orElseThrow();
@@ -2020,7 +2018,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes all join entities for a single entity using a custom executor for parallel execution.
      * Note: This operation cannot be completed within a single transaction when executed in multiple threads.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService cleanupExecutor = Executors.newCachedThreadPool();
@@ -2044,7 +2042,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes all join entities for a collection of entities.
      * This deletes all entities referenced by properties annotated with {@code @JoinedBy} for each entity.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.eq("markedForDeletion", true));
@@ -2068,7 +2066,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes all join entities for a collection of entities with optional parallel execution.
      * Note: Parallel execution may not complete within a single transaction.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getInactiveUsers();
@@ -2096,7 +2094,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Deletes all join entities for a collection of entities using a custom executor for parallel execution.
      * Note: This operation cannot be completed within a single transaction when executed in multiple threads.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService massCleanupExecutor = Executors.newWorkStealingPool(8);

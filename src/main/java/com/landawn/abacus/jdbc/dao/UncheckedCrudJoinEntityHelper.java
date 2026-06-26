@@ -23,7 +23,6 @@ import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.cs;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -35,21 +34,21 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p>This interface enables efficient loading of related entities when retrieving data by ID,
  * making it ideal for entities with complex relationships that need to be fetched together.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends UncheckedCrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends UncheckedCrudDao<User, Long, UserDao>, UncheckedCrudJoinEntityHelper<User, Long, UserDao> {
  *     // Inherits both CRUD and join entity operations
  * }
- * 
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
- * 
+ *
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ *
  * // Get user with all related entities
  * Optional<User> user = userDao.get(userId, true);
- * 
+ *
  * // Get user with specific related entities
  * User user = userDao.gett(userId, Order.class);
- * 
+ *
  * // Batch get users with their profiles
  * List<User> users = userDao.batchGet(
  *     Arrays.asList(1L, 2L, 3L),
@@ -59,7 +58,6 @@ import com.landawn.abacus.util.u.Optional;
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB})
  * @param <TD> the concrete DAO type, bounded by {@link UncheckedCrudDao}, that owns this helper
  *             (used for fluent method chaining and access to CRUD operations)
  * @see UncheckedJoinEntityHelper
@@ -67,13 +65,13 @@ import com.landawn.abacus.util.u.Optional;
  * @see CrudJoinEntityHelper
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
-        extends UncheckedJoinEntityHelper<T, SB, TD>, CrudJoinEntityHelper<T, ID, SB, TD> {
+public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
+        extends UncheckedJoinEntityHelper<T, TD>, CrudJoinEntityHelper<T, ID, TD> {
 
     /**
      * Retrieves an entity by ID and loads the specified join entity class.
      * This is a beta API that combines entity retrieval with automatic join loading.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with their orders loaded
@@ -100,7 +98,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID and optionally loads all join entities.
      * This is a beta API for convenient loading of all relationships.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with all relationships loaded
@@ -124,7 +122,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID with selected properties and loads the specified join entity class.
      * This is a beta API for efficient partial loading of entities with relationships.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal fields and their profile
@@ -154,7 +152,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID with selected properties and loads multiple join entity classes.
      * This is a beta API for flexible entity loading with multiple relationships.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with specific fields and multiple relationships
@@ -184,7 +182,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID with selected properties and optionally loads all join entities.
      * This is a beta API for flexible entity retrieval with automatic relationship loading.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with essential fields and all relationships
@@ -214,7 +212,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID and loads the specified join entity class, returning the entity directly.
      * This is a beta API that returns {@code null} if the entity is not found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders, returns null if not found
@@ -246,7 +244,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID and optionally loads all join entities, returning the entity directly.
      * This is a beta API that returns {@code null} if the entity is not found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with all relationships
@@ -278,7 +276,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID with selected properties and loads the specified join entity class.
      * This is a beta API for efficient partial entity loading with relationships.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal data and profile
@@ -314,7 +312,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID with selected properties and loads multiple join entity classes.
      * This is a beta API for complex entity loading scenarios.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with specific fields and multiple relationships
@@ -352,7 +350,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Retrieves an entity by ID with selected properties and optionally loads all join entities.
      * This is a beta API that combines partial loading with automatic relationship loading.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with core fields and all relationships
@@ -388,7 +386,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities by IDs and loads the specified join entity class for each.
      * This is a beta API for efficient batch loading with relationships.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get multiple users with their orders
@@ -414,7 +412,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities by IDs and optionally loads all join entities for each.
      * This is a beta API for batch loading with automatic relationship loading.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get multiple users with all their relationships
@@ -440,7 +438,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities with selected properties and loads the specified join entity class.
      * This is a beta API for efficient partial batch loading with relationships.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get users with minimal fields and their profiles
@@ -470,7 +468,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities with selected properties and loads multiple join entity classes.
      * This is a beta API for complex batch loading scenarios.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get users with specific fields and multiple relationships
@@ -500,7 +498,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities with selected properties and optionally loads all join entities.
      * This is a beta API for flexible batch loading with automatic relationship loading.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get users with essential fields and all relationships
@@ -530,7 +528,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities with selected properties using a specific batch size and loads the specified join entity class.
      * This is a beta API for efficient large-scale batch loading with relationships.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get thousands of users in batches of 500 with their orders
@@ -574,7 +572,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities with selected properties using a specific batch size and loads multiple join entity classes.
      * This is a beta API for complex large-scale batch loading scenarios.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get large number of users with multiple relationships
@@ -624,7 +622,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     /**
      * Batch gets entities with selected properties using a specific batch size and optionally loads all join entities.
      * This is a beta API for maximum flexibility in batch loading operations.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get large dataset with all relationships in optimized batches

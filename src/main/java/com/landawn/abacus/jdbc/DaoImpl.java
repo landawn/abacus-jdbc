@@ -91,17 +91,14 @@ import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.AbstractQueryBuilder;
 import com.landawn.abacus.query.AbstractQueryBuilder.SP;
+import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SqlBuilder;
-import com.landawn.abacus.query.SqlBuilder.NAC;
-import com.landawn.abacus.query.SqlBuilder.NLC;
-import com.landawn.abacus.query.SqlBuilder.NSC;
-import com.landawn.abacus.query.SqlBuilder.PAC;
-import com.landawn.abacus.query.SqlBuilder.PLC;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
@@ -151,9 +148,8 @@ import com.landawn.abacus.util.function.Supplier;
 import com.landawn.abacus.util.function.TriFunction;
 import com.landawn.abacus.util.stream.BaseStream;
 import com.landawn.abacus.util.stream.EntryStream;
-import com.landawn.abacus.util.stream.IntStream.IntStreamEx;
+import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
-import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
@@ -346,6 +342,59 @@ final class DaoImpl {
     private static final Jdbc.BiParametersSetter<AbstractQuery, Collection> collParamsSetter = AbstractQuery::setParameters;
 
     private static final Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = NamedQuery::setParameters; // NOSONAR
+
+    private static Dsl parameterizedDsl(final Dsl dsl) {
+        if (dsl == Dsl.PSB || dsl == Dsl.PSC || dsl == Dsl.PAC || dsl == Dsl.PLC) {
+            return dsl;
+        } else if (dsl == Dsl.NSB) {
+            return Dsl.PSB;
+        } else if (dsl == Dsl.NSC) {
+            return Dsl.PSC;
+        } else if (dsl == Dsl.NAC) {
+            return Dsl.PAC;
+        } else if (dsl == Dsl.NLC) {
+            return Dsl.PLC;
+        }
+
+        return dslWithPolicy(dsl, "PARAMETERIZED_SQL");
+    }
+
+    private static Dsl namedDsl(final Dsl dsl) {
+        if (dsl == Dsl.NSB || dsl == Dsl.NSC || dsl == Dsl.NAC || dsl == Dsl.NLC) {
+            return dsl;
+        } else if (dsl == Dsl.PSB) {
+            return Dsl.NSB;
+        } else if (dsl == Dsl.PSC) {
+            return Dsl.NSC;
+        } else if (dsl == Dsl.PAC) {
+            return Dsl.NAC;
+        } else if (dsl == Dsl.PLC) {
+            return Dsl.NLC;
+        }
+
+        return dslWithPolicy(dsl, "NAMED_SQL");
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static Dsl dslWithPolicy(final Dsl dsl, final String sqlPolicyName) {
+        final SqlDialect sqlDialect = dsl.sqlDialect();
+        final Object dialectBuilder = SqlDialect.builder()
+                .productInfo(sqlDialect.productInfo())
+                .namingPolicy(sqlDialect.namingPolicy())
+                .identifierQuote(sqlDialect.identifierQuote());
+
+        try {
+            final Class<? extends Enum> sqlPolicyClass = (Class<? extends Enum>) Class.forName("com.landawn.abacus.query.AbstractQueryBuilder$SQLPolicy");
+            final Method sqlPolicyMethod = dialectBuilder.getClass().getDeclaredMethod("sqlPolicy", sqlPolicyClass);
+            final Method buildMethod = dialectBuilder.getClass().getDeclaredMethod("build");
+            ClassUtil.setAccessibleQuietly(sqlPolicyMethod, true);
+            ClassUtil.setAccessibleQuietly(buildMethod, true);
+            sqlPolicyMethod.invoke(dialectBuilder, Enum.valueOf(sqlPolicyClass, sqlPolicyName));
+            return Dsl.forDialect((SqlDialect) buildMethod.invoke(dialectBuilder));
+        } catch (final ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to create Dsl with SQL policy: " + sqlPolicyName, e);
+        }
+    }
 
     /**
      * Creates a {@link MethodHandle} for invoking a default interface method via {@code unreflectSpecial}.
@@ -1224,7 +1273,7 @@ final class DaoImpl {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
 
             if (queryInfo.isProcedure) {
-                final String paramName = StreamEx.of(method.getParameterAnnotations()[stmtParamIndexes[0]])
+                final String paramName = Stream.of(method.getParameterAnnotations()[stmtParamIndexes[0]])
                         .select(Bind.class)
                         .map(Bind::value)
                         .first()
@@ -1247,7 +1296,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 }
             } else if (queryInfo.isNamedQuery) {
-                final String paramName = StreamEx.of(method.getParameterAnnotations()[stmtParamIndexes[0]])
+                final String paramName = Stream.of(method.getParameterAnnotations()[stmtParamIndexes[0]])
                         .select(Bind.class)
                         .map(Bind::value)
                         .first()
@@ -1316,12 +1365,12 @@ final class DaoImpl {
             }
         } else {
             if (queryInfo.isProcedure) {
-                final Bind[] paramBinds = IntStreamEx.of(stmtParamIndexes)
-                        .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElse(null))
+                final Bind[] paramBinds = IntStream.of(stmtParamIndexes)
+                        .mapToObj(i -> Stream.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElse(null))
                         .toArray(Bind[]::new);
 
-                final boolean hasBind = StreamEx.of(paramBinds).anyMatch(Objects::nonNull);
-                final boolean hasNoBind = StreamEx.of(paramBinds).anyMatch(Objects::isNull);
+                final boolean hasBind = Stream.of(paramBinds).anyMatch(Objects::nonNull);
+                final boolean hasNoBind = Stream.of(paramBinds).anyMatch(Objects::isNull);
 
                 if (hasBind) {
                     if (hasNoBind) {
@@ -1330,7 +1379,7 @@ final class DaoImpl {
                     }
 
                     @SuppressWarnings("resource")
-                    final String[] paramNames = StreamEx.of(paramBinds).map(Bind::value).toArray(IntFunctions.ofStringArray());
+                    final String[] paramNames = Stream.of(paramBinds).map(Bind::value).toArray(IntFunctions.ofStringArray());
 
                     parametersSetter = (preparedQuery, args) -> {
                         final CallableQuery namedQuery = ((CallableQuery) preparedQuery);
@@ -1352,8 +1401,8 @@ final class DaoImpl {
                 }
             } else if (queryInfo.isNamedQuery) {
                 @SuppressWarnings("resource")
-                final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
-                        .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i])
+                final String[] paramNames = IntStream.of(stmtParamIndexes)
+                        .mapToObj(i -> Stream.of(method.getParameterAnnotations()[i])
                                 .select(Bind.class)
                                 .first()
                                 .orElseThrow(() -> new UnsupportedOperationException("In method: " + fullClassMethodName + ", parameters[" + i + "]: "
@@ -1378,7 +1427,7 @@ final class DaoImpl {
                     }
                 };
             } else {
-                if (stmtParamLen == paramLen && StreamEx.of(bindListParamFlags).allMatch(it -> !it)) {
+                if (stmtParamLen == paramLen && Stream.of(bindListParamFlags).allMatch(it -> !it)) {
                     parametersSetter = AbstractQuery::setParameters;
                 } else {
                     parametersSetter = (preparedQuery, args) -> {
@@ -1820,6 +1869,7 @@ final class DaoImpl {
      * @param daoInterface the DAO interface class to create a proxy for; must be an interface
      * @param targetTableName the database table name to use, or {@code null}/{@code ""} to derive from the entity class
      * @param ds the {@link javax.sql.DataSource} providing database connections
+     * @param dsl the {@link Dsl} dialect used to generate CRUD SQL; must not be {@code null}
      * @param sqlMapper an optional {@link SqlMapper} containing pre-defined SQL statements keyed by ID; may be {@code null}
      * @param inputDaoCache an optional {@link Jdbc.DaoCache} for caching query results of methods annotated with
      *        {@code @CacheResult} (and invalidated by {@code @RefreshCache}). When {@code null}, the cache is
@@ -1833,24 +1883,25 @@ final class DaoImpl {
      * @param executor an optional {@link Executor} for asynchronous operations; if {@code null}, the default async executor is used
      * @return a proxy instance implementing the specified DAO interface
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}
-     *         is {@code null}, if duplicate SQL keys are defined, or if the DAO interface has invalid annotation
-     *         configurations or generic type arguments
+     *         is {@code null}, if {@code sqlBuilder} is {@code null}, if duplicate SQL keys are defined, or if the
+     *         DAO interface has invalid annotation configurations or generic type arguments
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
      *         incompatible return type for the declared {@link OP}, or a feature not yet enabled (e.g., cache on a
      *         non-{@code NoUpdateDao} interface, or a {@code RowMapper}/{@code ResultExtractor} parameter that is not the last method parameter)
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
-    static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
-            final Jdbc.DaoCache inputDaoCache, final Executor executor) {
+    static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
+            final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(dsl, "dsl");
 
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
 
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
         final String daoClassName = ClassUtil.getCanonicalClassName(daoInterface);
-        final String daoCacheKey = daoClassName + "_" + targetTableName + "_" + System.identityHashCode(ds) + "_"
+        final String daoCacheKey = daoClassName + "_" + targetTableName + "_" + System.identityHashCode(ds) + "_" + System.identityHashCode(dsl) + "_"
                 + (sqlMapper == null ? "null" : System.identityHashCode(sqlMapper)) + "_"
                 + (inputDaoCache == null ? "null" : System.identityHashCode(inputDaoCache)) + "_"
                 + (executor == null ? "null" : System.identityHashCode(executor));
@@ -1867,9 +1918,10 @@ final class DaoImpl {
         }
 
         if (daoLogger.isDebugEnabled()) {
-            daoLogger.debug("Creating Dao proxy(interface={}, targetTableName={}, dataSourceId={}, sqlMapperId={}, daoCacheId={}, executorId={})", daoClassName,
-                    targetTableName, System.identityHashCode(ds), sqlMapper == null ? null : System.identityHashCode(sqlMapper),
-                    inputDaoCache == null ? null : System.identityHashCode(inputDaoCache), executor == null ? null : System.identityHashCode(executor));
+            daoLogger.debug("Creating Dao proxy(interface={}, targetTableName={}, dataSourceId={}, dsl={}, sqlMapperId={}, daoCacheId={}, executorId={})",
+                    daoClassName, targetTableName, System.identityHashCode(ds), System.identityHashCode(dsl),
+                    sqlMapper == null ? null : System.identityHashCode(sqlMapper), inputDaoCache == null ? null : System.identityHashCode(inputDaoCache),
+                    executor == null ? null : System.identityHashCode(executor));
         }
 
         @SuppressWarnings("UnnecessaryLocalVariable")
@@ -1887,11 +1939,11 @@ final class DaoImpl {
         final boolean isCrudDao = CrudDao.class.isAssignableFrom(daoInterface) || UncheckedCrudDao.class.isAssignableFrom(daoInterface);
         final boolean isCrudDaoL = CrudDaoL.class.isAssignableFrom(daoInterface) || UncheckedCrudDaoL.class.isAssignableFrom(daoInterface);
 
-        final List<Class<?>> allInterfaces = StreamEx.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
+        final List<Class<?>> allInterfaces = Stream.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
         final SqlMapper newSqlMapper = sqlMapper == null ? new SqlMapper() : sqlMapper.copy();
 
-        StreamEx.of(allInterfaces) //
+        Stream.of(allInterfaces) //
                 .flatMapArray(Class::getAnnotations)
                 .select(SqlSource.class)
                 .map(SqlSource::value)
@@ -1927,9 +1979,9 @@ final class DaoImpl {
         final boolean callGenerateIdForInsertWithSql = daoConfigAnno != null && daoConfigAnno.callGenerateIdForInsertWithSqlIfIdNotSet();
         final boolean fetchColumnByEntityClassForDatasetQuery = daoConfigAnno == null || daoConfigAnno.fetchColumnByEntityClassForDatasetQuery();
 
-        final Map<String, String> sqlScriptMap = StreamEx.of(allInterfaces)
+        final Map<String, String> sqlScriptMap = Stream.of(allInterfaces)
                 .flatMapArray(Class::getDeclaredFields)
-                .append(StreamEx.of(allInterfaces).flatMapArray(Class::getDeclaredClasses).flatMapArray(Class::getDeclaredFields))
+                .append(Stream.of(allInterfaces).flatMapArray(Class::getDeclaredClasses).flatMapArray(Class::getDeclaredFields))
                 .filter(it -> it.isAnnotationPresent(SqlScript.class))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
                         "Field annotated with @SqlScript must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
@@ -1944,7 +1996,7 @@ final class DaoImpl {
                 })
                 .toMap(it -> it._1, Fn.ff(it -> (String) (it._2.get(null))));
 
-        // Print out the embedded sqls because most of them may be generated by SqlBuilder.
+        // Print out the embedded sqls because most of them may be generated by Dsl.
         if (daoLogger.isInfoEnabled() && N.notEmpty(sqlScriptMap)) {
             daoLogger.info("Embedded SQL scripts defined for Dao interface(interface={}, count={})", daoClassName, sqlScriptMap.size());
             sqlScriptMap.forEach((key, value) -> daoLogger.info("{} = {}", key, value));
@@ -1997,51 +2049,41 @@ final class DaoImpl {
                         + " extends JoinEntityHelper, but the entity class: " + typeArguments[0] + " has no sub-entity properties.");
             }
 
-            if (typeArguments.length >= 2 && typeArguments[1] instanceof Class && SqlBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
-                if (!(typeArguments[1].equals(PSC.class) || typeArguments[1].equals(PAC.class) || typeArguments[1].equals(PLC.class))) {
-                    throw new IllegalArgumentException("SqlBuilder Type parameter must be: SqlBuilder.PSC/PAC/PLC. Can't be: " + typeArguments[1]);
-                }
-            } else if ((typeArguments.length >= 3 && typeArguments[2] instanceof Class && SqlBuilder.class.isAssignableFrom((Class) typeArguments[2]))
-                    && !(typeArguments[2].equals(PSC.class) || typeArguments[2].equals(PAC.class) || typeArguments[2].equals(PLC.class))) {
-                throw new IllegalArgumentException("SqlBuilder Type parameter must be: SqlBuilder.PSC/PAC/PLC. Can't be: " + typeArguments[2]);
-            }
-
             if (isCrudDao) {
                 final List<String> idFieldNames = QueryUtil.getIdPropNames((Class) typeArguments[0]);
+                final Class<?> declaredIdClass = isCrudDaoL ? Long.class : (Class) typeArguments[1];
 
                 if (idFieldNames.size() == 0) {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
                             + " must have at least one field annotated with @Id");
-                } else if (idFieldNames.size() == 1 && !SqlBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
-                    if (!(ClassUtil.wrap((Class) typeArguments[1]))
+                } else if (idFieldNames.size() == 1) {
+                    if (!(ClassUtil.wrap(declaredIdClass))
                             .isAssignableFrom(ClassUtil.wrap(Beans.getPropGetter((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
                         throw new IllegalArgumentException("The 'ID' type declared in Dao: " + ClassUtil.getCanonicalClassName(daoInterface)
                                 + " is not assignable from the id property type: "
                                 + Beans.getPropGetter((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
-                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || Beans.isBeanClass((Class) typeArguments[1])
-                        || Beans.isRecordClass((Class) typeArguments[1]))) {
+                } else if (idFieldNames.size() > 1
+                        && !(EntityId.class.equals(declaredIdClass) || Beans.isBeanClass(declaredIdClass) || Beans.isRecordClass(declaredIdClass))) {
                     throw new IllegalArgumentException(
-                            "To support composite ids, the 'ID' type must be EntityId/Entity/Record. It can't be: " + typeArguments[1]);
+                            "To support composite ids, the 'ID' type must be EntityId/Entity/Record. It can't be: " + declaredIdClass);
                 }
             }
         }
 
         final Map<Method, Throwables.BiFunction<Dao, Object[], ?, Throwable>> methodInvokerMap = new ConcurrentHashMap<>();
 
-        final List<Method> sqlMethods = StreamEx.of(allInterfaces)
+        final List<Method> sqlMethods = Stream.of(allInterfaces)
                 .reversed()
                 .distinct()
                 .flatMapArray(Class::getDeclaredMethods)
                 .filter(m -> !Modifier.isStatic(m.getModifiers()))
                 .toList();
 
-        final Class<? extends SqlBuilder> sbc = N.isEmpty(typeArguments) ? PSC.class
-                : (typeArguments.length >= 2 && SqlBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
-                        : (typeArguments.length >= 3 && SqlBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2] : PSC.class));
-
-        final NamingPolicy namingPolicy = sbc.equals(PSC.class) ? NamingPolicy.SNAKE_CASE
-                : (sbc.equals(PAC.class) ? NamingPolicy.SCREAMING_SNAKE_CASE : NamingPolicy.CAMEL_CASE);
+        final SqlDialect sqlDialect = dsl.sqlDialect();
+        final NamingPolicy namingPolicy = sqlDialect.namingPolicy() == null ? NamingPolicy.SNAKE_CASE : sqlDialect.namingPolicy();
+        final Dsl parameterizedDsl = parameterizedDsl(dsl);
+        final Dsl namedDsl = namedDsl(dsl);
 
         final Class<Object> entityClass = N.isEmpty(typeArguments) ? null : (Class) typeArguments[0];
         final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
@@ -2051,100 +2093,44 @@ final class DaoImpl {
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
         final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 
-        final Function<Condition, SqlBuilder.SP> selectFromSqlBuilderFunc = sbc.equals(PSC.class)
-                ? cond -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? PSC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond).build()
-                        : PSC.select(entityClass).from(tableName).append(cond).build()
-                : (sbc.equals(PAC.class)
-                        ? cond -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? PAC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond).build()
-                                : PAC.select(entityClass).from(tableName).append(cond).build()
-                        : cond -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? PLC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond).build()
-                                : PLC.select(entityClass).from(tableName).append(cond).build());
+        final Function<Condition, SqlBuilder.SP> selectFromSqlBuilderFunc = cond -> cond instanceof final Criteria criteria
+                && Strings.isNotEmpty(criteria.getSelectModifier())
+                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond).build()
+                        : parameterizedDsl.select(entityClass).from(tableName).append(cond).build();
 
-        final BiFunction<String, Condition, SqlBuilder.SP> singleQuerySqlBuilderFunc = sbc.equals(PSC.class)
-                ? (selectPropName, cond) -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? PSC.select(selectPropName).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond).build()
-                        : PSC.select(selectPropName).from(tableName, entityClass).append(cond).build()
-                : (sbc.equals(PAC.class)
-                        ? (selectPropName, cond) -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? PAC.select(selectPropName).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond).build()
-                                : PAC.select(selectPropName).from(tableName, entityClass).append(cond).build()
-                        : (selectPropName, cond) -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? PLC.select(selectPropName).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond).build()
-                                : PLC.select(selectPropName).from(tableName, entityClass).append(cond).build());
+        final BiFunction<String, Condition, SqlBuilder.SP> singleQuerySqlBuilderFunc = (selectPropName,
+                cond) -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
+                        ? parameterizedDsl.select(selectPropName).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond).build()
+                        : parameterizedDsl.select(selectPropName).from(tableName, entityClass).append(cond).build();
 
-        final BiFunction<String, Condition, SqlBuilder.SP> singleQueryByIdSqlBuilderFunc = sbc.equals(PSC.class)
-                ? ((selectPropName, cond) -> NSC.select(selectPropName).from(tableName, entityClass).append(cond).build())
-                : (sbc.equals(PAC.class) ? ((selectPropName, cond) -> NAC.select(selectPropName).from(tableName, entityClass).append(cond).build())
-                        : ((selectPropName, cond) -> NLC.select(selectPropName).from(tableName, entityClass).append(cond).build()));
+        final BiFunction<String, Condition, SqlBuilder.SP> singleQueryByIdSqlBuilderFunc = (selectPropName,
+                cond) -> namedDsl.select(selectPropName).from(tableName, entityClass).append(cond).build();
 
-        final BiFunction<Collection<String>, Condition, SqlBuilder> selectSqlBuilderFunc = sbc.equals(PSC.class)
-                ? ((selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                        ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? PSC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
-                                : PSC.select(entityClass).from(tableName).append(cond))
-                        : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? PSC.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
-                                : PSC.select(selectPropNames).from(tableName, entityClass).append(cond))
-                : (sbc.equals(PAC.class)
-                        ? ((selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? PAC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
-                                        : PAC.select(entityClass).from(tableName).append(cond))
-                                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? PAC.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
-                                        : PAC.select(selectPropNames).from(tableName, entityClass).append(cond))
-                        : (selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? PLC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
-                                        : PLC.select(entityClass).from(tableName).append(cond))
-                                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? PLC.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
-                                        : PLC.select(selectPropNames).from(tableName, entityClass).append(cond));
+        final BiFunction<Collection<String>, Condition, SqlBuilder> selectSqlBuilderFunc = (selectPropNames, cond) -> N.isEmpty(selectPropNames)
+                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
+                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
+                        : parameterizedDsl.select(entityClass).from(tableName).append(cond))
+                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
+                        ? parameterizedDsl.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
+                        : parameterizedDsl.select(selectPropNames).from(tableName, entityClass).append(cond);
 
-        final BiFunction<Collection<String>, Condition, SqlBuilder> namedSelectSqlBuilderFunc = sbc.equals(PSC.class)
-                ? ((selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                        ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? NSC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
-                                : NSC.select(entityClass).from(tableName).append(cond))
-                        : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                ? NSC.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
-                                : NSC.select(selectPropNames).from(tableName, entityClass).append(cond))
-                : (sbc.equals(PAC.class)
-                        ? ((selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? NAC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
-                                        : NAC.select(entityClass).from(tableName).append(cond))
-                                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? NAC.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
-                                        : NAC.select(selectPropNames).from(tableName, entityClass).append(cond))
-                        : (selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? NLC.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
-                                        : NLC.select(entityClass).from(tableName).append(cond))
-                                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                                        ? NLC.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
-                                        : NLC.select(selectPropNames).from(tableName, entityClass).append(cond));
+        final BiFunction<Collection<String>, Condition, SqlBuilder> namedSelectSqlBuilderFunc = (selectPropNames, cond) -> N.isEmpty(selectPropNames)
+                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
+                        ? namedDsl.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
+                        : namedDsl.select(entityClass).from(tableName).append(cond))
+                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
+                        ? namedDsl.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
+                        : namedDsl.select(selectPropNames).from(tableName, entityClass).append(cond);
 
-        final Function<Collection<String>, SqlBuilder> namedInsertSqlBuilderFunc = sbc.equals(PSC.class)
-                ? (propNamesToInsert -> N.isEmpty(propNamesToInsert) ? NSC.insert(entityClass).into(tableName)
-                        : NSC.insert(propNamesToInsert).into(tableName, entityClass))
-                : (sbc.equals(PAC.class)
-                        ? (propNamesToInsert -> N.isEmpty(propNamesToInsert) ? NAC.insert(entityClass).into(tableName)
-                                : NAC.insert(propNamesToInsert).into(tableName, entityClass))
-                        : (propNamesToInsert -> N.isEmpty(propNamesToInsert) ? NLC.insert(entityClass).into(tableName)
-                                : NLC.insert(propNamesToInsert).into(tableName, entityClass)));
+        final Function<Collection<String>, SqlBuilder> namedInsertSqlBuilderFunc = propNamesToInsert -> N.isEmpty(propNamesToInsert)
+                ? namedDsl.insert(entityClass).into(tableName)
+                : namedDsl.insert(propNamesToInsert).into(tableName, entityClass);
 
-        final BiFunction<String, Class<?>, SqlBuilder> parameterizedUpdateFunc = sbc.equals(PSC.class) ? PSC::update
-                : (sbc.equals(PAC.class) ? PAC::update : PLC::update);
+        final BiFunction<String, Class<?>, SqlBuilder> parameterizedUpdateFunc = parameterizedDsl::update;
 
-        final BiFunction<String, Class<?>, SqlBuilder> parameterizedDeleteFromFunc = sbc.equals(PSC.class) ? PSC::deleteFrom
-                : (sbc.equals(PAC.class) ? PAC::deleteFrom : PLC::deleteFrom);
+        final BiFunction<String, Class<?>, SqlBuilder> parameterizedDeleteFromFunc = parameterizedDsl::deleteFrom;
 
-        final BiFunction<String, Class<?>, SqlBuilder> namedUpdateFunc = sbc.equals(PSC.class) ? NSC::update
-                : (sbc.equals(PAC.class) ? NAC::update : NLC::update);
+        final BiFunction<String, Class<?>, SqlBuilder> namedUpdateFunc = namedDsl::update;
 
         final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdPropNames(entityClass);
         final boolean isNoId = entityClass == null || N.isEmpty(idPropNameList);
@@ -2152,7 +2138,7 @@ final class DaoImpl {
         final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
         final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
         final boolean isOneId = !isNoId && idPropNameList.size() == 1;
-        final Condition idCond = isNoId ? null : isOneId ? Filters.eq(oneIdPropName) : Filters.and(StreamEx.of(idPropNameList).map(Filters::eq).toList());
+        final Condition idCond = isNoId ? null : isOneId ? Filters.eq(oneIdPropName) : Filters.and(Stream.of(idPropNameList).map(Filters::eq).toList());
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
                 : (isEntityId ? id -> Filters.id2Cond((EntityId) id)
                         : Map.class.isAssignableFrom(idClass) ? id -> Filters.allEqual((Map<String, ?>) id)
@@ -2173,34 +2159,14 @@ final class DaoImpl {
         final Collection<String> propNamesToUpdateById = entityClass == null ? N.emptyList() : QueryUtil.getUpdatePropNames(entityClass, idPropNameSet);
         final boolean noPropNameToUpdateById = N.isEmpty(propNamesToUpdateById);
 
-        if (sbc.equals(PSC.class)) {
-            sql_getById = isNoId ? null : NSC.select(entityClass).from(tableName).where(idCond).build().query();
-            sql_existsById = isNoId ? null : NSC.select(_1).from(tableName, entityClass).where(idCond).build().query();
-            sql_insertWithId = entityClass == null ? null : NSC.insert(entityClass).into(tableName).build().query();
-            sql_insertWithoutId = entityClass == null ? null
-                    : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NSC.insert(entityClass, idPropNameSet).into(tableName).build().query());
-            sql_updateById = isNoId || noPropNameToUpdateById ? null
-                    : NSC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
-            sql_deleteById = isNoId ? null : NSC.deleteFrom(tableName, entityClass).where(idCond).build().query();
-        } else if (sbc.equals(PAC.class)) {
-            sql_getById = isNoId ? null : NAC.select(entityClass).from(tableName).where(idCond).build().query();
-            sql_existsById = isNoId ? null : NAC.select(_1).from(tableName, entityClass).where(idCond).build().query();
-            sql_updateById = isNoId || noPropNameToUpdateById ? null
-                    : NAC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
-            sql_insertWithId = entityClass == null ? null : NAC.insert(entityClass).into(tableName).build().query();
-            sql_insertWithoutId = entityClass == null ? null
-                    : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NAC.insert(entityClass, idPropNameSet).into(tableName).build().query());
-            sql_deleteById = isNoId ? null : NAC.deleteFrom(tableName, entityClass).where(idCond).build().query();
-        } else {
-            sql_getById = isNoId ? null : NLC.select(entityClass).from(tableName).where(idCond).build().query();
-            sql_existsById = isNoId ? null : NLC.select(_1).from(tableName, entityClass).where(idCond).build().query();
-            sql_insertWithId = entityClass == null ? null : NLC.insert(entityClass).into(tableName).build().query();
-            sql_insertWithoutId = entityClass == null ? null
-                    : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NLC.insert(entityClass, idPropNameSet).into(tableName).build().query());
-            sql_updateById = isNoId || noPropNameToUpdateById ? null
-                    : NLC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
-            sql_deleteById = isNoId ? null : NLC.deleteFrom(tableName, entityClass).where(idCond).build().query();
-        }
+        sql_getById = isNoId ? null : namedDsl.select(entityClass).from(tableName).where(idCond).build().query();
+        sql_existsById = isNoId ? null : namedDsl.select(_1).from(tableName, entityClass).where(idCond).build().query();
+        sql_insertWithId = entityClass == null ? null : namedDsl.insert(entityClass).into(tableName).build().query();
+        sql_insertWithoutId = entityClass == null ? null
+                : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : namedDsl.insert(entityClass, idPropNameSet).into(tableName).build().query());
+        sql_updateById = isNoId || noPropNameToUpdateById ? null
+                : namedDsl.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
+        sql_deleteById = isNoId ? null : namedDsl.deleteFrom(tableName, entityClass).where(idCond).build().query();
 
         final ParsedSql namedGetByIdSQL = Strings.isEmpty(sql_getById) ? null : ParsedSql.parse(sql_getById);
         final ParsedSql namedExistsByIdSQL = Strings.isEmpty(sql_existsById) ? null : ParsedSql.parse(sql_existsById);
@@ -2294,16 +2260,16 @@ final class DaoImpl {
         final AtomicBoolean hasCacheResult = new AtomicBoolean(false);
         final AtomicBoolean hasRefreshCache = new AtomicBoolean(false);
 
-        final List<Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
+        final List<Handler> daoClassHandlerList = Stream.of(allInterfaces)
                 .reversed()
                 .flatMapArray(Class::getAnnotations)
                 .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
                 .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.toList(((HandlerList) anno).value()))
                 .toList();
 
-        final Map<String, Jdbc.Handler<?>> daoClassHandlerMap = StreamEx.of(allInterfaces)
+        final Map<String, Jdbc.Handler<?>> daoClassHandlerMap = Stream.of(allInterfaces)
                 .flatMapArray(Class::getDeclaredFields)
-                .append(StreamEx.of(allInterfaces).flatMapArray(Class::getDeclaredClasses).flatMapArray(Class::getDeclaredFields))
+                .append(Stream.of(allInterfaces).flatMapArray(Class::getDeclaredClasses).flatMapArray(Class::getDeclaredFields))
                 .filter(it -> Jdbc.Handler.class.isAssignableFrom(it.getType()))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()),
                         "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface))
@@ -2377,7 +2343,7 @@ final class DaoImpl {
         };
 
         Stream.of(sqlMethods).parallel().filter(method -> Modifier.isPublic(method.getModifiers())).forEach(method -> {
-            final boolean isNonDBOperation = StreamEx.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
+            final boolean isNonDBOperation = Stream.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
 
             final Predicate<String> filterByMethodNameStartsWith = it -> Strings.isNotEmpty(it)
                     && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName()));
@@ -2393,7 +2359,7 @@ final class DaoImpl {
             final Class<?> returnType = method.getReturnType();
             final int paramLen = paramTypes.length;
 
-            final boolean fetchColumnByEntityClass = StreamEx.of(method.getAnnotations())
+            final boolean fetchColumnByEntityClass = Stream.of(method.getAnnotations())
                     .select(FetchColumnByEntityClass.class)
                     .map(FetchColumnByEntityClass::value)
                     .onEach(it -> N.checkArgument(Dataset.class.isAssignableFrom(returnType),
@@ -2401,7 +2367,7 @@ final class DaoImpl {
                     .first()
                     .orElse(fetchColumnByEntityClassForDatasetQuery);
 
-            final Query queryAnno = StreamEx.of(method.getAnnotations()).select(Query.class).onlyOne().orElseNull();
+            final Query queryAnno = Stream.of(method.getAnnotations()).select(Query.class).onlyOne().orElseNull();
             List<String> sqlList = null;
 
             if (queryAnno != null && ((N.len(queryAnno.value()) > 1 || N.len(queryAnno.id()) > 1)
@@ -2461,14 +2427,16 @@ final class DaoImpl {
                 call = (proxy, args) -> daoInterface;
             } else if (methodName.equals("dataSource") && javax.sql.DataSource.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> primaryDataSource;
+            } else if (methodName.equals("dsl") && Dsl.class.isAssignableFrom(returnType) && paramLen == 0) {
+                call = (proxy, args) -> dsl;
             } else if (methodName.equals("sqlMapper") && SqlMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> newSqlMapper;
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);
-                final boolean throwsSQLException = StreamEx.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
-                final boolean throwsUncheckedSQLException = StreamEx.of(method.getExceptionTypes())
+                final boolean throwsSQLException = Stream.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
+                final boolean throwsUncheckedSQLException = Stream.of(method.getExceptionTypes())
                         .anyMatch(e -> e.isAssignableFrom(UncheckedSQLException.class));
-                final Annotation sqlAnno = StreamEx.of(method.getAnnotations())
+                final Annotation sqlAnno = Stream.of(method.getAnnotations())
                         .filter(anno -> sqlAnnoMap.containsKey(anno.annotationType()))
                         .first()
                         .orElseNull();
@@ -2631,7 +2599,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
 
                             final Condition limitedCond = handleLimit(cond, -1, dbVersion);
-                            final SP sp = singleQuerySqlBuilderFunc.apply(SqlBuilder.COUNT_ALL, limitedCond);
+                            final SP sp = singleQuerySqlBuilderFunc.apply(AbstractQueryBuilder.COUNT_ALL, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForInt().orElseZero();
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
@@ -4659,7 +4627,7 @@ final class DaoImpl {
                             return proxy.prepareNamedQuery(namedExistsByIdSQL).setFetchSize(1).settParameters(id, idParamSetter).exists();
                         };
                     } else if (methodName.equals("count") && paramLen == 1 && Collection.class.equals(paramTypes[0])) {
-                        final Collection<String> selectPropNames = N.asList(SqlBuilder.COUNT_ALL);
+                        final Collection<String> selectPropNames = N.asList(AbstractQueryBuilder.COUNT_ALL);
                         final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
                         final String sql_selectPart = selectSqlBuilderFunc.apply(selectPropNames, idCond).build().query();
                         final int eqIndex = sql_selectPart.lastIndexOf('=');
@@ -4787,11 +4755,7 @@ final class DaoImpl {
                             final int batchSize = (Integer) args[1];
                             N.checkArgPositive(batchSize, cs.batchSize);
 
-                            if (N.isEmpty(entities)) {
-                                return 0;
-                            }
-
-                            if (namedUpdateByIdSQL == null) {
+                            if (N.isEmpty(entities) || (namedUpdateByIdSQL == null)) {
                                 return 0;
                             }
 
@@ -4921,10 +4885,9 @@ final class DaoImpl {
                                     ClassUtil.getCanonicalClassName(entityClass));
 
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                    .getSelectSqlPlan(sbc);
+                                    .getSelectSqlPlan(parameterizedDsl);
 
-                            final Dao<?, SqlBuilder, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
-                                    proxy);
+                            final Dao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
@@ -4967,8 +4930,7 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final Dao<?, SqlBuilder, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
-                                    proxy);
+                            final Dao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (N.isEmpty(entities)) {
                                 // Do nothing.
@@ -4976,7 +4938,7 @@ final class DaoImpl {
                                 final Object first = N.firstOrNullIfEmpty(entities);
 
                                 final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                        .getSelectSqlPlan(sbc);
+                                        .getSelectSqlPlan(parameterizedDsl);
 
                                 final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(first, tp._2);
 
@@ -5007,7 +4969,7 @@ final class DaoImpl {
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                        .getBatchSelectSqlPlan(sbc);
+                                        .getBatchSelectSqlPlan(parameterizedDsl);
 
                                 Stream.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
@@ -5055,10 +5017,10 @@ final class DaoImpl {
                             N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
-                            final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlPlan(sbc);
+                            final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                    .getDeleteSqlPlan(parameterizedDsl);
 
-                            final Dao<?, SqlBuilder, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
-                                    proxy);
+                            final Dao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (Strings.isEmpty(tp._2)) {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
@@ -5088,15 +5050,15 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final Dao<?, SqlBuilder, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
-                                    proxy);
+                            final Dao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (N.isEmpty(entities)) {
                                 return 0;
                             } else if (entities.size() == 1) {
                                 final Object first = N.firstOrNullIfEmpty(entities);
 
-                                final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlPlan(sbc);
+                                final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
+                                        .getDeleteSqlPlan(parameterizedDsl);
 
                                 if (Strings.isEmpty(tp._2)) {
                                     return joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
@@ -5121,7 +5083,7 @@ final class DaoImpl {
 
                                 try {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                            .getBatchDeleteSqlPlan(sbc);
+                                            .getBatchDeleteSqlPlan(parameterizedDsl);
 
                                     result = Seq.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).sumInt(bp -> {
                                         if (tp._2 == null) {
@@ -5220,8 +5182,8 @@ final class DaoImpl {
                         //    }
 
                         if (isNamedQuery) {
-                            final List<String> tmp = IntStreamEx.range(0, paramLen)
-                                    .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElseNull())
+                            final List<String> tmp = IntStream.range(0, paramLen)
+                                    .mapToObj(i -> Stream.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElseNull())
                                     .skipNulls()
                                     .map(Bind::value)
                                     .filter(it -> !parsedSql.namedParameters().contains(it))
@@ -5233,13 +5195,13 @@ final class DaoImpl {
                             }
                         }
                     } else {
-                        if (IntStreamEx.range(0, paramLen)
-                                .anyMatch(i -> StreamEx.of(method.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Bind.class)))) {
+                        if (IntStream.range(0, paramLen)
+                                .anyMatch(i -> Stream.of(method.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Bind.class)))) {
                             throw new UnsupportedOperationException("@Bind parameters are defined for non-named query in method: " + fullClassMethodName);
                         }
                     }
 
-                    final int[] tmp = IntStreamEx.range(0, paramLen).filter(i -> !isRowMapperOrResultExtractor.test(paramTypes[i])).toArray();
+                    final int[] tmp = IntStream.range(0, paramLen).filter(i -> !isRowMapperOrResultExtractor.test(paramTypes[i])).toArray();
 
                     if (N.notEmpty(tmp) && tmp[tmp.length - 1] != tmp.length - 1) {
                         throw new UnsupportedOperationException(
@@ -5248,7 +5210,7 @@ final class DaoImpl {
 
                     final Predicate<Class<?>> isRowFilter = it -> Jdbc.RowFilter.class.isAssignableFrom(it) || Jdbc.BiRowFilter.class.isAssignableFrom(it);
 
-                    final int[] tmp2 = IntStreamEx.of(tmp).filter(i -> !isRowFilter.test(paramTypes[i])).toArray();
+                    final int[] tmp2 = IntStream.of(tmp).filter(i -> !isRowFilter.test(paramTypes[i])).toArray();
 
                     if (N.notEmpty(tmp2) && tmp2[tmp2.length - 1] != tmp2.length - 1) {
                         throw new UnsupportedOperationException(
@@ -5259,7 +5221,7 @@ final class DaoImpl {
                     final Predicate<Class<?>> isParameterSetter = it -> Jdbc.ParametersSetter.class.isAssignableFrom(it)
                             || Jdbc.BiParametersSetter.class.isAssignableFrom(it) || Jdbc.TriParametersSetter.class.isAssignableFrom(it);
 
-                    final int[] tmp3 = IntStreamEx.of(tmp2).filter(i -> !isParameterSetter.test(paramTypes[i])).toArray();
+                    final int[] tmp3 = IntStream.of(tmp2).filter(i -> !isParameterSetter.test(paramTypes[i])).toArray();
 
                     if (N.notEmpty(tmp3) && tmp3[tmp3.length - 1] != tmp3.length - 1) {
                         throw new UnsupportedOperationException(
@@ -5269,7 +5231,7 @@ final class DaoImpl {
 
                     final boolean hasRowMapperOrResultExtractor = paramLen > 0 && isRowMapperOrResultExtractor.test(lastParamType);
 
-                    final int[] rowFilterParamIndexes = IntStreamEx.range(0, paramLen).filter(i -> isRowFilter.test(paramTypes[i])).toArray();
+                    final int[] rowFilterParamIndexes = IntStream.range(0, paramLen).filter(i -> isRowFilter.test(paramTypes[i])).toArray();
                     final boolean hasRowFilter = N.notEmpty(rowFilterParamIndexes);
 
                     if (N.len(rowFilterParamIndexes) > 1) {
@@ -5304,7 +5266,7 @@ final class DaoImpl {
                                         + fullClassMethodName);
                     }
 
-                    final int[] fragmentParamIndexes = IntStreamEx.of(tmp3)
+                    final int[] fragmentParamIndexes = IntStream.of(tmp3)
                             .filter(i -> N.anyMatch(method.getParameterAnnotations()[i],
                                     it -> it.annotationType().equals(SqlFragment.class) || it.annotationType().equals(SqlFragmentList.class)
                                             || it.annotationType().equals(BindList.class)))
@@ -5327,22 +5289,22 @@ final class DaoImpl {
                             }
                         }
 
-                        if (IntStreamEx.of(fragmentParamIndexes)
+                        if (IntStream.of(fragmentParamIndexes)
                                 .filter(i -> N.anyMatch(method.getParameterAnnotations()[i], it -> it.annotationType().equals(SqlFragmentList.class)))
                                 .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
                             throw new UnsupportedOperationException(
                                     "Type of parameter annotated with @SqlFragmentList(method: " + fullClassMethodName + ") must be Collection/Array.");
                         }
 
-                        if (IntStreamEx.of(fragmentParamIndexes)
+                        if (IntStream.of(fragmentParamIndexes)
                                 .filter(i -> N.anyMatch(method.getParameterAnnotations()[i], it -> it.annotationType().equals(BindList.class)))
                                 .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
                             throw new UnsupportedOperationException(
                                     "Type of parameter annotated with @BindList(method: " + fullClassMethodName + ") must be Collection/Array.");
                         }
 
-                        if ((isNamedQuery || isProcedure) && IntStreamEx.of(fragmentParamIndexes)
-                                .flatMapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]))
+                        if ((isNamedQuery || isProcedure) && IntStream.of(fragmentParamIndexes)
+                                .flatMapToObj(i -> Stream.of(method.getParameterAnnotations()[i]))
                                 .anyMatch(it -> BindList.class.isAssignableFrom(it.annotationType()))) {
                             throw new UnsupportedOperationException(
                                     "@BindList on method: " + fullClassMethodName + " is not supported for named or callable query.");
@@ -5364,12 +5326,12 @@ final class DaoImpl {
                             : Strings.repeat(SK.QUESTION_MARK, N.size((Collection) param), SK.COMMA_SPACE, ((BindList) anno).prefixForNonEmpty(),
                                     ((BindList) anno).suffixForNonEmpty());
 
-                    final Tuple2<Annotation, String>[] fragmentAnnos = IntStreamEx.of(fragmentParamIndexes)
+                    final Tuple2<Annotation, String>[] fragmentAnnos = IntStream.of(fragmentParamIndexes)
                             .mapToObj(i -> resolveFragmentAnnoAndPlaceholder(method, i, fullClassMethodName))
                             .toArray(Tuple2[]::new);
 
-                    final BiFunction<Annotation, Object, String>[] fragmentMappers = IntStreamEx.of(fragmentParamIndexes)
-                            .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).map(Annotation::annotationType).map(it -> {
+                    final BiFunction<Annotation, Object, String>[] fragmentMappers = IntStream.of(fragmentParamIndexes)
+                            .mapToObj(i -> Stream.of(method.getParameterAnnotations()[i]).map(Annotation::annotationType).map(it -> {
                                 if (SqlFragment.class.isAssignableFrom(it)) {
                                     return fragmentParamMapper;
                                 } else if (SqlFragmentList.class.isAssignableFrom(it)) {
@@ -5389,13 +5351,13 @@ final class DaoImpl {
                                 + " are not found in sql annotated in method: " + fullClassMethodName);
                     }
 
-                    final int[] stmtParamIndexes = IntStreamEx.of(tmp3)
-                            .filter(i -> StreamEx.of(method.getParameterAnnotations()[i])
+                    final int[] stmtParamIndexes = IntStream.of(tmp3)
+                            .filter(i -> Stream.of(method.getParameterAnnotations()[i])
                                     .noneMatch(it -> it.annotationType().equals(SqlFragment.class) || it.annotationType().equals(SqlFragmentList.class)))
                             .toArray();
 
-                    final boolean[] bindListParamFlags = IntStreamEx.of(stmtParamIndexes)
-                            .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(BindList.class)))
+                    final boolean[] bindListParamFlags = IntStream.of(stmtParamIndexes)
+                            .mapToObj(i -> Stream.of(method.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(BindList.class)))
                             .toListThenApply(N::toBooleanArray);
 
                     final int stmtParamLen = stmtParamIndexes.length;
@@ -5413,9 +5375,9 @@ final class DaoImpl {
                                 "Don't set 'isSingleParameter' to true if the count of statement/query parameter is not one in method: " + fullClassMethodName);
                     }
 
-                    final List<OutParameter> outParameterList = StreamEx.of(method.getAnnotations())
+                    final List<OutParameter> outParameterList = Stream.of(method.getAnnotations())
                             .select(OutParameter.class)
-                            .append(StreamEx.of(method.getAnnotations()).select(OutParameterList.class).flatMapArray(OutParameterList::value))
+                            .append(Stream.of(method.getAnnotations()).select(OutParameterList.class).flatMapArray(OutParameterList::value))
                             .toList();
 
                     if (N.notEmpty(outParameterList)) {
@@ -5425,12 +5387,12 @@ final class DaoImpl {
                                             + fullClassMethodName);
                         }
 
-                        if (StreamEx.of(outParameterList).anyMatch(it -> Strings.isEmpty(it.name()) && it.position() < 0)) {
+                        if (Stream.of(outParameterList).anyMatch(it -> Strings.isEmpty(it.name()) && it.position() < 0)) {
                             throw new UnsupportedOperationException(
                                     "One of the attribute: (name, position) of @OutParameter must be set in method: " + fullClassMethodName);
                         }
 
-                        if (StreamEx.of(outParameterList).anyMatch(it -> Strings.isNotEmpty(it.name()) && it.position() >= 0)) {
+                        if (Stream.of(outParameterList).anyMatch(it -> Strings.isNotEmpty(it.name()) && it.position() >= 0)) {
                             throw new UnsupportedOperationException(
                                     "Only one of the attribute: (name, position) of @OutParameter can be set in method: " + fullClassMethodName);
                         }
@@ -5820,7 +5782,7 @@ final class DaoImpl {
 
                 // ignore
             } else {
-                final Transactional transactionalAnno = StreamEx.of(method.getAnnotations()).select(Transactional.class).last().orElseNull();
+                final Transactional transactionalAnno = Stream.of(method.getAnnotations()).select(Transactional.class).last().orElseNull();
 
                 //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
                 //        throw new UnsupportedOperationException(
@@ -5828,22 +5790,22 @@ final class DaoImpl {
                 //                       + fullClassMethodName);
                 //    }
 
-                final SqlLogEnabled daoClassSqlLogAnno = StreamEx.of(allInterfaces)
+                final SqlLogEnabled daoClassSqlLogAnno = Stream.of(allInterfaces)
                         .flatMapArray(Class::getAnnotations)
                         .select(SqlLogEnabled.class)
-                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodNameContains))
+                        .filter(it -> Stream.of(it.filter()).anyMatch(filterByMethodNameContains))
                         .first()
                         .orElseNull();
 
-                final PerfLog daoClassPerfLogAnno = StreamEx.of(allInterfaces)
+                final PerfLog daoClassPerfLogAnno = Stream.of(allInterfaces)
                         .flatMapArray(Class::getAnnotations)
                         .select(PerfLog.class)
-                        .filter(it -> StreamEx.of(it.filter()).anyMatch(filterByMethodNameContains))
+                        .filter(it -> Stream.of(it.filter()).anyMatch(filterByMethodNameContains))
                         .first()
                         .orElseNull();
 
-                final SqlLogEnabled sqlLogAnno = StreamEx.of(method.getAnnotations()).select(SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
-                final PerfLog perfLogAnno = StreamEx.of(method.getAnnotations()).select(PerfLog.class).last().orElse(daoClassPerfLogAnno);
+                final SqlLogEnabled sqlLogAnno = Stream.of(method.getAnnotations()).select(SqlLogEnabled.class).last().orElse(daoClassSqlLogAnno);
+                final PerfLog perfLogAnno = Stream.of(method.getAnnotations()).select(PerfLog.class).last().orElse(daoClassPerfLogAnno);
                 final boolean hasSqlLogAnno = sqlLogAnno != null;
                 final boolean hasPerfLogAnno = perfLogAnno != null;
 
@@ -6086,7 +6048,7 @@ final class DaoImpl {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method,
                         ImmutableList.wrap(N.toList(method.getParameterTypes())), method.getReturnType());
 
-                final CacheResult methodCacheResultAnno = StreamEx.of(method.getAnnotations()).select(CacheResult.class).last().orElseNull();
+                final CacheResult methodCacheResultAnno = Stream.of(method.getAnnotations()).select(CacheResult.class).last().orElseNull();
                 final CacheResult cacheResultAnno = methodCacheResultAnno != null ? (methodCacheResultAnno.disabled() ? null : methodCacheResultAnno)
                         : ((daoClassCacheResultAnno != null //
                                 && !daoClassCacheResultAnno.disabled() //
@@ -6095,7 +6057,7 @@ final class DaoImpl {
                                         ? daoClassCacheResultAnno
                                         : null);
 
-                final RefreshCache methodRefreshCacheAnno = StreamEx.of(method.getAnnotations()).select(RefreshCache.class).last().orElseNull();
+                final RefreshCache methodRefreshCacheAnno = Stream.of(method.getAnnotations()).select(RefreshCache.class).last().orElseNull();
                 final RefreshCache refreshResultAnno = methodRefreshCacheAnno != null ? (methodRefreshCacheAnno.disabled() ? null : methodRefreshCacheAnno)
                         : ((daoClassRefreshCacheAnno != null //
                                 && !daoClassRefreshCacheAnno.disabled() //
@@ -6235,10 +6197,10 @@ final class DaoImpl {
                     };
                 }
 
-                final List<Tuple2<Jdbc.Handler, Boolean>> handlerList = StreamEx.of(method.getAnnotations())
+                final List<Tuple2<Jdbc.Handler, Boolean>> handlerList = Stream.of(method.getAnnotations())
                         .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
                         .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.toList(((HandlerList) anno).value()))
-                        .prepend(StreamEx.of(daoClassHandlerList).filter(h -> StreamEx.of(h.filter()).anyMatch(filterByMethodNameContains)))
+                        .prepend(Stream.of(daoClassHandlerList).filter(h -> Stream.of(h.filter()).anyMatch(filterByMethodNameContains)))
                         .map(handlerAnno -> Tuple.of((Jdbc.Handler) (Strings.isNotEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
                                 : HandlerFactory.getOrCreate(handlerAnno.type())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))

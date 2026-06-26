@@ -15,8 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.query.SqlBuilder;
-
 /**
  * A read-only CRUD DAO helper interface with join entity capabilities that uses {@code Long} as the ID type
  * (with primitive {@code long} convenience overloads) and throws unchecked exceptions. This interface combines
@@ -39,11 +37,11 @@ import com.landawn.abacus.query.SqlBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with primitive long IDs
- * public interface ReadOnlyUserDao extends UncheckedReadOnlyCrudJoinEntityHelperL<User, SqlBuilder.PSC, ReadOnlyUserDao> {
+ * public interface ReadOnlyUserDao extends UncheckedReadOnlyCrudJoinEntityHelperL<User, ReadOnlyUserDao> {
  *     // Inherits read-only operations with join loading and primitive long ID support
  * }
  *
- * ReadOnlyUserDao dao = JdbcUtil.createDao(ReadOnlyUserDao.class, readOnlyDataSource);
+ * ReadOnlyUserDao dao = JdbcUtil.createDao(ReadOnlyUserDao.class, readOnlyDataSource, Dsl.PSC);
  *
  * // Read operations with join loading using primitive long - no checked exceptions
  * Optional<User> user = dao.get(123L, Order.class);   // loads user with orders
@@ -62,14 +60,13 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB})
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDaoL}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityHelperL
  * @see UncheckedCrudDaoL
  */
-public interface UncheckedReadOnlyCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
-        extends UncheckedReadOnlyJoinEntityHelper<T, SB, TD>, UncheckedCrudJoinEntityHelperL<T, SB, TD> {
+public interface UncheckedReadOnlyCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<T, TD>>
+        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedCrudJoinEntityHelperL<T, TD> {
     // This interface combines read-only restrictions with join entity capabilities
     // and primitive long ID support. All methods are inherited from parent interfaces.
 }

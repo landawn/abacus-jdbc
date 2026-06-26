@@ -1,6 +1,8 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -9,11 +11,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.query.SqlBuilder;
 
 public class UncheckedReadOnlyDaoTest extends TestBase {
 
-    private interface DummyUncheckedReadOnlyDao extends UncheckedReadOnlyDao<Object, SqlBuilder.PSC, DummyUncheckedReadOnlyDao> {
+    private interface DummyUncheckedReadOnlyDao extends UncheckedReadOnlyDao<Object, DummyUncheckedReadOnlyDao> {
     }
 
     private final DummyUncheckedReadOnlyDao dao = createDefaultMethodProxy(DummyUncheckedReadOnlyDao.class);
@@ -35,7 +36,7 @@ public class UncheckedReadOnlyDaoTest extends TestBase {
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(3, UncheckedReadOnlyDao.class.getTypeParameters().length);
+        assertEquals(2, UncheckedReadOnlyDao.class.getTypeParameters().length);
     }
 
     @Test

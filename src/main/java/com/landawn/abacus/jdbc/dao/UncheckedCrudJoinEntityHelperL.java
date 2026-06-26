@@ -20,7 +20,6 @@ import java.util.Collection;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -28,23 +27,23 @@ import com.landawn.abacus.util.u.Optional;
  * A specialized interface for CRUD operations with join entity support, specifically designed for entities
  * with {@link Long} type primary keys. This interface extends the generic join entity helper functionality
  * with convenience methods that accept primitive {@code long} values for IDs.
- * 
+ *
  * <p>This interface provides all the standard join entity operations but with overloaded methods that
  * accept primitive {@code long} parameters instead of {@link Long} objects. This can lead to cleaner code
  * and better performance by avoiding auto-boxing in high-frequency operations.</p>
- * 
+ *
  * <p>The interface supports loading related entities through various join strategies, allowing you to
  * fetch an entity and eagerly load its associated entities, either all mapped relationships at once or
  * only the specific join entity types you request.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends UncheckedCrudDaoL<User, SqlBuilder.PSC, UserDao>,
- *         UncheckedCrudJoinEntityHelperL<User, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends UncheckedCrudDaoL<User, UserDao>,
+ *         UncheckedCrudJoinEntityHelperL<User, UserDao> {
  *     // Inherits both CRUD operations and join entity helpers with primitive long ID convenience
  * }
  *
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
  *
  * // Fetch user with primitive long ID and load associated orders
  * Optional<User> user = userDao.get(123L, Order.class);
@@ -57,34 +56,33 @@ import com.landawn.abacus.util.u.Optional;
  * // Load all join entities for a user
  * Optional<User> fullUser = userDao.get(123L, true);   // includeAllJoinEntities = true
  * }</pre>
- * 
+ *
  * <p>All methods in this interface throw {@link UncheckedSQLException} instead of checked exceptions,
  * allowing for cleaner code without explicit exception handling. Methods may also throw
  * {@link DuplicateResultException} when multiple records are found for a unique query.</p>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB})
  * @param <TD> the self-type of the companion {@link UncheckedCrudDaoL} (with {@code Long} primary key) that
  *             owns this helper, enabling fluent method chaining and access to its CRUD operations
  * @see UncheckedCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see UncheckedCrudDaoL
  */
-public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
-        extends UncheckedCrudJoinEntityHelper<T, Long, SB, TD>, CrudJoinEntityHelperL<T, SB, TD> {
+public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<T, TD>>
+        extends UncheckedCrudJoinEntityHelper<T, Long, TD>, CrudJoinEntityHelperL<T, TD> {
 
     /**
      * Retrieves an entity by its ID and loads the specified join entity class.
-     * 
+     *
      * <p>This method fetches the main entity and automatically loads the related entities
      * of the specified type. The join is performed based on the relationship mappings
      * defined in the entity classes.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Fetch a user and load their orders
      * Optional<User> userWithOrders = userDao.get(123L, Order.class);
-     * 
+     *
      * if (userWithOrders.isPresent()) {
      *     User user = userWithOrders.get();
      *     List<Order> orders = user.getOrders();   // Orders are already loaded
@@ -106,16 +104,16 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
 
     /**
      * Retrieves an entity by its ID with the option to load all associated join entities.
-     * 
+     *
      * <p>When {@code includeAllJoinEntities} is {@code true}, all mapped relationships will be loaded.
      * This is useful when you need the complete object graph but should be used carefully
      * to avoid performance issues with large datasets.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Fetch a user with all related entities (orders, addresses, preferences, etc.)
      * Optional<User> fullUser = userDao.get(123L, true);
-     * 
+     *
      * // Fetch only the user without any joins
      * Optional<User> userOnly = userDao.get(123L, false);
      * }</pre>
@@ -135,16 +133,16 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
 
     /**
      * Retrieves an entity by its ID with specific properties and loads the specified join entity.
-     * 
+     *
      * <p>This method allows you to optimize queries by selecting only the required properties
      * of the main entity while still loading the complete join entities. This is particularly
      * useful for large entities where you only need a subset of fields.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Fetch only id, name, and email from User, but load complete Order entities
-     * Optional<User> user = userDao.get(123L, 
-     *     Arrays.asList("id", "name", "email"), 
+     * Optional<User> user = userDao.get(123L,
+     *     Arrays.asList("id", "name", "email"),
      *     Order.class);
      * }</pre>
      *
@@ -167,11 +165,11 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
 
     /**
      * Retrieves an entity by its ID with specific properties and loads multiple join entity types.
-     * 
+     *
      * <p>This method provides fine-grained control over what data is fetched, allowing you to
      * specify exactly which properties of the main entity and which related entity types to load.
      * This can significantly improve performance in complex object graphs.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Fetch user with limited properties and multiple join entities
@@ -199,18 +197,18 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
 
     /**
      * Retrieves an entity by its ID with specific properties and optionally loads all join entities.
-     * 
+     *
      * <p>This method combines property selection with the option to load all relationships,
      * providing maximum flexibility in controlling what data is fetched from the database.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Fetch minimal user data with all relationships
      * Optional<User> user = userDao.get(123L,
      *     Arrays.asList("id", "name"),
      *     true);   // Load all join entities
-     * 
-     * // Fetch complete user data without relationships  
+     *
+     * // Fetch complete user data without relationships
      * Optional<User> userOnly = userDao.get(123L,
      *     null,   // Select all properties
      *     false); // Don't load join entities

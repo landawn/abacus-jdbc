@@ -15,6 +15,10 @@
  */
 package com.landawn.abacus.jdbc;
 
+import static com.landawn.abacus.query.Dsl.PAC;
+import static com.landawn.abacus.query.Dsl.PLC;
+import static com.landawn.abacus.query.Dsl.PSC;
+
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,11 +35,9 @@ import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlBuilder;
-import com.landawn.abacus.query.SqlBuilder.PAC;
-import com.landawn.abacus.query.SqlBuilder.PLC;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.type.Type;
@@ -51,7 +53,6 @@ import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.stream.Stream;
-import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
  * Manages join relationships between entities in JDBC operations.
@@ -108,17 +109,17 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 @SuppressWarnings({ "java:S1192", "resource" })
 public final class JoinInfo {
 
-    // Per-SqlBuilder factory functions, keyed by builder class (PSC/PAC/PLC). The Tuple4 slots are:
+    // Per-SqlBuilder factory functions, keyed by builder DSL (PSC/PAC/PLC). The Tuple4 slots are:
     //   _1 = select(columns), _2 = selectFrom(entityClass), _3 = update(entityClass), _4 = deleteFrom(entityClass).
     // Referenced as entry.getValue()._1.._4 throughout the constructor.
-    static final Map<Class<? extends SqlBuilder>, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> sqlBuilderFuncMap = new HashMap<>();
+    static final Map<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> sqlBuilderFuncMap = new HashMap<>();
 
     static {
-        sqlBuilderFuncMap.put(PSC.class, Tuple.of(PSC::select, PSC::selectFrom, PSC::update, PSC::deleteFrom));
+        sqlBuilderFuncMap.put(PSC, Tuple.of(PSC::select, PSC::selectFrom, PSC::update, PSC::deleteFrom));
 
-        sqlBuilderFuncMap.put(PAC.class, Tuple.of(PAC::select, PAC::selectFrom, PAC::update, PAC::deleteFrom));
+        sqlBuilderFuncMap.put(PAC, Tuple.of(PAC::select, PAC::selectFrom, PAC::update, PAC::deleteFrom));
 
-        sqlBuilderFuncMap.put(PLC.class, Tuple.of(PLC::select, PLC::selectFrom, PLC::update, PLC::deleteFrom));
+        sqlBuilderFuncMap.put(PLC, Tuple.of(PLC::select, PLC::selectFrom, PLC::update, PLC::deleteFrom));
     }
 
     final Class<?> entityClass;
@@ -135,15 +136,15 @@ public final class JoinInfo {
     final boolean isManyToManyJoin;
     final boolean allowJoiningByNullOrDefaultValue;
 
-    private final Map<Class<? extends SqlBuilder>, Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>> selectSqlBuilderAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>> selectSqlBuilderAndParamSetterPool = new HashMap<>();
 
-    private final Map<Class<? extends SqlBuilder>, Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchSelectSqlBuilderAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchSelectSqlBuilderAndParamSetterPool = new HashMap<>();
 
-    private final Map<Class<? extends SqlBuilder>, Tuple2<String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple2<String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new HashMap<>();
 
-    private final Map<Class<? extends SqlBuilder>, Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
 
-    private final Map<Class<? extends SqlBuilder>, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSqlBuilderAndParamSetterForPool = new HashMap<>();
+    private final Map<Dsl, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSqlBuilderAndParamSetterForPool = new HashMap<>();
 
     /**
      * Constructs a new JoinInfo instance for managing join relationships between entities.
@@ -240,7 +241,7 @@ public final class JoinInfo {
 
         final String[] joinColumnPairs = Strings.split(joinByVal, ',', true);
 
-        isManyToManyJoin = StreamEx.of(joinColumnPairs)
+        isManyToManyJoin = Stream.of(joinColumnPairs)
                 .flatMapArray(it -> Strings.split(it, '=', true))
                 .filter(it -> it.indexOf('.') > 0) //NOSONAR
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
@@ -358,7 +359,7 @@ public final class JoinInfo {
                 srcPropInfos[0].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[0], entity));
             };
 
-            for (final Map.Entry<Class<? extends SqlBuilder>, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> entry : sqlBuilderFuncMap
+            for (final Map.Entry<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> entry : sqlBuilderFuncMap
                     .entrySet()) {
 
                 final String middleSelectSql = entry.getValue()._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).build().query();
@@ -598,7 +599,7 @@ public final class JoinInfo {
                 }
             });
 
-            for (final Map.Entry<Class<? extends SqlBuilder>, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> entry : sqlBuilderFuncMap
+            for (final Map.Entry<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> entry : sqlBuilderFuncMap
                     .entrySet()) {
 
                 final String selectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).build().query();
@@ -728,7 +729,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     plan = joinInfo.getSelectSqlPlan(PSC.class);
+     *     plan = joinInfo.getSelectSqlPlan(PSC);
      *
      * // Build SQL with specific columns
      * String sql = plan._1.apply(Arrays.asList("id", "name", "description"));
@@ -738,16 +739,15 @@ public final class JoinInfo {
      * @return a tuple containing a function to build SQL and a parameter setter for prepared statements
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see SqlBuilder.PSC
+     * @see Dsl.PSC
      * @see SqlBuilder.PAC
      * @see SqlBuilder.PLC
      */
-    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(
-            final Class<? extends SqlBuilder> sbc) {
+    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(final Dsl sbc) {
         final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
         }
 
         return tp;
@@ -761,7 +761,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     plan = joinInfo.getSelectSqlBuilderAndParamSetter(PSC.class);
+     *     plan = joinInfo.getSelectSqlBuilderAndParamSetter(PSC);
      *
      * // _1 builds the SELECT SQL from the selected column names (null -> all columns).
      * String sql = plan._1.apply(null);  // a non-blank "SELECT ..." statement
@@ -769,17 +769,16 @@ public final class JoinInfo {
      * plan._2.accept(stmt, employee);
      *
      * // PLC produces lower-camel-case identifiers instead of snake_case.
-     * String plcSql = joinInfo.getSelectSqlBuilderAndParamSetter(PLC.class)._1.apply(null);
+     * String plcSql = joinInfo.getSelectSqlBuilderAndParamSetter(PLC)._1.apply(null);
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the SQL builder function and parameter setter
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * @deprecated Use {@link #getSelectSqlPlan(Class)}.
+     * @deprecated Use {@link #getSelectSqlPlan(Dsl)}.
      */
     @Deprecated
-    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlBuilderAndParamSetter(
-            final Class<? extends SqlBuilder> sbc) {
+    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlBuilderAndParamSetter(final Dsl sbc) {
         return getSelectSqlPlan(sbc);
     }
 
@@ -792,7 +791,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchPlan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+     *     batchPlan = joinInfo.getBatchSelectSqlPlan(PSC);
      *
      * // Build SQL for batch of entities
      * List<Employee> employees = getEmployees();
@@ -803,17 +802,17 @@ public final class JoinInfo {
      * @return a tuple containing a function to build SQL and a parameter setter for batch operations
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see SqlBuilder.PSC
+     * @see Dsl.PSC
      * @see SqlBuilder.PAC
      * @see SqlBuilder.PLC
      */
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR
-            final Class<? extends SqlBuilder> sbc) {
+            final Dsl sbc) {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSqlBuilderAndParamSetterPool
                 .get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
         }
 
         return tp;
@@ -827,7 +826,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchPlan = joinInfo.getBatchSelectSqlBuilderAndParamSetter(PSC.class);
+     *     batchPlan = joinInfo.getBatchSelectSqlBuilderAndParamSetter(PSC);
      *
      * List<Employee> employees = getEmployees();
      * // _1 builds the SELECT SQL sized for the batch (null columns -> all columns).
@@ -839,11 +838,11 @@ public final class JoinInfo {
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch SQL builder function and parameter setter
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * @deprecated Use {@link #getBatchSelectSqlPlan(Class)}.
+     * @deprecated Use {@link #getBatchSelectSqlPlan(Dsl)}.
      */
     @Deprecated
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlBuilderAndParamSetter( //NOSONAR
-            final Class<? extends SqlBuilder> sbc) {
+            final Dsl sbc) {
         return getBatchSelectSqlPlan(sbc);
     }
 
@@ -856,7 +855,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     deletePlan = joinInfo.getDeleteSqlPlan(PSC.class);
+     *     deletePlan = joinInfo.getDeleteSqlPlan(PSC);
      *
      * String deleteSql = deletePlan._1;             // Main delete SQL
      * String middleTableDeleteSql = deletePlan._2;  // Always null in current implementation
@@ -869,15 +868,15 @@ public final class JoinInfo {
      *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3})
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see SqlBuilder.PSC
+     * @see Dsl.PSC
      * @see SqlBuilder.PAC
      * @see SqlBuilder.PLC
      */
-    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Class<? extends SqlBuilder> sbc) {
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Dsl sbc) {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
         }
 
         return tp;
@@ -891,7 +890,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     deletePlan = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
+     *     deletePlan = joinInfo.getDeleteSqlAndParamSetter(PSC);
      *
      * String deleteSql = deletePlan._1;            // a non-blank "DELETE ..." statement
      * String middleTableDeleteSql = deletePlan._2; // always null in the current implementation
@@ -902,10 +901,10 @@ public final class JoinInfo {
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the delete SQL, the middle (join) table delete SQL (always {@code null}), and the parameter setter
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * @deprecated Use {@link #getDeleteSqlPlan(Class)}.
+     * @deprecated Use {@link #getDeleteSqlPlan(Dsl)}.
      */
     @Deprecated
-    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SqlBuilder> sbc) {
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Dsl sbc) {
         return getDeleteSqlPlan(sbc);
     }
 
@@ -918,7 +917,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchDeletePlan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+     *     batchDeletePlan = joinInfo.getBatchDeleteSqlPlan(PSC);
      *
      * List<Employee> employees = getEmployeesToDelete();
      * String deleteSql = batchDeletePlan._1.apply(employees.size());   // Main delete SQL
@@ -932,17 +931,17 @@ public final class JoinInfo {
      *         cascade-delete control is supported), and parameter setter ({@code _3}))
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see SqlBuilder.PSC
+     * @see Dsl.PSC
      * @see SqlBuilder.PAC
      * @see SqlBuilder.PLC
      */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR
-            final Class<? extends SqlBuilder> sbc) {
+            final Dsl sbc) {
         final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSqlBuilderAndParamSetterForPool
                 .get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder class: " + ClassUtil.getCanonicalClassName(sbc));
+            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
         }
 
         return tp;
@@ -956,7 +955,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchDeletePlan = joinInfo.getBatchDeleteSqlBuilderAndParamSetter(PSC.class);
+     *     batchDeletePlan = joinInfo.getBatchDeleteSqlBuilderAndParamSetter(PSC);
      *
      * List<Employee> employees = getEmployeesToDelete();
      * // _1 builds the DELETE SQL sized for the batch.
@@ -969,11 +968,11 @@ public final class JoinInfo {
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch delete SQL builder functions and parameter setter
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * @deprecated Use {@link #getBatchDeleteSqlPlan(Class)}.
+     * @deprecated Use {@link #getBatchDeleteSqlPlan(Dsl)}.
      */
     @Deprecated
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlBuilderAndParamSetter( //NOSONAR
-            final Class<? extends SqlBuilder> sbc) {
+            final Dsl sbc) {
         return getBatchDeleteSqlPlan(sbc);
     }
 
@@ -1211,7 +1210,7 @@ public final class JoinInfo {
      * // Use the join info to load related entities for a single employee
      * Employee employee = employeeDao.findById(123);
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     builder = joinInfo.getSelectSqlPlan(PSC.class);
+     *     builder = joinInfo.getSelectSqlPlan(PSC);
      * String sql = builder._1.apply(null);   // Use default columns
      * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
      *                                   .setParameters(builder._2, employee)

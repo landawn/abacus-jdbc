@@ -16,10 +16,9 @@ package com.landawn.abacus.samples.dao;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.dao.CrudDaoL;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.samples.entity.User;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
-public interface UserDaoL extends CrudDaoL<User, SqlBuilder.PSC, UserDaoL>, JoinEntityHelper<User, SqlBuilder.PSC, UserDaoL> {
+public interface UserDaoL extends CrudDaoL<User, UserDaoL>, JoinEntityHelper<User, UserDaoL> {
 
 }

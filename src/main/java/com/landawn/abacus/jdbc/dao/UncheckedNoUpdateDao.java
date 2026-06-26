@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
@@ -41,12 +40,12 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, SqlBuilder.PSC, EventLogDao> {
+ * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, EventLogDao> {
  *     // Can insert new logs and query existing logs
  *     // But cannot update or delete any logs
  * }
  *
- * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);
+ * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource, Dsl.PSC);
  *
  * // Insert and query operations work without checked exception handling:
  * dao.save(new EventLog("System startup"));
@@ -70,19 +69,17 @@ import com.landawn.abacus.query.condition.Condition;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB}
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedDao
  * @see NoUpdateDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>
-        extends UncheckedDao<T, SB, TD>, NoUpdateDao<T, SB, TD> {
+public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>> extends UncheckedDao<T, TD>, NoUpdateDao<T, TD> {
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
@@ -99,6 +96,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param updateProps a map of property names to their new values
      * @param cond the condition identifying the records to update
@@ -114,6 +112,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param entity the entity containing values to update
      * @param cond the condition identifying the records to update
@@ -129,6 +128,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param entity the entity containing values to update
      * @param propNamesToUpdate the property names to include in the update
@@ -177,6 +177,7 @@ public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Condition-based deletes remove existing records, which is disabled in this DAO type.
      *
      * @param cond the condition identifying the records to delete
      * @return never returns normally

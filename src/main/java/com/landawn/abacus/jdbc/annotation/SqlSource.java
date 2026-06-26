@@ -42,7 +42,7 @@ import java.lang.annotation.Target;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @SqlSource("sql/UserDao.xml")
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *
  *     @Query(id = "findActiveAdults")              // Reference into the mapper file.
  *     List<User> findActiveAdults(@Bind("minAge") int minAge);

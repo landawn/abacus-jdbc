@@ -22,7 +22,6 @@ import java.util.Map;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -46,27 +45,25 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDaoL<User, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDaoL<User, UserDao> {
  *     // Inherits all CrudDao methods with Long ID type,
  *     // plus convenience overloads that accept primitive long
  * }
  *
  * // Usage with primitive long
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
  * Optional<User> user = userDao.get(123L);   // Can use primitive long
  * userDao.deleteById(456L);                  // More convenient than Long.valueOf(456)
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (must be one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC}, or {@code SqlBuilder.PSB})
  * @param <TD> the self-type of the DAO for fluent interface support
  *
  * @see CrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {
+public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long, TD> {
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.

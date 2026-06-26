@@ -17,22 +17,22 @@ import org.mockito.Mockito;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.query.SqlBuilder.PSC;
+import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedCrudDaoTest extends TestBase {
 
-    interface TestUncheckedCrudDao extends UncheckedCrudDao<TestEntity, Long, PSC, TestUncheckedCrudDao> {
+    interface TestUncheckedCrudDao extends UncheckedCrudDao<TestEntity, Long, TestUncheckedCrudDao> {
     }
 
     static final class TestEntity {
     }
 
-    interface IdentifiedUncheckedCrudDao extends UncheckedCrudDao<IdentifiedEntity, Long, PSC, IdentifiedUncheckedCrudDao> {
+    interface IdentifiedUncheckedCrudDao extends UncheckedCrudDao<IdentifiedEntity, Long, IdentifiedUncheckedCrudDao> {
     }
 
-    interface IdAnnotatedUncheckedCrudDao extends UncheckedCrudDao<IdAnnotatedEntity, Long, PSC, IdAnnotatedUncheckedCrudDao> {
+    interface IdAnnotatedUncheckedCrudDao extends UncheckedCrudDao<IdAnnotatedEntity, Long, IdAnnotatedUncheckedCrudDao> {
     }
 
     static final class IdAnnotatedEntity {
@@ -378,7 +378,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         }
     }
 
-    interface NoIdUncheckedCrudDao extends UncheckedCrudDao<NoIdEntity, Long, PSC, NoIdUncheckedCrudDao> {
+    interface NoIdUncheckedCrudDao extends UncheckedCrudDao<NoIdEntity, Long, NoIdUncheckedCrudDao> {
     }
 
     @Test

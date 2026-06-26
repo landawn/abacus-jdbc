@@ -802,6 +802,18 @@ public final class JdbcUtils {
                 //NOSONAR
                 batchSize, batchIntervalInMillis);
 
+        // Validate columnTypeMap keys up front so an unknown key is rejected per the @throws contract even when the
+        // dataset is empty (the per-row setter below is never invoked for a zero-row dataset).
+        if (N.notEmpty(columnTypeMap)) {
+            final List<String> columnNameList = dataset.columnNames();
+
+            if (!columnNameList.containsAll(columnTypeMap.keySet())) {
+                final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
+                keys.removeAll(columnNameList);
+                throw new IllegalArgumentException(keys + " are not included in titles: " + N.toString(columnNameList));
+            }
+        }
+
         final Type<Object> objType = N.typeOf(Object.class);
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = new Throwables.BiConsumer<>() {
             private int columnCount = 0;
@@ -813,26 +825,16 @@ public final class JdbcUtils {
                     final List<String> columnNameList = dataset.columnNames();
                     columnCount = columnNameList.size();
 
-                    final Set<String> columnNameSet = N.newHashSet(columnCount);
                     columnTypes = new Type[columnCount];
 
-                    String columnName = null;
-
                     for (int i = 0; i < columnCount; i++) {
-                        columnName = columnNameList.get(i);
+                        final String columnName = columnNameList.get(i);
 
                         if (columnTypeMap.containsKey(columnName)) {
                             columnTypes[i] = N.requireNonNull(columnTypeMap.get(columnName));
-                            columnNameSet.add(columnName);
                         } else {
                             columnTypes[i] = objType;
                         }
-                    }
-
-                    if (columnNameSet.size() != columnTypeMap.size()) {
-                        final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
-                        keys.removeAll(columnNameSet);
-                        throw new IllegalArgumentException(keys + " are not included in titles: " + N.toString(columnNameList));
                     }
                 }
 
@@ -1138,9 +1140,9 @@ public final class JdbcUtils {
      * Throwables.Function<String, Object[], Exception> parser = line -> {
      *     String[] parts = line.split("\t");
      *     return new Object[] {
-     *         parts[0], 
-     *         new BigDecimal(parts[1]), 
-     *         java.sql.Date.valueOf(parts[2]) 
+     *         parts[0],
+     *         new BigDecimal(parts[1]),
+     *         java.sql.Date.valueOf(parts[2])
      *     };
      * };
      * long rowsImported = JdbcUtils.importData(reader, connection, insertSql, 2000, 200, parser);
@@ -1180,9 +1182,9 @@ public final class JdbcUtils {
      *     Matcher matcher = pattern.matcher(line);
      *     if (!matcher.matches()) return null;
      *     return new Object[] {
-     *         matcher.group(1), 
-     *         matcher.group(3), 
-     *         new Timestamp(Long.parseLong(matcher.group(2))) 
+     *         matcher.group(1),
+     *         matcher.group(3),
+     *         new Timestamp(Long.parseLong(matcher.group(2)))
      *     };
      * };
      * long rowsImported = JdbcUtils.importData(reader, stmt, 1000, 0, parser);
@@ -1310,7 +1312,7 @@ public final class JdbcUtils {
      * String insertSql = "INSERT INTO products (sku, name, price, stock) VALUES (?, ?, ?, ?)";
      *
      * try {
-     *     long rowsImported = JdbcUtils.importData(products, conn, insertSql, 
+     *     long rowsImported = JdbcUtils.importData(products, conn, insertSql,
      *         5000,  // larger batch size for better performance
      *         100,   // 100ms pause between batches to avoid overwhelming the DB
      *         (stmt, product) -> {
@@ -1507,7 +1509,7 @@ public final class JdbcUtils {
      * String insertSql = "INSERT INTO products (sku, name, category, price) VALUES (?, ?, ?, ?)";
      *
      * try {
-     *     long rowsImported = JdbcUtils.importCsv(csvFile, conn, insertSql, 
+     *     long rowsImported = JdbcUtils.importCsv(csvFile, conn, insertSql,
      *         2000,  // batch size
      *         50,    // 50ms pause between batches
      *         (stmt, row) -> {
@@ -2769,7 +2771,7 @@ public final class JdbcUtils {
      *
      * long rowsCopied = JdbcUtils.copy(
      *     sourceDS, "SELECT * FROM large_table", 100000,
-     *     targetDS, "INSERT INTO processed_table VALUES (?, ?, ?)", 
+     *     targetDS, "INSERT INTO processed_table VALUES (?, ?, ?)",
      *     5000, 1000, setter
      * );
      * }</pre>
@@ -2878,7 +2880,7 @@ public final class JdbcUtils {
      *      Connection targetConn = targetDS.getConnection()) {
      *
      *     // Use larger batch size for better performance with large tables
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn, 
+     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn,
      *                                       "large_table", "large_table_copy", 10000);
      *     System.out.println("Copied " + rowsCopied + " rows");
      * }
@@ -2935,7 +2937,7 @@ public final class JdbcUtils {
      *      Connection targetConn = targetDS.getConnection()) {
      *
      *     Set<String> columns = Set.of("id", "name", "price", "category");
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn, 
+     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn,
      *                                       "products", "product_catalog", columns);
      *     System.out.println("Copied " + rowsCopied + " products to catalog");
      * }
@@ -3209,11 +3211,11 @@ public final class JdbcUtils {
      * };
      *
      * long rowsCopied = JdbcUtils.copy(
-     *     sourceConn, 
-     *     "SELECT id, data FROM sensitive_table", 
+     *     sourceConn,
+     *     "SELECT id, data FROM sensitive_table",
      *     50000,  // Large fetch size
-     *     targetConn, 
-     *     "INSERT INTO sanitized_table VALUES (?, ?, ?)", 
+     *     targetConn,
+     *     "INSERT INTO sanitized_table VALUES (?, ?, ?)",
      *     1000,   // Smaller batch size
      *     100,    // 100ms delay between batches
      *     setter

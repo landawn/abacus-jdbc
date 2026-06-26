@@ -26,7 +26,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * Provides DAO-level configuration options that affect query generation and execution behavior.
  * This annotation allows fine-tuning of various framework behaviors at the DAO interface level,
  * overriding global defaults for specific use cases.
- * 
+ *
  * <p>Configuration options include:</p>
  * <ul>
  *   <li>Automatic LIMIT clause addition for single-result queries</li>
@@ -34,14 +34,14 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *   <li>Join condition handling with {@code null} values</li>
  *   <li>Column fetching strategies for Dataset queries</li>
  * </ul>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @DaoConfig(
  *     addLimitForSingleQuery            = true,
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Built-in Condition-based single-result methods (e.g. findFirst, findOnlyOne, exists)
  *     // will have a LIMIT clause appended automatically. User-supplied SQL in @Query methods
  *     // is left untouched.
@@ -54,9 +54,9 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *         return user;
  *     }
  * }
- * 
+ *
  * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
- * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
+ * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
  *     // Framework-managed @JoinedBy joins are allowed even when the join key is null
  *     List<Order> listAllWithItems(Collection<String> selectPropNames);
  * }
@@ -85,7 +85,7 @@ public @interface DaoConfig {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(addLimitForSingleQuery = true)
-     * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+     * public interface ProductDao extends CrudDao<Product, Long, ProductDao> {
      *     // Built-in Condition-based methods will have LIMIT 1 appended
      *     // when invoked through the proxy.
      * }
@@ -99,22 +99,22 @@ public @interface DaoConfig {
     /**
      * Controls whether to automatically call {@code generateId()} for entity inserts
      * when the ID field is not set or has a default value.
-     * 
+     *
      * <p>This applies to {@code CrudDao.insert(T entity)} and {@code CrudDao.batchInsert(Collection<T> entities)}
      * methods. The ID is considered "not set" when it's null or has the default value for its type
      * (0 for numeric types, null for objects).</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(callGenerateIdForInsertIfIdNotSet = true)
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     @Override
      *     default Long generateId() {
      *         // Custom ID generation logic
      *         return System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(1000);
      *     }
      * }
-     * 
+     *
      * // Usage
      * User user = new User("John", "john@example.com");
      * userDao.insert(user);   // generateId() called automatically
@@ -127,15 +127,15 @@ public @interface DaoConfig {
     /**
      * Controls whether to automatically call {@code generateId()} for SQL-based entity inserts
      * when the ID field is not set or has a default value.
-     * 
-     * <p>This applies to {@code CrudDao.insert(String sql, T entity)} and 
+     *
+     * <p>This applies to {@code CrudDao.insert(String sql, T entity)} and
      * {@code CrudDao.batchInsert(String sql, Collection<T> entities)} methods.
      * Similar to {@link #callGenerateIdForInsertIfIdNotSet()} but for custom SQL inserts.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(callGenerateIdForInsertWithSqlIfIdNotSet = true)
-     * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
+     * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
      *     default void insertWithAudit(Order order) {
      *         String sql = "INSERT INTO orders (id, customer_id, total, created_by) " +
      *                     "VALUES (:id, :customerId, :total, CURRENT_USER())";
@@ -162,7 +162,7 @@ public @interface DaoConfig {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
-     * public interface CustomerDao extends CrudDao<Customer, Long, SqlBuilder.PSC, CustomerDao> {
+     * public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> {
      *     // @JoinedBy-driven joins are allowed even if the join key is null or zero
      *     List<Customer> listAllWithPreferredContacts(Collection<String> selectPropNames);
      * }
@@ -192,7 +192,7 @@ public @interface DaoConfig {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(fetchColumnByEntityClassForDatasetQuery = false)
-     * public interface ReportDao extends CrudDao<Report, Long, SqlBuilder.PSC, ReportDao> {
+     * public interface ReportDao extends CrudDao<Report, Long, ReportDao> {
      *     // Will fetch all columns including calculated ones
      *     @Query("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
      *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +

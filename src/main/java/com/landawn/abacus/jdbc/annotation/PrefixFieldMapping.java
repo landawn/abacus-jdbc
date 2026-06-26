@@ -40,7 +40,7 @@ import java.lang.annotation.Target;
  *     Address   address;     // nested target
  * }
  *
- * public interface UserDao extends Dao<User, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends Dao<User, UserDao> {
  *
  *     @PrefixFieldMapping("addr=address")
  *     @Query("SELECT u.id, u.name, " +
@@ -72,9 +72,9 @@ public @interface PrefixFieldMapping {
     /**
      * Specifies the mapping between column prefixes and object field paths.
      * The format is a comma-separated list of prefix=fieldPath pairs.
-     * 
+     *
      * <p>Format: {@code "prefix1=fieldPath1, prefix2=fieldPath2, ..."}</p>
-     * 
+     *
      * <p>Two distinct syntaxes are involved &mdash; do not confuse them:</p>
      * <ul>
      *   <li><b>Mapping syntax (this element's value):</b> a comma-separated list of {@code prefix=fieldPath}
@@ -94,26 +94,26 @@ public @interface PrefixFieldMapping {
      *       configured {@code fieldPath} target</li>
      *   <li>Columns whose aliases have no matching prefix are mapped normally</li>
      * </ul>
-     * 
+     *
      * <p>Example mappings:</p>
      * <pre>{@code
      * // Simple prefix mapping
      * @PrefixFieldMapping("addr=address")
      * // addr.street -> address.street
      * // addr.city -> address.city
-     * 
+     *
      * // Multiple prefix mappings
      * @PrefixFieldMapping("u=user, o=order, p=payment")
      * // u.name -> user.name
      * // o.id -> order.id
      * // p.amount -> payment.amount
-     * 
+     *
      * // Nested field mapping
      * @PrefixFieldMapping("bill=billing.address, ship=shipping.address")
      * // bill.street -> billing.address.street
      * // ship.street -> shipping.address.street
      * }</pre>
-     * 
+     *
      * @return the comma-separated {@code prefix=fieldPath} mapping string; empty (default) means no prefix mapping is applied
      */
     String value() default "";

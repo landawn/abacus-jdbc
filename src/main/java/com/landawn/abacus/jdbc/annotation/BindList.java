@@ -25,26 +25,26 @@ import com.landawn.abacus.annotation.Beta;
 /**
  * Binds a collection or array parameter to a SQL query, automatically expanding it
  * into the appropriate number of parameter placeholders.
- * 
+ *
  * <p>This annotation is particularly useful for {@code IN} clauses where you need to
  * bind a variable number of values. The framework automatically handles the expansion
  * of the collection into individual parameter bindings.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Basic usage with IN clause
  *     @Query("SELECT * FROM users WHERE id IN ({ids})")
  *     List<User> findByIds(@BindList("ids") List<Long> userIds);
- *     
+ *
  *     // Usage: dao.findByIds(Arrays.asList(1L, 2L, 3L))
  *     // Generates: SELECT * FROM users WHERE id IN (?, ?, ?)
  *     // With values: [1, 2, 3]
- *     
+ *
  *     // Using with array parameter
  *     @Query("SELECT * FROM users WHERE status IN ({statuses})")
  *     List<User> findByStatuses(@BindList("statuses") String[] statuses);
- *     
+ *
  *     // With prefix and suffix for conditional SQL
  *     @Query("SELECT * FROM users WHERE active = true {statusFilter}")
  *     List<User> findActiveUsers(
@@ -58,7 +58,7 @@ import com.landawn.abacus.annotation.Beta;
  *     // If statuses has values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
  * }
  * }</pre>
- * 
+ *
  * <p>The annotation automatically handles:</p>
  * <ul>
  *   <li>Empty collections: the {@code {name}} token is replaced with an empty string, and the
@@ -112,7 +112,7 @@ public @interface BindList {
      *
      * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
      * Consider using {@link SqlFragment} annotation for complex dynamic SQL construction.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM users WHERE active = true {statusFilter}")
@@ -138,7 +138,7 @@ public @interface BindList {
      *
      * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
      * Consider using {@link SqlFragment} annotation for complex dynamic SQL construction.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM products {categoryFilter} ORDER BY name")
@@ -148,7 +148,7 @@ public @interface BindList {
      *               suffixForNonEmpty = ")")
      *     Set<String> categories
      * );
-     * 
+     *
      * // With empty set: SELECT * FROM products ORDER BY name
      * // With values: SELECT * FROM products WHERE category IN (?, ?, ?) ORDER BY name
      * }</pre>
