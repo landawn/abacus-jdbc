@@ -205,17 +205,17 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         }
     }
 
-    // importFrom(dataset).into(dataSource, insertSql) — default all-columns path.
+    // importFrom(dataset).to(dataSource, insertSql) — default all-columns path.
     @Test
     public void testImportFrom_AllColumns_IntoDataSource() throws SQLException {
-        final int imported = DataTransferUtil.importFrom(threeRowDataset()).into(ds, CSV_INSERT_SQL);
+        final int imported = DataTransferUtil.importFrom(threeRowDataset()).to(ds, CSV_INSERT_SQL);
 
         assertEquals(3, imported);
         assertEquals(3, count("csv_tgt"));
         assertEquals("Alice", nameOf(1));
     }
 
-    // importFrom(dataset).selectColumns(..).filter(..).batchSize(..).into(conn, insertSql)
+    // importFrom(dataset).selectColumns(..).filter(..).batchSize(..).to(conn, insertSql)
     @Test
     public void testImportFrom_SelectColumns_Filter_BatchSize() throws SQLException {
         try (Connection conn = ds.getConnection()) {
@@ -223,7 +223,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
                     .selectColumns(List.of("id", "name", "amount"))
                     .filter(row -> ((Double) row[2]) >= 20.0) // drops Alice (10.5)
                     .batchSize(1)
-                    .into(conn, CSV_INSERT_SQL);
+                    .to(conn, CSV_INSERT_SQL);
 
             assertEquals(2, imported);
         }
@@ -231,7 +231,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals(2, count("csv_tgt"));
     }
 
-    // importFrom(dataset).stmtSetter(..).into(stmt) — custom parameter binding, terminal PreparedStatement.
+    // importFrom(dataset).stmtSetter(..).to(stmt) — custom parameter binding, terminal PreparedStatement.
     @Test
     public void testImportFrom_StmtSetter_IntoStatement() throws SQLException {
         try (Connection conn = ds.getConnection();
@@ -240,7 +240,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
                 pq.setLong(1, (Long) row[0]);
                 pq.setString(2, ((String) row[1]).toUpperCase());
                 pq.setDouble(3, (Double) row[2]);
-            }).into(stmt);
+            }).to(stmt);
 
             assertEquals(3, imported);
         }
@@ -249,13 +249,13 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("ALICE", nameOf(1));
     }
 
-    // importFrom(dataset).columnTypeMap(..).into(dataSource, insertSql) — type-mapped value binding.
+    // importFrom(dataset).columnTypeMap(..).to(dataSource, insertSql) — type-mapped value binding.
     @SuppressWarnings("rawtypes")
     @Test
     public void testImportFrom_ColumnTypeMap() throws SQLException {
         final Map<String, Type> columnTypeMap = Map.of("id", Type.of(Long.class), "name", Type.of(String.class), "amount", Type.of(Double.class));
 
-        final int imported = DataTransferUtil.importFrom(threeRowDataset()).columnTypeMap(columnTypeMap).into(ds, CSV_INSERT_SQL);
+        final int imported = DataTransferUtil.importFrom(threeRowDataset()).columnTypeMap(columnTypeMap).to(ds, CSV_INSERT_SQL);
 
         assertEquals(3, imported);
         assertEquals(3, count("csv_tgt"));
@@ -268,7 +268,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
                 () -> DataTransferUtil.importFrom(threeRowDataset())
                         .selectColumns(List.of("id", "name", "amount"))
                         .stmtSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
-                        .into(ds, CSV_INSERT_SQL));
+                        .to(ds, CSV_INSERT_SQL));
     }
 
     private static final String COPY_SELECT_SQL = "SELECT id, name, amount FROM copy_src";

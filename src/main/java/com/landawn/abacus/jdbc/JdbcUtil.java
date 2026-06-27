@@ -1924,42 +1924,6 @@ public final class JdbcUtil {
         return columnNameList;
     }
 
-    /**
-     * Returns an ordered list of column names for a specified table.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
-     *     // Delegates to getColumnNames(conn, tableName).
-     *     List<String> cols = JdbcUtil.getColumnNameList(conn, "users");
-     *     System.out.println(cols);   // e.g. [ID, FIRST_NAME, LAST_NAME] (H2 upper-cases unquoted identifiers)
-     *
-     *     // Identical result to the non-deprecated method:
-     *     List<String> same = JdbcUtil.getColumnNames(conn, "users");   // equal to cols
-     *
-     *     // A qualified name (schema.table or catalog.schema.table) is also accepted:
-     *     List<String> qualified = JdbcUtil.getColumnNameList(conn, "PUBLIC.users");   // returns the same columns
-     *
-     *     // Non-existent table:
-     *     JdbcUtil.getColumnNameList(conn, "no_such_table");   // throws SQLException
-     *
-     *     // Blank table name:
-     *     JdbcUtil.getColumnNameList(conn, "");   // throws IllegalArgumentException
-     * }
-     * }</pre>
-     *
-     * @param conn The database {@link Connection} to use.
-     * @param tableName The name of the table for which to retrieve column names.
-     * @return A {@link List} of column names in the order they are defined in the table.
-     * @throws SQLException if a database access error occurs or the table does not exist.
-     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
-     * @deprecated use {@link #getColumnNames(Connection, String)} instead.
-     */
-    @Deprecated
-    public static List<String> getColumnNameList(final Connection conn, final String tableName) throws SQLException {
-        return getColumnNames(conn, tableName);
-    }
-
     private static List<String> getColumnNamesFromMetadata(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
             final String tableNamePattern) throws SQLException {
         final ResultSet rs = metadata.getColumns(catalog, schemaPattern, tableNamePattern, null);
@@ -2054,35 +2018,6 @@ public final class JdbcUtil {
         }
 
         return labelList;
-    }
-
-    /**
-     * Returns an ordered list of column labels from a {@link ResultSet}.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Delegates to getColumnLabels(rs); prefers the column alias (label), falling back to the column name.
-     * try (Statement stmt = connection.createStatement();
-     *      ResultSet rs = stmt.executeQuery("SELECT id AS \"User ID\", first_name AS \"First Name\" FROM users")) {
-     *     List<String> labels = JdbcUtil.getColumnLabelList(rs);
-     *     System.out.println(labels);   // returns [User ID, First Name]
-     * }
-     *
-     * // No aliases: falls back to column names (H2 upper-cases unquoted identifiers).
-     * try (Statement stmt = connection.createStatement();
-     *      ResultSet rs = stmt.executeQuery("SELECT id, first_name FROM users")) {
-     *     List<String> labels = JdbcUtil.getColumnLabelList(rs);   // returns [ID, FIRST_NAME]
-     * }
-     * }</pre>
-     *
-     * @param rs The {@link ResultSet} from which to retrieve column labels.
-     * @return A {@link List} of column labels in the order they appear in the {@code ResultSet}.
-     * @throws SQLException if a database access error occurs.
-     * @deprecated use {@link #getColumnLabels(ResultSet)} instead.
-     */
-    @Deprecated
-    public static List<String> getColumnLabelList(final ResultSet rs) throws SQLException {
-        return getColumnLabels(rs);
     }
 
     /**

@@ -108,7 +108,7 @@ import com.landawn.abacus.util.stream.CharStream;
  * returns a builder whose chained methods set optional parameters and whose terminal method actually
  * runs the operation:</p>
  * <ul>
- *   <li>{@link #importFrom(Dataset)} &rarr; {@link DatasetImportBuilder} (terminal: {@code into(...)})</li>
+ *   <li>{@link #importFrom(Dataset)} &rarr; {@link DatasetImportBuilder} (terminal: {@code to(...)})</li>
  *   <li>{@link #copyFrom(javax.sql.DataSource, String)} / {@link #copyFrom(Connection, String)} /
  *       {@link #copyFrom(PreparedStatement)} &rarr; {@code CopyFrom*} builders (terminal: {@code to(...)})</li>
  *   <li>{@link #copyTable(javax.sql.DataSource, String)} / {@link #copyTable(Connection, String)}
@@ -3435,7 +3435,7 @@ public final class DataTransferUtil {
      *
      * <p>The returned {@link DatasetImportBuilder} lets you configure the optional aspects of the import
      * (selected columns, row filter, batch size/interval, column-type mapping or a custom statement setter)
-     * through chained calls, and then run the import with one of the terminal {@code into(...)} methods.
+     * through chained calls, and then run the import with one of the terminal {@code to(...)} methods.
      * It is an ergonomic alternative to the many positional {@code importData(Dataset, ...)} overloads.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -3448,7 +3448,7 @@ public final class DataTransferUtil {
      *         .selectColumns(cols)
      *         .filter(row -> ((Integer) row[1]) >= 18)
      *         .batchSize(1000)
-     *         .into(dataSource, "INSERT INTO users (name, age) VALUES (?, ?)");
+     *         .to(dataSource, "INSERT INTO users (name, age) VALUES (?, ?)");
      * }</pre>
      *
      * @param dataset the Dataset whose data will be imported (must not be {@code null})
@@ -3467,12 +3467,12 @@ public final class DataTransferUtil {
      * A fluent builder that configures and runs the import of a {@link Dataset} into a database table.
      *
      * <p>Obtain an instance via {@link DataTransferUtil#importFrom(Dataset)}, chain any of the optional configuration
-     * methods, then call one of the terminal {@code into(...)} methods to run the import. Each configuration
+     * methods, then call one of the terminal {@code to(...)} methods to run the import. Each configuration
      * method returns {@code this}, so calls can be chained.</p>
      *
      * <p>The three value-mapping strategies &mdash; {@link #selectColumns(Collection)},
      * {@link #columnTypeMap(Map)} and {@link #stmtSetter(Throwables.BiConsumer)} &mdash; are mutually
-     * exclusive; configuring more than one causes the terminal {@code into(...)} call to throw
+     * exclusive; configuring more than one causes the terminal {@code to(...)} call to throw
      * {@link IllegalArgumentException}. When none of them is configured, all columns of the dataset are
      * imported in order. The {@link #filter(Throwables.Predicate)} is independent and may be combined with
      * any of them.</p>
@@ -3523,7 +3523,7 @@ public final class DataTransferUtil {
         /**
          * Sets the number of rows inserted per batch.
          *
-         * @param batchSize the batch size (must be greater than 0 when {@code into(...)} is called)
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
          * @return this builder
          */
         public DatasetImportBuilder batchSize(final int batchSize) {
@@ -3535,7 +3535,7 @@ public final class DataTransferUtil {
         /**
          * Sets the pause between consecutive batch executions.
          *
-         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code into(...)} is called)
+         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
          * @return this builder
          */
         public DatasetImportBuilder batchIntervalInMillis(final long batchIntervalInMillis) {
@@ -3584,11 +3584,11 @@ public final class DataTransferUtil {
          *         is not a column of the dataset
          * @throws SQLException if a database access error occurs
          */
-        public int into(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+        public int to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
             final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
             try {
-                return into(conn, insertSql);
+                return to(conn, insertSql);
             } finally {
                 JdbcUtil.releaseConnection(conn, targetDataSource);
             }
@@ -3605,9 +3605,9 @@ public final class DataTransferUtil {
          *         is not a column of the dataset
          * @throws SQLException if a database access error occurs
          */
-        public int into(final Connection conn, final String insertSql) throws SQLException {
+        public int to(final Connection conn, final String insertSql) throws SQLException {
             try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-                return into(stmt);
+                return to(stmt);
             }
         }
 
@@ -3621,7 +3621,7 @@ public final class DataTransferUtil {
          *         is not a column of the dataset
          * @throws SQLException if a database access error occurs
          */
-        public int into(final PreparedStatement stmt) throws SQLException {
+        public int to(final PreparedStatement stmt) throws SQLException {
             int configuredStrategies = 0;
 
             if (N.notEmpty(selectColumnNames)) {

@@ -180,7 +180,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testBiParametersSetterCreateForArray() throws SQLException {
         List<String> fields = Arrays.asList("name", "age");
-        Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.createForArray(fields, TestEntity.class);
+        Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.forArray(fields, TestEntity.class);
         assertNotNull(setter);
 
         Object[] params = new Object[] { "John", 25 };
@@ -194,7 +194,7 @@ public class JdbcTest extends TestBase {
     @SuppressWarnings("unchecked")
     public void testBiParametersSetterCreateForList() throws SQLException {
         List<String> fields = Arrays.asList("name", "age");
-        Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.createForList(fields, TestEntity.class);
+        Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.forList(fields, TestEntity.class);
         assertNotNull(setter);
 
         List<Object> params = Arrays.asList("John", 25);
@@ -207,7 +207,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testBiParametersSetterCreateForList_InvalidField() {
         List<String> fields = Arrays.asList("nonexistentField");
-        Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.createForList(fields, TestEntity.class);
+        Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.forList(fields, TestEntity.class);
         assertNotNull(setter);
         assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, Arrays.asList("value")));
     }
@@ -215,7 +215,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testBiParametersSetterCreateForArray_InvalidField() {
         List<String> fields = Arrays.asList("nonexistentField");
-        Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.createForArray(fields, TestEntity.class);
+        Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.forArray(fields, TestEntity.class);
         assertNotNull(setter);
         assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, new Object[] { "value" }));
     }
@@ -1209,7 +1209,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testRowConsumerCreate() throws SQLException {
         List<Integer> columnIndices = new ArrayList<>();
-        Jdbc.RowConsumer consumer = Jdbc.RowConsumer.create((rs, colIndex) -> columnIndices.add(colIndex));
+        Jdbc.RowConsumer consumer = Jdbc.RowConsumer.forEachColumn((rs, colIndex) -> columnIndices.add(colIndex));
 
         consumer.accept(mockResultSet);
 
@@ -1296,7 +1296,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testBiRowConsumerCreate() throws SQLException {
         List<Integer> columnIndices = new ArrayList<>();
-        Jdbc.BiRowConsumer consumer = Jdbc.BiRowConsumer.create((rs, colIndex) -> columnIndices.add(colIndex));
+        Jdbc.BiRowConsumer consumer = Jdbc.BiRowConsumer.forEachColumn((rs, colIndex) -> columnIndices.add(colIndex));
 
         consumer.accept(mockResultSet, Arrays.asList("col1", "col2"));
 
@@ -1513,7 +1513,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString(2)).thenReturn("John");
         when(mockResultSet.getObject(3)).thenReturn(25);
 
-        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(TestEntity.class);
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class);
         Object[] outputRow = new Object[3];
 
         extractor.accept(mockResultSet, outputRow);
@@ -1530,7 +1530,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString(2)).thenReturn("Mia");
 
         List<String> columnLabels = Arrays.asList("id", "name");
-        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(TestEntity.class, columnLabels);
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, columnLabels);
         Object[] outputRow = new Object[2];
 
         extractor.accept(mockResultSet, outputRow);
@@ -1545,7 +1545,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString(2)).thenReturn("Ned");
         when(mockResultSet.getObject(3)).thenReturn(40);
 
-        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(TestEntity.class, new HashMap<>());
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, new HashMap<>());
         Object[] outputRow = new Object[3];
 
         extractor.accept(mockResultSet, outputRow);
@@ -2402,11 +2402,11 @@ public class JdbcTest extends TestBase {
     @Test
     public void testNullArguments() {
         assertThrows(IllegalArgumentException.class, () -> {
-            Jdbc.BiParametersSetter.createForArray(null, TestEntity.class);
+            Jdbc.BiParametersSetter.forArray(null, TestEntity.class);
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
-            Jdbc.BiParametersSetter.createForArray(Arrays.asList("field"), null);
+            Jdbc.BiParametersSetter.forArray(Arrays.asList("field"), null);
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
@@ -3295,7 +3295,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(1)).thenReturn("fallback_value");
 
         List<String> columnLabels = Arrays.asList("unknown_col");
-        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(TestEntity.class, columnLabels);
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, columnLabels);
         Object[] outputRow = new Object[1];
 
         extractor.accept(mockResultSet, outputRow);
@@ -3309,7 +3309,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString(1)).thenReturn("Carol");
 
         List<String> columnLabels = Arrays.asList("first_name");
-        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(CamelCaseEntity.class, columnLabels);
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(CamelCaseEntity.class, columnLabels);
         Object[] outputRow = new Object[1];
 
         extractor.accept(mockResultSet, outputRow);

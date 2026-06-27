@@ -254,7 +254,7 @@ public final class Jdbc {
          * <pre>{@code
          * List<String> fields = List.of("firstName", "age");
          * BiParametersSetter<PreparedStatement, Object[]> setter =
-         * BiParametersSetter.createForArray(fields, User.class);
+         * BiParametersSetter.forArray(fields, User.class);
          *
          * // In an execution context:
          * // setter.accept(preparedStatement, new Object[] {"John", 30});
@@ -270,7 +270,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
+        static <T> BiParametersSetter<PreparedStatement, T[]> forArray(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
@@ -322,7 +322,7 @@ public final class Jdbc {
          * <pre>{@code
          * List<String> fields = List.of("firstName", "age");
          * BiParametersSetter<PreparedStatement, List<Object>> setter =
-         * BiParametersSetter.createForList(fields, User.class);
+         * BiParametersSetter.forList(fields, User.class);
          *
          * // In an execution context:
          * // setter.accept(preparedStatement, List.of("John", 30));
@@ -338,7 +338,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
+        static <T> BiParametersSetter<PreparedStatement, List<T>> forList(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
@@ -1015,7 +1015,7 @@ public final class Jdbc {
             N.checkArgNotNull(targetClass, cs.targetClass);
 
             return rs -> {
-                final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
+                final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
 
                 return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(targetClass);
             };
@@ -1043,7 +1043,7 @@ public final class Jdbc {
             N.checkArgNotNull(targetClass, cs.targetClass);
 
             return rs -> {
-                final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
+                final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
 
                 return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(idPropNameForMerge, targetClass);
             };
@@ -1073,7 +1073,7 @@ public final class Jdbc {
             N.checkArgNotNull(targetClass, cs.targetClass);
 
             return rs -> {
-                final RowExtractor rowExtractor = RowExtractor.createBy(targetClass);
+                final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
 
                 return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(idPropNamesForMerge, targetClass);
             };
@@ -1096,7 +1096,7 @@ public final class Jdbc {
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor) {
             N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
 
-            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor));
+            return rs -> JdbcUtil.extractData(rs, RowExtractor.forType(entityClassForExtractor));
         }
 
         /**
@@ -1119,7 +1119,7 @@ public final class Jdbc {
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
             N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
 
-            return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor, prefixAndFieldNameMap));
+            return rs -> JdbcUtil.extractData(rs, RowExtractor.forType(entityClassForExtractor, prefixAndFieldNameMap));
         }
 
         /**
@@ -1160,7 +1160,7 @@ public final class Jdbc {
          * <pre>{@code
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
          * rs -> rs.getInt("status") > 0,       // Filter for positive status
-         * RowExtractor.createBy(User.class)    // Use User class for type info
+         * RowExtractor.forType(User.class)    // Use User class for type info
          * );
          * }</pre>
          *
@@ -3529,7 +3529,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Extract using custom RowExtractor and filter out null values
-         * RowExtractor extractor = RowExtractor.createBy(User.class);
+         * RowExtractor extractor = RowExtractor.forType(User.class);
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
          *     extractor,
          *     (key, value) -> value != null,
@@ -3678,7 +3678,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Use a custom RowExtractor for specialized value extraction
-         * RowExtractor extractor = RowExtractor.createBy(User.class);
+         * RowExtractor extractor = RowExtractor.forType(User.class);
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(extractor);
          * }</pre>
          *
@@ -3728,7 +3728,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Combine custom extractor, name conversion, and TreeMap
-         * RowExtractor extractor = RowExtractor.createBy(User.class);
+         * RowExtractor extractor = RowExtractor.forType(User.class);
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
          *     extractor,
          *     Strings::toCamelCase,
@@ -4523,7 +4523,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // A consumer that prints the value of each column in a row.
-         * RowConsumer consumer = RowConsumer.create((rs, columnIndex) -> {
+         * RowConsumer consumer = RowConsumer.forEachColumn((rs, columnIndex) -> {
          *     System.out.println("Column " + columnIndex + ": " + rs.getObject(columnIndex));
          * });
          * preparedQuery.forEach(consumer);
@@ -4537,7 +4537,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
+        static RowConsumer forEachColumn(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
             N.checkArgNotNull(consumerForAll, cs.consumerForAll);
 
             return new RowConsumer() {
@@ -4746,7 +4746,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // A consumer that prints each column's index and value.
-         * BiRowConsumer consumer = BiRowConsumer.create((rs, columnIndex) -> {
+         * BiRowConsumer consumer = BiRowConsumer.forEachColumn((rs, columnIndex) -> {
          *     System.out.println("Column index " + columnIndex + ": " + rs.getObject(columnIndex));
          * });
          * preparedQuery.forEach(consumer);
@@ -4758,7 +4758,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code consumerForAll} is {@code null}
          */
         @Beta
-        static BiRowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
+        static BiRowConsumer forEachColumn(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
             N.checkArgNotNull(consumerForAll, cs.consumerForAll);
 
             return (rs, columnLabels) -> {
@@ -5102,13 +5102,13 @@ public final class Jdbc {
      * {@code RowExtractor} populates a pre-allocated array, making it more efficient for bulk data
      * extraction into a {@link Dataset}.
      *
-     * <p>Instances can be created via the factory methods {@link #createBy(Class)} or
+     * <p>Instances can be created via the factory methods {@link #forType(Class)} or
      * the fluent {@link #builder()} API for fine-grained control over column extraction.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Create an extractor using entity class for type mapping
-     * RowExtractor extractor = RowExtractor.createBy(User.class);
+     * RowExtractor extractor = RowExtractor.forType(User.class);
      * Dataset dataset = JdbcUtil.extractData(rs, extractor);
      *
      * // Create a custom extractor via builder
@@ -5156,8 +5156,8 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor createBy(final Class<?> entityClassForFetch) {
-            return createBy(entityClassForFetch, null, null);
+        static RowExtractor forType(final Class<?> entityClassForFetch) {
+            return forType(entityClassForFetch, null, null);
         }
 
         /**
@@ -5174,8 +5174,8 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor createBy(final Class<?> entityClassForFetch, final Map<String, String> prefixAndFieldNameMap) {
-            return createBy(entityClassForFetch, null, prefixAndFieldNameMap);
+        static RowExtractor forType(final Class<?> entityClassForFetch, final Map<String, String> prefixAndFieldNameMap) {
+            return forType(entityClassForFetch, null, prefixAndFieldNameMap);
         }
 
         /**
@@ -5192,8 +5192,8 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor createBy(final Class<?> entityClassForFetch, final List<String> columnLabels) {
-            return createBy(entityClassForFetch, columnLabels, null);
+        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels) {
+            return forType(entityClassForFetch, columnLabels, null);
         }
 
         /**
@@ -5212,7 +5212,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor createBy(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndFieldNameMap) {
+        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndFieldNameMap) {
             N.checkArgument(Beans.isBeanClass(entityClassForFetch), "{} is not a valid entity class with getter/setter methods", entityClassForFetch);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClassForFetch);

@@ -486,7 +486,7 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testGetColumnNameList() throws SQLException {
+    public void testGetColumnNames() throws SQLException {
         when(mockConnection.prepareStatement(anyString())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.getMetaData()).thenReturn(mockResultSetMetaData);
@@ -495,7 +495,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnName(2)).thenReturn("name");
         when(mockResultSetMetaData.getColumnName(3)).thenReturn("age");
 
-        List<String> columns = JdbcUtil.getColumnNameList(mockConnection, "users");
+        List<String> columns = JdbcUtil.getColumnNames(mockConnection, "users");
 
         assertEquals(3, columns.size());
         assertEquals("id", columns.get(0));
@@ -547,19 +547,6 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(0);
 
         assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "ghost_table"));
-    }
-
-    @Test
-    public void testGetColumnLabelList() throws SQLException {
-        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
-        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
-        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("user_name");
-
-        List<String> labels = JdbcUtil.getColumnLabelList(mockResultSet);
-
-        assertEquals(2, labels.size());
-        assertEquals("user_id", labels.get(0));
-        assertEquals("user_name", labels.get(1));
     }
 
     @Test

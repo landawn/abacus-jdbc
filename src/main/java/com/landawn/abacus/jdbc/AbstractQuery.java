@@ -112,6 +112,18 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *
+ * <p><b>{@code setParameters} vs {@code settParameters} (double "t"):</b> these are two distinct,
+ * intentionally similar method families &mdash; the extra {@code t} is not a typo, and because both
+ * compile, the compiler will not flag a wrong choice:</p>
+ * <ul>
+ * <li>{@code setParameters(...)} binds values onto the underlying {@code PreparedStatement} (the
+ *     {@code Stmt}). Its functional overloads accept a {@link Jdbc.ParametersSetter ParametersSetter} /
+ *     {@link Jdbc.BiParametersSetter BiParametersSetter} that operate directly on the {@code Stmt}.</li>
+ * <li>{@code settParameters(...)} instead hands you <i>this</i> query ({@code This}), giving the
+ *     setter access to the full fluent API (e.g. {@code q.setString(1, ...).setInt(2, ...)}) rather
+ *     than the raw statement.</li>
+ * </ul>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * JdbcUtil.prepareQuery(connection, "SELECT * FROM users WHERE age > ?")
