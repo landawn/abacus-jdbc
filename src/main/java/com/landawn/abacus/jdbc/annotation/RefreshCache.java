@@ -72,6 +72,9 @@ public @interface RefreshCache {
     /**
      * Specifies whether cache refresh is disabled for the annotated element.
      *
+     * <p>At the method level, {@code disabled = true} opts that single method back out of the
+     * cache-invalidation set declared by a type-level {@code @RefreshCache} (and its {@link #filter()}).</p>
+     *
      * <p>This is useful for:</p>
      * <ul>
      *   <li>Excluding specific methods from triggering cache refresh</li>

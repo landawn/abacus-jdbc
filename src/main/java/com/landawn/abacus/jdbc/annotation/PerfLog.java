@@ -86,7 +86,8 @@ public @interface PerfLog {
      * List<User> findActiveUsers();
      * }</pre>
      *
-     * @return the minimum execution time in milliseconds for SQL logging
+     * @return the minimum execution time in milliseconds for SQL logging; defaults to
+     *         {@link JdbcUtil#DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG} (1000 ms)
      */
     long minExecutionTimeForSql() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG; // 1000
 
@@ -103,7 +104,8 @@ public @interface PerfLog {
      * void executeLargeQuery(String complexQuery);
      * }</pre>
      *
-     * @return the maximum number of characters to include from SQL statements in logs
+     * @return the maximum number of characters to include from SQL statements in logs; defaults to
+     *         {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} (1024 characters)
      */
     int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 
@@ -120,7 +122,8 @@ public @interface PerfLog {
      * void processLargeBatchUpdate(List<Order> orders);
      * }</pre>
      *
-     * @return the minimum execution time in milliseconds for DAO operation logging
+     * @return the minimum execution time in milliseconds for DAO operation logging; defaults to
+     *         {@link JdbcUtil#DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG} (3000 ms)
      */
     long minExecutionTimeForOperation() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000
 

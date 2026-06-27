@@ -69,7 +69,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a boolean value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalBoolean} if no record is found.
+     * Returns an empty {@link OptionalBoolean} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code false}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code false}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -81,7 +83,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalBoolean} containing the value if found, otherwise empty
+     * @return an {@link OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@link OptionalBoolean} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalBoolean queryForBoolean(final String singleSelectPropName, final long id) throws SQLException {
@@ -92,7 +94,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a char value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalChar} if no record is found.
+     * Returns an empty {@link OptionalChar} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code (char) 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code (char) 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -102,7 +106,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalChar} containing the value if found, otherwise empty
+     * @return an {@link OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@link OptionalChar} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalChar queryForChar(final String singleSelectPropName, final long id) throws SQLException {
@@ -113,7 +117,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a byte value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalByte} if no record is found.
+     * Returns an empty {@link OptionalByte} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -123,7 +129,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalByte} containing the value if found, otherwise empty
+     * @return an {@link OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@link OptionalByte} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalByte queryForByte(final String singleSelectPropName, final long id) throws SQLException {
@@ -134,7 +140,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a short value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalShort} if no record is found.
+     * Returns an empty {@link OptionalShort} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -144,7 +152,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalShort} containing the value if found, otherwise empty
+     * @return an {@link OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@link OptionalShort} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalShort queryForShort(final String singleSelectPropName, final long id) throws SQLException {
@@ -155,7 +163,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for an integer value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalInt} if no record is found.
+     * Returns an empty {@link OptionalInt} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -165,7 +175,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalInt} containing the value if found, otherwise empty
+     * @return an {@link OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@link OptionalInt} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalInt queryForInt(final String singleSelectPropName, final long id) throws SQLException {
@@ -176,7 +186,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a long value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalLong} if no record is found.
+     * Returns an empty {@link OptionalLong} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0L}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0L}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -186,7 +198,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalLong} containing the value if found, otherwise empty
+     * @return an {@link OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@link OptionalLong} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalLong queryForLong(final String singleSelectPropName, final long id) throws SQLException {
@@ -197,7 +209,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a float value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalFloat} if no record is found.
+     * Returns an empty {@link OptionalFloat} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0f}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0f}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -207,7 +221,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalFloat} containing the value if found, otherwise empty
+     * @return an {@link OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@link OptionalFloat} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalFloat queryForFloat(final String singleSelectPropName, final long id) throws SQLException {
@@ -218,7 +232,9 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a double value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link OptionalDouble} if no record is found.
+     * Returns an empty {@link OptionalDouble} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0d}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0d}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -228,7 +244,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an {@link OptionalDouble} containing the value if found, otherwise empty
+     * @return an {@link OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@link OptionalDouble} when no record matches the id
      * @throws SQLException if a database access error occurs
      */
     default OptionalDouble queryForDouble(final String singleSelectPropName, final long id) throws SQLException {

@@ -46,6 +46,13 @@ import com.landawn.abacus.util.stream.Stream;
  * instead, making it easier to work with in functional programming contexts and reducing boilerplate
  * exception handling.</p>
  *
+ * <p>Join relationships are declared on entity properties using the {@code @JoinedBy} annotation. All
+ * {@code loadJoinEntities}/{@code loadJoinEntitiesIfNull}/{@code loadAllJoinEntities} operations populate the
+ * matching join properties <i>in place</i> on the supplied entity instance(s); they return {@code void} rather
+ * than the loaded relationships. The {@code deleteJoinEntities}/{@code deleteAllJoinEntities} operations remove
+ * the related rows from the database and return the number of deleted records, but do not alter the in-memory
+ * join properties of the supplied entities.</p>
+ *
  * <p>Key features:</p>
  * <ul>
  *   <li>On-demand loading of related entities</li>
@@ -89,6 +96,8 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <TD> the companion {@link UncheckedDao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
  * @see JoinEntityHelper
+ * @see UncheckedDao
+ * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("resource")
@@ -130,6 +139,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Finds the first entity matching the condition and loads multiple join entity classes.
+     * The matching join property of every requested type is populated in place on the returned entity.
+     * If {@code joinEntitiesToLoad} is {@code null} or empty, the entity is returned without any join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -143,9 +154,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
-     * @return an Optional containing the entity with join entities loaded, or empty if not found
+     * @return an Optional containing the entity with the requested join entities loaded, or empty if not found
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
@@ -233,7 +244,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Finds exactly one entity matching the condition and loads multiple join entity classes.
-     * Throws an exception if multiple entities are found.
+     * Throws an exception if multiple entities are found. The matching join property of every requested type is
+     * populated in place on the returned entity. If {@code joinEntitiesToLoad} is {@code null} or empty, the entity is
+     * returned without any join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -246,7 +259,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
      * @throws DuplicateResultException if more than one record is found for the specified condition
@@ -303,7 +316,10 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Lists all entities matching the condition and loads the specified join entity class for each.
-     * This is a beta API that provides batch loading of join entities for better performance.
+     * This is a beta API that provides batch loading of join entities for better performance. Each returned
+     * entity has its matching join property populated in place. For result sets larger than
+     * {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches to keep the
+     * generated queries bounded in size.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -319,7 +335,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
-     * @return a list of entities with loaded join entities
+     * @return a list of entities, each with the specified join property populated in place; empty if no entity matches
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
@@ -341,7 +357,10 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Lists all entities matching the condition and loads multiple join entity classes for each.
-     * This is a beta API that efficiently loads multiple relationships in batches.
+     * This is a beta API that efficiently loads multiple relationships in batches. Each returned entity has the
+     * matching join property of every requested type populated in place. For result sets larger than
+     * {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches. If
+     * {@code joinEntitiesToLoad} is {@code null} or empty, the entities are returned without any join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -355,9 +374,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
-     * @return a list of entities with loaded join entities
+     * @return a list of entities, each with the requested join properties populated in place; empty if no entity matches
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
@@ -386,7 +405,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Lists all entities matching the condition and optionally loads all join entities for each.
-     * This is a beta API that provides automatic loading of all relationships.
+     * This is a beta API that provides automatic loading of all relationships. When loading is requested, every
+     * property annotated with {@code @JoinedBy} is populated in place on each returned entity. For result sets larger
+     * than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -403,7 +424,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
-     * @return a list of entities with loaded join entities
+     * @return a list of entities, each with all join properties populated in place when {@code includeAllJoinEntities} is
+     *         {@code true}; empty if no entity matches
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -424,7 +446,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Loads join entities of the specified class for a single entity.
-     * The join entities are determined by the relationship annotations in the entity class.
+     * The join properties are determined by the {@code @JoinedBy} relationship annotations in the entity class and are
+     * populated in place on the entity. If the entity class declares more than one join property of the specified type,
+     * all of them are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -480,7 +504,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Loads join entities of the specified class for multiple entities in batch.
-     * This is more efficient than loading join entities one by one.
+     * This is more efficient than loading join entities one by one, as it avoids the N+1 query problem. The matching
+     * join property is populated in place on each entity. If the entity class declares more than one join property of
+     * the specified type, all of them are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -489,7 +515,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * userDao.loadJoinEntities(users, Order.class);
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for
+     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -513,7 +539,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for
+     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -692,7 +718,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * }</pre>
      *
      * @param entity the entity to load join entities for
-     * @param joinEntityPropNames the property names of join entities to load
+     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
@@ -788,8 +814,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for
-     * @param joinEntityPropNames the property names of join entities to load
+     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
@@ -946,6 +972,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Loads all join entities for multiple entities in batch.
+     * Every property annotated with {@code @JoinedBy} is populated in place on each entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -954,7 +981,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * userDao.loadAllJoinEntities(users);
      * }</pre>
      *
-     * @param entities the collection of entities to load all join entities for
+     * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1006,7 +1033,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * userDao.loadAllJoinEntities(users, loadingPool);
      * }</pre>
      *
-     * @param entities the collection of entities to load all join entities for
+     * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -1161,6 +1188,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Loads join entities for a specific property with selected fields only if the property is {@code null}.
+     * If the property already holds a non-{@code null} value, it is left unchanged and no query is executed.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1217,6 +1245,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
     /**
      * Loads join entities for a specific property with selected fields for multiple entities only where {@code null}.
+     * Entities that already have the property populated are skipped; only those whose property value is {@code null}
+     * trigger a load, and the matching join entities are populated in place on them.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1229,7 +1259,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for
+     * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropName the property name of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -1271,7 +1301,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
-     * @param joinEntityPropNames the property names of the join entities to load
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1365,8 +1395,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for
-     * @param joinEntityPropNames the property names of the join entities to load
+     * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1650,9 +1680,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * int totalDeleted = userDao.deleteJoinEntities(usersToClean, Order.class);
      * }</pre>
      *
-     * @param entities the collection of entities whose join entities should be deleted
+     * @param entities the collection of entities whose join entities should be deleted. If {@code null} or empty, 0 is returned
      * @param joinEntityClass the class of join entities to delete
-     * @return the total count of deleted records
+     * @return the total count of deleted records, or 0 if {@code entities} is empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
@@ -1804,8 +1834,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropNames the property names of the join entities to delete
-     * @return the total count of deleted records
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
+     * @return the total count of deleted records, or 0 if {@code joinEntityPropNames} is empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
@@ -1852,9 +1882,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param executor the {@code Executor} to use for parallel execution
-     * @return the total count of deleted records
+     * @return the total count of deleted records, or 0 if {@code joinEntityPropNames} is empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
@@ -1924,9 +1954,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * );
      * }</pre>
      *
-     * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropNames the property names of the join entities to delete
-     * @return the total count of deleted records
+     * @param entities the collection of entities whose join entities should be deleted. If {@code null} or empty, 0 is returned
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
+     * @return the total count of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
@@ -2007,10 +2037,10 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * );
      * }</pre>
      *
-     * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param entities the collection of entities whose join entities should be deleted. If {@code null} or empty, 0 is returned
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param executor the {@code Executor} to use for parallel execution
-     * @return the total count of deleted records
+     * @return the total count of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
@@ -2119,8 +2149,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * int totalDeleted = userDao.deleteAllJoinEntities(usersToDelete);
      * }</pre>
      *
-     * @param entities the collection of entities whose all join entities should be deleted
-     * @return the total count of deleted records
+     * @param entities the collection of entities whose all join entities should be deleted. If {@code null} or empty, 0 is returned
+     * @return the total count of deleted records, or 0 if {@code entities} is empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -2174,9 +2204,9 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * int deleted = userDao.deleteAllJoinEntities(users, massDeleteExecutor);
      * }</pre>
      *
-     * @param entities the collection of entities whose all join entities should be deleted
+     * @param entities the collection of entities whose all join entities should be deleted. If {@code null} or empty, 0 is returned
      * @param executor the {@code Executor} to use for parallel execution
-     * @return the total count of deleted records
+     * @return the total count of deleted records, or 0 if {@code entities} is empty
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
      *             prefer the sequential {@link #deleteAllJoinEntities(Collection)} for transactional deletion

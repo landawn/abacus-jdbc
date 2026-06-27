@@ -565,7 +565,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalBoolean} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalBoolean} describing the value of a single boolean column for the first
+     * record matching the condition. Only the first matching record is read; any remaining matching
+     * records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -577,7 +579,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalBoolean containing the value, or empty if no match found
+     * @return an {@code OptionalBoolean} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalBoolean} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code false}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code false}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForBoolean()
      */
@@ -585,7 +590,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalChar} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalChar} describing the value of a single char column for the first record
+     * matching the condition. Only the first matching record is read; any remaining matching records
+     * are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -594,7 +601,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalChar containing the value, or empty if no match found
+     * @return an {@code OptionalChar} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalChar} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code (char) 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code (char) 0}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForChar()
      */
@@ -602,7 +612,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalByte} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalByte} describing the value of a single byte column for the first record
+     * matching the condition. Only the first matching record is read; any remaining matching records
+     * are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -611,7 +623,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalByte containing the value, or empty if no match found
+     * @return an {@code OptionalByte} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalByte} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForByte()
      */
@@ -619,7 +634,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalShort} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalShort} describing the value of a single short column for the first record
+     * matching the condition. Only the first matching record is read; any remaining matching records
+     * are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -628,7 +645,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalShort containing the value, or empty if no match found
+     * @return an {@code OptionalShort} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalShort} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForShort()
      */
@@ -636,7 +656,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalInt} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalInt} describing the value of a single int column for the first record
+     * matching the condition. Only the first matching record is read; any remaining matching records
+     * are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -645,7 +667,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalInt containing the value, or empty if no match found
+     * @return an {@code OptionalInt} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalInt} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForInt()
      */
@@ -653,7 +678,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalLong} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalLong} describing the value of a single long column for the first record
+     * matching the condition. Only the first matching record is read; any remaining matching records
+     * are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -662,7 +689,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalLong containing the value, or empty if no match found
+     * @return an {@code OptionalLong} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalLong} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForLong()
      */
@@ -670,7 +700,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalFloat} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalFloat} describing the value of a single float column for the first record
+     * matching the condition. Only the first matching record is read; any remaining matching records
+     * are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -679,7 +711,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalFloat containing the value, or empty if no match found
+     * @return an {@code OptionalFloat} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalFloat} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0f}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0f}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForFloat()
      */
@@ -687,7 +722,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalDouble} describing the value in the first row/column if it exists.
+     * Returns an {@code OptionalDouble} describing the value of a single double column for the first record
+     * matching the condition. Only the first matching record is read; any remaining matching records
+     * are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -696,7 +733,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return an OptionalDouble containing the value, or empty if no match found
+     * @return an {@code OptionalDouble} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalDouble} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0d}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0d}.
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForDouble()
      */
@@ -704,7 +744,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<String>} describing the value in the first row/column if it exists.
+     * Returns a {@code Nullable<String>} describing the value of a single String column for the first
+     * record matching the condition. Only the first matching record is read; any remaining matching
+     * records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -716,7 +758,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return a Nullable containing the String value, or empty if no match found
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForString()
      */
@@ -724,7 +768,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Date>} describing the value in the first row/column if it exists.
+     * Returns a {@code Nullable<java.sql.Date>} describing the value of a single date column for the first
+     * record matching the condition. Only the first matching record is read; any remaining matching
+     * records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -733,7 +779,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return a Nullable containing the Date value, or empty if no match found
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForDate()
      */
@@ -741,7 +789,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Time>} describing the value in the first row/column if it exists.
+     * Returns a {@code Nullable<java.sql.Time>} describing the value of a single time column for the first
+     * record matching the condition. Only the first matching record is read; any remaining matching
+     * records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -750,7 +800,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return a Nullable containing the Time value, or empty if no match found
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForTime()
      */
@@ -758,7 +810,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Timestamp>} describing the value in the first row/column if it exists.
+     * Returns a {@code Nullable<java.sql.Timestamp>} describing the value of a single timestamp column for
+     * the first record matching the condition. Only the first matching record is read; any remaining
+     * matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -767,7 +821,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return a Nullable containing the Timestamp value, or empty if no match found
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForTimestamp()
      */
@@ -775,7 +831,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<byte[]>} describing the value in the first row/column if it exists.
+     * Returns a {@code Nullable<byte[]>} describing the value of a single binary column for the first
+     * record matching the condition. Only the first matching record is read; any remaining matching
+     * records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -784,7 +842,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return a Nullable containing the byte array value, or empty if no match found
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForBytes()
      */
@@ -792,8 +852,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists,
-     * converted to the specified target type.
+     * Returns a {@code Nullable<V>} describing the value of a single column for the first record matching
+     * the condition, converted to the specified target type. Only the first matching record is read; any
+     * remaining matching records are ignored. The returned {@code Nullable} preserves the distinction
+     * between "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -804,7 +866,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
-     * @return a Nullable containing the converted value, or empty if no match found
+     * @return a <i>present</i> {@code Nullable} holding the converted value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -813,8 +877,11 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
             throws UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the non-null value in the first row/column if it exists.
-     * Unlike {@link #queryForSingleValue(String, Condition, Class)}, this method returns an empty {@code Optional} for {@code null} values.
+     * Returns an {@code Optional} describing the non-null value of a single column for the first record
+     * matching the condition, converted to the specified target type. Only the first matching record is
+     * read; any remaining matching records are ignored. Unlike {@link #queryForSingleValue(String, Condition, Class)},
+     * this method collapses both "no record matched" and "the matched value is SQL {@code NULL}" into an
+     * empty {@code Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -825,7 +892,8 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
-     * @return an Optional containing the non-null value, or empty if no match found or value is null
+     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
+     *         matches the condition or the matched value is SQL {@code NULL}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -834,7 +902,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
             throws UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the non-null value mapped by the row mapper.
+     * Returns an {@code Optional} describing the non-null value of a single column for the first record
+     * matching the condition, mapped by the provided row mapper. Only the first matching record is read;
+     * any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -849,7 +919,8 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
-     * @return an Optional containing the non-null mapped value, or empty if no match found or value is null
+     * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
+     *         matches the condition or the mapped value is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Condition, Class)
      */
@@ -858,8 +929,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
             throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable} describing the value in the first row/column if it exists.
-     * Throws {@code DuplicateResultException} if more than one record is found.
+     * Returns a {@code Nullable<V>} describing the value of a single column for the unique record matching
+     * the condition, converted to the specified target type. Throws {@code DuplicateResultException} if
+     * more than one record matches. The returned {@code Nullable} preserves the distinction between
+     * "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -870,7 +943,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
-     * @return a Nullable containing the unique result value, or empty if no match found
+     * @return a <i>present</i> {@code Nullable} holding the converted value (possibly {@code null} for a
+     *         SQL {@code NULL}) when exactly one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
@@ -880,8 +955,10 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the unique non-null value in the first row/column.
-     * Throws {@code DuplicateResultException} if more than one record is found.
+     * Returns an {@code Optional} describing the unique non-null value of a single column for the record
+     * matching the condition, converted to the specified target type. Throws {@code DuplicateResultException}
+     * if more than one record matches. Both "no record matched" and "the matched value is SQL {@code NULL}"
+     * collapse into an empty {@code Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -896,7 +973,8 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
-     * @return an Optional containing the unique non-null value, or empty if no match found or value is null
+     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
+     *         matches the condition or the matched value is SQL {@code NULL}
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -906,8 +984,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper.
-     * Throws {@code DuplicateResultException} if more than one record is found.
+     * Returns an {@code Optional} describing the unique non-null value of a single column for the record
+     * matching the condition, mapped by the provided row mapper. Throws {@code DuplicateResultException}
+     * if more than one record matches.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -922,7 +1001,8 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
-     * @return an Optional containing the unique non-null mapped value, or empty if no match found or value is null
+     * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
+     *         matches the condition or the mapped value is {@code null}
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Condition, Class)

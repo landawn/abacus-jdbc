@@ -2198,8 +2198,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <R> the type of the result returned by the function
-     * @param getter the function to apply to the executed CallableStatement
+     * @param getter the function to apply to the executed CallableStatement. Must not be {@code null}.
      * @return the result of applying the function
+     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalArgumentException if {@code getter} is {@code null}
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
@@ -2233,8 +2235,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <R> the type of the result returned by the function
      * @param getter the bi-function to apply. The first parameter is the executed CallableStatement,
-     *               the second parameter is {@code true} if the first result is a ResultSet, {@code false} otherwise
+     *               the second parameter is {@code true} if the first result is a ResultSet, {@code false} otherwise.
+     *               Must not be {@code null}.
      * @return the result of applying the bi-function
+     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalArgumentException if {@code getter} is {@code null}
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
@@ -2325,7 +2330,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * });
      * }</pre>
      *
-     * @param consumer the consumer to apply to the executed CallableStatement
+     * @param consumer the consumer to apply to the executed CallableStatement. Must not be {@code null}.
+     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if a database access error occurs or the consumer throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
@@ -2357,7 +2364,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param consumer the bi-consumer to apply. The first parameter is the executed CallableStatement,
-     *                 the second parameter is {@code true} if the first result is a ResultSet
+     *                 the second parameter is {@code true} if the first result is a ResultSet.
+     *                 Must not be {@code null}.
+     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if a database access error occurs or the consumer throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      */
@@ -2422,7 +2432,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * any result sets returned by the procedure.
      *
      * <p>The returned {@link Jdbc.OutParamResult} provides convenient methods to retrieve
-     * OUT parameter values by index or name with appropriate type conversion.</p>
+     * OUT parameter values by index or name with appropriate type conversion. A value that the
+     * procedure returns as SQL {@code NULL} is reported as {@code null}. If no OUT parameters were
+     * registered, the returned result is empty.</p>
+     *
+     * <p>Before reading the OUT parameters, any remaining result sets and update counts produced by
+     * the procedure are drained, because some drivers (notably SQL Server and Oracle) only finalize
+     * OUT parameter values once all results have been consumed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2437,7 +2453,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * int recordCount = outParams.getOutParamValue(3);
      * }</pre>
      *
-     * @return a {@link Jdbc.OutParamResult} containing all OUT parameter values
+     * @return a {@link Jdbc.OutParamResult} containing all OUT parameter values; empty if no OUT
+     *         parameters were registered
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.OutParamResult

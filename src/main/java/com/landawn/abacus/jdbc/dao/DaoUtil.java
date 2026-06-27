@@ -559,8 +559,11 @@ final class DaoUtil {
      * Checks if the given SQL statement is a SELECT query.
      * <p>
      * This method performs a case-insensitive check on the leading SQL keyword (after skipping
-     * any leading whitespace and SQL comments). For statements that start with a {@code WITH}
-     * (CTE) clause, the keyword that follows the CTE definitions is examined instead.
+     * any leading whitespace, line comments {@code --}/{@code #} and block comments
+     * {@code /}{@code * ... *}{@code /}). Any leading parentheses are skipped as well, so a
+     * parenthesized query such as {@code (SELECT ...) UNION ALL (SELECT ...)} is still recognized
+     * as a SELECT. For statements that start with a {@code WITH} (CTE) clause, the keyword that
+     * follows the CTE definitions is examined instead.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -594,8 +597,10 @@ final class DaoUtil {
      * Checks if the given SQL statement is an INSERT query.
      * <p>
      * This method performs a case-insensitive check on the leading SQL keyword (after skipping
-     * any leading whitespace and SQL comments). For statements that start with a {@code WITH}
-     * (CTE) clause, the keyword that follows the CTE definitions is examined instead.
+     * any leading whitespace, line comments {@code --}/{@code #} and block comments
+     * {@code /}{@code * ... *}{@code /}). Any leading parentheses are skipped as well. For
+     * statements that start with a {@code WITH} (CTE) clause, the keyword that follows the CTE
+     * definitions is examined instead.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -625,10 +630,52 @@ final class DaoUtil {
         return "INSERT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
     }
 
+    /**
+     * Checks whether the given SQL statement is read-only, i.e. a SELECT that performs no data
+     * mutation. This is the gate used by read-only DAOs (see {@link ReadOnlyDao}) to reject any
+     * statement that could modify data.
+     * <p>
+     * A statement is considered read-only only if its leading keyword is {@code SELECT}
+     * (see {@link #isSelectQuery(String)}) <i>and</i> it contains no top-level mutation keyword
+     * ({@code INSERT}, {@code UPDATE}, {@code DELETE} or {@code MERGE}). Keyword matching ignores
+     * occurrences inside quoted string literals and SQL comments, so a SELECT that merely returns
+     * the literal text {@code 'DELETE'} is still treated as read-only, whereas a data-changing
+     * CTE such as {@code WITH t AS (...) DELETE ...} is not.
+     * </p>
+     *
+     * @param sql the SQL statement to check; may be empty or {@code null}
+     * @return {@code true} if the SQL is a read-only SELECT query, {@code false} otherwise
+     * @see #isSelectQuery(String)
+     */
     static boolean isReadOnlyQuery(final String sql) {
         return isSelectQuery(sql) && !containsMutationQueryKeyword(sql);
     }
 
+    /**
+     * Checks whether the given SQL statement neither updates nor deletes existing rows. This is the
+     * gate used by no-update DAOs (see {@link NoUpdateDao}), which permit reads and plain inserts of
+     * new rows but forbid statements that mutate existing data.
+     * <p>
+     * A statement qualifies as "no-update" only if its leading keyword is {@code SELECT} or
+     * {@code INSERT} <i>and</i> it contains none of the following (matching outside of quoted string
+     * literals and SQL comments):
+     * </p>
+     * <ul>
+     *   <li>an {@code UPDATE}, {@code DELETE} or {@code MERGE} keyword; or</li>
+     *   <li>an upsert clause that can modify existing rows, namely {@code INSERT OR REPLACE},
+     *       {@code ON DUPLICATE KEY UPDATE} (MySQL) or {@code ON CONFLICT ... DO UPDATE}
+     *       (PostgreSQL/SQLite).</li>
+     * </ul>
+     * <p>
+     * A plain {@code INSERT}, and an {@code INSERT ... ON CONFLICT ... DO NOTHING}, are therefore
+     * accepted, since they never overwrite existing rows.
+     * </p>
+     *
+     * @param sql the SQL statement to check; may be empty or {@code null}
+     * @return {@code true} if the SQL neither updates nor deletes existing rows, {@code false} otherwise
+     * @see #isSelectQuery(String)
+     * @see #isInsertQuery(String)
+     */
     static boolean isNoUpdateQuery(final String sql) {
         if (!(isSelectQuery(sql) || isInsertQuery(sql))) {
             return false;

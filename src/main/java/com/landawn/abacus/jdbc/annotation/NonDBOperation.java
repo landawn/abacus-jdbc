@@ -50,6 +50,10 @@ import java.lang.annotation.Target;
  * whenever they should be excluded from the DAO proxy's database-related processing (handlers,
  * SQL/perf logging, transactional weaving).</p>
  *
+ * <p>This is a marker annotation: it declares no elements and carries no configuration. Its mere
+ * presence on a method (per {@code @Target(METHOD)}, retained at runtime) is what signals the DAO
+ * proxy to skip the database-related wiring listed above.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {

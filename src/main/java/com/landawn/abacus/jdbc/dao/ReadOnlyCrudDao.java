@@ -108,8 +108,7 @@ import com.landawn.abacus.annotation.Beta;
 public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> extends ReadOnlyDao<T, TD>, NoUpdateCrudDao<T, ID, TD> {
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entityToInsert the entity to insert
      * @return never returns normally
@@ -123,8 +122,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entityToInsert the entity to insert
      * @param propNamesToInsert the property names to include in the {@code INSERT} statement
@@ -139,8 +137,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entityToSave the entity whose properties are bound to the named parameters
@@ -155,8 +152,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to insert
      * @return never returns normally
@@ -170,8 +166,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process per batch
@@ -186,8 +181,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the {@code INSERT} statement
@@ -202,8 +196,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the {@code INSERT} statement
@@ -220,8 +213,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties are bound to the named parameters
@@ -236,8 +228,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Inserting is not permitted in a read-only DAO.
+     * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties are bound to the named parameters

@@ -127,7 +127,7 @@ public @interface BindList {
      * // With values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
      * }</pre>
      *
-     * @return the prefix to add when collection is non-empty
+     * @return the prefix to add when the collection is non-empty; empty (the default) means no prefix is emitted
      */
     @Beta
     String prefixForNonEmpty() default "";
@@ -153,7 +153,7 @@ public @interface BindList {
      * // With values: SELECT * FROM products WHERE category IN (?, ?, ?) ORDER BY name
      * }</pre>
      *
-     * @return the suffix to add when collection is non-empty
+     * @return the suffix to add when the collection is non-empty; empty (the default) means no suffix is emitted
      */
     @Beta
     String suffixForNonEmpty() default "";

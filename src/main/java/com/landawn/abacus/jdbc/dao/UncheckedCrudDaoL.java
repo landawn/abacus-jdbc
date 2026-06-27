@@ -68,8 +68,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalBoolean} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalBoolean} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code false}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code false}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -81,7 +84,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalBoolean containing the value if found, otherwise empty
+     * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -91,8 +94,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalChar} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalChar} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code (char) 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code (char) 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -102,7 +108,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalChar containing the value if found, otherwise empty
+     * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -112,8 +118,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a byte value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalByte} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalByte} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -125,7 +134,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalByte containing the value if found, otherwise empty
+     * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -135,8 +144,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalShort} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalShort} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -148,7 +160,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalShort containing the value if found, otherwise empty
+     * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -158,8 +170,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalInt} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalInt} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -169,7 +184,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalInt containing the value if found, otherwise empty
+     * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -179,8 +194,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalLong} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalLong} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0L}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0L}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -189,7 +207,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalLong containing the value if found, otherwise empty
+     * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -199,8 +217,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a float value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalFloat} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalFloat} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0f}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0f}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -209,7 +230,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalFloat containing the value if found, otherwise empty
+     * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -219,8 +240,11 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code OptionalDouble} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns an empty {@code OptionalDouble} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0d}); use
+     * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0d}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -229,7 +253,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return an OptionalDouble containing the value if found, otherwise empty
+     * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -239,7 +263,9 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -260,8 +286,10 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Queries for a Date value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * Queries for a {@link java.sql.Date} value from a single property of the entity with the specified ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -270,7 +298,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a {@code Nullable} containing the Date value if found, or {@code Nullable.empty()} if no record exists
+     * @return a {@code Nullable} containing the {@link java.sql.Date} value if found, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -279,8 +307,10 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Queries for a Time value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * Queries for a {@link java.sql.Time} value from a single property of the entity with the specified ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -289,7 +319,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a {@code Nullable} containing the Time value if found, or {@code Nullable.empty()} if no record exists
+     * @return a {@code Nullable} containing the {@link java.sql.Time} value if found, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -298,8 +328,10 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Queries for a Timestamp value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * Queries for a {@link java.sql.Timestamp} value from a single property of the entity with the specified ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -308,7 +340,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a {@code Nullable} containing the Timestamp value if found, or {@code Nullable.empty()} if no record exists
+     * @return a {@code Nullable} containing the {@link java.sql.Timestamp} value if found, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -318,7 +350,10 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
+     * This is typically used for BLOB data.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -337,15 +372,16 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty {@code Nullable} if no record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = userDao.queryForSingleValue("price", 123L, BigDecimal.class);
      * }</pre>
      *
-     * @param <V> the type of the property value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -360,7 +396,8 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
      * Returns an empty {@code Optional} if no record is found or if the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -368,7 +405,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", 123L, String.class);
      * }</pre>
      *
-     * @param <V> the type of the property value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -383,7 +420,9 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a single non-null value using a custom row mapper.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
+     * This allows for complex transformations of the result.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -409,7 +448,8 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a unique single result of the specified type.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p>This method ensures that at most one record matches the query.</p>
@@ -419,7 +459,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * Nullable<String> uniqueCode = userDao.queryForUniqueValue("code", 123L, String.class);
      * }</pre>
      *
-     * @param <V> the type of the property value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -435,7 +475,8 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a unique non-null result of the specified type.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
      * Returns an empty {@code Optional} if no record is found or the value is {@code null}.
      *
@@ -444,7 +485,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * Optional<Integer> level = userDao.queryForUniqueNonNull("level", 123L, Integer.class);
      * }</pre>
      *
-     * @param <V> the type of the property value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -460,7 +501,8 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
 
     /**
      * Queries for a unique non-null result using a custom row mapper.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p><b>Usage Examples:</b></p>
@@ -487,8 +529,10 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Retrieves the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Retrieves an entity by its ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link UncheckedCrudDao#get(Object)}.
+     * Returns an {@link Optional} containing the entity if found, otherwise empty.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -496,7 +540,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * user.ifPresent(u -> System.out.println("Found: " + u.getName()));
      * }</pre>
      *
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID of the entity to retrieve
      * @return an {@code Optional} containing the entity if found, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
@@ -507,15 +551,17 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Retrieves the entity with the specified ID, selecting only the specified properties.
-     * This method accepts a primitive long ID for convenience.
+     * Retrieves an entity by its ID with only the selected properties populated.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link UncheckedCrudDao#get(Object, Collection)}.
+     * Properties not in the select list will have their default values.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name", "email"));
      * }</pre>
      *
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID of the entity to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if {@code null}
      * @return an {@code Optional} containing the entity with selected properties if found, otherwise empty
@@ -528,8 +574,10 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Retrieves the entity with the specified ID, returning it directly or {@code null} if not found.
-     * This method accepts a primitive long ID for convenience.
+     * Retrieves an entity by its ID, returning {@code null} if not found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link UncheckedCrudDao#gett(Object)}. Unlike {@link #get(long)}, the
+     * entity is returned directly rather than wrapped in an {@link Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -539,7 +587,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * }
      * }</pre>
      *
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID of the entity to retrieve
      * @return the entity if found, otherwise {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
@@ -550,15 +598,17 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Retrieves the entity with the specified ID and selected properties, returning it directly or {@code null} if not found.
-     * This method accepts a primitive long ID for convenience.
+     * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link UncheckedCrudDao#gett(Object, Collection)}.
+     * This is useful for performance optimization when you only need specific fields.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(123L, Arrays.asList("id", "email", "status"));
      * }</pre>
      *
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID of the entity to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if {@code null}
      * @return the entity with selected properties if found, otherwise {@code null}
@@ -571,8 +621,9 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Checks if an entity with the specified ID exists.
-     * This method accepts a primitive long ID for convenience.
+     * Checks if an entity with the specified ID exists in the database.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link UncheckedCrudDao#exists(Object)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -583,7 +634,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * }
      * }</pre>
      *
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID to check for existence
      * @return {@code true} if the entity exists, {@code false} otherwise
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -593,8 +644,9 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Checks if an entity with the specified ID does not exist.
-     * This method accepts a primitive long ID for convenience.
+     * Checks if an entity with the specified ID does not exist in the database.
+     * This is a convenience overload that accepts a primitive {@code long} ID;
+     * it simply negates the result of {@link #exists(long)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -603,7 +655,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * }
      * }</pre>
      *
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID to check for non-existence
      * @return {@code true} if the entity does not exist, {@code false} if it exists
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -614,8 +666,9 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Updates a single property value for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Updates a single property of an entity identified by ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao.update(String, Object, ID)} method.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -625,7 +678,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID of the entity to update
      * @return the number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -635,8 +688,9 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Updates multiple properties for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Updates multiple properties of an entity identified by ID without loading the entire entity.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao.update(Map, ID)} method.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -649,7 +703,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * }</pre>
      *
      * @param updateProps a map of property names to their new values
-     * @param id the entity ID as primitive long
+     * @param id the primitive long ID of the entity to update
      * @return the number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -659,8 +713,10 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
     }
 
     /**
-     * Deletes the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Deletes an entity by its ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link UncheckedCrudDao#deleteById(Object)}.
+     * This is more efficient than loading the entity first and then deleting it.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -670,8 +726,8 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * }
      * }</pre>
      *
-     * @param id the entity ID as primitive long
-     * @return the number of rows deleted (typically 1 or 0)
+     * @param id the primitive long ID of the entity to delete
+     * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

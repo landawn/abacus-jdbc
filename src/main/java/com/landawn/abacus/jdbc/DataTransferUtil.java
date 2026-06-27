@@ -96,7 +96,29 @@ import com.landawn.abacus.util.stream.CharStream;
  *     <td>{@code createParamSetter()}</td>
  *     <td>Factory method to create a parameter setter from a {@link Jdbc.ColumnGetter}</td>
  *   </tr>
+ *   <tr>
+ *     <td>Fluent Builders</td>
+ *     <td>{@code importFrom()}, {@code copyFrom()}, {@code copyTable()}</td>
+ *     <td>Chainable, named-option alternatives to the positional {@code importData}/{@code copy} overloads</td>
+ *   </tr>
  * </table>
+ *
+ * <p><b>Fluent Builders:</b> In addition to the positional static overloads, this class exposes
+ * builder entry points that read more clearly when several options are configured. Each entry point
+ * returns a builder whose chained methods set optional parameters and whose terminal method actually
+ * runs the operation:</p>
+ * <ul>
+ *   <li>{@link #importFrom(Dataset)} &rarr; {@link DatasetImportBuilder} (terminal: {@code into(...)})</li>
+ *   <li>{@link #copyFrom(javax.sql.DataSource, String)} / {@link #copyFrom(Connection, String)} /
+ *       {@link #copyFrom(PreparedStatement)} &rarr; {@code CopyFrom*} builders (terminal: {@code to(...)})</li>
+ *   <li>{@link #copyTable(javax.sql.DataSource, String)} / {@link #copyTable(Connection, String)}
+ *       &rarr; {@code CopyTable*} builders (terminal: {@code to(...)})</li>
+ * </ul>
+ *
+ * <p><b>Resource ownership:</b> Methods that accept a {@link Connection}, {@link PreparedStatement} or
+ * {@link ResultSet} never close the caller-supplied resource; they only close resources they create
+ * internally. Methods that accept a {@link javax.sql.DataSource} obtain a connection and release it
+ * back to the data source before returning.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -300,7 +322,7 @@ public final class DataTransferUtil {
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
-     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the selected columns
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
@@ -424,7 +446,7 @@ public final class DataTransferUtil {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
@@ -526,7 +548,7 @@ public final class DataTransferUtil {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
@@ -655,7 +677,7 @@ public final class DataTransferUtil {
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
-     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
@@ -783,7 +805,7 @@ public final class DataTransferUtil {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
@@ -927,7 +949,7 @@ public final class DataTransferUtil {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
@@ -1662,7 +1684,7 @@ public final class DataTransferUtil {
      *
      * @param <E> exception type that filter may throw
      * @param file the CSV file containing the data to be imported
-     * @param filter a predicate to filter rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
@@ -1857,7 +1879,7 @@ public final class DataTransferUtil {
      *
      * @param <E> exception type that filter may throw
      * @param reader the Reader to read the CSV data from
-     * @param filter a predicate to filter rows; only rows returning {@code true} will be imported
+     * @param filter a predicate to filter rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
@@ -3770,7 +3792,13 @@ public final class DataTransferUtil {
 
     /**
      * A fluent builder that copies the rows of a SELECT query from a source {@link javax.sql.DataSource} into a
-     * target table. Obtain an instance via {@link DataTransferUtil#copyFrom(javax.sql.DataSource, String)}.
+     * target table. Obtain an instance via {@link DataTransferUtil#copyFrom(javax.sql.DataSource, String)}, chain
+     * any of the optional configuration methods ({@link #fetchSize(int)}, {@link #batchSize(int)},
+     * {@link #batchIntervalInMillis(long)}, {@link #stmtSetter(Throwables.BiConsumer)}), then call the terminal
+     * {@link #to(javax.sql.DataSource, String)} to run the copy. Each configuration method returns {@code this}.
+     *
+     * <p>Connections are obtained from the source and target data sources and released back to them when the
+     * copy completes.</p>
      *
      * @see DataTransferUtil#copyFrom(javax.sql.DataSource, String)
      */
@@ -3852,7 +3880,12 @@ public final class DataTransferUtil {
 
     /**
      * A fluent builder that copies the rows of a SELECT query between two {@link Connection}s. Obtain an instance
-     * via {@link DataTransferUtil#copyFrom(Connection, String)}.
+     * via {@link DataTransferUtil#copyFrom(Connection, String)}, chain any of the optional configuration methods
+     * ({@link #fetchSize(int)}, {@link #batchSize(int)}, {@link #batchIntervalInMillis(long)},
+     * {@link #stmtSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(Connection, String)} to run
+     * the copy. Each configuration method returns {@code this}.
+     *
+     * <p>Neither the source nor the target connection is closed by the copy; the caller retains ownership.</p>
      *
      * @see DataTransferUtil#copyFrom(Connection, String)
      */
@@ -3934,7 +3967,13 @@ public final class DataTransferUtil {
 
     /**
      * A fluent builder that copies the rows produced by a source {@link PreparedStatement} into a target
-     * {@link PreparedStatement}. Obtain an instance via {@link DataTransferUtil#copyFrom(PreparedStatement)}.
+     * {@link PreparedStatement}. Obtain an instance via {@link DataTransferUtil#copyFrom(PreparedStatement)}, chain
+     * any of the optional configuration methods ({@link #batchSize(int)}, {@link #batchIntervalInMillis(long)},
+     * {@link #stmtSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(PreparedStatement)} to run the
+     * copy. Each configuration method returns {@code this}.
+     *
+     * <p>The fetch size is whatever the caller already configured on the source statement, so this builder does
+     * not expose a {@code fetchSize} option. Neither the source nor the target statement is closed by the copy.</p>
      *
      * @see DataTransferUtil#copyFrom(PreparedStatement)
      */
@@ -4001,7 +4040,12 @@ public final class DataTransferUtil {
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link javax.sql.DataSource}s,
      * generating the SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link DataTransferUtil#copyTable(javax.sql.DataSource, String)}.
+     * {@link DataTransferUtil#copyTable(javax.sql.DataSource, String)}, optionally chain {@link #selectColumns(Collection)}
+     * and {@link #batchSize(int)}, then call the terminal {@link #to(javax.sql.DataSource, String)} to run the copy.
+     * Each configuration method returns {@code this}.
+     *
+     * <p>Connections are obtained from the source and target data sources and released back to them when the
+     * copy completes.</p>
      *
      * @see DataTransferUtil#copyTable(javax.sql.DataSource, String)
      */
@@ -4058,7 +4102,11 @@ public final class DataTransferUtil {
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link Connection}s, generating the
      * SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link DataTransferUtil#copyTable(Connection, String)}.
+     * {@link DataTransferUtil#copyTable(Connection, String)}, optionally chain {@link #selectColumns(Collection)}
+     * and {@link #batchSize(int)}, then call the terminal {@link #to(Connection, String)} to run the copy. Each
+     * configuration method returns {@code this}.
+     *
+     * <p>Neither the source nor the target connection is closed by the copy; the caller retains ownership.</p>
      *
      * @see DataTransferUtil#copyTable(Connection, String)
      */

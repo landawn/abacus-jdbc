@@ -16,12 +16,18 @@
 package com.landawn.abacus.jdbc;
 
 /**
- * Execution modes understood by {@link AbstractQuery} and {@link com.landawn.abacus.jdbc.annotation.Query}.
+ * Execution modes understood by {@link AbstractQuery} and the {@code op} element of
+ * {@link com.landawn.abacus.jdbc.annotation.Query}.
  *
- * <p>Each constant selects a particular result-extraction strategy such as existence checks,
- * single-row retrieval, streaming, or update counts.</p>
+ * <p>Each constant selects a particular result-extraction strategy -- for example an existence
+ * check, single-row retrieval, list or stream materialization, retrieval of every {@code ResultSet}
+ * returned by a stored procedure, or an update count. The value is normally supplied through the
+ * {@code op} attribute of a {@code @Query}-annotated DAO method; when it is left at its default of
+ * {@link #DEFAULT}, the framework infers the appropriate strategy from the SQL statement and the
+ * method's return type.</p>
  *
  * @see AbstractQuery
+ * @see com.landawn.abacus.jdbc.annotation.Query
  */
 public enum OP {
     /**

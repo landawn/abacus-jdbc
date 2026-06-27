@@ -52,6 +52,9 @@ public @interface OnDelete {
      *   <li>{@link OnDeleteAction#SET_NULL} - Set foreign key to NULL</li>
      * </ul>
      *
+     * <p>Because {@code @OnDelete} has no runtime effect, this value is purely informational and is
+     * never read by the DAO proxy.</p>
+     *
      * @return the delete action, defaults to {@link OnDeleteAction#NO_ACTION}
      * @deprecated Define ON DELETE actions in database foreign key constraints
      */

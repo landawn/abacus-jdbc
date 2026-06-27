@@ -97,6 +97,10 @@ public @interface HandlerList {
      * }
      * }</pre>
      *
+     * <p>This element is mandatory and has no default value. When the compiler synthesizes the
+     * container from repeated {@link Handler @Handler} annotations it always populates this array,
+     * and an explicit {@code @HandlerList} must supply at least one {@code @Handler}.</p>
+     *
      * @return the array of {@link Handler} annotations contained in this list
      */
     Handler[] value();

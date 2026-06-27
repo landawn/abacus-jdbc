@@ -69,6 +69,16 @@ import com.landawn.abacus.util.Strings;
  *       acquisition attempts efficiently.</li>
  * </ul>
  *
+ * <p><b>Thread Safety:</b> Instances are thread-safe. Multiple threads may concurrently invoke
+ * {@link #lock(String, long, long, long)} and {@link #unlock(String, String)} on the same
+ * {@code DBLock} instance. Each acquisition is keyed by its {@code target} and protected by a
+ * unique per-acquisition {@code code}, so only the holder that supplies the matching {@code code}
+ * can release a given lock.</p>
+ *
+ * <p>Instances are normally obtained through {@link JdbcUtil#getDBLock(DataSource, String)} rather
+ * than constructed directly. The {@link #close()} method should be called when the lock is no
+ * longer needed to stop the background refresh task and release any locks still held.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Initialize DBLock with a DataSource and a table name
@@ -317,7 +327,8 @@ public final class DBLock {
      *
      * @param target the unique identifier of the resource to lock. Must not be {@code null} or empty.
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
-     *         could not be acquired within the default timeout.
+     *         could not be acquired within the default timeout, or if the calling thread was interrupted
+     *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty.
      * @see #lock(String, long, long)
@@ -360,7 +371,8 @@ public final class DBLock {
      * @param target the unique identifier of the resource to lock. Must not be {@code null} or empty.
      * @param timeout the maximum time in milliseconds to wait for the lock. Must be non-negative.
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
-     *         could not be acquired within the specified timeout.
+     *         could not be acquired within the specified timeout, or if the calling thread was interrupted
+     *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty, or {@code timeout} is negative.
      * @see #lock(String, long, long)
@@ -406,7 +418,8 @@ public final class DBLock {
      * @param liveTime the duration in milliseconds for which the lock is valid. Must be positive.
      * @param timeout the maximum time in milliseconds to wait for the lock. Must be non-negative.
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
-     *         could not be acquired within the specified timeout.
+     *         could not be acquired within the specified timeout, or if the calling thread was interrupted
+     *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
      *         {@code liveTime} is not positive, or {@code timeout} is negative.
@@ -425,6 +438,13 @@ public final class DBLock {
      * holds the lock), it will repeatedly retry after {@code retryInterval} milliseconds until
      * the total {@code timeout} is reached. Before each acquisition attempt, it removes any expired
      * locks for the target to reduce stale lock contention.</p>
+     *
+     * <p>A transient failure of an individual acquisition attempt (for example, a unique-constraint
+     * violation surfaced as a {@link SQLException} because another holder currently owns the lock)
+     * is caught and recorded but does not abort the loop; the method simply waits and retries. If
+     * the calling thread is interrupted while sleeping between attempts, the loop stops immediately,
+     * the thread's interrupt status is restored, and {@code null} is returned. When the timeout
+     * elapses without success, {@code null} is returned and the last failure (if any) is logged.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -456,7 +476,8 @@ public final class DBLock {
      * @param retryInterval the time in milliseconds to wait between retry attempts. A value of 0 means
      *        an internal minimum (1 ms) delay is used to avoid a tight spin loop. Must be non-negative.
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
-     *         could not be acquired within the specified timeout.
+     *         could not be acquired within the specified timeout, or if the calling thread was interrupted
+     *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
      *         {@code liveTime} is not positive, or {@code timeout} or {@code retryInterval} is negative.
@@ -626,11 +647,17 @@ public final class DBLock {
      * This includes stopping the background scheduled task that refreshes locks
      * and marking this instance as unusable for further lock operations.
      *
+     * <p>As part of closing, this method attempts to release every lock currently held by this
+     * instance by deleting the corresponding rows from the lock table. Any database error
+     * encountered while releasing an individual lock is logged and suppressed, so {@code close()}
+     * never propagates such failures to the caller.</p>
+     *
      * <p>Once closed, any subsequent attempts to call {@code lock()} or {@code unlock()}
      * methods on this instance will result in an {@link IllegalStateException}.</p>
      *
      * <p>This method is idempotent: calling it multiple times on an already closed
-     * instance has no additional effect.</p>
+     * instance has no additional effect. It is declared {@code synchronized} so concurrent
+     * close attempts are serialized.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

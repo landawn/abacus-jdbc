@@ -37,6 +37,17 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * Results are cached after the first execution and returned from cache for subsequent
  * calls with the same parameters until the cache expires or is invalidated.</p>
  *
+ * <p>Per its {@code @Target}, this annotation can be placed on an individual DAO method, or on a
+ * DAO interface type to enable caching for every method whose name matches {@link #filter()}.</p>
+ *
+ * <p><strong>Restriction:</strong> {@code @CacheResult} (together with {@link Cache @Cache} and
+ * {@link RefreshCache @RefreshCache}) is only honored on {@code NoUpdateDao}/{@code UncheckedNoUpdateDao}
+ * subtypes. Applying it to a DAO that supports update/delete operations fails with
+ * {@code UnsupportedOperationException} at DAO initialization time. Use {@link Cache @Cache} on the same
+ * DAO interface to configure the shared cache pool (capacity, eviction sweep interval, and
+ * implementation), and {@link RefreshCache @RefreshCache} on selected methods to invalidate cached
+ * entries; {@code @CacheResult} only controls whether and how an individual result is cached.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
@@ -92,7 +103,7 @@ public @interface CacheResult {
      * User findById(@Bind("id") Long id);
      * }</pre>
      *
-     * @return {@code true} to disable caching, {@code false} to enable
+     * @return {@code true} to disable caching, {@code false} (default) to enable
      */
     boolean disabled() default false;
 
@@ -100,6 +111,8 @@ public @interface CacheResult {
      * Specifies the maximum time (in milliseconds) a cached entry can live.
      * After this time expires, the entry is removed from cache and the next
      * request will execute the query again.
+     *
+     * <p>The default is {@link JdbcUtil#DEFAULT_CACHE_LIVE_TIME} (30 minutes).</p>
      *
      * <p>Common time duration values:</p>
      * <ul>
@@ -117,7 +130,8 @@ public @interface CacheResult {
      * Config getConfig(@Bind("key") String key);
      * }</pre>
      *
-     * @return the maximum cache entry lifetime in milliseconds
+     * @return the maximum cache entry lifetime in milliseconds; defaults to
+     *         {@link JdbcUtil#DEFAULT_CACHE_LIVE_TIME} (30 minutes)
      */
     long liveTime() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME;
 
@@ -129,6 +143,8 @@ public @interface CacheResult {
      * <p>The entry expires when either {@code liveTime} or {@code maxIdleTime}
      * is exceeded, whichever comes first.</p>
      *
+     * <p>The default is {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes).</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Expire if not accessed for 10 minutes
@@ -137,7 +153,8 @@ public @interface CacheResult {
      * UserSession getSession(@Bind("token") String token);
      * }</pre>
      *
-     * @return the maximum idle time in milliseconds
+     * @return the maximum idle time in milliseconds; defaults to
+     *         {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes)
      */
     long maxIdleTime() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME;
 

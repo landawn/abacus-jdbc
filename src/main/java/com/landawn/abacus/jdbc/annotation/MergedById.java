@@ -34,6 +34,10 @@ import com.landawn.abacus.annotation.JoinedBy;
  * <p>The merging is performed based on the entity's ID field(s). Rows with the
  * same ID are combined into one entity, with collection properties populated from the multiple rows.</p>
  *
+ * <p>Per its {@code @Target}, this annotation is placed on a DAO query method that returns the
+ * entity type (typically a {@code List} of entities) produced by a one-to-many join. Contrast with
+ * {@link MappedByKey}, which keys each row into a {@code Map} rather than merging rows.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Entity classes

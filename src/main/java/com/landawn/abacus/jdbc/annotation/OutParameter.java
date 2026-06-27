@@ -30,6 +30,24 @@ import java.sql.Types;
  * JDBC {@link Types SQL type} used when registering it on the underlying
  * {@link CallableStatement}.</p>
  *
+ * <p>The annotation is placed on a stored-procedure DAO method (per its
+ * {@link ElementType#METHOD METHOD} target) and is {@link Repeatable repeatable}: declaring several
+ * {@code @OutParameter}s on the same method collects them into an {@link OutParameterList}. Exactly one
+ * of {@link #name()} or {@link #position()} must be supplied on each instance, while {@link #sqlType()}
+ * is always mandatory. The accompanying {@link Query @Query} should declare {@code isProcedure = true}
+ * and an {@code op} that retrieves the OUT values (for example {@code OP.executeAndGetOutParameters}).</p>
+ *
+ * <p><b>Usage Example:</b></p>
+ * <pre>{@code
+ * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
+ *        isProcedure = true, op = OP.executeAndGetOutParameters)
+ * @OutParameter(name = "discount",   sqlType = Types.DECIMAL)
+ * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
+ * Jdbc.OutParamResult calculateDiscount(
+ *         @Bind("price")      BigDecimal price,
+ *         @Bind("customerId") long       customerId);
+ * }</pre>
+ *
  * @see Query
  * @see OutParameterList
  * @see CallableStatement#registerOutParameter(String, int)

@@ -170,7 +170,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a query with auto-generated key retrieval is not allowed in a read-only DAO,
+     * Preparing a query with auto-generated key retrieval is not permitted in a read-only DAO,
      * since key generation only applies to {@code INSERT} statements.
      *
      * @param query the SQL query string
@@ -188,7 +188,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a query that returns generated keys by column index is not allowed in a read-only DAO.
+     * Preparing a query that returns generated keys by column index is not permitted in a read-only DAO.
      *
      * @param query the SQL query string
      * @param returnColumnIndexes an array of column indexes for returned keys
@@ -205,7 +205,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a query that returns generated keys by column name is not allowed in a read-only DAO.
+     * Preparing a query that returns generated keys by column name is not permitted in a read-only DAO.
      *
      * @param query the SQL query string
      * @param returnColumnNames an array of column names for returned keys
@@ -262,7 +262,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a named query with auto-generated key retrieval is not allowed in a read-only DAO,
+     * Preparing a named query with auto-generated key retrieval is not permitted in a read-only DAO,
      * since key generation only applies to {@code INSERT} statements.
      *
      * @param namedQuery the SQL query string with named parameters
@@ -280,7 +280,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a named query that returns generated keys by column index is not allowed in a read-only DAO.
+     * Preparing a named query that returns generated keys by column index is not permitted in a read-only DAO.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
@@ -297,7 +297,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a named query that returns generated keys by column name is not allowed in a read-only DAO.
+     * Preparing a named query that returns generated keys by column name is not permitted in a read-only DAO.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnNames an array of column names for returned keys
@@ -398,7 +398,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a parsed named query with auto-generated key retrieval is not allowed in a read-only DAO,
+     * Preparing a parsed named query with auto-generated key retrieval is not permitted in a read-only DAO,
      * since key generation only applies to {@code INSERT} statements.
      *
      * @param namedQuery the parsed SQL query with named parameters
@@ -416,7 +416,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a parsed named query that returns generated keys by column index is not allowed in a read-only DAO.
+     * Preparing a parsed named query that returns generated keys by column index is not permitted in a read-only DAO.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
@@ -433,7 +433,7 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Preparing a parsed named query that returns generated keys by column name is not allowed in a read-only DAO.
+     * Preparing a parsed named query that returns generated keys by column name is not permitted in a read-only DAO.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnNames an array of column names for returned keys

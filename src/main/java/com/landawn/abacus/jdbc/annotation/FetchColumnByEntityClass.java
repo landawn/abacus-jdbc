@@ -31,6 +31,11 @@ import java.lang.annotation.Target;
  * <p>When disabled, all columns from the query result will be fetched, regardless of whether
  * they have corresponding properties in the entity class.</p>
  *
+ * <p>A method-level {@code @FetchColumnByEntityClass} always takes precedence over the DAO-level
+ * default configured through {@link DaoConfig#fetchColumnByEntityClassForDatasetQuery()}; when no
+ * method-level annotation is present, that DAO-level default (itself {@code true} unless overridden)
+ * applies.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
@@ -100,7 +105,9 @@ public @interface FetchColumnByEntityClass {
      * Dataset getUserLoginStats();
      * }</pre>
      *
-     * @return {@code true} to fetch only entity columns, {@code false} to fetch all columns
+     * @return {@code true} to fetch only entity columns, {@code false} to fetch all columns; defaults to
+     *         {@code true}, and a value declared here overrides the DAO-level
+     *         {@link DaoConfig#fetchColumnByEntityClassForDatasetQuery()} default
      */
     boolean value() default true;
 }

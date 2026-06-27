@@ -97,6 +97,11 @@ public @interface SqlFragmentList {
      * List<User> findWithColumns(@SqlFragmentList List<String> columns);
      * }</pre>
      *
+     * <p>The resolved name must correspond to a {@code {name}} token in the surrounding
+     * {@link Query @Query} SQL. The collection/array elements are comma-joined (with no surrounding
+     * parentheses) and rewritten into that token; an empty collection yields an empty fragment,
+     * which is usually a SQL syntax error, so guard against it at the call site.</p>
+     *
      * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})
      */
     String value() default "";

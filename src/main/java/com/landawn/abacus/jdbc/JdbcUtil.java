@@ -566,6 +566,7 @@ public final class JdbcUtil {
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A {@code javax.sql.DataSource} instance configured with HikariCP.
+     * @throws IllegalArgumentException if {@code url} is {@code null} or empty.
      * @throws RuntimeException if the HikariCP library is not available in the classpath or if the configuration fails.
      * @see #createHikariDataSource(String, String, String, int, int)
      * @see com.zaxxer.hikari.HikariDataSource
@@ -618,6 +619,7 @@ public final class JdbcUtil {
      * @param minIdle the minimum number of idle connections that HikariCP tries to maintain in the pool.
      * @param maxPoolSize the maximum number of connections that can be in the pool, including both idle and in-use connections.
      * @return a {@code javax.sql.DataSource} instance configured with HikariCP and custom pool settings.
+     * @throws IllegalArgumentException if {@code url} is {@code null} or empty.
      * @throws RuntimeException if the HikariCP library is not available in the classpath or if the configuration fails.
      * @see #createHikariDataSource(String, String, String)
      * @see com.zaxxer.hikari.HikariConfig
@@ -666,6 +668,7 @@ public final class JdbcUtil {
      * @param user The username for database authentication
      * @param password The password for database authentication
      * @return A {@code javax.sql.DataSource} instance configured with C3P0 defaults
+     * @throws IllegalArgumentException if {@code url} is {@code null} or empty
      * @throws RuntimeException if the C3P0 classpath/runtime is invalid or configuration fails
      * @see #createC3p0DataSource(String, String, String, int, int)
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
@@ -716,6 +719,7 @@ public final class JdbcUtil {
      * @param minPoolSize the minimum number of connections the pool will maintain
      * @param maxPoolSize the maximum number of connections the pool will allow
      * @return a {@code javax.sql.DataSource} instance configured with C3P0 and custom pool settings
+     * @throws IllegalArgumentException if {@code url} is {@code null} or empty
      * @throws RuntimeException if the C3P0 classpath/runtime is invalid or configuration fails
      * @see #createC3p0DataSource(String, String, String)
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
@@ -7226,6 +7230,7 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
+     * @throws IllegalArgumentException if {@code ds} or {@code paramSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -7267,6 +7272,7 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
+     * @throws IllegalArgumentException if {@code ds}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -7331,6 +7337,7 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
+     * @throws IllegalArgumentException if {@code ds}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -7391,6 +7398,7 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
+     * @throws IllegalArgumentException if {@code conn} or {@code paramSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize,
@@ -7432,6 +7440,7 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
+     * @throws IllegalArgumentException if {@code conn}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
@@ -7497,6 +7506,7 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
+     * @throws IllegalArgumentException if {@code conn}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
@@ -10408,6 +10418,7 @@ public final class JdbcUtil {
      *
      * @param ds the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
      * @return a {@link SqlTransaction} object representing the new transaction that must be committed or rolled back
+     * @throws IllegalArgumentException if {@code ds} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs while beginning the transaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
@@ -10440,6 +10451,7 @@ public final class JdbcUtil {
      * @param ds the DataSource for which to begin the transaction
      * @param isolationLevel the isolation level for the transaction
      * @return a SqlTransaction object representing the new transaction
+     * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}
      * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
@@ -10482,6 +10494,7 @@ public final class JdbcUtil {
      * @param isolationLevel the isolation level for the transaction
      * @param isForUpdateOnly whether this transaction is only for update operations
      * @return a SqlTransaction object representing the transaction
+     * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}
      * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
      * @see JdbcUtil#getConnection(javax.sql.DataSource)
      * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)

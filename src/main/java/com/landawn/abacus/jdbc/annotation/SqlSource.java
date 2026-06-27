@@ -88,6 +88,10 @@ public @interface SqlSource {
      * @SqlSource("mappers/user-queries.xml")     // Custom naming
      * }</pre>
      *
+     * <p>Every SQL id loaded from this resource must be unique across the mapper and any
+     * {@link SqlScript} fields declared on the same DAO; a collision fails DAO initialization with
+     * {@code IllegalArgumentException}.</p>
+     *
      * @return the path to the SQL mapper XML file passed to {@code SqlMapper.load}; empty (default) means no external mapper is associated with this DAO
      */
     String value() default "";

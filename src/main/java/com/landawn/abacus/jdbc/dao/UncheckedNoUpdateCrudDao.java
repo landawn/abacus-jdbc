@@ -91,9 +91,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
         extends UncheckedNoUpdateDao<T, TD>, NoUpdateCrudDao<T, ID, TD>, UncheckedCrudDao<T, ID, TD> {
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Updating an existing entity (located by its ID) is disallowed by {@code UncheckedNoUpdateCrudDao}
-     * because it would mutate an existing record, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Updating an existing entity by ID would mutate a stored record, violating the read/insert-only contract.
      *
      * @param entityToUpdate the entity with updated values
      * @return never returns normally
@@ -107,9 +106,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Selective property updates by ID are disallowed by {@code UncheckedNoUpdateCrudDao}
-     * because they would mutate an existing record, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Selective property updates by ID would mutate a stored record, violating the read/insert-only contract.
      *
      * @param entityToUpdate the entity containing the values to update
      * @param propNamesToUpdate the property names to update
@@ -124,9 +122,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Single-property updates by ID are disallowed by {@code UncheckedNoUpdateCrudDao}
-     * because they would mutate an existing record, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Single-property updates by ID would mutate a stored record, violating the read/insert-only contract.
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
@@ -142,9 +139,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Multi-property updates by ID are disallowed by {@code UncheckedNoUpdateCrudDao}
-     * because they would mutate an existing record, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Multi-property updates by ID would mutate a stored record, violating the read/insert-only contract.
      *
      * @param updateProps a {@code Map} of property names to their new values
      * @param id the entity ID to update
@@ -159,9 +155,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Batch updates are disallowed by {@code UncheckedNoUpdateCrudDao} because they would
-     * mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Batch updates would mutate stored records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @return never returns normally
@@ -175,9 +170,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Sized batch updates are disallowed by {@code UncheckedNoUpdateCrudDao} because they
-     * would mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Sized batch updates would mutate stored records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @param batchSize the number of entities to process per batch
@@ -192,9 +186,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Selective batch updates are disallowed by {@code UncheckedNoUpdateCrudDao} because they
-     * would mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Selective batch updates would mutate stored records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
@@ -209,9 +202,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Sized selective batch updates are disallowed by {@code UncheckedNoUpdateCrudDao} because
-     * they would mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Sized selective batch updates would mutate stored records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
@@ -228,9 +220,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Upserts perform an update when a matching record exists, which violates the
-     * read/insert-only contract of {@code UncheckedNoUpdateCrudDao}.
+     * Upserting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the read/insert-only contract.
      *
      * @param entity the entity to upsert
      * @return never returns normally
@@ -244,9 +235,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Upserts perform an update when a matching record exists, which violates the
-     * read/insert-only contract of {@code UncheckedNoUpdateCrudDao}.
+     * Upserting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the read/insert-only contract.
      *
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the property names that uniquely identify the entity
@@ -261,9 +251,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Upserts perform an update when a matching record exists, which violates the
-     * read/insert-only contract of {@code UncheckedNoUpdateCrudDao}.
+     * Upserting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the read/insert-only contract.
      *
      * @param entity the entity to insert or update
      * @param cond the condition to check whether the entity already exists
@@ -278,9 +267,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Batch upserts perform updates when matching records exist, which violates the
-     * read/insert-only contract of {@code UncheckedNoUpdateCrudDao}.
+     * Upserting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Batch upserts perform updates when matching records exist, which violates the read/insert-only contract.
      *
      * @param entities the collection of entities to upsert
      * @return never returns normally
@@ -294,9 +282,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Sized batch upserts perform updates when matching records exist, which violates the
-     * read/insert-only contract of {@code UncheckedNoUpdateCrudDao}.
+     * Upserting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Sized batch upserts perform updates when matching records exist, which violates the read/insert-only contract.
      *
      * @param entities the collection of entities to upsert
      * @param batchSize the number of entities to process per batch
@@ -311,9 +298,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Batch upserts perform updates when matching records exist, which violates the
-     * read/insert-only contract of {@code UncheckedNoUpdateCrudDao}.
+     * Upserting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Batch upserts perform updates when matching records exist, which violates the read/insert-only contract.
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
@@ -328,9 +314,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Sized batch upserts perform updates when matching records exist, which violates the
-     * read/insert-only contract of {@code UncheckedNoUpdateCrudDao}.
+     * Upserting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Sized batch upserts perform updates when matching records exist, which violates the read/insert-only contract.
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
@@ -347,9 +332,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Deleting an entity by its populated ID is disallowed by {@code UncheckedNoUpdateCrudDao}
-     * because it would remove an existing record, violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Deleting an entity by its populated ID would remove a stored record, violating the read/insert-only contract.
      *
      * @param entity the entity to delete (must have its ID populated)
      * @return never returns normally
@@ -363,9 +347,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Deleting by ID is disallowed by {@code UncheckedNoUpdateCrudDao} because it would
-     * remove an existing record, violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Deleting by ID would remove a stored record, violating the read/insert-only contract.
      *
      * @param id the entity ID to delete
      * @return never returns normally
@@ -379,9 +362,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Batch deletes are disallowed by {@code UncheckedNoUpdateCrudDao} because they would
-     * remove existing records, violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Batch deletes would remove stored records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to delete
      * @return never returns normally
@@ -395,9 +377,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Sized batch deletes are disallowed by {@code UncheckedNoUpdateCrudDao} because they
-     * would remove existing records, violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Sized batch deletes would remove stored records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to delete
      * @param batchSize the number of entities to process per batch
@@ -412,9 +393,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Batch deletes by ID are disallowed by {@code UncheckedNoUpdateCrudDao} because they
-     * would remove existing records, violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Batch deletes by ID would remove stored records, violating the read/insert-only contract.
      *
      * @param ids the collection of entity IDs to delete
      * @return never returns normally
@@ -428,9 +408,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCru
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Sized batch deletes by ID are disallowed by {@code UncheckedNoUpdateCrudDao} because
-     * they would remove existing records, violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
+     * Sized batch deletes by ID would remove stored records, violating the read/insert-only contract.
      *
      * @param ids the collection of entity IDs to delete
      * @param batchSize the number of IDs to process per batch

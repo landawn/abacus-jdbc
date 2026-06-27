@@ -28,11 +28,55 @@ import com.landawn.abacus.util.RegExUtil;
 /**
  * Declares how a DAO method should execute SQL.
  *
- * <p>This annotation can point to inline SQL or named SQL, choose an {@link OP execution mode},
- * enable stored-procedure handling, configure batching, and supply runtime hints such as fetch size
- * or timeout. The method return type still participates in the final execution strategy.</p>
+ * <p>Place this annotation on an abstract (or {@code default}) method of a DAO interface to bind that
+ * method to a SQL statement. The SQL may be written inline through {@link #value()} or referenced by id
+ * from an external SQL mapper through {@link #id()} (see {@link SqlSource}). Exactly one of the two must
+ * be supplied: declaring both, or neither, causes DAO initialization to fail with an
+ * {@code IllegalArgumentException}.</p>
+ *
+ * <p>Beyond the SQL itself, the annotation lets a method choose an {@link OP execution mode}
+ * ({@link #op()}), flag a stored-procedure call ({@link #isProcedure()}), enable batching
+ * ({@link #isBatch()} / {@link #batchSize()}), and supply runtime hints such as {@link #fetchSize()}
+ * and {@link #queryTimeout()}. The method's return type still participates in the final execution
+ * strategy: for example, with {@link OP#DEFAULT} a {@code Stream} return type triggers lazy streaming
+ * while an {@code Optional} return type triggers "find first" semantics.</p>
+ *
+ * <p>Method parameters are bound to named parameters in the SQL through {@link Bind} (and
+ * {@link BindList} for {@code IN}-clause expansion); stored-procedure {@code OUT} parameters are
+ * declared with {@link OutParameter} / {@link OutParameterList}; and template placeholders are filled
+ * with {@link SqlFragment} / {@link SqlFragmentList}.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * public interface UserDao extends CrudDao<User, Long, UserDao> {
+ *     // Inline SQL with a named parameter
+ *     @Query("SELECT * FROM users WHERE email = :email")
+ *     Optional<User> findByEmail(@Bind("email") String email);
+ *
+ *     // Scalar aggregate via an explicit execution mode
+ *     @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = OP.queryForSingle)
+ *     long countActiveUsers();
+ *
+ *     // Streaming a large result set with a fetch-size hint
+ *     @Query(value = "SELECT * FROM users ORDER BY id", fetchSize = 1000)
+ *     Stream<User> streamAllUsers();
+ *
+ *     // Batch insert with a custom batch size
+ *     @Query(value = "INSERT INTO users (name, email) VALUES (:name, :email)",
+ *            isBatch = true, batchSize = 500)
+ *     int[] batchInsert(List<User> users);
+ *
+ *     // SQL stored in an external mapper, referenced by id
+ *     @Query(id = "findUsersByComplexCriteria")
+ *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria);
+ * }
+ * }</pre>
+ *
+ * <p>This annotation is retained at runtime ({@link RetentionPolicy#RUNTIME}) and may only be applied
+ * to methods ({@link ElementType#METHOD}).</p>
  *
  * @see Bind
+ * @see BindList
  * @see SqlFragment
  * @see SqlFragmentList
  * @see SqlSource
@@ -478,6 +522,11 @@ public @interface Query {
     /**
      * Indicates whether the SQL statement contains template variables defined by the {@link SqlFragment} or {@link SqlFragmentList} annotations
      * that will be replaced with query fragments containing named parameters.
+     *
+     * <p>By default ({@code false}) the substituted fragment is treated as plain text and is not
+     * re-scanned for named parameters, so any {@code :param} placeholders introduced by the fragment
+     * would not be bound. Set this to {@code true} when a replaced fragment itself contains named
+     * parameters, so the framework parses the merged SQL and binds them as well.</p>
      *
      * <p>Basic examples:</p>
      * <pre>{@code

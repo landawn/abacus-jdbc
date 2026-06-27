@@ -36,6 +36,11 @@ import com.landawn.abacus.util.u.Optional;
  * fetch an entity and eagerly load its associated entities, either all mapped relationships at once or
  * only the specific join entity types you request.</p>
  *
+ * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the
+ * corresponding {@code @JoinedBy} properties of the entity instance returned by each {@code get} and
+ * {@code gett} method. When a method accepts a collection of join entity classes, a {@code null} or empty
+ * collection results in no join entities being loaded.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends UncheckedCrudDaoL<User, UserDao>,
@@ -76,7 +81,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
      *
      * <p>This method fetches the main entity and automatically loads the related entities
      * of the specified type. The join is performed based on the relationship mappings
-     * defined in the entity classes.</p>
+     * defined in the entity classes. The loaded related entities are populated in place on the returned
+     * entity instance.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -105,7 +111,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
     /**
      * Retrieves an entity by its ID with the option to load all associated join entities.
      *
-     * <p>When {@code includeAllJoinEntities} is {@code true}, all mapped relationships will be loaded.
+     * <p>When {@code includeAllJoinEntities} is {@code true}, all mapped relationships are loaded and
+     * populated in place on the returned entity; when {@code false}, no join entities are loaded.
      * This is useful when you need the complete object graph but should be used carefully
      * to avoid performance issues with large datasets.</p>
      *
@@ -136,7 +143,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
      *
      * <p>This method allows you to optimize queries by selecting only the required properties
      * of the main entity while still loading the complete join entities. This is particularly
-     * useful for large entities where you only need a subset of fields.</p>
+     * useful for large entities where you only need a subset of fields. The loaded related entities are
+     * populated in place on the returned entity instance.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -168,7 +176,9 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
      *
      * <p>This method provides fine-grained control over what data is fetched, allowing you to
      * specify exactly which properties of the main entity and which related entity types to load.
-     * This can significantly improve performance in complex object graphs.</p>
+     * This can significantly improve performance in complex object graphs. The loaded related entities are
+     * populated in place on the returned entity; if {@code joinEntitiesToLoad} is {@code null} or empty,
+     * no join entities are loaded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -199,7 +209,9 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
      * Retrieves an entity by its ID with specific properties and optionally loads all join entities.
      *
      * <p>This method combines property selection with the option to load all relationships,
-     * providing maximum flexibility in controlling what data is fetched from the database.</p>
+     * providing maximum flexibility in controlling what data is fetched from the database. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -234,7 +246,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
      * Retrieves an entity by its ID and loads the specified join entity class, returning {@code null} if not found.
      *
      * <p>This method is similar to {@link #get(long, Class)} but returns the entity directly
-     * instead of an Optional. It returns {@code null} if the entity is not found.</p>
+     * instead of an Optional. It returns {@code null} if the entity is not found. The loaded related
+     * entities are populated in place on the returned entity instance.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -267,7 +280,9 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
     /**
      * Retrieves an entity by its ID with the option to load all join entities, returning {@code null} if not found.
      *
-     * <p>This method provides a non-Optional alternative to {@link #get(long, boolean)}.</p>
+     * <p>This method provides a non-Optional alternative to {@link #get(long, boolean)}. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -303,7 +318,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
     /**
      * Retrieves an entity by its ID with specific properties and loads the specified join entity, returning {@code null} if not found.
      *
-     * <p>This method combines property selection with join loading, providing optimized data fetching.</p>
+     * <p>This method combines property selection with join loading, providing optimized data fetching.
+     * The loaded related entities are populated in place on the returned entity instance.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -342,7 +358,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
      * Retrieves an entity by its ID with specific properties and loads multiple join entity types, returning {@code null} if not found.
      *
      * <p>This method provides maximum control over data fetching, allowing precise specification
-     * of what data to retrieve.</p>
+     * of what data to retrieve. The loaded related entities are populated in place on the returned entity;
+     * if {@code joinEntitiesToLoad} is {@code null} or empty, no join entities are loaded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -386,7 +403,9 @@ public interface UncheckedCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<
      * Retrieves an entity by its ID with specific properties and optionally loads all join entities, returning {@code null} if not found.
      *
      * <p>This method provides complete flexibility in controlling what data is fetched,
-     * combining property selection with optional loading of all relationships.</p>
+     * combining property selection with optional loading of all relationships. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

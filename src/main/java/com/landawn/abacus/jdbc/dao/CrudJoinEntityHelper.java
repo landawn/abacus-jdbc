@@ -35,6 +35,11 @@ import com.landawn.abacus.util.u.Optional;
  * related entities when retrieving records from the database. This eliminates the N+1 query problem
  * and simplifies working with entity relationships.</p>
  *
+ * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the
+ * corresponding {@code @JoinedBy} properties of the entity instance returned by each {@code get},
+ * {@code gett}, and {@code batchGet} method. When a method accepts a collection of join entity classes,
+ * a {@code null} or empty collection results in no join entities being loaded.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Entity
@@ -84,7 +89,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities.
      * Only the join properties of the specified class will be loaded; if multiple properties in the entity
-     * class are joined to that type, all of them are loaded.
+     * class are joined to that type, all of them are loaded. The loaded related entities are populated in
+     * place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -112,7 +118,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves an entity by its ID and optionally loads all join entities.
-     * When {@code includeAllJoinEntities} is {@code true}, all fields annotated with {@code @JoinedBy} will be loaded.
+     * When {@code includeAllJoinEntities} is {@code true}, all fields annotated with {@code @JoinedBy} are
+     * populated in place on the returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -144,6 +151,7 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
     /**
      * Retrieves an entity by its ID with only selected properties and loads the specified type of join entities.
      * This method allows for optimized queries by selecting only needed columns from the main entity.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -171,6 +179,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
     /**
      * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities.
      * This method provides fine-grained control over what data is loaded from the database.
+     * The loaded related entities are populated in place on the returned entity instance; if
+     * {@code joinEntitiesToLoad} is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -198,7 +208,9 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves an entity by its ID with only selected properties and optionally loads all join entities.
-     * Combines property selection with the option to load all relationships.
+     * Combines property selection with the option to load all relationships. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -225,7 +237,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
-     * This is the null-returning variant of {@link #get(Object, Class)}.
+     * This is the null-returning variant of {@link #get(Object, Class)}. The loaded related entities are
+     * populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -256,7 +269,9 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
-     * This is the null-returning variant of {@link #get(Object, boolean)}.
+     * This is the null-returning variant of {@link #get(Object, boolean)}. When {@code includeAllJoinEntities}
+     * is {@code true}, the loaded entities are populated in place on the returned entity; when {@code false},
+     * no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -287,7 +302,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves an entity by its ID with only selected properties and loads the specified type of join entities, returning {@code null} if not found.
-     * This is the null-returning variant of {@link #get(Object, Collection, Class)}.
+     * This is the null-returning variant of {@link #get(Object, Collection, Class)}. The loaded related
+     * entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -320,7 +336,9 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning {@code null} if not found.
-     * This is the null-returning variant of {@link #get(Object, Collection, Collection)}.
+     * This is the null-returning variant of {@link #get(Object, Collection, Collection)}. The loaded related
+     * entities are populated in place on the returned entity; if {@code joinEntitiesToLoad} is {@code null} or
+     * empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -358,7 +376,9 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves an entity by its ID with only selected properties and optionally loads all join entities, returning {@code null} if not found.
-     * This is the null-returning variant of {@link #get(Object, Collection, boolean)}.
+     * This is the null-returning variant of {@link #get(Object, Collection, boolean)}. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -393,7 +413,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves multiple entities by their IDs and loads the specified type of join entities.
-     * Uses the default batch size for processing.
+     * Uses the default batch size for processing. The loaded related entities are populated in place on
+     * each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -419,7 +440,9 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves multiple entities by their IDs and optionally loads all join entities.
-     * Uses the default batch size for processing.
+     * Uses the default batch size for processing. When {@code includeAllJoinEntities} is {@code true}, the
+     * loaded entities are populated in place on each returned entity; when {@code false}, no join entities
+     * are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -442,7 +465,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
-     * Uses the default batch size for processing.
+     * Uses the default batch size for processing. The loaded related entities are populated in place on
+     * each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -469,7 +493,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
-     * Uses the default batch size for processing.
+     * Uses the default batch size for processing. The loaded related entities are populated in place on each
+     * returned entity; if {@code joinEntitiesToLoad} is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -496,7 +521,9 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
 
     /**
      * Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
-     * Uses the default batch size for processing.
+     * Uses the default batch size for processing. When {@code includeAllJoinEntities} is {@code true}, the
+     * loaded entities are populated in place on each returned entity; when {@code false}, no join entities
+     * are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -524,6 +551,7 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
      * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
+     * The loaded related entities are populated in place on each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -543,7 +571,7 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
      * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property of the specified type is found in the entity class
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad,
@@ -566,6 +594,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
      * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
+     * The loaded related entities are populated in place on each returned entity; if {@code joinEntitiesToLoad}
+     * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -585,7 +615,7 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
      * @return a list of entities with selected properties and specified join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property is found for one of the specified types in the entity class
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
@@ -614,6 +644,8 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
     /**
      * Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
      * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
+     * When {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on each
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -634,6 +666,7 @@ public interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> exte
      * @return a list of entities with selected properties and join entities as specified
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities,

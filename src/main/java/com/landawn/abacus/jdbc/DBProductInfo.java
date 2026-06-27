@@ -45,6 +45,8 @@ package com.landawn.abacus.jdbc;
  * @param version the parsed {@link DBVersion} enum representing the database type and major version; may be {@code null} for manually-created records
  *
  * @see DBVersion
+ * @see JdbcUtil#getDBProductInfo(java.sql.Connection)
+ * @see JdbcUtil#getDBProductInfo(javax.sql.DataSource)
  */
 public record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR
 

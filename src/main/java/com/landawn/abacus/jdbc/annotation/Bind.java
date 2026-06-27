@@ -26,6 +26,11 @@ import java.lang.annotation.Target;
  * in SQL statements, providing better readability and maintainability compared
  * to positional parameters.
  *
+ * <p>It is applied to a parameter of a DAO interface method (per its
+ * {@link java.lang.annotation.ElementType#PARAMETER PARAMETER} target), typically one whose SQL is
+ * declared with {@link Query @Query} using named placeholders. The {@link #value() value} names the
+ * {@code :token} that this argument supplies.</p>
+ *
  * <p>The annotation can bind:</p>
  * <ul>
  *   <li>Simple types (String, Integer, Date, etc.)</li>

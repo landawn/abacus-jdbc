@@ -50,6 +50,21 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * <p>Join entities are typically defined using the {@code @JoinedBy} annotation on entity properties.</p>
  *
+ * <p>A <i>join entity property</i> is a property of the main entity, annotated with {@code @JoinedBy}, whose value
+ * holds the related entity (for a single-valued property) or related entities (for a {@code Collection}-valued
+ * property). The {@code loadXxx} methods <b>populate these properties in place</b> on the entity (or entities)
+ * passed to them; they do not create or return new main-entity objects. The {@code findXxx}/{@code list}/
+ * {@code stream} methods first fetch the matching main entities and then populate the requested join properties on
+ * those returned objects. The {@code deleteXxx} methods delete the related rows from the database but leave the
+ * in-memory join properties of the passed entity (or entities) unchanged.</p>
+ *
+ * <p>Methods that accept a {@code selectPropNames} argument select only the listed columns: from the main entity for
+ * the {@code findXxx}/{@code list}/{@code stream} methods, or from the join entity for the {@code loadXxx} methods.
+ * A {@code null} {@code selectPropNames} selects all columns. Most operations declare the checked
+ * {@link SQLException}; the {@code stream} methods instead wrap any {@link SQLException} raised while loading join
+ * entities during stream consumption in an {@link UncheckedSQLException}. Methods throw
+ * {@link IllegalArgumentException} when a referenced join property (by type or by name) cannot be resolved.</p>
+ *
  * <p><b>Example usage:</b></p>
  * <pre>{@code
  * // Define entities with join relationships
@@ -163,7 +178,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntitiesToLoad the collection of join entity classes to load.
+     *                          If {@code null} or empty, no join entities are loaded and the matched entity is returned as-is
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws SQLException if a database access error occurs
@@ -251,7 +267,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntitiesToLoad the collection of join entity classes to load.
+     *                          If {@code null} or empty, no join entities are loaded and the matched entity is returned as-is
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicateResultException if more than one record is found by the specified condition
@@ -348,7 +365,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntitiesToLoad the collection of join entity classes to load.
+     *                          If {@code null} or empty, no join entities are loaded and the matched entities are returned as-is
      * @param cond the condition to match
      * @return a list of entities matching the condition with the specified join entities loaded
      * @throws SQLException if a database access error occurs
@@ -412,8 +430,9 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
     /**
      * Streams entities that match the specified condition and loads the specified type of join entities for each.
      * The stream processes entities in batches of {@link JdbcUtil#DEFAULT_BATCH_SIZE} for efficient memory usage.
-     * Any {@link SQLException} thrown while loading join entities during stream consumption is wrapped as an
-     * {@link UncheckedSQLException}.
+     * Join entities are populated in place on the streamed entities. Any {@link SQLException} thrown while loading
+     * join entities during stream consumption is wrapped as an {@link UncheckedSQLException}; if no join property of
+     * the specified type is found, an {@link IllegalArgumentException} is thrown during stream consumption.
      * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
@@ -448,8 +467,10 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
     /**
      * Streams entities that match the specified condition and loads multiple types of join entities for each.
      * The stream processes entities in batches of {@link JdbcUtil#DEFAULT_BATCH_SIZE} for efficient memory usage.
-     * Any {@link SQLException} thrown while loading join entities during stream consumption is wrapped as an
-     * {@link UncheckedSQLException}.
+     * Join entities are populated in place on the streamed entities. Any {@link SQLException} thrown while loading
+     * join entities during stream consumption is wrapped as an {@link UncheckedSQLException}; if no join property is
+     * found for one of the specified types, an {@link IllegalArgumentException} is thrown during stream consumption.
+     * If {@code joinEntitiesToLoad} is {@code null} or empty, the underlying entity stream is returned unmodified.
      * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
@@ -462,7 +483,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntitiesToLoad the collection of join entity classes to load.
+     *                          If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
      * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
@@ -604,6 +626,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
     /**
      * Loads join entities of the specified type for a collection of entities with specific property selection.
      * If multiple properties in the entity class are joined to the specified type, all of them will be loaded.
+     * The loaded join entities are populated in place on each entity in the collection.
+     * If {@code entities} is {@code null} or empty, this method returns immediately without performing any query.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -612,7 +636,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * userDao.loadJoinEntities(users, Order.class, Arrays.asList("id", "totalAmount"));
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -922,7 +947,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
     /**
      * Loads all join entities for a single entity.
-     * This method loads all properties annotated with {@code @JoinedBy} in the entity class.
+     * This method loads all properties annotated with {@code @JoinedBy} in the entity class, populating them in place.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -987,7 +1012,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
     /**
      * Loads all join entities for a collection of entities.
-     * This method loads all properties annotated with {@code @JoinedBy} in the entity class for each entity.
+     * This method loads all properties annotated with {@code @JoinedBy} in the entity class for each entity,
+     * populating them in place. If {@code entities} is {@code null} or empty, this method returns immediately.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -996,7 +1022,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * // All join entities are loaded for all users
      * }</pre>
      *
-     * @param entities the collection of entities for which to load all join entities
+     * @param entities the collection of entities for which to load all join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1587,6 +1614,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
     /**
      * Deletes all join entities of the specified type for a single entity.
      * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.
+     * This deletes the related rows from the database; the in-memory join properties of {@code entity} are left unchanged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1633,6 +1661,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
     /**
      * Deletes all join entities of the specified type for a collection of entities.
      * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.
+     * This deletes the related rows from the database; the in-memory join properties of the entities are left unchanged.
+     * If {@code entities} is {@code null} or empty, this method returns 0 immediately.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1641,7 +1671,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * int deletedCount = userDao.deleteJoinEntities(users, Order.class);
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete join entities
+     * @param entities the collection of entities for which to delete join entities.
+     *                 If {@code null} or empty, this method returns 0 immediately
      * @param joinEntityClass the class of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
@@ -1979,7 +2010,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
     /**
      * Deletes all join entities for a single entity.
-     * This deletes all entities referenced by properties annotated with {@code @JoinedBy}.
+     * This deletes the rows referenced by every property annotated with {@code @JoinedBy};
+     * the in-memory join properties of {@code entity} are left unchanged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2051,7 +2083,9 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
     /**
      * Deletes all join entities for a collection of entities.
-     * This deletes all entities referenced by properties annotated with {@code @JoinedBy} for each entity.
+     * This deletes the rows referenced by every property annotated with {@code @JoinedBy} for each entity;
+     * the in-memory join properties of the entities are left unchanged.
+     * If {@code entities} is {@code null} or empty, this method returns 0 immediately.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2060,7 +2094,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * int deletedCount = userDao.deleteAllJoinEntities(users);
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete all join entities
+     * @param entities the collection of entities for which to delete all join entities.
+     *                 If {@code null} or empty, this method returns 0 immediately
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */

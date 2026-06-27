@@ -163,7 +163,7 @@ public @interface Cache {
      * }
      * }</pre>
      *
-     * @return the cache implementation class
+     * @return the cache implementation class; defaults to {@link Jdbc.DefaultDaoCache}
      */
     Class<? extends DaoCache> impl() default Jdbc.DefaultDaoCache.class; //NOSONAR
 }

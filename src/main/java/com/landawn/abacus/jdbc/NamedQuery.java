@@ -57,6 +57,12 @@ import com.landawn.abacus.util.N;
  * ({@code ?}). The same named parameter may appear multiple times in the SQL; every occurrence is
  * bound to the same value.
  *
+ * <p>If a name passed to a by-name {@code setXxx(String, ...)} setter (or to
+ * {@link #setObject(String, Object)} and its overloads) does not match any named parameter declared
+ * in the SQL, the backing {@code PreparedStatement} is closed and an {@link IllegalArgumentException}
+ * is thrown. This differs from {@link #setParameters(Map)}, which silently ignores map entries whose
+ * keys are not named parameters.
+ *
  * <p>The backing {@code PreparedStatement} is closed by default
  * after any execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
  * {@code findFirst}, {@code findOnlyOne}, {@code list}, {@code execute}, and similar),
@@ -3916,7 +3922,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param parameters an object containing the parameters (bean, map, collection, array, or single value)
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is {@code null} or of an unsupported type
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}, is of an unsupported type, or is a
+     *         bean that lacks a property matching one of the named parameters in the SQL
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#namedParameters(String)
      */
@@ -4081,7 +4088,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>This method provides maximum flexibility by allowing you to define custom logic for
      * setting parameters. The setter function receives the parsed SQL, this NamedQuery instance,
-     * and your parameters object.
+     * and your parameters object. If the setter throws, the backing statement is closed and the
+     * exception propagates to the caller.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4103,8 +4111,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameters the parameters object to pass to the setter
      * @param parametersSetter a tri-consumer that receives the parsed SQL, this NamedQuery instance, and the parameters object
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if parametersSetter is null
-     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code parametersSetter} is {@code null}
+     * @throws SQLException if a database access error occurs (e.g. propagated from {@code parametersSetter})
      */
     public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {
@@ -4136,6 +4144,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>Maps with keys matching parameter names</li>
      * <li>Arrays or Collections for positional parameters</li>
      * </ul>
+     *
+     * <p>All elements are interpreted in the same way as the first element (see {@link #addBatchParameters(Iterator)}).
+     * If {@code batchParameters} is empty, this is a no-op and no batch is added.
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *
@@ -4191,6 +4202,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>Maps with keys matching parameter names</li>
      * <li>Arrays or Collections for positional parameters</li>
      * </ul>
+     *
+     * <p>The runtime type of the <i>first</i> element determines how every element is interpreted; all
+     * remaining elements are assumed to be of the same kind. If the iterator is empty, this is a no-op
+     * and no batch is added. A {@code null} element is only supported when the SQL has exactly one named
+     * parameter (it is bound as SQL {@code NULL}); otherwise an {@link IllegalArgumentException} is thrown.
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *

@@ -80,6 +80,10 @@ public @interface SqlScript {
      *         PSC.selectFrom(User.class).where(Filters.gt("id")).sql();
      * }</pre>
      *
+     * <p>When supplied, the id must be a non-empty, whitespace-free Java identifier that is unique
+     * among all {@link SqlScript} fields on the DAO and does not collide with any id loaded via
+     * {@link SqlSource}; otherwise DAO initialization fails with {@code IllegalArgumentException}.</p>
+     *
      * @return the identifier used by {@link Query#id()}; empty means the annotated field name is used
      */
     String id() default "";

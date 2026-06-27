@@ -32,6 +32,10 @@ import java.util.Map;
  * will overwrite previous ones; use {@link MergedById} when you need to combine
  * one-to-many rows into a single entity instead.</p>
  *
+ * <p>Per its {@code @Target}, this annotation is placed on a DAO query method whose declared return
+ * type is a {@code Map} (or a {@code Map} subtype); see {@link #mapClass()} to control the concrete
+ * implementation.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {

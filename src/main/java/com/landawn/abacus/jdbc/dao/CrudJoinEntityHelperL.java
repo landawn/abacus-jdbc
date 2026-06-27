@@ -31,6 +31,11 @@ import com.landawn.abacus.util.u.Optional;
  * <p>This interface is designed to work with entities that have relationships defined using the {@code @JoinedBy} annotation.
  * It automatically handles the loading of related entities when retrieving records from the database.</p>
  *
+ * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the
+ * corresponding {@code @JoinedBy} properties of the entity instance returned by each {@code get} and
+ * {@code gett} method. When a method accepts a collection of join entity classes, a {@code null} or empty
+ * collection results in no join entities being loaded.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Entity
@@ -70,6 +75,7 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -96,6 +102,8 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID and optionally loads all join entities.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * When {@code includeAllJoinEntities} is {@code true}, all {@code @JoinedBy} properties are populated in
+     * place on the returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -124,6 +132,7 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID with selected properties and loads the specified type of join entities.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -149,6 +158,8 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID with selected properties and loads multiple types of join entities.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * The loaded related entities are populated in place on the returned entity; if {@code joinEntitiesToLoad}
+     * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -174,6 +185,8 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID with selected properties and optionally loads all join entities.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * When {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -199,6 +212,7 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -230,6 +244,8 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * When {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -261,6 +277,7 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID with selected properties and loads the specified type of join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -294,6 +311,8 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID with selected properties and loads multiple types of join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * The loaded related entities are populated in place on the returned entity; if {@code joinEntitiesToLoad}
+     * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -330,6 +349,8 @@ public interface CrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends Cr
     /**
      * Retrieves an entity by its ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
+     * When {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

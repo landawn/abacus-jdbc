@@ -57,11 +57,20 @@ import com.landawn.abacus.util.stream.Stream;
 
 /**
  * The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations
- * with unchecked exceptions. It extends {@link UncheckedDao} and adds entity ID-based operations for more
- * convenient data access patterns.
+ * with unchecked exceptions. It is the unchecked counterpart of {@link CrudDao}: it extends
+ * {@link UncheckedDao} (the unchecked base DAO) and {@link CrudDao}, and re-declares the id-based
+ * operations so that they throw the unchecked {@link UncheckedSQLException} instead of the checked
+ * {@link java.sql.SQLException}.
  *
- * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
- * making it easier to work with in functional programming contexts and reducing boilerplate exception handling.</p>
+ * <p>Because every database operation declared here throws {@link UncheckedSQLException} (a
+ * {@link RuntimeException}) rather than a checked exception, this interface is easier to use in
+ * functional programming contexts (lambdas, streams) and reduces boilerplate exception handling.</p>
+ *
+ * <p><b>ID semantics:</b> the entity class must declare one or more {@code @Id} properties. A single id
+ * property maps directly to the {@code <ID>} type (for example {@code Long} or {@code String}), whereas a
+ * composite (multi-column) key is represented by an {@link EntityId}. Insert operations write a
+ * database-generated key back into the entity's id property where applicable, and {@code by-id} lookups
+ * treat the supplied id as a primary-key match.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -79,7 +88,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <ID> the ID type of the entity
+ * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
  * @param <TD> the self-type of the DAO for method chaining
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
@@ -113,8 +122,12 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
     }
 
     /**
-     * Inserts the specified entity into the database and returns the generated ID.
+     * Inserts the specified entity into the database and returns its ID.
      * All insertable properties of the entity will be included in the INSERT statement.
+     *
+     * <p>If the database generates the ID (for example via an auto-increment column), the generated
+     * ID is retrieved, written back to the entity's ID property (where applicable) and returned. If the
+     * database does not generate a key, the entity's existing ID value is returned instead.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -125,7 +138,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * }</pre>
      *
      * @param entityToInsert the entity to insert (must not be {@code null})
-     * @return the generated ID of the inserted entity
+     * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
      */
@@ -149,8 +162,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param entityToInsert the entity to insert (must not be {@code null})
      * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If {@code null} or empty, all insertable properties will be included
-     * @return the generated ID of the inserted entity
+     * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
      */
     @Override
     ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
@@ -169,7 +183,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entityToInsert the entity whose properties will be bound to the named parameters
-     * @return the generated ID of the inserted entity
+     * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -292,6 +306,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalBoolean} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalBoolean} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code false}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code false}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -303,7 +320,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalBoolean} containing the value, or empty if no entity found
+     * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForBoolean()
      */
@@ -312,6 +329,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalChar} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalChar} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code (char) 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code (char) 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -323,7 +343,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalChar containing the value, or empty if no entity found
+     * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForChar()
      */
@@ -332,6 +352,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalByte} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalByte} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -343,7 +366,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalByte containing the value, or empty if no entity found
+     * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForByte()
      */
@@ -352,6 +375,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalShort} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalShort} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -363,7 +389,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalShort containing the value, or empty if no entity found
+     * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForShort()
      */
@@ -372,6 +398,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalInt} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalInt} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -383,7 +412,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalInt containing the value, or empty if no entity found
+     * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForInt()
      */
@@ -392,6 +421,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalLong} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalLong} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0L}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0L}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -403,7 +435,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalLong containing the value, or empty if no entity found
+     * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForLong()
      */
@@ -412,6 +444,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalFloat} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalFloat} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0f}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0f}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -423,7 +458,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalFloat containing the value, or empty if no entity found
+     * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForFloat()
      */
@@ -432,6 +467,9 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code OptionalDouble} describing the value of a single property for the entity with the specified ID.
+     * Returns an empty {@code OptionalDouble} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0d}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0d}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -443,7 +481,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an OptionalDouble containing the value, or empty if no entity found
+     * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForDouble()
      */
@@ -452,6 +490,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns a {@code Nullable<String>} describing the value of a single property for the entity with the specified ID.
+     * The returned {@code Nullable} holds {@code null} when the selected value is SQL {@code null}; it is empty only when no record matches the {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -472,6 +511,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns a {@code Nullable<java.sql.Date>} describing the value of a single property for the entity with the specified ID.
+     * The returned {@code Nullable} holds {@code null} when the selected value is SQL {@code null}; it is empty only when no record matches the {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -492,6 +532,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns a {@code Nullable<java.sql.Time>} describing the value of a single property for the entity with the specified ID.
+     * The returned {@code Nullable} holds {@code null} when the selected value is SQL {@code null}; it is empty only when no record matches the {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -512,6 +553,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns a {@code Nullable<java.sql.Timestamp>} describing the value of a single property for the entity with the specified ID.
+     * The returned {@code Nullable} holds {@code null} when the selected value is SQL {@code null}; it is empty only when no record matches the {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -532,7 +574,8 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns a {@code Nullable<byte[]>} describing the value of a single property for the entity with the specified ID.
-     * The returned {@code Nullable} can contain {@code null} if the database value is {@code null}.
+     * This is typically used for BLOB data. The returned {@code Nullable} holds {@code null} when the selected value is
+     * SQL {@code null}; it is empty only when no record matches the {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -567,7 +610,8 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return a Nullable containing the converted value, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the converted value (which holds {@code null} when the value is SQL {@code null}),
+     *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -588,7 +632,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return an Optional containing the non-null value, or empty if no entity found or value is null
+     * @return an {@code Optional} containing the non-null value, or empty if no record matches the {@code id} or the value is SQL {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -612,7 +656,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an Optional containing the non-null mapped value, or empty if no entity found or value is null
+     * @return an {@code Optional} containing the non-null mapped value, or empty if no record matches the {@code id} or the value is SQL {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Object, Class)
      */
@@ -634,7 +678,8 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return a Nullable containing the unique result value, or empty if no entity found
+     * @return a {@code Nullable} containing the unique result value (which holds {@code null} when the value is SQL {@code null}),
+     *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
@@ -660,7 +705,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return an Optional containing the unique non-null value, or empty if no entity found or value is null
+     * @return an {@code Optional} containing the unique non-null value, or empty if no record matches the {@code id} or the value is SQL {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -686,7 +731,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an Optional containing the unique non-null mapped value, or empty if no entity found or value is null
+     * @return an {@code Optional} containing the unique non-null mapped value, or empty if no record matches the {@code id} or the value is SQL {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Object, Class)

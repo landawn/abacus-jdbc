@@ -64,6 +64,19 @@ import com.landawn.abacus.util.stream.Stream;
  * refresh, and various primitive/Date/byte[] type conversions on top of the base {@link Dao}
  * interface.</p>
  *
+ * <p>All database operations declared here are <i>checked</i>: they propagate {@link SQLException}
+ * to the caller. For a variant whose methods instead throw the unchecked
+ * {@link com.landawn.abacus.exception.UncheckedSQLException}, see {@link UncheckedCrudDao}. For variants
+ * that forbid mutating operations, see {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDao}. When the
+ * entity's ID is a {@code long}/{@code Long}, the convenience sub-interface {@link CrudDaoL} adds
+ * primitive-{@code long} id overloads.</p>
+ *
+ * <p><b>ID semantics:</b> the entity class must declare one or more {@code @Id} properties. A single id
+ * property maps directly to the {@code <ID>} type (for example {@code Long} or {@code String}), whereas a
+ * composite (multi-column) key is represented by an {@link EntityId}. Insert operations write a
+ * database-generated key back into the entity's id property where applicable, and {@code by-id} lookups
+ * treat the supplied id as a primary-key match.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
@@ -149,7 +162,8 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * All insertable properties of the entity will be included in the INSERT statement.
      *
      * <p>If the database generates the ID (for example via an auto-increment column), the generated
-     * ID is also written back to the entity's ID property where applicable.</p>
+     * ID is retrieved, written back to the entity's ID property (where applicable) and returned. If the
+     * database does not generate a key, the entity's existing ID value is returned instead.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -330,7 +344,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalBoolean} if no record is found.
+     * Returns an empty {@code OptionalBoolean} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code false}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code false}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -342,7 +358,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalBoolean} containing the value if found, otherwise empty
+     * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForBoolean()
      */
@@ -350,7 +366,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalChar} if no record is found.
+     * Returns an empty {@code OptionalChar} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code (char) 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code (char) 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -360,7 +378,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalChar} containing the value if found, otherwise empty
+     * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForChar()
      */
@@ -368,7 +386,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a byte value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalByte} if no record is found.
+     * Returns an empty {@code OptionalByte} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -378,7 +398,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalByte} containing the value if found, otherwise empty
+     * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForByte()
      */
@@ -386,7 +406,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalShort} if no record is found.
+     * Returns an empty {@code OptionalShort} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -396,7 +418,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalShort} containing the value if found, otherwise empty
+     * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForShort()
      */
@@ -404,7 +426,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalInt} if no record is found.
+     * Returns an empty {@code OptionalInt} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -414,7 +438,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalInt} containing the value if found, otherwise empty
+     * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForInt()
      */
@@ -422,7 +446,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalLong} if no record is found.
+     * Returns an empty {@code OptionalLong} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0L}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0L}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -432,7 +458,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalLong} containing the value if found, otherwise empty
+     * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForLong()
      */
@@ -440,7 +466,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a float value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalFloat} if no record is found.
+     * Returns an empty {@code OptionalFloat} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0f}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0f}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -450,7 +478,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalFloat} containing the value if found, otherwise empty
+     * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForFloat()
      */
@@ -458,7 +486,9 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
-     * Returns an empty {@code OptionalDouble} if no record is found.
+     * Returns an empty {@code OptionalDouble} only when no record matches the given id. If a matching record's value is SQL {@code null},
+     * the returned optional is <i>present</i> and holds the primitive default ({@code 0d}); use
+     * {@link #queryForSingleValue(String, Object, Class)} to distinguish SQL {@code null} from a real {@code 0d}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -468,7 +498,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return an {@code OptionalDouble} containing the value if found, otherwise empty
+     * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForDouble()
      */

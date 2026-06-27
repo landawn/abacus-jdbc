@@ -77,7 +77,7 @@ import com.landawn.abacus.annotation.Beta;
 public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>> extends UncheckedNoUpdateDao<T, TD>, ReadOnlyDao<T, TD> {
 
     /**
-     * Unsupported save operation that always throws {@link UnsupportedOperationException}.
+     * Saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entityToSave the entity that would be saved
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
@@ -90,7 +90,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported save operation that always throws {@link UnsupportedOperationException}.
+     * Saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entityToSave the entity that would be saved
      * @param propNamesToSave the collection of property names that would be saved
@@ -104,7 +104,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported save operation that always throws {@link UnsupportedOperationException}.
+     * Saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named SQL insert statement that would be executed
      * @param entityToSave the entity that would be saved
@@ -118,7 +118,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported batch-save operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the collection of entities that would be saved
      * @throws UnsupportedOperationException always, since batch saves are not permitted in read-only mode
@@ -131,7 +131,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported batch-save operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the collection of entities that would be saved
      * @param batchSize the number of entities that would be processed per batch
@@ -145,7 +145,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported batch-save operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the collection of entities that would be saved
      * @param propNamesToSave the collection of property names that would be saved
@@ -159,7 +159,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported batch-save operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the collection of entities that would be saved
      * @param propNamesToSave the collection of property names that would be saved
@@ -175,7 +175,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported batch-save operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named SQL insert statement that would be executed
      * @param entitiesToSave the collection of entities that would be saved
@@ -189,7 +189,7 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     }
 
     /**
-     * Unsupported batch-save operation that always throws {@link UnsupportedOperationException}.
+     * Batch saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named SQL insert statement that would be executed
      * @param entitiesToSave the collection of entities that would be saved

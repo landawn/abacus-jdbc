@@ -37,6 +37,41 @@ import com.landawn.abacus.util.Throwables;
  * status transitions, and restores connection state when the transaction completes. Do not
  * close the connection manually while the transaction is active.</p>
  *
+ * <p>Instances are not created directly; obtain one from
+ * {@link JdbcUtil#beginTransaction(javax.sql.DataSource)} or one of its overloads. Each instance
+ * is bound to the thread and data source on which it was started, so transaction-aware operations
+ * (such as DAO calls and {@code JdbcUtil} queries against the same data source on that thread)
+ * automatically enlist in it.</p>
+ *
+ * <p><b>Nested scopes:</b> beginning a transaction again on the same thread and data source does
+ * not start a brand-new transaction; instead it re-enters this one and increments an internal
+ * reference count. Each scope must call {@link #commit()} or {@link #rollbackIfNotCommitted()}; the
+ * underlying JDBC {@code COMMIT}/{@code ROLLBACK} is issued only when the outermost scope completes
+ * (the reference count reaches zero). If any inner scope rolls back, the transaction is marked
+ * rollback-only and the outermost commit is converted into a rollback. A nested scope may request a
+ * different isolation level, which is pushed onto a stack and restored when that scope exits.</p>
+ *
+ * <p>This class implements {@link AutoCloseable}; {@link #close()} simply delegates to
+ * {@link #rollbackIfNotCommitted()}, making it safe to use in a try-with-resources block.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * try {
+ *     dao.save(entity);
+ *     dao.update(anotherEntity);
+ *     tran.commit();
+ * } finally {
+ *     tran.rollbackIfNotCommitted(); // no-op after a successful commit
+ * }
+ *
+ * // Or, using try-with-resources:
+ * try (SqlTransaction tran2 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE)) {
+ *     dao.save(entity);
+ *     tran2.commit();
+ * } // close() rolls back automatically if commit() was not reached
+ * }</pre>
+ *
  * @see Transaction
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel)
@@ -153,6 +188,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * Returns the unique identifier of this transaction.
      * The ID includes timestamp information to ensure uniqueness across time.
      *
+     * <p>This same value backs {@link #equals(Object)}, {@link #hashCode()}, and
+     * {@link #toString()}, and appears in this class's log messages, so it can be used to correlate
+     * a transaction across logs.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
@@ -198,6 +237,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     /**
      * Returns the isolation level of this transaction.
      * The isolation level determines how this transaction interacts with other concurrent transactions.
+     *
+     * <p>While nested scopes are active, this reflects the isolation level of the current
+     * (innermost) scope, which may differ from the level supplied to the outermost scope; the
+     * previous level is restored as each nested scope exits.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -477,6 +520,15 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p>This method is particularly useful in finally blocks or cleanup code
      * where you want to ensure a transaction is not left in an active state.
      * It will do nothing if the transaction has already been committed or rolled back.</p>
+     *
+     * <p>Immediately after an explicit {@link #commit()} or {@link #rollback()} on this scope, the
+     * first call to this method is a deliberate no-op: it consumes a one-shot latch set by that
+     * commit/rollback rather than decrementing the scope reference count a second time. This is what
+     * makes the common idiom of {@code commit()} at the end of a {@code try} block followed by
+     * {@code rollbackIfNotCommitted()} in the {@code finally} block safe.</p>
+     *
+     * <p>For a nested (non-outermost) scope this method marks the transaction
+     * {@link Status#MARKED_ROLLBACK} and defers the actual rollback to the outermost scope.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -226,6 +226,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final DataSource ds, final String tableName) {
@@ -252,6 +253,7 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
@@ -329,6 +331,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final Connection conn, final String tableName) {
@@ -353,6 +356,7 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
@@ -932,6 +936,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateSelectSql(final DataSource ds, final String tableName) throws UncheckedSQLException {
@@ -959,6 +964,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateSelectSql(final Connection conn, final String tableName) {
@@ -991,9 +997,10 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the SELECT statement
-     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Can be {@code null} or empty to include all columns
+     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateSelectSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final String whereClause)
@@ -1021,9 +1028,10 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the SELECT statement
-     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Can be {@code null} or empty to include all columns
+     * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
@@ -1066,6 +1074,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException {
@@ -1092,6 +1101,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateInsertSql(final Connection conn, final String tableName) {
@@ -1125,8 +1135,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the INSERT statement
-     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with positional parameters for all included columns
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames)
@@ -1153,8 +1164,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the INSERT statement
-     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with positional parameters for all included columns
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateInsertSql(Connection, String)
      * @see #generateInsertSql(DataSource, String, Collection)
@@ -1198,6 +1210,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException {
@@ -1224,6 +1237,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) {
@@ -1258,8 +1272,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named INSERT statement
-     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames)
@@ -1286,8 +1301,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named INSERT statement
-     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateNamedInsertSql(Connection, String)
      * @see #generateNamedInsertSql(DataSource, String, Collection)
@@ -1332,6 +1348,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException {
@@ -1360,6 +1377,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) {
@@ -1392,8 +1410,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause
+     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
+     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException {
@@ -1418,8 +1437,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause
+     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
+     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
@@ -1466,10 +1486,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(Connection, String, Collection, Collection, String)
@@ -1506,10 +1527,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
@@ -1576,6 +1598,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException {
@@ -1605,6 +1628,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
@@ -1640,8 +1664,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause
+     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
+     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException {
@@ -1666,8 +1691,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause
+     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
+     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
@@ -1714,10 +1740,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames,
@@ -1751,10 +1778,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateNamedUpdateSql(Connection, String, String)
      * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)

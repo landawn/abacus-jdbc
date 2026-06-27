@@ -553,6 +553,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code ResultExtractor} that produces a custom {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code supplier} is {@code null}
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Supplier<? extends M> supplier) {
@@ -579,6 +580,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param mergeFunction a function to resolve collisions between values associated with the same key
          * @return a {@code ResultExtractor} that produces a {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code mergeFunction} is {@code null}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -611,6 +613,7 @@ public final class Jdbc {
          * @param mergeFunction a function to resolve collisions between values associated with the same key
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code ResultExtractor} that produces a custom {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, {@code mergeFunction}, or {@code supplier} is {@code null}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -645,6 +648,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code RowMapper} to extract the value from each row, which is then fed into the collector
          * @param downstream the {@code Collector} to process values associated with each key
          * @return a {@code ResultExtractor} that produces a {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code downstream} is {@code null}
          * @see #groupTo(RowMapper, RowMapper, Collector)
          * @deprecated Replaced by {@link #groupTo(RowMapper, RowMapper, Collector)} which has a more descriptive name.
          */
@@ -667,6 +671,7 @@ public final class Jdbc {
          * @param downstream the {@code Collector} to process values associated with each key
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code ResultExtractor} that produces a custom {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, {@code downstream}, or {@code supplier} is {@code null}
          * @see #groupTo(RowMapper, RowMapper, Collector, Supplier)
          * @deprecated Replaced by {@link #groupTo(RowMapper, RowMapper, Collector, Supplier)} which has a more descriptive name.
          */
@@ -694,6 +699,7 @@ public final class Jdbc {
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @return a {@code ResultExtractor} that produces a {@code ListMultimap}
+         * @throws IllegalArgumentException if {@code keyExtractor} or {@code valueExtractor} is {@code null}
          */
         static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return toMultimap(keyExtractor, valueExtractor, Suppliers.ofListMultimap());
@@ -721,6 +727,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param multimapSupplier a {@code Supplier} that provides a new, empty {@code Multimap} instance
          * @return a {@code ResultExtractor} that produces a custom {@code Multimap}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code multimapSupplier} is {@code null}
          */
         static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<? extends K> keyExtractor,
                 final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
@@ -756,6 +763,7 @@ public final class Jdbc {
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @return a {@code ResultExtractor} that produces a {@code Map} with {@code List} values
+         * @throws IllegalArgumentException if {@code keyExtractor} or {@code valueExtractor} is {@code null}
          */
         static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.ofMap());
@@ -772,6 +780,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code ResultExtractor} that produces a custom {@code Map} with {@code List} values
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code supplier} is {@code null}
          */
         static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor,
                 final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
@@ -816,6 +825,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param downstream the {@code Collector} for aggregating values associated with each key
          * @return a {@code ResultExtractor} that produces a {@code Map} with collected values
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code downstream} is {@code null}
          */
         static <K, V, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
@@ -846,6 +856,7 @@ public final class Jdbc {
          * @param downstream the {@code Collector} for aggregating values associated with each key
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code ResultExtractor} that produces a custom {@code Map} with collected values
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, {@code downstream}, or {@code supplier} is {@code null}
          */
         static <K, V, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
@@ -896,7 +907,7 @@ public final class Jdbc {
          * }</pre>
          *
          * @param <T> list element type
-         * @param rowMapper the function to map each row to an element
+         * @param rowMapper the function to map each row to an element; must not be {@code null}
          * @return a {@code ResultExtractor} that produces a {@code List}
          * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
          */
@@ -1080,6 +1091,7 @@ public final class Jdbc {
          *
          * @param entityClassForExtractor the class used to map column names to property types
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
+         * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null}
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor) {
             N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
@@ -1102,6 +1114,7 @@ public final class Jdbc {
          * @param entityClassForExtractor the class used to map fields from columns
          * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name.
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
+         * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null}
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
             N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
@@ -1304,6 +1317,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code BiResultExtractor} that produces a custom {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code supplier} is {@code null}
          */
         static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
@@ -1329,6 +1343,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param mergeFunction a function to resolve collisions for the same key
          * @return a {@code BiResultExtractor} that produces a {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code mergeFunction} is {@code null}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -1362,6 +1377,7 @@ public final class Jdbc {
          * @param mergeFunction a function to resolve collisions for the same key
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code BiResultExtractor} that produces a custom {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, {@code mergeFunction}, or {@code supplier} is {@code null}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -1395,6 +1411,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param downstream the {@code Collector} to process values for each key
          * @return a {@code BiResultExtractor} that produces a {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code downstream} is {@code null}
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector)
          * @deprecated Replaced by {@link #groupTo(BiRowMapper, BiRowMapper, Collector)} which has a more descriptive name.
          */
@@ -1417,6 +1434,7 @@ public final class Jdbc {
          * @param downstream the {@code Collector} to process values for each key
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code BiResultExtractor} that produces a custom {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, {@code downstream}, or {@code supplier} is {@code null}
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)
          * @deprecated Replaced by {@link #groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)} which has a more descriptive name.
          */
@@ -1443,6 +1461,7 @@ public final class Jdbc {
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @return a {@code BiResultExtractor} that produces a {@code ListMultimap}
+         * @throws IllegalArgumentException if {@code keyExtractor} or {@code valueExtractor} is {@code null}
          */
         static <K, V> BiResultExtractor<ListMultimap<K, V>> toMultimap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor) {
@@ -1460,6 +1479,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param multimapSupplier a {@code Supplier} that provides a new, empty {@code Multimap} instance
          * @return a {@code BiResultExtractor} that produces a custom {@code Multimap}
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code multimapSupplier} is {@code null}
          */
         static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> BiResultExtractor<M> toMultimap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
@@ -1480,13 +1500,23 @@ public final class Jdbc {
 
         /**
          * Creates a {@code BiResultExtractor} that groups rows into a {@code Map} where each key is
-         * associated with a {@code List} of values.
+         * associated with a {@code List} of values. Values are added to each key's list in the order
+         * the rows are read from the {@code ResultSet}.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Group employee names by their department
+         * BiResultExtractor<Map<String, List<String>>> extractor = BiResultExtractor.groupTo(
+         *     (rs, cols) -> rs.getString("department"),
+         *     (rs, cols) -> rs.getString("name"));
+         * }</pre>
          *
          * @param <K> map key type
          * @param <V> map value type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @return a {@code BiResultExtractor} that produces a {@code Map} with {@code List} values
+         * @throws IllegalArgumentException if {@code keyExtractor} or {@code valueExtractor} is {@code null}
          */
         static <K, V> BiResultExtractor<Map<K, List<V>>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.ofMap());
@@ -1494,7 +1524,17 @@ public final class Jdbc {
 
         /**
          * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Map} where each key is
-         * associated with a {@code List} of values.
+         * associated with a {@code List} of values. The supplied map controls iteration order and concrete
+         * map type (e.g., {@code LinkedHashMap} to preserve key insertion order, {@code TreeMap} to sort keys).
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Group values into a LinkedHashMap to preserve key insertion order
+         * BiResultExtractor<LinkedHashMap<String, List<Integer>>> extractor = BiResultExtractor.groupTo(
+         *     (rs, cols) -> rs.getString("category"),
+         *     (rs, cols) -> rs.getInt("value"),
+         *     LinkedHashMap::new);
+         * }</pre>
          *
          * @param <K> map key type
          * @param <V> map value type
@@ -1503,6 +1543,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code BiResultExtractor} that produces a custom {@code Map} with {@code List} values
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code supplier} is {@code null}
          */
         static <K, V, M extends Map<K, List<V>>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
@@ -1546,6 +1587,7 @@ public final class Jdbc {
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param downstream the {@code Collector} for aggregating values associated with each key
          * @return a {@code BiResultExtractor} that produces a {@code Map} with collected values
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, or {@code downstream} is {@code null}
          */
         static <K, V, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
@@ -1575,6 +1617,7 @@ public final class Jdbc {
          * @param downstream the {@code Collector} for aggregating values associated with each key
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
          * @return a {@code BiResultExtractor} that produces a custom {@code Map} with collected values
+         * @throws IllegalArgumentException if {@code keyExtractor}, {@code valueExtractor}, {@code downstream}, or {@code supplier} is {@code null}
          */
         static <K, V, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
@@ -1846,6 +1889,7 @@ public final class Jdbc {
          *
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
          * @return a stateful {@code RowMapper} that maps a row to an {@code Object[]}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -1890,6 +1934,7 @@ public final class Jdbc {
          *
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
          * @return a stateful {@code RowMapper} that maps a row to a {@code List<Object>}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -1921,6 +1966,7 @@ public final class Jdbc {
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
          * @param supplier a function that takes the column count and returns a new {@code Collection} instance
          * @return a stateful {@code RowMapper} that maps a row to a {@code Collection}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -2327,6 +2373,7 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column
              * @param type the target class type to convert the column value to
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getObject(final int columnIndex, final Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
@@ -2948,7 +2995,9 @@ public final class Jdbc {
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}, or if a non-trivial
+         *         {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
+         *         single-column scalar {@code targetClass} (which does not support filtering or conversion).
          */
         @SequentialOnly
         @Stateful
@@ -3440,6 +3489,7 @@ public final class Jdbc {
          *                    as the second argument; only entries for which this predicate returns {@code true} are included
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a {@code BiRowMapper} that produces a filtered {@code Map}
+         * @throws IllegalArgumentException if {@code valueFilter} or {@code mapSupplier} is {@code null}
          */
         static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
@@ -3492,6 +3542,7 @@ public final class Jdbc {
          *                    as the second argument; only entries for which this predicate returns {@code true} are included
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a new stateful {@code BiRowMapper}.
+         * @throws IllegalArgumentException if {@code rowExtractor}, {@code valueFilter}, or {@code mapSupplier} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -3550,6 +3601,7 @@ public final class Jdbc {
          *
          * @param columnNameConverter a function to transform column names into map keys
          * @return a new stateful {@code BiRowMapper}.
+         * @throws IllegalArgumentException if {@code columnNameConverter} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -3579,6 +3631,7 @@ public final class Jdbc {
          * @param columnNameConverter a function to transform column names into map keys
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a new stateful {@code BiRowMapper}.
+         * @throws IllegalArgumentException if {@code columnNameConverter} or {@code mapSupplier} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -3631,6 +3684,7 @@ public final class Jdbc {
          *
          * @param rowExtractor the custom extractor to get values from the {@code ResultSet} row
          * @return a new stateful {@code BiRowMapper}.
+         * @throws IllegalArgumentException if {@code rowExtractor} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -3686,6 +3740,7 @@ public final class Jdbc {
          * @param columnNameConverter a function to transform column names into map keys
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a new stateful {@code BiRowMapper}.
+         * @throws IllegalArgumentException if {@code rowExtractor}, {@code columnNameConverter}, or {@code mapSupplier} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -3731,6 +3786,7 @@ public final class Jdbc {
          *
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
          * @return a {@code BiRowMapper} that produces an {@code Object[]}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
         static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
@@ -3754,6 +3810,7 @@ public final class Jdbc {
          *
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
          * @return a {@code BiRowMapper} that produces a {@code List<Object>}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
         static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
@@ -3767,6 +3824,7 @@ public final class Jdbc {
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
          * @param supplier a function that takes the column count and returns a new {@code Collection} instance
          * @return a {@code BiRowMapper} that produces a {@code Collection}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
         static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
@@ -3981,6 +4039,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getBoolean(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BOOLEAN);
@@ -3991,6 +4050,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getByte(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BYTE);
@@ -4001,6 +4061,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getShort(final String columnName) {
                 return get(columnName, ColumnGetter.GET_SHORT);
@@ -4011,6 +4072,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getInt(final String columnName) {
                 return get(columnName, ColumnGetter.GET_INT);
@@ -4021,6 +4083,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getLong(final String columnName) {
                 return get(columnName, ColumnGetter.GET_LONG);
@@ -4031,6 +4094,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getFloat(final String columnName) {
                 return get(columnName, ColumnGetter.GET_FLOAT);
@@ -4041,6 +4105,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getDouble(final String columnName) {
                 return get(columnName, ColumnGetter.GET_DOUBLE);
@@ -4051,6 +4116,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getBigDecimal(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BIG_DECIMAL);
@@ -4061,6 +4127,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getString(final String columnName) {
                 return get(columnName, ColumnGetter.GET_STRING);
@@ -4071,6 +4138,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getDate(final String columnName) {
                 return get(columnName, ColumnGetter.GET_DATE);
@@ -4081,6 +4149,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getTime(final String columnName) {
                 return get(columnName, ColumnGetter.GET_TIME);
@@ -4091,6 +4160,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getTimestamp(final String columnName) {
                 return get(columnName, ColumnGetter.GET_TIMESTAMP);
@@ -4128,6 +4198,7 @@ public final class Jdbc {
              * @param columnName the name of the column
              * @param type the target class type to convert the column value to
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) {
                 return get(columnName, ColumnGetter.get(type));
@@ -4494,6 +4565,16 @@ public final class Jdbc {
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
          * Do not store references to it. This consumer should not be reused across different queries
          * with varying column counts or used in parallel streams.</p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Efficiently process each row without allocating a new array per row.
+         * RowConsumer consumer = RowConsumer.oneOff(rowValues -> {
+         *     // 'rowValues' is a reusable view of the current row's column values; do not store a reference to it.
+         *     System.out.println(rowValues);
+         * });
+         * preparedQuery.forEach(consumer);
+         * }</pre>
          *
          * @param consumer the consumer to process the {@code DisposableObjArray} for each row.
          * @return a new stateful {@code RowConsumer}.
@@ -5272,6 +5353,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getBoolean(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BOOLEAN);
@@ -5282,6 +5364,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getByte(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BYTE);
@@ -5292,6 +5375,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getShort(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_SHORT);
@@ -5302,6 +5386,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getInt(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_INT);
@@ -5312,6 +5397,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getLong(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_LONG);
@@ -5322,6 +5408,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getFloat(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_FLOAT);
@@ -5332,6 +5419,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getDouble(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DOUBLE);
@@ -5342,6 +5430,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getBigDecimal(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
@@ -5352,6 +5441,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getString(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_STRING);
@@ -5362,6 +5452,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getDate(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DATE);
@@ -5372,6 +5463,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getTime(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIME);
@@ -5382,6 +5474,7 @@ public final class Jdbc {
              *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
             public RowExtractorBuilder getTimestamp(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
@@ -5411,6 +5504,7 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column.
              * @param type the class type to which the column value should be converted.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive, or {@code type} is {@code null}.
              */
             public RowExtractorBuilder getObject(final int columnIndex, final Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
@@ -5418,6 +5512,16 @@ public final class Jdbc {
 
             /**
              * Configures the extractor to use a custom {@code ColumnGetter} for the specified column.
+             * This is the underlying method that all other {@code getXxx} configuration methods delegate to.
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * // Apply a custom transformation to column 2 (uppercase its String value).
+             * RowExtractor extractor = RowExtractor.builder()
+             *     .getInt(1)
+             *     .get(2, (rs, columnIndex) -> rs.getString(columnIndex).toUpperCase())
+             *     .build();
+             * }</pre>
              *
              * @param columnIndex the 1-based index of the column.
              * @param columnGetter the custom {@code ColumnGetter} to use for this column.
@@ -5620,6 +5724,13 @@ public final class Jdbc {
         /**
          * Retrieves a cached or creates a new {@code ColumnGetter} for the specified class type.
          * It leverages Abacus-common's {@code Type} system to determine the appropriate extraction method.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * ColumnGetter<LocalDate> getter = ColumnGetter.get(LocalDate.class);
+         * // Extract the value from the 3rd column (1-based) of the current row.
+         * LocalDate value = getter.apply(resultSet, 3); // throws SQLException
+         * }</pre>
          *
          * @param <T> target type
          * @param cls the class for which to get a {@code ColumnGetter}. Must not be {@code null}.
@@ -6406,7 +6517,9 @@ public final class Jdbc {
          *
          * @param handlerClass the handler class to instantiate and register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
-         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
+         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if it is abstract or otherwise cannot be
+         *         instantiated (e.g. it has no accessible no-argument constructor). The reflective instantiation is performed
+         *         by {@code N.newInstance(Class)}.
          */
         public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {
             N.checkArgNotNull(handlerClass, cs.handlerClass);
@@ -6563,9 +6676,15 @@ public final class Jdbc {
          * HandlerFactory.getOrCreate((Class<? extends Handler<?>>) null); // throws IllegalArgumentException
          * }</pre>
          *
+         * <p>When a new instance has to be created, this method is race-safe: if another thread registers its own
+         * instance for the same qualifier first, the already-registered instance is returned so that all callers
+         * observe the same once-per-qualifier handler.</p>
+         *
          * @param handlerClass the class of the handler to retrieve or create.
-         * @return the existing or newly created handler instance.
-         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
+         * @return the existing or newly created handler instance. May be {@code null} only if {@code N.newInstance} returns
+         *         {@code null} for the given class.
+         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if a new instance has to be created and
+         *         the class is abstract or otherwise cannot be instantiated (e.g. it has no accessible no-argument constructor).
          */
         public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, cs.handlerClass);
@@ -6765,7 +6884,19 @@ public final class Jdbc {
          * Retrieves a cached result. The implementation can use the provided parameters to customize
          * the cache key generation if needed.
          *
-         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A return value of
+         * {@code null} is treated as a cache miss by the framework, so implementations should not store
+         * {@code null} results.</p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * DaoCache cache = DaoCache.create(1000, 3000);
+         * // defaultCacheKey format: fullMethodName#tableName#jsonArrayOfParameters
+         * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig);
+         * if (hit == null) {
+         *     // cache miss: execute the query and populate the cache via put(...)
+         * }
+         * }</pre>
          *
          * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters).
          * @param daoProxy the DAO proxy instance on which the method was called.
@@ -6778,7 +6909,17 @@ public final class Jdbc {
         /**
          * Caches a result with default time-to-live (TTL) settings.
          *
-         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result}
+         * is typically rejected (and not cached), since {@code null} is indistinguishable from a cache miss in
+         * {@link #get(String, Object, Object[], Tuple3)}.</p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * DaoCache cache = DaoCache.create(1000, 3000);
+         * User user = ...; // result of a query
+         * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
+         * // cached == true when the non-null result was stored
+         * }</pre>
          *
          * @param defaultCacheKey the default cache key.
          * @param result the method result to cache.
@@ -6792,7 +6933,17 @@ public final class Jdbc {
         /**
          * Caches a result with custom time-to-live (TTL) and idle time settings.
          *
-         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result}
+         * is typically rejected (and not cached). Whether {@code liveTime}/{@code maxIdleTime} are honored depends on
+         * the implementation; map-backed caches such as {@link DaoCacheByMap} ignore them.</p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * DaoCache cache = DaoCache.create(1000, 3000);
+         * User user = ...;
+         * // Cache for at most 60 seconds, evicting after 10 seconds of inactivity.
+         * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, 60_000L, 10_000L, daoProxy, args, sig);
+         * }</pre>
          *
          * @param defaultCacheKey the default cache key.
          * @param result the method result to cache.
@@ -6810,7 +6961,18 @@ public final class Jdbc {
          * Updates the cache after a data modification operation (e.g., insert, update, delete). This method
          * is responsible for invalidating or clearing cache entries that may be affected by the operation.
          *
-         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. Typical implementations
+         * invalidate every entry whose key references the affected table (parsed from {@code defaultCacheKey}), or
+         * clear the whole cache when the table name cannot be determined.</p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * DaoCache cache = DaoCache.create(1000, 3000);
+         * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
+         * // After updating the "users" table, invalidate the cached entries for that table.
+         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
+         * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null
+         * }</pre>
          *
          * @param defaultCacheKey the default cache key from the modification method.
          * @param result the result of the modification operation (e.g., number of rows affected).
@@ -6854,6 +7016,17 @@ public final class Jdbc {
             pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay);
         }
 
+        /**
+         * Retrieves a previously cached result from the backing {@link KeyedObjectPool}.
+         * The {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused by this
+         * implementation; only {@code defaultCacheKey} is consulted.
+         *
+         * @param defaultCacheKey the cache key (fullMethodName#tableName#jsonArrayOfParameters).
+         * @param daoProxy the DAO proxy instance (unused).
+         * @param args the method arguments (unused).
+         * @param methodSignature a tuple containing method metadata (unused).
+         * @return the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted).
+         */
         @Override
         @SuppressWarnings("unused")
         public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
@@ -6863,6 +7036,23 @@ public final class Jdbc {
             return w == null ? null : w.value();
         }
 
+        /**
+         * Caches a result using the framework default TTL ({@code JdbcUtil.DEFAULT_CACHE_LIVE_TIME}) and
+         * default max idle time ({@code JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME}).
+         *
+         * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned, so that a cached
+         * value can never be confused with a miss in {@link #get(String, Object, Object[], Tuple3)}. The
+         * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p>
+         *
+         * @param defaultCacheKey the cache key; must not be {@code null}.
+         * @param result the method result to cache; if {@code null}, nothing is cached.
+         * @param daoProxy the DAO proxy instance (unused).
+         * @param args the method arguments (unused).
+         * @param methodSignature a tuple containing method metadata (unused).
+         * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null}
+         *         or the backing pool rejected the entry.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         */
         @Override
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
@@ -6879,6 +7069,23 @@ public final class Jdbc {
             return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME));
         }
 
+        /**
+         * Caches a result with the given time-to-live and max idle time, honored by the backing {@link KeyedObjectPool}.
+         *
+         * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned. The
+         * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p>
+         *
+         * @param defaultCacheKey the cache key; must not be {@code null}.
+         * @param result the method result to cache; if {@code null}, nothing is cached.
+         * @param liveTime the maximum time in milliseconds the entry should live in the cache.
+         * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted.
+         * @param daoProxy the DAO proxy instance (unused).
+         * @param args the method arguments (unused).
+         * @param methodSignature a tuple containing method metadata (unused).
+         * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null}
+         *         or the backing pool rejected the entry.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
@@ -6893,8 +7100,10 @@ public final class Jdbc {
 
         /**
          * Implements cache invalidation. If the table name can be determined from the cache key,
-         * it removes all cache entries associated with that table. Otherwise, it clears the entire cache.
-         * No action is taken for update operations that affect zero rows.
+         * it removes all cache entries whose key references that table (matched case-insensitively).
+         * Otherwise, it clears the entire cache.
+         * No action is taken for built-in update operations that report zero affected rows (an
+         * {@code int}/{@code long} result of {@code 0}). The {@code daoProxy} and {@code args} arguments are unused.
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -6906,6 +7115,11 @@ public final class Jdbc {
          * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted)
          * }</pre>
          *
+         * @param defaultCacheKey the cache key from the modification method (used to extract the affected table name).
+         * @param result the result of the modification operation; a zero row count for a built-in update is treated as a no-op.
+         * @param daoProxy the DAO proxy instance (unused).
+         * @param args the method arguments (unused).
+         * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit.
          */
         @Override
         @SuppressWarnings("unused")

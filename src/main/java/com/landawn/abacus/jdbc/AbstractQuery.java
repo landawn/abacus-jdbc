@@ -8916,6 +8916,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param rowConsumer the consumer to apply to each row's DisposableObjArray. Must not be {@code null}.
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if rowConsumer is null
      * @throws SQLException if a database access error occurs
      * @see RowConsumer#oneOff(Consumer)
@@ -8966,6 +8967,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param entityClass the class used to determine proper types for column value retrieval. Must not be {@code null}.
      * @param rowConsumer the consumer to apply to each row's DisposableObjArray. Must not be {@code null}.
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if entityClass or rowConsumer is null
      * @throws SQLException if a database access error occurs
      * @see RowConsumer#oneOff(Class, Consumer)

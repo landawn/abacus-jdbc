@@ -65,10 +65,8 @@ public interface UncheckedNoUpdateCrudDaoL<T, TD extends UncheckedNoUpdateCrudDa
         extends UncheckedNoUpdateCrudDao<T, Long, TD>, UncheckedCrudDaoL<T, TD> {
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * This {@code long}-keyed single-property update overload is disallowed by
-     * {@code UncheckedNoUpdateCrudDaoL} because it would mutate an existing record,
-     * violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDaoL}; this method always throws {@link UnsupportedOperationException}.
+     * Single-property updates by primitive {@code long} ID would mutate a stored record, violating the read/insert-only contract.
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
@@ -84,10 +82,8 @@ public interface UncheckedNoUpdateCrudDaoL<T, TD extends UncheckedNoUpdateCrudDa
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * This {@code long}-keyed multi-property update overload is disallowed by
-     * {@code UncheckedNoUpdateCrudDaoL} because it would mutate an existing record,
-     * violating the read/insert-only contract.
+     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDaoL}; this method always throws {@link UnsupportedOperationException}.
+     * Multi-property updates by primitive {@code long} ID would mutate a stored record, violating the read/insert-only contract.
      *
      * @param updateProps a map of property names to their new values
      * @param id the primitive {@code long} ID of the entity to update
@@ -102,10 +98,8 @@ public interface UncheckedNoUpdateCrudDaoL<T, TD extends UncheckedNoUpdateCrudDa
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * This {@code long}-keyed delete-by-id overload is disallowed by
-     * {@code UncheckedNoUpdateCrudDaoL} because it would remove an existing record,
-     * violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDaoL}; this method always throws {@link UnsupportedOperationException}.
+     * Deleting by primitive {@code long} ID would remove a stored record, violating the read/insert-only contract.
      *
      * @param id the primitive {@code long} ID of the entity to delete
      * @return never returns normally

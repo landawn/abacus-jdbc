@@ -259,16 +259,17 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Custom {@link PreparedStatement} creators bypass the SQL-kind check enforced by
-     * {@code NoUpdateDao}, so this overload is disallowed entirely to preserve the
+     * Custom statement creation is not permitted in a {@code NoUpdateDao}; this method always
+     * throws {@link UnsupportedOperationException}.
+     * Custom {@link PreparedStatement} creators bypass the {@code SELECT}/{@code INSERT} SQL-kind
+     * check enforced by {@code NoUpdateDao}, so this overload is disabled entirely to preserve the
      * read/insert-only contract.
      *
      * @param query the SQL query string
      * @param stmtCreator custom statement creator function
      * @return never returns normally
      * @throws UnsupportedOperationException always, since custom statement creation is not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Custom statement creators are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; custom statement creators are not permitted
      */
     @Deprecated
     @NonDBOperation
@@ -435,16 +436,17 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Custom {@link PreparedStatement} creators bypass the SQL-kind check enforced by
-     * {@code NoUpdateDao}, so this overload is disallowed entirely to preserve the
+     * Custom statement creation is not permitted in a {@code NoUpdateDao}; this method always
+     * throws {@link UnsupportedOperationException}.
+     * Custom {@link PreparedStatement} creators bypass the {@code SELECT}/{@code INSERT} SQL-kind
+     * check enforced by {@code NoUpdateDao}, so this overload is disabled entirely to preserve the
      * read/insert-only contract.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param stmtCreator custom statement creator function
      * @return never returns normally
      * @throws UnsupportedOperationException always, since custom statement creation is not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Custom statement creators are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; custom statement creators are not permitted
      */
     @Deprecated
     @NonDBOperation
@@ -637,16 +639,17 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Custom {@link PreparedStatement} creators bypass the SQL-kind check enforced by
-     * {@code NoUpdateDao}, so this overload is disallowed entirely to preserve the
+     * Custom statement creation is not permitted in a {@code NoUpdateDao}; this method always
+     * throws {@link UnsupportedOperationException}.
+     * Custom {@link PreparedStatement} creators bypass the {@code SELECT}/{@code INSERT} SQL-kind
+     * check enforced by {@code NoUpdateDao}, so this overload is disabled entirely to preserve the
      * read/insert-only contract.
      *
      * @param namedQuery the pre-parsed SQL query object
      * @param stmtCreator custom statement creator function
      * @return never returns normally
      * @throws UnsupportedOperationException always, since custom statement creation is not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Custom statement creators are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; custom statement creators are not permitted
      */
     @Deprecated
     @NonDBOperation
@@ -657,15 +660,15 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Stored-procedure ({@code CALL}) execution may have arbitrary side effects, including
-     * updates and deletes, so it is disallowed by {@code NoUpdateDao} to preserve the
-     * read/insert-only contract.
+     * Callable (stored-procedure) queries are not permitted in a {@code NoUpdateDao}; this method
+     * always throws {@link UnsupportedOperationException}.
+     * Stored-procedure ({@code CALL}) execution may have arbitrary side effects, including updates
+     * and deletes, so it is disabled by {@code NoUpdateDao} to preserve the read/insert-only contract.
      *
      * @param query the stored procedure call string
      * @return never returns normally
      * @throws UnsupportedOperationException always, since callable queries are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Callable queries are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; callable queries are not permitted
      */
     @Deprecated
     @NonDBOperation
@@ -675,16 +678,16 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Stored-procedure ({@code CALL}) execution may have arbitrary side effects, including
-     * updates and deletes, so it is disallowed by {@code NoUpdateDao} to preserve the
-     * read/insert-only contract.
+     * Callable (stored-procedure) queries are not permitted in a {@code NoUpdateDao}; this method
+     * always throws {@link UnsupportedOperationException}.
+     * Stored-procedure ({@code CALL}) execution may have arbitrary side effects, including updates
+     * and deletes, so it is disabled by {@code NoUpdateDao} to preserve the read/insert-only contract.
      *
      * @param query the stored procedure call string
      * @param stmtCreator custom callable statement creator function
      * @return never returns normally
      * @throws UnsupportedOperationException always, since callable queries are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Callable queries are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; callable queries are not permitted
      */
     @Deprecated
     @NonDBOperation
@@ -695,16 +698,17 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Single-property condition-based updates are disallowed by {@code NoUpdateDao} because
-     * they would mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code NoUpdateDao}; this method always throws
+     * {@link UnsupportedOperationException}.
+     * Single-property condition-based updates would mutate existing records, violating the
+     * read/insert-only contract of {@code NoUpdateDao}.
      *
      * @param propName the name of the property to update
      * @param propValue the new value for the property
      * @param cond the condition to identify records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Updates are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; updates are not permitted
      */
     @Override
     @Deprecated
@@ -713,15 +717,16 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Multi-property condition-based updates are disallowed by {@code NoUpdateDao} because
-     * they would mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code NoUpdateDao}; this method always throws
+     * {@link UnsupportedOperationException}.
+     * Multi-property condition-based updates would mutate existing records, violating the
+     * read/insert-only contract of {@code NoUpdateDao}.
      *
      * @param updateProps a map of property names to their new values
      * @param cond the condition to identify records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Updates are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; updates are not permitted
      */
     @Deprecated
     @Override
@@ -730,15 +735,16 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Entity-based condition updates are disallowed by {@code NoUpdateDao} because they
-     * would mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code NoUpdateDao}; this method always throws
+     * {@link UnsupportedOperationException}.
+     * Entity-based condition updates would mutate existing records, violating the
+     * read/insert-only contract of {@code NoUpdateDao}.
      *
      * @param entity the entity containing values to update
      * @param cond the condition to identify records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Updates are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; updates are not permitted
      */
     @Deprecated
     @Override
@@ -747,16 +753,17 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Selective entity-based condition updates are disallowed by {@code NoUpdateDao} because
-     * they would mutate existing records, violating the read/insert-only contract.
+     * Updating is not permitted in a {@code NoUpdateDao}; this method always throws
+     * {@link UnsupportedOperationException}.
+     * Selective entity-based condition updates would mutate existing records, violating the
+     * read/insert-only contract of {@code NoUpdateDao}.
      *
      * @param entity the entity containing values to update
      * @param propNamesToUpdate collection of property names to update from the entity
      * @param cond the condition to identify records to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Updates are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; updates are not permitted
      */
     @Deprecated
     @Override
@@ -765,7 +772,8 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserting is not permitted in a {@code NoUpdateDao}; this method always throws
+     * {@link UnsupportedOperationException}.
      * Upserts perform an update when a matching record exists, which violates the
      * read/insert-only contract of {@code NoUpdateDao}.
      *
@@ -773,7 +781,7 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
      * @param uniquePropNamesForQuery the list of property names to determine uniqueness
      * @return never returns normally
      * @throws UnsupportedOperationException always, since upserts are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Upserts are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; upserts are not permitted
      */
     @Deprecated
     @Override
@@ -782,7 +790,8 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserting is not permitted in a {@code NoUpdateDao}; this method always throws
+     * {@link UnsupportedOperationException}.
      * Upserts perform an update when a matching record exists, which violates the
      * read/insert-only contract of {@code NoUpdateDao}.
      *
@@ -790,7 +799,7 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
      * @param cond the condition to check whether the record exists
      * @return never returns normally
      * @throws UnsupportedOperationException always, since upserts are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Upserts are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; upserts are not permitted
      */
     @Deprecated
     @Override
@@ -799,14 +808,15 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
-     * Condition-based deletes are disallowed by {@code NoUpdateDao} because they would
-     * remove existing records, violating the read/insert-only contract.
+     * Deleting is not permitted in a {@code NoUpdateDao}; this method always throws
+     * {@link UnsupportedOperationException}.
+     * Condition-based deletes would remove existing records, violating the read/insert-only
+     * contract of {@code NoUpdateDao}.
      *
      * @param cond the condition to identify records to delete
      * @return never returns normally
      * @throws UnsupportedOperationException always, since deletes are not permitted
-     * @deprecated Unsupported in {@code NoUpdateDao}. Deletes are not allowed.
+     * @deprecated unsupported in a {@code NoUpdateDao}; deletes are not permitted
      */
     @Deprecated
     @Override

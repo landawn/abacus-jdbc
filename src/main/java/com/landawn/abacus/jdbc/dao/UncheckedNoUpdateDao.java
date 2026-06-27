@@ -78,7 +78,7 @@ import com.landawn.abacus.query.condition.Condition;
 public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>> extends UncheckedDao<T, TD>, NoUpdateDao<T, TD> {
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
      * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param propName the property name to update
@@ -95,7 +95,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
      * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param updateProps a map of property names to their new values
@@ -111,7 +111,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
      * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param entity the entity containing values to update
@@ -127,7 +127,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
      * Condition-based updates mutate existing records, which is disabled in this DAO type.
      *
      * @param entity the entity containing values to update
@@ -144,7 +144,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserting is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
      * Upsert requires update capability, which is disabled in this DAO type.
      *
      * @param entity the entity to upsert
@@ -160,7 +160,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserting is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
      * Upsert requires update capability, which is disabled in this DAO type.
      *
      * @param entity the entity to upsert
@@ -176,7 +176,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     }
 
     /**
-     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Deleting is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
      * Condition-based deletes remove existing records, which is disabled in this DAO type.
      *
      * @param cond the condition identifying the records to delete

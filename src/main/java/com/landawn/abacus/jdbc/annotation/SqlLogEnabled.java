@@ -118,7 +118,8 @@ public @interface SqlLogEnabled {
      * List<Report> generateComplexReport();
      * }</pre>
      *
-     * @return the maximum number of characters to include from SQL statements in logs
+     * @return the maximum number of characters to include from SQL statements in logs; defaults to
+     *         {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} (1024)
      */
     int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 

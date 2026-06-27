@@ -911,7 +911,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the function to map the result row
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
@@ -924,7 +924,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result row
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
@@ -957,7 +957,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the function to map the result
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
@@ -972,7 +972,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
@@ -1003,7 +1003,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the function to map the result
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
@@ -1018,7 +1018,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
@@ -1046,7 +1046,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the function to map the result
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
@@ -1062,7 +1062,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
-     * @return Optional containing the mapped result
+     * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
@@ -1071,8 +1071,8 @@ public interface Dao<T, TD extends Dao<T, TD>> {
             throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
-     * Queries for a boolean value from a single column.
-     * Returns an OptionalBoolean containing the value if found.
+     * Queries the value of a single boolean column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1082,16 +1082,20 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalBoolean} containing the value
+     * @return an {@code OptionalBoolean} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalBoolean} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code false}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code false}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a char value from a single column.
-     * Returns an OptionalChar containing the value if found.
+     * Queries the value of a single char column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1101,48 +1105,60 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalChar} containing the value
+     * @return an {@code OptionalChar} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalChar} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code (char) 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code (char) 0}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a byte value from a single column.
-     * Returns an OptionalByte containing the value if found.
+     * Queries the value of a single byte column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalByte status = dao.queryForByte("status", Filters.eq("id", 1));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalByte} containing the value
+     * @return an {@code OptionalByte} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalByte} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a short value from a single column.
-     * Returns an OptionalShort containing the value if found.
+     * Queries the value of a single short column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalShort year = dao.queryForShort("year", Filters.eq("id", 1));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalShort} containing the value
+     * @return an {@code OptionalShort} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalShort} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for an integer value from a single column.
-     * Returns an OptionalInt containing the value if found.
+     * Queries the value of a single int column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1150,64 +1166,80 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * System.out.println("Age: " + age.orElse(0));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalInt} containing the value
+     * @return an {@code OptionalInt} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalInt} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a long value from a single column.
-     * Returns an OptionalLong containing the value if found.
+     * Queries the value of a single long column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong count = dao.queryForLong("count", Filters.eq("category", "A"));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalLong} containing the value
+     * @return an {@code OptionalLong} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalLong} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a float value from a single column.
-     * Returns an OptionalFloat containing the value if found.
+     * Queries the value of a single float column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalFloat temperature = dao.queryForFloat("temperature", Filters.eq("city", "London"));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalFloat} containing the value
+     * @return an {@code OptionalFloat} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalFloat} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0f}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0f}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a double value from a single column.
-     * Returns an OptionalDouble containing the value if found.
+     * Queries the value of a single double column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble average = dao.queryForDouble("average", Filters.eq("group_id", 1));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code OptionalDouble} containing the value
+     * @return an {@code OptionalDouble} holding the selected value when at least one record matches,
+     *         or an empty {@code OptionalDouble} if no record matches the condition. A SQL {@code NULL}
+     *         value is returned as <i>present</i> holding the primitive default {@code 0d}; use
+     *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0d}.
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a String value from a single column.
-     * Returns a Nullable containing the value, which can be {@code null}.
+     * Queries the value of a single String column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1215,80 +1247,97 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * System.out.println("Name: " + name.orElse("Unknown"));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code Nullable} containing the String value
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a Date value from a single column.
-     * Returns a Nullable containing the java.sql.Date value.
+     * Queries the value of a single {@code java.sql.Date} column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = dao.queryForDate("birth_date", Filters.eq("id", 1));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code Nullable} containing the Date value
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a Time value from a single column.
-     * Returns a Nullable containing the java.sql.Time value.
+     * Queries the value of a single {@code java.sql.Time} column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Time> startTime = dao.queryForTime("start_time", Filters.eq("id", 1));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code Nullable} containing the Time value
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a Timestamp value from a single column.
-     * Returns a Nullable containing the java.sql.Timestamp value.
+     * Queries the value of a single {@code java.sql.Timestamp} column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Timestamp> createdAt = dao.queryForTimestamp("created_at", Filters.eq("id", 1));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code Nullable} containing the Timestamp value
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a byte array from a single column.
-     * Returns a Nullable containing the byte array value.
+     * Queries the value of a single byte-array column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> data = dao.queryForBytes("data", Filters.eq("id", 1));
      * }</pre>
      *
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @return {@code Nullable} containing the byte array
+     * @return a <i>present</i> {@code Nullable} holding the selected value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws SQLException if a database access error occurs
+     * @see Filters
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Queries for a single value of the specified type from a column.
-     * Returns a Nullable that can contain {@code null} values.
+     * Queries a single value of the specified type from one column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
+     * The returned {@code Nullable} preserves the distinction between "no record matched" (empty) and
+     * "the matched value is SQL {@code NULL}" (present-but-null).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1300,18 +1349,22 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param <V> the value type
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @param targetValueType the class of the target value type
-     * @return {@code Nullable} containing the value
+     * @param targetValueType the class of the target value type to convert the column value to
+     * @return a <i>present</i> {@code Nullable} holding the converted value (possibly {@code null} for a
+     *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
 
     /**
-     * Queries for a single non-null value of the specified type.
-     * Returns an Optional, empty if no value found or if the value is {@code null}.
+     * Queries a single non-null value of the specified type from one column for the first record matching the condition.
+     * Only the first matching record is read; any remaining matching records are ignored.
+     * Unlike {@link #queryForSingleValue(String, Condition, Class)}, this method collapses both
+     * "no record matched" and "the matched value is SQL {@code NULL}" into an empty {@code Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1323,10 +1376,11 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param <V> the value type
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @param targetValueType the class of the target value type
-     * @return {@code Optional} containing the non-null value
+     * @param targetValueType the class of the target value type to convert the column value to
+     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
+     *         matches the condition or the matched value is SQL {@code NULL}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -1334,7 +1388,8 @@ public interface Dao<T, TD extends Dao<T, TD>> {
             throws SQLException;
 
     /**
-     * Queries for a single value using a custom row mapper.
+     * Queries a single value from one column for the first record matching the condition, mapping it with a custom row mapper.
+     * Only the first matching record is read; any remaining matching records are ignored.
      * Provides flexibility in how the single column value is transformed.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1347,10 +1402,11 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param <V> the value type
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @param rowMapper the function to map the result
-     * @return {@code Optional} containing the mapped value, empty if no row matches or the value is {@code null}
+     * @param rowMapper the function to map the selected value
+     * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
+     *         matches the condition or the mapped value is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -1358,8 +1414,9 @@ public interface Dao<T, TD extends Dao<T, TD>> {
             throws SQLException;
 
     /**
-     * Queries for a unique single value, throwing if multiple rows found.
-     * Returns a Nullable that can contain {@code null} values.
+     * Queries a unique single value of the specified type from one column, throwing if more than one record matches.
+     * The returned {@code Nullable} preserves the distinction between "no record matched" (empty) and
+     * "the matched value is SQL {@code NULL}" (present-but-null).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1372,11 +1429,13 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param <V> the value type
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @param targetValueType the class of the target value type
-     * @return {@code Nullable} containing the unique value
-     * @throws DuplicateResultException if more than one row matches
+     * @param targetValueType the class of the target value type to convert the column value to
+     * @return a <i>present</i> {@code Nullable} holding the converted value (possibly {@code null} for a
+     *         SQL {@code NULL}) when exactly one record matches, or an empty {@code Nullable} if no record
+     *         matches the condition
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
@@ -1384,8 +1443,9 @@ public interface Dao<T, TD extends Dao<T, TD>> {
             throws DuplicateResultException, SQLException;
 
     /**
-     * Queries for a unique non-null single value, throwing if multiple rows found.
-     * Combines uniqueness constraint with non-null requirement.
+     * Queries a unique non-null single value of the specified type from one column, throwing if more than one record matches.
+     * Combines the uniqueness constraint with a non-null requirement: both "no record matched" and
+     * "the matched value is SQL {@code NULL}" collapse into an empty {@code Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1398,11 +1458,12 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param <V> the value type
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @param targetValueType the class of the target value type
-     * @return {@code Optional} containing the unique non-null value
-     * @throws DuplicateResultException if more than one row matches
+     * @param targetValueType the class of the target value type to convert the column value to
+     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
+     *         matches the condition or the matched value is SQL {@code NULL}
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
@@ -1410,7 +1471,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
             throws DuplicateResultException, SQLException;
 
     /**
-     * Queries for a unique non-null value using a custom row mapper.
+     * Queries a unique value from one column using a custom row mapper, throwing if more than one record matches.
      * Ensures uniqueness while allowing custom value transformation.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1426,11 +1487,12 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param <V> the value type
-     * @param singleSelectPropName the property name to select
+     * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
-     * @param rowMapper the function to map the result
-     * @return {@code Optional} containing the unique mapped value, empty if no row matches or the value is {@code null}
-     * @throws DuplicateResultException if more than one row matches
+     * @param rowMapper the function to map the selected value
+     * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
+     *         matches the condition or the mapped value is {@code null}
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -1450,7 +1512,8 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param cond the search condition
-     * @return a {@code Dataset} containing the query results
+     * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
+     *         returned when no record matches)
      * @throws SQLException if a database access error occurs
      */
     Dataset query(final Condition cond) throws SQLException;
@@ -1461,7 +1524,8 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
-     * @return Dataset containing the query results
+     * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
+     *         returned when no record matches)
      * @throws SQLException if a database access error occurs
      */
     Dataset query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
@@ -1486,8 +1550,9 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *
      * @param <R> the result type
      * @param cond the search condition
-     * @param resultExtractor function to process the ResultSet
-     * @return the extracted result
+     * @param resultExtractor function to process the ResultSet; it is responsible for iterating the
+     *                        {@code ResultSet} and must not save or hold a reference to it after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws SQLException if a database access error occurs
      */
     <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -1499,8 +1564,9 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
-     * @param resultExtractor function to process the ResultSet
-     * @return the extracted result
+     * @param resultExtractor function to process the ResultSet; it is responsible for iterating the
+     *                        {@code ResultSet} and must not save or hold a reference to it after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws SQLException if a database access error occurs
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -1511,8 +1577,10 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *
      * @param <R> the result type
      * @param cond the search condition
-     * @param resultExtractor bi-function to process the ResultSet
-     * @return the extracted result
+     * @param resultExtractor bi-function to process the ResultSet; it receives the {@code ResultSet} and the
+     *                        list of column labels, and must not save or hold a reference to the {@code ResultSet}
+     *                        after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws SQLException if a database access error occurs
      */
     <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -1524,8 +1592,10 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
-     * @param resultExtractor bi-function to process the ResultSet
-     * @return the extracted result
+     * @param resultExtractor bi-function to process the ResultSet; it receives the {@code ResultSet} and the
+     *                        list of column labels, and must not save or hold a reference to the {@code ResultSet}
+     *                        after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws SQLException if a database access error occurs
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -1563,7 +1633,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type
      * @param cond the search condition
      * @param rowMapper function to map each row
-     * @return list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
@@ -1575,7 +1645,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type
      * @param cond the search condition
      * @param rowMapper bi-function to map each row
-     * @return list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
@@ -1597,7 +1667,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param cond the search condition
      * @param rowFilter predicate to filter rows
      * @param rowMapper function to map filtered rows
-     * @return list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
@@ -1610,7 +1680,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param cond the search condition
      * @param rowFilter bi-predicate to filter rows
      * @param rowMapper bi-function to map filtered rows
-     * @return list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
@@ -1629,7 +1699,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
-     * @return list of partially loaded entities
+     * @return a list of partially loaded entities, or an empty list if no record matches the condition
      * @throws SQLException if a database access error occurs
      */
     List<T> list(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
@@ -1642,7 +1712,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper function to map each row
-     * @return list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
@@ -1655,7 +1725,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper bi-function to map each row
-     * @return list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
@@ -1669,7 +1739,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param cond the search condition
      * @param rowFilter predicate to filter rows
      * @param rowMapper function to map filtered rows
-     * @return list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
@@ -1684,7 +1754,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param cond the search condition
      * @param rowFilter bi-predicate to filter rows
      * @param rowMapper bi-function to map filtered rows
-     * @return list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
@@ -1702,7 +1772,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param <R> the result type
      * @param singleSelectPropName the single property to select
      * @param cond the search condition
-     * @return list of property values
+     * @return a list of property values, or an empty list if no record matches the condition
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1730,7 +1800,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param singleSelectPropName the single property to select
      * @param cond the search condition
      * @param rowMapper function to map the property value
-     * @return list of mapped values
+     * @return a list of mapped values, or an empty list if no record matches the condition
      * @throws SQLException if a database access error occurs
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException {
@@ -1746,7 +1816,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param cond the search condition
      * @param rowFilter predicate to filter values
      * @param rowMapper function to map filtered values
-     * @return list of filtered and mapped values
+     * @return a list of filtered and mapped values, or an empty list if no record matches or passes the filter
      * @throws SQLException if a database access error occurs
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,

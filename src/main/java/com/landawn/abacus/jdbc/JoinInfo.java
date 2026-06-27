@@ -104,6 +104,13 @@ import com.landawn.abacus.util.stream.Stream;
  * joinInfo.setJoinPropEntities(employees, projects);
  * }</pre>
  *
+ * <p><b>Note:</b> this class is annotated {@code @Internal} and is intended for use by the framework rather
+ * than directly by application code. Instances are not created via its (package-private) constructor; they are
+ * obtained and cached through the static factory methods {@link #getEntityJoinInfo(Class, Class, String)} and
+ * {@link #getPropJoinInfo(Class, Class, String, String)}.</p>
+ *
+ * @see JoinedBy
+ * @see com.landawn.abacus.jdbc.annotation.DaoConfig
  */
 @Internal
 @SuppressWarnings({ "java:S1192", "resource" })
@@ -735,9 +742,12 @@ public final class JoinInfo {
      * String sql = plan._1.apply(Arrays.asList("id", "name", "description"));
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing a function to build SQL and a parameter setter for prepared statements
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection
+     *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT),
+     *         and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a
+     *         {@link PreparedStatement}
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -772,9 +782,10 @@ public final class JoinInfo {
      * String plcSql = joinInfo.getSelectSqlBuilderAndParamSetter(PLC)._1.apply(null);
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the SQL builder function and parameter setter
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple containing the SQL builder function ({@code _1}) and the parameter setter ({@code _2});
+     *         see {@link #getSelectSqlPlan(Dsl)} for the meaning of each slot
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      * @deprecated Use {@link #getSelectSqlPlan(Dsl)}.
      */
     @Deprecated
@@ -798,9 +809,12 @@ public final class JoinInfo {
      * String sql = batchPlan._1.apply(Arrays.asList("id", "name"), employees.size());
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing a function to build SQL and a parameter setter for batch operations
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection
+     *         of selected property names and the batch size (a {@code null} or empty collection yields the default
+     *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
+     *         in the batch onto a {@link PreparedStatement}
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -835,9 +849,10 @@ public final class JoinInfo {
      * batchPlan._2.accept(stmt, employees);
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the batch SQL builder function and parameter setter
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple containing the batch SQL builder function ({@code _1}) and the parameter setter
+     *         ({@code _2}); see {@link #getBatchSelectSqlPlan(Dsl)} for the meaning of each slot
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      * @deprecated Use {@link #getBatchSelectSqlPlan(Dsl)}.
      */
     @Deprecated
@@ -862,11 +877,12 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deletePlan._3;
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the delete SQL ({@code _1}), the middle (join) table delete SQL
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple containing the delete SQL ({@code _1}), the middle (join) table delete SQL
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future
-     *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3})
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3}) that
+     *         binds the join key(s) of a single source entity onto a {@link PreparedStatement}
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -898,9 +914,11 @@ public final class JoinInfo {
      * deletePlan._3.accept(stmt, employee);
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the delete SQL, the middle (join) table delete SQL (always {@code null}), and the parameter setter
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple containing the delete SQL ({@code _1}), the middle (join) table delete SQL
+     *         ({@code _2}, always {@code null}), and the parameter setter ({@code _3}); see {@link #getDeleteSqlPlan(Dsl)}
+     *         for the meaning of each slot
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      * @deprecated Use {@link #getDeleteSqlPlan(Dsl)}.
      */
     @Deprecated
@@ -925,11 +943,12 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDeletePlan._3;
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple of (main delete SQL builder ({@code _1}), middle/join table delete SQL builder ({@code _2},
-     *         always {@code null} in the current implementation — reserved for future use when per-entity
-     *         cascade-delete control is supported), and parameter setter ({@code _3}))
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple of (main delete SQL builder ({@code _1}), middle/join table delete SQL builder
+     *         ({@code _2}, always {@code null} in the current implementation — reserved for future use when per-entity
+     *         cascade-delete control is supported), and parameter setter ({@code _3}) that binds the join key(s) of every
+     *         entity in the batch onto a {@link PreparedStatement})
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -965,9 +984,10 @@ public final class JoinInfo {
      * batchDeletePlan._3.accept(stmt, employees);
      * }</pre>
      *
-     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the batch delete SQL builder functions and parameter setter
-     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @return a non-{@code null} tuple containing the batch delete SQL builder functions ({@code _1}, {@code _2}) and the
+     *         parameter setter ({@code _3}); see {@link #getBatchDeleteSqlPlan(Dsl)} for the meaning of each slot
+     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      * @deprecated Use {@link #getBatchDeleteSqlPlan(Dsl)}.
      */
     @Deprecated
@@ -987,7 +1007,7 @@ public final class JoinInfo {
      * collection of the declared type is created and populated. For a single-entity (non-collection,
      * non-map) join property, only the first matching entity is used; for a map-valued join property,
      * exactly one matching entity per key is expected and more than one match throws
-     * {@link IllegalArgumentException}.</p>
+     * {@link IllegalArgumentException}. A source entity with no matching joined entity is left untouched.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1034,6 +1054,10 @@ public final class JoinInfo {
      * properties, automatically adapting the assignment based on the declared property type. For map
      * properties, only one joined entity is allowed per source key; multiple matches will result in an
      * {@link IllegalArgumentException}.</p>
+     *
+     * <p>A source entity whose extracted join key has no corresponding entry in {@code groupedPropEntities}
+     * is left untouched (its join property is not assigned, cleared, or reset). The {@code entities} collection
+     * is iterated in its natural order and is not modified by this method.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1157,10 +1181,16 @@ public final class JoinInfo {
      * }
      * }</pre>
      *
+     * <p>Whether join operations are permitted when a join key value is {@code null} or its type default is
+     * derived from the {@code @DaoConfig(allowJoiningByNullOrDefaultValue = ...)} setting on {@code daoClass}
+     * (defaults to {@code false} when the annotation is absent).</p>
+     *
      * @param daoClass the DAO class associated with the entity, must not be {@code null}
      * @param entityClass the entity class to inspect for join properties, must not be {@code null}
      * @param tableName the database table name for the entity, must not be {@code null}
      * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist
+     * @throws IllegalArgumentException if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
+     *                                  (this is raised the first time the map is built and cached for the given key)
      *
      * @see JoinedBy
      * @see DaoConfig
@@ -1227,7 +1257,9 @@ public final class JoinInfo {
      * @param tableName the database table name for the entity, must not be {@code null}
      * @param joinEntityPropName the name of the property with the {@code @JoinedBy} annotation, must not be {@code null}
      * @return the JoinInfo for the specified property, never {@code null}
-     * @throws IllegalArgumentException if no join property is found with the given name
+     * @throws IllegalArgumentException if no {@code @JoinedBy} join property is found with the given name on the entity,
+     *                                  or if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
+     *                                  (surfaced while building the underlying join-info map)
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
@@ -1288,6 +1320,8 @@ public final class JoinInfo {
      * @param tableName the database table name for the entity, must not be {@code null}
      * @param joinPropEntityClass the class of the joined entity to search for, must not be {@code null}
      * @return an unmodifiable list of property names that join to the specified entity class, never {@code null}, empty if none found
+     * @throws IllegalArgumentException if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
+     *                                  (surfaced while building the underlying join-info map)
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)

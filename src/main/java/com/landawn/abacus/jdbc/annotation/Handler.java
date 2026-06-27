@@ -40,6 +40,10 @@ import com.landawn.abacus.jdbc.dao.Dao;
  *   <li><strong>Type level:</strong> Applies to all methods in the DAO interface (with filtering options)</li>
  * </ul>
  *
+ * <p>This annotation is {@link java.lang.annotation.Repeatable @Repeatable}: multiple {@code @Handler}
+ * declarations may be placed on the same method or type, in which case they are collected into a
+ * {@link HandlerList} container and each handler is applied in declaration order.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Custom handler implementation
@@ -191,7 +195,7 @@ public @interface Handler {
      * User user = userDao.findById(123L);   // TransactionHandler IS applied here
      * }</pre>
      *
-     * @return {@code true} if handler only applies to external calls, {@code false} otherwise
+     * @return {@code true} if handler only applies to external calls, {@code false} (default) otherwise
      */
     boolean isForInvokeFromOutsideOfDaoOnly() default false;
 }

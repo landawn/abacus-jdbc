@@ -1830,8 +1830,8 @@ final class DaoImpl {
      * {@link InvocationHandler} that intercepts each method call to execute the corresponding SQL operation.</p>
      *
      * <p>Created DAO instances are cached by a composite key derived from the interface class, target table name,
-     * data source identity, SQL mapper identity, DAO cache identity, and executor identity. Subsequent calls with
-     * the same parameters return the cached instance.</p>
+     * data source identity, DSL dialect identity, SQL mapper identity, DAO cache identity, and executor identity.
+     * Subsequent calls with the same parameters return the cached instance.</p>
      *
      * <p>In addition to method-level annotations, the method also processes type-level configuration:</p>
      * <ul>

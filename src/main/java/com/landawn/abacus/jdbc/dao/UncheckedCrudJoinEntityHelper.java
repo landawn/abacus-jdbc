@@ -35,6 +35,11 @@ import com.landawn.abacus.util.u.Optional;
  * <p>This interface enables efficient loading of related entities when retrieving data by ID,
  * making it ideal for entities with complex relationships that need to be fetched together.</p>
  *
+ * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the
+ * corresponding {@code @JoinedBy} properties of the entity instance returned by each {@code get},
+ * {@code gett}, and {@code batchGet} method. When a method accepts a collection of join entity classes,
+ * a {@code null} or empty collection results in no join entities being loaded.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends UncheckedCrudDao<User, Long, UserDao>, UncheckedCrudJoinEntityHelper<User, Long, UserDao> {
@@ -71,6 +76,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Retrieves an entity by ID and loads the specified join entity class.
      * This is a beta API that combines entity retrieval with automatic join loading.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -97,7 +103,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
 
     /**
      * Retrieves an entity by ID and optionally loads all join entities.
-     * This is a beta API for convenient loading of all relationships.
+     * This is a beta API for convenient loading of all relationships. When {@code includeAllJoinEntities}
+     * is {@code true}, all {@code @JoinedBy} properties are populated in place on the returned entity;
+     * when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -122,6 +130,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Retrieves an entity by ID with selected properties and loads the specified join entity class.
      * This is a beta API for efficient partial loading of entities with relationships.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -152,6 +161,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Retrieves an entity by ID with selected properties and loads multiple join entity classes.
      * This is a beta API for flexible entity loading with multiple relationships.
+     * The loaded related entities are populated in place on the returned entity; if {@code joinEntitiesToLoad}
+     * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -181,7 +192,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
 
     /**
      * Retrieves an entity by ID with selected properties and optionally loads all join entities.
-     * This is a beta API for flexible entity retrieval with automatic relationship loading.
+     * This is a beta API for flexible entity retrieval with automatic relationship loading. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -212,6 +225,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Retrieves an entity by ID and loads the specified join entity class, returning the entity directly.
      * This is a beta API that returns {@code null} if the entity is not found.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -243,7 +257,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
 
     /**
      * Retrieves an entity by ID and optionally loads all join entities, returning the entity directly.
-     * This is a beta API that returns {@code null} if the entity is not found.
+     * This is a beta API that returns {@code null} if the entity is not found. When {@code includeAllJoinEntities}
+     * is {@code true}, the loaded entities are populated in place on the returned entity; when {@code false},
+     * no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -274,8 +290,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and loads the specified join entity class.
+     * Retrieves an entity by ID with selected properties and loads the specified join entity class, returning {@code null} if not found.
      * This is a beta API for efficient partial entity loading with relationships.
+     * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -310,8 +327,10 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and loads multiple join entity classes.
+     * Retrieves an entity by ID with selected properties and loads multiple join entity classes, returning {@code null} if not found.
      * This is a beta API for complex entity loading scenarios.
+     * The loaded related entities are populated in place on the returned entity; if {@code joinEntitiesToLoad}
+     * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -348,8 +367,10 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and optionally loads all join entities.
-     * This is a beta API that combines partial loading with automatic relationship loading.
+     * Retrieves an entity by ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
+     * This is a beta API that combines partial loading with automatic relationship loading. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -386,6 +407,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Batch gets entities by IDs and loads the specified join entity class for each.
      * This is a beta API for efficient batch loading with relationships.
+     * The loaded related entities are populated in place on each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -411,7 +433,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
 
     /**
      * Batch gets entities by IDs and optionally loads all join entities for each.
-     * This is a beta API for batch loading with automatic relationship loading.
+     * This is a beta API for batch loading with automatic relationship loading. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on each
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -438,6 +462,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Batch gets entities with selected properties and loads the specified join entity class.
      * This is a beta API for efficient partial batch loading with relationships.
+     * The loaded related entities are populated in place on each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -468,6 +493,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Batch gets entities with selected properties and loads multiple join entity classes.
      * This is a beta API for complex batch loading scenarios.
+     * The loaded related entities are populated in place on each returned entity; if {@code joinEntitiesToLoad}
+     * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -497,7 +524,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
 
     /**
      * Batch gets entities with selected properties and optionally loads all join entities.
-     * This is a beta API for flexible batch loading with automatic relationship loading.
+     * This is a beta API for flexible batch loading with automatic relationship loading. When
+     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on each
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -528,6 +557,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Batch gets entities with selected properties using a specific batch size and loads the specified join entity class.
      * This is a beta API for efficient large-scale batch loading with relationships.
+     * The loaded related entities are populated in place on each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -548,7 +578,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
      * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property of the specified type is found in the entity class
      */
     @Beta
     @Override
@@ -572,6 +602,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
     /**
      * Batch gets entities with selected properties using a specific batch size and loads multiple join entity classes.
      * This is a beta API for complex large-scale batch loading scenarios.
+     * The loaded related entities are populated in place on each returned entity; if {@code joinEntitiesToLoad}
+     * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -592,7 +624,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
      * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property is found for one of the specified types in the entity class
      */
     @Beta
     @Override
@@ -621,7 +653,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
 
     /**
      * Batch gets entities with selected properties using a specific batch size and optionally loads all join entities.
-     * This is a beta API for maximum flexibility in batch loading operations.
+     * This is a beta API for maximum flexibility in batch loading operations. When {@code includeAllJoinEntities}
+     * is {@code true}, the loaded entities are populated in place on each returned entity; when {@code false},
+     * no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -643,6 +677,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDa
      * @return a list of the found entities, each with the selected properties and its join entities loaded (when requested); empty if none are found
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      */
     @Beta
     @Override
