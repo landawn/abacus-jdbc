@@ -1066,7 +1066,7 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testBiRowMapperBuilder_ToEntity_WithDefaultGetter() throws SQLException {
-        // Uses default GET_OBJECT getter → triggers rsColumnGetters[i] = ColumnGetter.get(propType) path
+        // Uses default GET_OBJECT getter → triggers rsColumnGetters[i] = ColumnGetter.forType(propType) path
         when(mockResultSet.getObject(1)).thenReturn(5L);
         when(mockResultSet.getObject(2)).thenReturn("Leo");
         when(mockResultSet.getObject(3)).thenReturn(30);
@@ -1601,27 +1601,27 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString(1)).thenReturn("test");
         when(mockResultSet.getInt(1)).thenReturn(42);
 
-        assertEquals(true, Jdbc.ColumnGetter.GET_BOOLEAN.apply(mockResultSet, 1));
-        assertEquals("test", Jdbc.ColumnGetter.GET_STRING.apply(mockResultSet, 1));
-        assertEquals(42, Jdbc.ColumnGetter.GET_INT.apply(mockResultSet, 1));
+        assertEquals(true, Jdbc.ColumnGetter.GET_BOOLEAN.get(mockResultSet, 1));
+        assertEquals("test", Jdbc.ColumnGetter.GET_STRING.get(mockResultSet, 1));
+        assertEquals(42, Jdbc.ColumnGetter.GET_INT.get(mockResultSet, 1));
     }
 
     @Test
     public void testColumnGetterGet() throws SQLException {
         when(mockResultSet.getString(1)).thenReturn("test");
-        // ColumnGetter.get(Integer.class) flows through Type<Integer>.get which uses rs.getObject for null preservation.
+        // ColumnGetter.forType(Integer.class) flows through Type<Integer>.get which uses rs.getObject for null preservation.
         when(mockResultSet.getObject(1)).thenReturn(42);
 
-        Jdbc.ColumnGetter<String> stringGetter = Jdbc.ColumnGetter.get(String.class);
-        Jdbc.ColumnGetter<Integer> intGetter = Jdbc.ColumnGetter.get(Integer.class);
+        Jdbc.ColumnGetter<String> stringGetter = Jdbc.ColumnGetter.forType(String.class);
+        Jdbc.ColumnGetter<Integer> intGetter = Jdbc.ColumnGetter.forType(Integer.class);
 
-        assertEquals("test", stringGetter.apply(mockResultSet, 1));
-        assertEquals(42, intGetter.apply(mockResultSet, 1));
+        assertEquals("test", stringGetter.get(mockResultSet, 1));
+        assertEquals(42, intGetter.get(mockResultSet, 1));
     }
 
     @Test
     public void testColumnGetterGet_WrapperTypes_PreserveSqlNull() throws SQLException {
-        // Regression: ColumnGetter.get(Wrapper.class) MUST preserve SQL NULL as Java null,
+        // Regression: ColumnGetter.forType(Wrapper.class) MUST preserve SQL NULL as Java null,
         // unlike the primitive-style ColumnGetter.GET_* constants which return 0 / false for null.
         // Previously the static initializer cached Boolean/Integer/Long/etc. as the primitive ResultSet::getXxx
         // getters, which silently converted SQL NULL to 0 / false. That has now been fixed.
@@ -1629,19 +1629,19 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(1)).thenReturn(null);
         when(mockResultSet.wasNull()).thenReturn(true);
 
-        assertNull(Jdbc.ColumnGetter.get(Boolean.class).apply(mockResultSet, 1));
-        assertNull(Jdbc.ColumnGetter.get(Byte.class).apply(mockResultSet, 1));
-        assertNull(Jdbc.ColumnGetter.get(Short.class).apply(mockResultSet, 1));
-        assertNull(Jdbc.ColumnGetter.get(Integer.class).apply(mockResultSet, 1));
-        assertNull(Jdbc.ColumnGetter.get(Long.class).apply(mockResultSet, 1));
-        assertNull(Jdbc.ColumnGetter.get(Float.class).apply(mockResultSet, 1));
-        assertNull(Jdbc.ColumnGetter.get(Double.class).apply(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.forType(Boolean.class).get(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.forType(Byte.class).get(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.forType(Short.class).get(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.forType(Integer.class).get(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.forType(Long.class).get(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.forType(Float.class).get(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.forType(Double.class).get(mockResultSet, 1));
 
         // Sanity check: the primitive-class lookup still maps to the primitive ResultSet::getXxx getters
         // (which is the only valid behavior for primitive types).
-        assertSame(Jdbc.ColumnGetter.GET_INT, Jdbc.ColumnGetter.get(int.class));
-        assertSame(Jdbc.ColumnGetter.GET_BOOLEAN, Jdbc.ColumnGetter.get(boolean.class));
-        assertSame(Jdbc.ColumnGetter.GET_LONG, Jdbc.ColumnGetter.get(long.class));
+        assertSame(Jdbc.ColumnGetter.GET_INT, Jdbc.ColumnGetter.forType(int.class));
+        assertSame(Jdbc.ColumnGetter.GET_BOOLEAN, Jdbc.ColumnGetter.forType(boolean.class));
+        assertSame(Jdbc.ColumnGetter.GET_LONG, Jdbc.ColumnGetter.forType(long.class));
     }
 
     // Columns.ColumnOne Tests
@@ -2460,8 +2460,8 @@ public class JdbcTest extends TestBase {
         // Test various type conversions through ColumnGetter
         when(mockResultSet.getBigDecimal(1)).thenReturn(new BigDecimal("123.45"));
 
-        Jdbc.ColumnGetter<BigDecimal> bigDecimalGetter = Jdbc.ColumnGetter.get(BigDecimal.class);
-        BigDecimal bd = bigDecimalGetter.apply(mockResultSet, 1);
+        Jdbc.ColumnGetter<BigDecimal> bigDecimalGetter = Jdbc.ColumnGetter.forType(BigDecimal.class);
+        BigDecimal bd = bigDecimalGetter.get(mockResultSet, 1);
         assertNotNull(bd);
         // Verify the BigDecimal value is preserved exactly
         assertEquals(new BigDecimal("123.45"), bd);
@@ -2469,8 +2469,8 @@ public class JdbcTest extends TestBase {
 
         // Verify ColumnGetter.get returns a working getter for String type
         when(mockResultSet.getString(1)).thenReturn("hello");
-        Jdbc.ColumnGetter<String> stringGetter = Jdbc.ColumnGetter.get(String.class);
-        assertEquals("hello", stringGetter.apply(mockResultSet, 1));
+        Jdbc.ColumnGetter<String> stringGetter = Jdbc.ColumnGetter.forType(String.class);
+        assertEquals("hello", stringGetter.get(mockResultSet, 1));
     }
 
     @Test
@@ -3372,12 +3372,12 @@ public class JdbcTest extends TestBase {
         assertTrue(ex.getMessage().contains("col2"), "Expected message to mention col2: " + ex.getMessage());
     }
 
-    // Bug fix: ColumnGetter.get(Type) should throw IllegalArgumentException for null type,
+    // Bug fix: ColumnGetter.forType(Type) should throw IllegalArgumentException for null type,
     // not a cryptic NullPointerException from the pool's computeIfAbsent.
     @Tag("2025")
     @Test
     public void testColumnGetterGet_NullType_ThrowsIAE() {
-        assertThrows(IllegalArgumentException.class, () -> Jdbc.ColumnGetter.get((com.landawn.abacus.type.Type<?>) null));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.ColumnGetter.forType((com.landawn.abacus.type.Type<?>) null));
     }
 
     // Bug fix: DaoCacheByMap.put() should reject null cache keys consistently with DefaultDaoCache.

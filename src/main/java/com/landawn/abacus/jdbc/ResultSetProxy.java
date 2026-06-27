@@ -789,7 +789,7 @@ final class ResultSetProxy implements ResultSet {
 
             return ret;
         } else {
-            return columnGetters[columnIndex].apply(delegate, columnIndex);
+            return columnGetters[columnIndex].get(delegate, columnIndex);
         }
     }
 

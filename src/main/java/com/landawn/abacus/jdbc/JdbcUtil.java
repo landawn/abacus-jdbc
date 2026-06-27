@@ -5663,22 +5663,69 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL statement of any kind using a connection obtained from the supplied DataSource.
+     * Executes a SQL statement of any kind using a connection obtained from the supplied DataSource,
+     * returning the raw JDBC "first result" indicator of {@link PreparedStatement#execute()}.
+     *
+     * <p><b>WARNING — the returned {@code boolean} is NOT a success/failure flag.</b> Despite sitting next
+     * to {@link #executeUpdate(javax.sql.DataSource, String, Object...) executeUpdate} (which returns an
+     * affected-row count) and {@link #executeQuery(javax.sql.DataSource, String, Object...) executeQuery}
+     * (which returns a {@link Dataset} of rows), this method's {@code boolean} carries the exact semantics
+     * of {@link java.sql.Statement#execute()}: it reports the <i>shape of the statement's first result</i>,
+     * not whether the statement "worked". A statement that completes without throwing has already
+     * succeeded — failure is reported by a thrown {@link SQLException}, <b>never</b> by a {@code false}
+     * return value.</p>
+     *
+     * <ul>
+     *   <li>{@code true}  &mdash; the first result is a {@link ResultSet} (e.g. a {@code SELECT}, or any
+     *       statement whose first result is a row set). Note: an empty result set still counts &mdash; a
+     *       {@code SELECT} matching zero rows returns {@code true}.</li>
+     *   <li>{@code false} &mdash; the first result is an update count, or there is no result at all (e.g. a
+     *       <i>successful</i> {@code INSERT}/{@code UPDATE}/{@code DELETE}, or DDL such as
+     *       {@code CREATE}/{@code DROP}).</li>
+     * </ul>
+     *
+     * <p>So a perfectly successful {@code INSERT INTO ...} returns {@code false} (meaning "the first result
+     * is not a ResultSet", <b>not</b> "the insert failed"). Never write
+     * {@code if (JdbcUtil.execute(ds, sql)) { ...succeeded... }}.</p>
+     *
+     * <p><b>Choosing among the execute-family methods</b> (all share the same
+     * {@code (source, sql, parameters)} shape):</p>
+     * <table border="1">
+     *   <caption>JdbcUtil execute-family return values</caption>
+     *   <tr><th>Method</th><th>Returns</th><th>Use when</th></tr>
+     *   <tr><td>{@link #executeQuery(javax.sql.DataSource, String, Object...) executeQuery}</td>
+     *       <td>{@link Dataset} of the selected rows</td>
+     *       <td>the SQL is a query and you want the rows</td></tr>
+     *   <tr><td>{@link #executeUpdate(javax.sql.DataSource, String, Object...) executeUpdate}</td>
+     *       <td>{@code int} affected-row count</td>
+     *       <td>the SQL is an INSERT/UPDATE/DELETE and you want the count</td></tr>
+     *   <tr><td>{@code execute} (this method)</td>
+     *       <td>{@code boolean}: first-result-is-a-{@code ResultSet}</td>
+     *       <td>you do not know the statement type in advance, or you specifically need the raw JDBC
+     *           dispatch flag</td></tr>
+     * </table>
      *
      * <p>This is a thin wrapper over {@link PreparedStatement#execute()} that handles connection
      * acquisition, transaction participation (an active transaction's connection is reused), parameter
-     * binding, and resource cleanup. Use it when you do not know in advance whether the SQL returns a
-     * {@link ResultSet} or an update count.</p>
+     * binding, and resource cleanup. Because the internal statement is closed before this method returns,
+     * any {@link ResultSet} that caused a {@code true} return is already closed and cannot be read here; use
+     * {@link #executeQuery(javax.sql.DataSource, String, Object...) executeQuery} if you actually need the
+     * rows.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // SELECT: the first result is a ResultSet -> returns true.
-     * boolean hasResultSet = JdbcUtil.execute(dataSource,
-     *         "SELECT * FROM users WHERE age > ?", 18);   // returns true
+     * // SELECT: the first result is a ResultSet -> returns true (even when it matches no rows).
+     * boolean firstResultIsResultSet = JdbcUtil.execute(dataSource,
+     *         "SELECT * FROM users WHERE age > ?", 18);   // true
      *
-     * // INSERT/UPDATE/DELETE: the first result is an update count -> returns false.
-     * boolean isResultSet = JdbcUtil.execute(dataSource,
-     *         "INSERT INTO users (name, age) VALUES (?, ?)", "John", 25);   // returns false
+     * // A SUCCESSFUL INSERT/UPDATE/DELETE: the first result is an update count -> returns false.
+     * // false here means "not a ResultSet", NOT "the insert failed".
+     * boolean firstResultIsResultSet2 = JdbcUtil.execute(dataSource,
+     *         "INSERT INTO users (name, age) VALUES (?, ?)", "John", 25);   // false
+     *
+     * // Want the affected-row count instead? Use executeUpdate:
+     * int inserted = JdbcUtil.executeUpdate(dataSource,
+     *         "INSERT INTO users (name, age) VALUES (?, ?)", "John", 25);   // 1
      *
      * // A null DataSource is rejected.
      * JdbcUtil.execute((javax.sql.DataSource) null, "SELECT 1");   // throws IllegalArgumentException
@@ -5688,11 +5735,15 @@ public final class JdbcUtil {
      * @param sql the SQL statement to execute; must not be {@code null} or empty
      * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
      *                   the SQL; may be empty
-     * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update
-     *         count or there are no results
+     * @return {@code true} if the statement's first result is a {@link ResultSet}; {@code false} if it is an
+     *         update count or there is no result. This mirrors {@link java.sql.Statement#execute()} and is
+     *         <b>not</b> a success indicator &mdash; a failed statement throws {@link SQLException} instead
      * @throws IllegalArgumentException if {@code ds} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs while executing the statement
      * @see PreparedStatement#execute()
+     * @see java.sql.Statement#execute()
+     * @see #executeQuery(javax.sql.DataSource, String, Object...)
+     * @see #executeUpdate(javax.sql.DataSource, String, Object...)
      */
     public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -5714,25 +5765,70 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL statement of any kind on the supplied {@link Connection}.
+     * Executes a SQL statement of any kind on the supplied {@link Connection}, returning the raw JDBC
+     * "first result" indicator of {@link PreparedStatement#execute()}.
+     *
+     * <p><b>WARNING — the returned {@code boolean} is NOT a success/failure flag.</b> Despite sitting next
+     * to {@link #executeUpdate(Connection, String, Object...) executeUpdate} (which returns an affected-row
+     * count) and {@link #executeQuery(Connection, String, Object...) executeQuery} (which returns a
+     * {@link Dataset} of rows), this method's {@code boolean} carries the exact semantics of
+     * {@link java.sql.Statement#execute()}: it reports the <i>shape of the statement's first result</i>, not
+     * whether the statement "worked". A statement that completes without throwing has already succeeded —
+     * failure is reported by a thrown {@link SQLException}, <b>never</b> by a {@code false} return value.</p>
+     *
+     * <ul>
+     *   <li>{@code true}  &mdash; the first result is a {@link ResultSet} (e.g. a {@code SELECT}). An empty
+     *       result set still counts: a {@code SELECT} matching zero rows returns {@code true}.</li>
+     *   <li>{@code false} &mdash; the first result is an update count, or there is no result at all (e.g. a
+     *       <i>successful</i> {@code INSERT}/{@code UPDATE}/{@code DELETE}, or DDL such as
+     *       {@code CREATE}/{@code DROP}).</li>
+     * </ul>
+     *
+     * <p>So a perfectly successful {@code INSERT INTO ...} returns {@code false} (meaning "the first result
+     * is not a ResultSet", <b>not</b> "the insert failed"). Never write
+     * {@code if (JdbcUtil.execute(conn, sql)) { ...succeeded... }}.</p>
+     *
+     * <p><b>Choosing among the execute-family methods</b> (all share the same
+     * {@code (source, sql, parameters)} shape):</p>
+     * <table border="1">
+     *   <caption>JdbcUtil execute-family return values</caption>
+     *   <tr><th>Method</th><th>Returns</th><th>Use when</th></tr>
+     *   <tr><td>{@link #executeQuery(Connection, String, Object...) executeQuery}</td>
+     *       <td>{@link Dataset} of the selected rows</td>
+     *       <td>the SQL is a query and you want the rows</td></tr>
+     *   <tr><td>{@link #executeUpdate(Connection, String, Object...) executeUpdate}</td>
+     *       <td>{@code int} affected-row count</td>
+     *       <td>the SQL is an INSERT/UPDATE/DELETE and you want the count</td></tr>
+     *   <tr><td>{@code execute} (this method)</td>
+     *       <td>{@code boolean}: first-result-is-a-{@code ResultSet}</td>
+     *       <td>you do not know the statement type in advance, or you specifically need the raw JDBC
+     *           dispatch flag</td></tr>
+     * </table>
      *
      * <p>This method does not manage the lifecycle of the connection — the caller is responsible for
-     * closing {@code conn}. The internally created {@link PreparedStatement} is always closed before
-     * this method returns.</p>
+     * closing {@code conn}. The internally created {@link PreparedStatement} is always closed before this
+     * method returns; consequently any {@link ResultSet} that caused a {@code true} return is already closed
+     * and cannot be read here. Use {@link #executeQuery(Connection, String, Object...) executeQuery} if you
+     * actually need the rows.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
-     *     // SELECT -> the first result is a ResultSet.
-     *     boolean hasResultSet = JdbcUtil.execute(conn,
-     *             "SELECT * FROM users WHERE age > ?", 18);   // returns true
+     *     // SELECT -> first result is a ResultSet -> returns true (even when it matches no rows).
+     *     boolean firstResultIsResultSet = JdbcUtil.execute(conn,
+     *             "SELECT * FROM users WHERE age > ?", 18);   // true
      *
-     *     // INSERT -> the first result is an update count, not a ResultSet.
-     *     boolean isResultSet = JdbcUtil.execute(conn,
-     *             "INSERT INTO users (name, age) VALUES (?, ?)", "John", 25);   // returns false
+     *     // SUCCESSFUL INSERT -> first result is an update count, not a ResultSet -> returns false.
+     *     // false here means "not a ResultSet", NOT "the insert failed".
+     *     boolean firstResultIsResultSet2 = JdbcUtil.execute(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", "John", 25);   // false
      *
-     *     // DDL -> no ResultSet.
-     *     boolean ddl = JdbcUtil.execute(conn, "CREATE TABLE tmp_x (id INT)");   // returns false
+     *     // DDL -> no ResultSet -> returns false.
+     *     boolean ddl = JdbcUtil.execute(conn, "CREATE TABLE tmp_x (id INT)");   // false
+     *
+     *     // Want the affected-row count instead? Use executeUpdate:
+     *     int inserted = JdbcUtil.executeUpdate(conn,
+     *             "INSERT INTO users (name, age) VALUES (?, ?)", "Jane", 30);   // 1
      * }
      * }</pre>
      *
@@ -5740,11 +5836,15 @@ public final class JdbcUtil {
      * @param sql the SQL statement to execute; must not be {@code null} or empty
      * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
      *                   the SQL; may be empty
-     * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update
-     *         count or there are no results
+     * @return {@code true} if the statement's first result is a {@link ResultSet}; {@code false} if it is an
+     *         update count or there is no result. This mirrors {@link java.sql.Statement#execute()} and is
+     *         <b>not</b> a success indicator &mdash; a failed statement throws {@link SQLException} instead
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs while executing the statement
      * @see PreparedStatement#execute()
+     * @see java.sql.Statement#execute()
+     * @see #executeQuery(Connection, String, Object...)
+     * @see #executeUpdate(Connection, String, Object...)
      */
     public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);

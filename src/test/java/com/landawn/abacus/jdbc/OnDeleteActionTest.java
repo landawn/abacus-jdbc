@@ -30,54 +30,43 @@ import com.landawn.abacus.TestBase;
 @SuppressWarnings("deprecation")
 public class OnDeleteActionTest extends TestBase {
 
-    // Test value() method for each enum constant
+    // Test intValue() method for each enum constant
     @Test
-    public void testValue() {
-        assertEquals(0, OnDeleteAction.NO_ACTION.value());
+    public void testIntValue() {
+        assertEquals(0, OnDeleteAction.NO_ACTION.intValue());
     }
 
     @Test
-    public void testValue_SetNull() {
-        assertEquals(1, OnDeleteAction.SET_NULL.value());
+    public void testIntValue_SetNull() {
+        assertEquals(1, OnDeleteAction.SET_NULL.intValue());
     }
 
     @Test
-    public void testValue_Cascade() {
-        assertEquals(2, OnDeleteAction.CASCADE.value());
+    public void testIntValue_Cascade() {
+        assertEquals(2, OnDeleteAction.CASCADE.intValue());
     }
 
-    // Test get(String) method - case insensitive
+    // Test valueOf(int) factory method
     @Test
-    public void testGet() {
-        assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.get("noAction"));
-        assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.get("NOACTION"));
-        assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.get("NoAction"));
-    }
-
-    @Test
-    public void testGet_SetNull() {
-        assertEquals(OnDeleteAction.SET_NULL, OnDeleteAction.get("setNull"));
-        assertEquals(OnDeleteAction.SET_NULL, OnDeleteAction.get("SETNULL"));
-        assertEquals(OnDeleteAction.SET_NULL, OnDeleteAction.get("SetNull"));
+    public void testValueOfInt() {
+        assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.valueOf(0));
+        assertEquals(OnDeleteAction.SET_NULL, OnDeleteAction.valueOf(1));
+        assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.valueOf(2));
     }
 
     @Test
-    public void testGet_Cascade() {
-        assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.get("cascade"));
-        assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.get("CASCADE"));
-        assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.get("Cascade"));
+    public void testValueOfInt_InvalidValue() {
+        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.valueOf(3));
+        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.valueOf(-1));
+        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.valueOf(99));
     }
 
+    // Round-trip: intValue() -> valueOf(int)
     @Test
-    public void testGet_InvalidValue() {
-        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get("invalid"));
-        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get(""));
-        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get("delete"));
-    }
-
-    @Test
-    public void testGet_NullValue() {
-        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get(null));
+    public void testValueOfInt_RoundTrip() {
+        for (final OnDeleteAction action : OnDeleteAction.values()) {
+            assertEquals(action, OnDeleteAction.valueOf(action.intValue()));
+        }
     }
 
     // Test inherited enum methods

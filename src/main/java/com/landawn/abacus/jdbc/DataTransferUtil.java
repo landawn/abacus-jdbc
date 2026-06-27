@@ -3390,7 +3390,7 @@ public final class DataTransferUtil {
      * the ResultSet column count on first invocation by calling {@link JdbcUtil#getColumnCount(ResultSet)}.
      * For each column index {@code 1..columnCount}, it calls
      * {@link PreparedQuery#setObject(int, Object)} with the value from
-     * {@code columnGetterForAll.apply(resultSet, index)}.</p>
+     * {@code columnGetterForAll.get(resultSet, index)}.</p>
      *
      * <p>Because the column count is cached, the setter must only be reused for ResultSet instances
      * with the same number of columns, and should not be shared across threads.</p>
@@ -3424,7 +3424,7 @@ public final class DataTransferUtil {
                 }
 
                 for (int i = 1; i <= columnCount; i++) {
-                    stmt.setObject(i, columnGetterForAll.apply(rs, i));
+                    stmt.setObject(i, columnGetterForAll.get(rs, i));
                 }
             }
         };

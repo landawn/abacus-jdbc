@@ -135,7 +135,7 @@ public final class Jdbc {
         COLUMN_GETTER_POOL.put(N.typeOf(float.class), ColumnGetter.GET_FLOAT);
         COLUMN_GETTER_POOL.put(N.typeOf(double.class), ColumnGetter.GET_DOUBLE);
         // Numeric/boolean wrapper types (Boolean, Byte, Short, Integer, Long, Float, Double) intentionally are NOT
-        // cached here. They flow through ColumnGetter.get(Type) -> computeIfAbsent and use the Type<Wrapper>.get
+        // cached here. They flow through ColumnGetter.forType(Type) -> computeIfAbsent and use the Type<Wrapper>.get
         // implementations which preserve SQL NULL as Java null. Caching them as the primitive ResultSet::getXxx
         // getters would lose null information (e.g. SQL NULL -> 0 / false), which is incorrect for wrapper types.
         // Reference types where rs.getXxx() naturally preserves null can stay cached as the corresponding
@@ -1909,7 +1909,7 @@ public final class Jdbc {
                     final Object[] result = new Object[columnCount];
 
                     for (int i = 0; i < columnCount; i++) {
-                        result[i] = columnGetterForAll.apply(rs, i + 1);
+                        result[i] = columnGetterForAll.get(rs, i + 1);
                     }
 
                     return result;
@@ -1986,7 +1986,7 @@ public final class Jdbc {
                     final Collection<Object> result = (Collection<Object>) supplier.apply(columnCount);
 
                     for (int i = 0; i < columnCount; i++) {
-                        result.add(columnGetterForAll.apply(rs, i + 1));
+                        result.add(columnGetterForAll.get(rs, i + 1));
                     }
 
                     return (C) result;
@@ -2376,7 +2376,7 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getObject(final int columnIndex, final Class<?> type) {
-                return get(columnIndex, ColumnGetter.get(type));
+                return get(columnIndex, ColumnGetter.forType(type));
             }
 
             /**
@@ -2449,7 +2449,7 @@ public final class Jdbc {
                         final Object[] row = new Object[rsColumnCount];
 
                         for (int i = 0; i < rsColumnCount; i++) {
-                            row[i] = rsColumnGetters[i].apply(rs, i + 1);
+                            row[i] = rsColumnGetters[i].get(rs, i + 1);
                         }
 
                         return row;
@@ -2518,7 +2518,7 @@ public final class Jdbc {
                         final Collection<Object> row = (Collection<Object>) supplier.apply(rsColumnCount);
 
                         for (int i = 0; i < rsColumnCount; i++) {
-                            row.add(rsColumnGetters[i].apply(rs, i + 1));
+                            row.add(rsColumnGetters[i].get(rs, i + 1));
                         }
 
                         return (C) row;
@@ -2584,7 +2584,7 @@ public final class Jdbc {
                         final Map<String, Object> row = mapSupplier.apply(rsColumnCount);
 
                         for (int i = 0; i < rsColumnCount; i++) {
-                            row.put(columnLabels.get(i), rsColumnGetters[i].apply(rs, i + 1));
+                            row.put(columnLabels.get(i), rsColumnGetters[i].get(rs, i + 1));
                         }
 
                         return row;
@@ -2634,7 +2634,7 @@ public final class Jdbc {
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
-                            outputRow[i] = rsColumnGetters[i].apply(rs, i + 1);
+                            outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
                         }
 
                         return finisher.apply(output);
@@ -2687,7 +2687,7 @@ public final class Jdbc {
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
-                            outputRow[i] = rsColumnGetters[i].apply(rs, i + 1);
+                            outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
                         }
 
                         return finisher.apply(columnLabels, output);
@@ -3797,7 +3797,7 @@ public final class Jdbc {
                 final Object[] result = new Object[columnCount];
 
                 for (int i = 0; i < columnCount; i++) {
-                    result[i] = columnGetterForAll.apply(rs, i + 1);
+                    result[i] = columnGetterForAll.get(rs, i + 1);
                 }
 
                 return result;
@@ -3836,7 +3836,7 @@ public final class Jdbc {
                 final Collection<Object> result = (Collection<Object>) supplier.apply(columnCount);
 
                 for (int i = 0; i < columnCount; i++) {
-                    result.add(columnGetterForAll.apply(rs, i + 1));
+                    result.add(columnGetterForAll.get(rs, i + 1));
                 }
 
                 return (C) result;
@@ -4201,7 +4201,7 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
             public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) {
-                return get(columnName, ColumnGetter.get(type));
+                return get(columnName, ColumnGetter.forType(type));
             }
 
             /**
@@ -4300,7 +4300,7 @@ public final class Jdbc {
                             final Object[] a = Array.newInstance(targetClass.getComponentType(), rsColumnCount);
 
                             for (int i = 0; i < rsColumnCount; i++) {
-                                a[i] = rsColumnGetters[i].apply(rs, i + 1);
+                                a[i] = rsColumnGetters[i].get(rs, i + 1);
                             }
 
                             return (T) a;
@@ -4322,7 +4322,7 @@ public final class Jdbc {
                             final Collection<Object> c = N.newCollection((Class<Collection>) targetClass, rsColumnCount);
 
                             for (int i = 0; i < rsColumnCount; i++) {
-                                c.add(rsColumnGetters[i].apply(rs, i + 1));
+                                c.add(rsColumnGetters[i].get(rs, i + 1));
                             }
 
                             return (T) c;
@@ -4348,7 +4348,7 @@ public final class Jdbc {
                             final Map<String, Object> m = N.newMap((Class<Map>) targetClass, rsColumnCount);
 
                             for (int i = 0; i < rsColumnCount; i++) {
-                                m.put(columnLabels[i], rsColumnGetters[i].apply(rs, i + 1));
+                                m.put(columnLabels[i], rsColumnGetters[i].get(rs, i + 1));
                             }
 
                             return (T) m;
@@ -4400,7 +4400,7 @@ public final class Jdbc {
                                         }
                                     } else {
                                         if (rsColumnGetters[i] == ColumnGetter.GET_OBJECT) {
-                                            rsColumnGetters[i] = ColumnGetter.get(localPropInfos[i].dbType);
+                                            rsColumnGetters[i] = ColumnGetter.forType(localPropInfos[i].dbType);
                                         }
                                     }
                                 }
@@ -4415,7 +4415,7 @@ public final class Jdbc {
                                     continue;
                                 }
 
-                                propInfos[i].setPropValue(result, rsColumnGetters[i].apply(rs, i + 1));
+                                propInfos[i].setPropValue(result, rsColumnGetters[i].get(rs, i + 1));
                             }
 
                             return entityInfo.finishBeanResult(result);
@@ -4437,11 +4437,11 @@ public final class Jdbc {
                                 rsColumnGetters = initColumnGetter(columnLabelList);
 
                                 if (rsColumnGetters[0] == ColumnGetter.GET_OBJECT) {
-                                    rsColumnGetters[0] = ColumnGetter.get(N.typeOf(targetClass));
+                                    rsColumnGetters[0] = ColumnGetter.forType(N.typeOf(targetClass));
                                 }
                             }
 
-                            return (T) rsColumnGetters[0].apply(rs, 1);
+                            return (T) rsColumnGetters[0].get(rs, 1);
                         }
                     };
                 }
@@ -5507,7 +5507,7 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code columnIndex} is not positive, or {@code type} is {@code null}.
              */
             public RowExtractorBuilder getObject(final int columnIndex, final Class<?> type) {
-                return get(columnIndex, ColumnGetter.get(type));
+                return get(columnIndex, ColumnGetter.forType(type));
             }
 
             /**
@@ -5572,7 +5572,7 @@ public final class Jdbc {
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
-                            outputRow[i] = rsColumnGetters[i].apply(rs, i + 1);
+                            outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
                         }
                     }
 
@@ -5597,16 +5597,20 @@ public final class Jdbc {
      *
      * <p>Pre-defined getters are provided for all common JDBC types (e.g., {@link #GET_BOOLEAN},
      * {@link #GET_INT}, {@link #GET_STRING}, etc.). Custom getters can be created using lambda expressions
-     * or the {@link #get(Class)} / {@link #get(Type)} factory methods.</p>
+     * or the {@link #forType(Class)} / {@link #forType(Type)} factory methods.</p>
+     *
+     * <p><b>Naming note:</b> the value-fetching method is {@link #get(ResultSet, int)} (this interface's
+     * single abstract method); the static {@code forType(...)} methods are <i>factories</i> that
+     * <b>return</b> a {@code ColumnGetter}, they do not fetch a value.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Using a predefined getter
      * ColumnGetter<Integer> intGetter = ColumnGetter.GET_INT;
-     * Integer value = intGetter.apply(rs, 1);
+     * Integer value = intGetter.get(rs, 1);
      *
      * // Using a type-based factory method
-     * ColumnGetter<LocalDate> dateGetter = ColumnGetter.get(LocalDate.class);
+     * ColumnGetter<LocalDate> dateGetter = ColumnGetter.forType(LocalDate.class);
      *
      * // Custom lambda getter
      * ColumnGetter<String> upperCaseGetter = (rs, idx) -> rs.getString(idx).toUpperCase();
@@ -5712,24 +5716,31 @@ public final class Jdbc {
         ColumnGetter GET_OBJECT = JdbcUtil::getColumnValue;
 
         /**
-         * Extracts a value from the specified column of the given {@code ResultSet}.
+         * Extracts (gets) a value from the specified column of the given {@code ResultSet}.
+         *
+         * <p>This is the single abstract method of this functional interface &mdash; the actual
+         * value-fetching operation. (By contrast, the static {@link #forType(Class)} / {@link #forType(Type)}
+         * methods are factories that <i>return</i> a {@code ColumnGetter}.)</p>
          *
          * @param rs the {@code ResultSet} to extract from.
          * @param columnIndex the 1-based index of the column.
          * @return the extracted value of type {@code V}.
          * @throws SQLException if a database access error occurs.
          */
-        V apply(ResultSet rs, int columnIndex) throws SQLException;
+        V get(ResultSet rs, int columnIndex) throws SQLException;
 
         /**
-         * Retrieves a cached or creates a new {@code ColumnGetter} for the specified class type.
+         * Returns a cached (or newly created) {@code ColumnGetter} for the specified class type.
          * It leverages Abacus-common's {@code Type} system to determine the appropriate extraction method.
+         *
+         * <p>This is a <i>factory</i> that returns a getter; call {@link #get(ResultSet, int)} on the
+         * returned instance to actually fetch a value.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * ColumnGetter<LocalDate> getter = ColumnGetter.get(LocalDate.class);
+         * ColumnGetter<LocalDate> getter = ColumnGetter.forType(LocalDate.class);
          * // Extract the value from the 3rd column (1-based) of the current row.
-         * LocalDate value = getter.apply(resultSet, 3); // throws SQLException
+         * LocalDate value = getter.get(resultSet, 3); // throws SQLException
          * }</pre>
          *
          * @param <T> target type
@@ -5737,22 +5748,25 @@ public final class Jdbc {
          * @return a {@code ColumnGetter} for the specified type.
          * @throws IllegalArgumentException if {@code cls} is {@code null}, or the {@code Type} resolved from {@code cls} is {@code null}.
          */
-        static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
+        static <T> ColumnGetter<T> forType(final Class<? extends T> cls) {
             N.checkArgNotNull(cls, cs.cls);
 
-            return get(N.typeOf(cls));
+            return forType(N.typeOf(cls));
         }
 
         /**
-         * Retrieves a cached or creates a new {@code ColumnGetter} for the specified Abacus-common {@code Type}.
+         * Returns a cached (or newly created) {@code ColumnGetter} for the specified Abacus-common {@code Type}.
          * Common types are cached for efficient reuse.
+         *
+         * <p>This is a <i>factory</i> that returns a getter; call {@link #get(ResultSet, int)} on the
+         * returned instance to actually fetch a value.</p>
          *
          * @param <T> target type
          * @param type the {@code Type} for which to get a {@code ColumnGetter}.
          * @return a {@code ColumnGetter} for the specified type.
          * @throws IllegalArgumentException if {@code type} is {@code null}.
          */
-        static <T> ColumnGetter<T> get(final Type<? extends T> type) {
+        static <T> ColumnGetter<T> forType(final Type<? extends T> type) {
             N.checkArgNotNull(type, cs.type);
 
             final ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.computeIfAbsent(type, k -> type::get);
