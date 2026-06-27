@@ -1,0 +1,46 @@
+API Design Review — DBLock.java
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+DBLock is a compact, public final DB-table-backed distributed lock. The public surface is small: four
+lock(...) overloads, unlock(target, code)->boolean, close(), and the constants LOCKED/UNLOCKED/
+DEFAULT_LOCK_LIVE_TIME/DEFAULT_TIMEOUT. The lock-acquisition retry loop, expired-lock cleanup, background
+refresh scheduler, and code-matched unlock are well implemented and the lifecycle is sound. Findings are a
+parameter-ordering trap in the lock overload family, a dead public constant, a missing AutoCloseable
+declaration, and a return-type-convention nit.
+
+2. NAMING ISSUES
+- None. lock/unlock/close and the constant names are accurate.
+
+3. RETURN-TYPE AND PARAMETER ISSUES
+- lock(String, long) vs lock(String, long, long) — inconsistent meaning of the trailing long |
+  DBLock.java:369 (the single long = timeout: delegates to lock(target, DEFAULT_LOCK_LIVE_TIME, timeout))
+  vs 415 (the FIRST long = liveTime: lock(target, liveTime, timeout)) | Medium | The 2-arg overload's single
+  long maps to the SECOND parameter (timeout) of the 3-arg overload, not the first (liveTime). A caller
+  extending lock(target, timeout) to add liveTime will naturally write lock(target, timeout, liveTime) and
+  get the two swapped silently (both are long, no compile error). Recommend: keep the 3-arg/4-arg forms but
+  reconsider the 2-arg overload — either rename intent (there is no way to disambiguate two longs) or drop
+  lock(String,long) so callers must spell out lock(target, liveTime, timeout). At minimum, document the
+  hazard prominently. Confirming check: grep callers of lock(String,long) to gauge churn.
+- lock(...) returns String (null on failure) | DBLock.java:327, 369, 415, 464 | Low | The library elsewhere
+  favors Optional/Nullable for "may be absent" returns, but a lock-acquire-returns-null idiom is also a
+  widespread convention (cf. tryLock). Recommend: keep null (acquire-failure null is idiomatic) OR, for
+  cross-library consistency, return Optional<String>. Confirming check: whether other "acquire/try" style
+  APIs in the library use Optional vs null.
+
+4. MISPLACED METHODS
+- None.
+
+5. MISSING METHODS (with target class)
+- implements AutoCloseable | DBLock.java:109 (class decl) + close() at 655 | Medium | DBLock has a public
+  close() and its own Javadoc usage examples wrap it in try/finally (e.g. 638-651), but the class does not
+  implement AutoCloseable, so it cannot be used in try-with-resources. Recommend: add `implements
+  AutoCloseable` to DBLock (close() already has the right signature: public void, idempotent). Low risk,
+  pure addition.
+
+6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
+- UNLOCKED constant | DBLock.java:123 | Medium | The Javadoc itself states it is a "reserved/legacy constant
+  that is not currently written by the implementation: a lock is released by deleting its row, so no row ever
+  carries this value." It is dead public API (only LOCKED is ever written to the status column, at 493).
+  Recommend: remove UNLOCKED (or, if kept for documentation, mark @Deprecated). Confirming check: grep the
+  repo for external references to DBLock.UNLOCKED.

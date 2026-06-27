@@ -1,0 +1,91 @@
+API Design Review — AbstractQuery.java
+MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
+
+1. OVERALL ASSESSMENT
+AbstractQuery<Stmt,This> is the fluent base for PreparedQuery/NamedQuery/CallableQuery; the bulk of
+it is well-structured and consistent. The setXxx(int, primitive|wrapper|wrapper+default) family is
+uniform (primitive, null-handling wrapper, and @Beta default-for-null triplets) with correct JDBC
+Types mapping (including the deliberate Float->REAL fix). The terminal-op families are internally
+consistent: queryForBoolean/Char/Byte/Short/Int/Long/Float/Double return OptionalXxx;
+queryForString/BigInteger/BigDecimal/Date/Time/Timestamp/Bytes return Nullable;
+queryForSingleValue/UniqueValue (Nullable) pair cleanly with queryForSingleNonNull/UniqueNonNull
+(Optional); findFirst/findOnlyOne (Optional) mirror findFirstOrNull/findOnlyOneOrNull (null); and the
+Class / RowMapper / BiRowMapper triad is offered consistently across findFirst, findOnlyOne, list,
+stream, insert, batchInsert. The findings concentrate on one genuine duplicate, several
+deprecation-consistency gaps, and a few capitalization-based naming hazards.
+
+2. NAMING ISSUES
+- foreach(Consumer<DisposableObjArray>) / foreach(Class, Consumer<DisposableObjArray>) vs the
+  forEach(RowConsumer ...) family | AbstractQuery.java:8925, 8975 (vs forEach 8684/8726/8778/8836) |
+  Medium | The two families differ ONLY by letter case (foreach vs forEach) and take different
+  callback contracts; a one-character typo silently selects a different method. The Javadoc itself
+  documents the hazard (8938-8941). The name exists to dodge lambda-overload ambiguity between
+  Consumer<DisposableObjArray> and Jdbc.RowConsumer. Recommend: add an unambiguous name (e.g.
+  forEachRow / forEachDisposable) and keep foreach only as a deprecated alias.
+- settParameters(...) (double-t) vs setParameters(...) | AbstractQuery.java:3140, 3187 | Low | Same
+  capitalization/typo hazard; the double-t disambiguates ParametersSetter<? super This> from
+  ParametersSetter<? super Stmt>. Recommend: a clearer name (configParameters / setParametersForQuery).
+  Confirming check: confirm a single setParameters name truly causes lambda-inference ambiguity (it
+  does for the no-context overloads).
+
+3. RETURN-TYPE AND PARAMETER ISSUES
+- query2ResultSets / query3ResultSets accept only BiResultExtractor | AbstractQuery.java:5493, 5559 |
+  Low | The single-result query(...) and queryAllResultSets(...) each offer BOTH ResultExtractor and
+  BiResultExtractor variants, but the numbered multi-result-set methods offer only BiResultExtractor.
+  (Note: CallableQuery's query2/query3ResultSetsAndGetOutParameters have the SAME limitation — this is
+  a cross-class pattern; see SUMMARY.) Recommend: add the ResultExtractor overloads for parity, or
+  document the intentional restriction.
+- setParameters(String,String) exists but no setParameters(Object,Object) | AbstractQuery.java:2258
+  (fixed-arity String overloads start at 2 args) vs ~2440 (Object overloads start at 3; the 2-Object
+  form is commented out ~2417) | Low | A caller with two Object params cannot use setParameters(a,b)
+  though the String case works. Recommend: add setParameters(Object,Object). Confirming check: verify
+  it does not create overload-resolution ambiguity with setParameters(T, BiParametersSetter) (~2857);
+  the more-specific BiParametersSetter overload should still win.
+
+4. MISPLACED METHODS
+- None. Every public method belongs on this fluent base; subclass-specific concerns (named params,
+  out-params) are correctly absent.
+
+5. MISSING METHODS
+- setXxxForIndices family is partial | AbstractQuery.java:3227-3582 | Low | Covers
+  Null/Boolean/Int/Long/Double/String/Date/Time/Timestamp/Object but omits Byte/Short/Float/BigDecimal
+  (and Bytes). The family is @Beta. Recommend: complete the set or document the intentional subset.
+- No primitive-array setParameters beyond int[]/long[]/String[] | AbstractQuery.java:2671, 2689, 2707 |
+  Low | setParameters(double[]/boolean[]/short[]/...) are absent and won't bind via the generic
+  setParameters(T[]) (primitive arrays don't match T[]). Recommend: add the remaining primitive-array
+  overloads or document. Confirming check: confirm setParameters(new double[]{...}) does not compile
+  against T[].
+
+6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
+- setBigIntegerAsString(int, BigInteger) duplicates setString(int, BigInteger) | AbstractQuery.java:1069
+  (body: return setString(parameterIndex, value);) vs 1170 | High | VERIFIED byte-for-byte equivalent
+  (both bind the BigInteger as a base-10 VARCHAR), each @see's the other, both @Beta. Genuine redundant
+  pair. Recommend: keep the explicitly-named setBigIntegerAsString and remove the surprising
+  setString(int, BigInteger) overload (a setString taking BigInteger is itself misleading).
+- list(..., int maxResult) deprecation is inconsistent | deprecated: AbstractQuery.java:6614
+  list(Class,int), 6679 list(RowMapper,int), 6834 list(BiRowMapper,int); NOT deprecated: 6749
+  list(RowFilter,RowMapper,int), 6907 list(BiRowFilter,BiRowMapper,int) | Medium | VERIFIED. The 2-arg
+  maxResult forms are @Deprecated ("limit on the DB side") yet the 3-arg maxResult forms they delegate
+  to are not — the discouraged concept stays fully reachable without warning. Recommend: deprecate the
+  (Filter,Mapper,int) variants too, or un-deprecate the 2-arg ones.
+- Filter+mapper terminal-op deprecation is inconsistent | deprecated: AbstractQuery.java:6231/6291
+  findFirst(RowFilter/BiRowFilter,...), 6416/6497 findFirstOrNull(...) ("use stream(...).first()");
+  NOT deprecated: 6749/6907 list(filter,mapper,...), 8726/8836 forEach(filter,...), 8323/8372
+  count(filter) | Medium | VERIFIED. If in-Java row filtering is discouraged enough to deprecate the
+  findFirst filter overloads, the analogous list/forEach/count filter overloads are inconsistent in
+  remaining blessed. Recommend: pick one policy and apply it across the filter overloads.
+- count() deprecated while count(RowFilter)/count(BiRowFilter) are not | AbstractQuery.java:8280
+  (deprecated), 8323, 8372 | Low | VERIFIED. count() is deprecated as inefficient (full client-side
+  scan); the filtered forms do the same full scan but are kept (@Beta, justified by predicate logic not
+  expressible in SQL). Recommend: a one-line Javadoc note on the filtered forms acknowledging the cost,
+  or deprecate for consistency.
+- @Beta inconsistency within queryForXxx | AbstractQuery.java:4793 queryForBigInteger (@Beta), 4827
+  queryForBigDecimal (@Beta) vs non-Beta queryForString/Date/Time/Timestamp/Bytes | Low | These two are
+  @Beta while their sibling Nullable-returning query-for methods are stable. Recommend: promote out of
+  @Beta or document why they remain provisional.
+- setLong(int, BigInteger) | AbstractQuery.java:790 | Low | Surprising signature (setLong with a
+  BigInteger; throws ArithmeticException on overflow via longValueExact). Mirrored across Named/Callable.
+  Recommend: keep (cross-family consistency + documentation) or deprecate in all three families together
+  toward setBigDecimal/setBigIntegerAsString. Confirming check: usage frequency vs the explicit forms.
+- (Already correct — no action) setInt(int, char)/setInt(int, Character) | AbstractQuery.java:631/656 |
+  Already @Deprecated+@Beta with the correct replacement setString(int, char/Character).

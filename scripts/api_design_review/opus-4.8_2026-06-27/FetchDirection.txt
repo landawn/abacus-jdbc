@@ -1,0 +1,8 @@
+API Design Review — FetchDirection.java (public enum)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+Healthy, no actionable findings. FORWARD/REVERSE/UNKNOWN wrap the ResultSet.FETCH_* constants; the
+accessor intValue() (184) and reverse-lookup valueOf(int) (146) match the IsolationLevel convention and
+are internally consistent. No methods to rename, no return/parameter issues, nothing misplaced or missing,
+no deprecation candidates.

@@ -1,0 +1,23 @@
+API Design Review — SpringApplicationContext.java (public final util)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+A small Spring ApplicationContext bridge with getBean(String)->Object and getBean(Class<T>)->T. The class
+Javadoc states it is "intended for internal framework use only," yet it is public and not @Internal. The
+two getBean overloads are consistent with Spring's own API. Minor, low-priority findings only.
+
+2. NAMING ISSUES — None.
+
+3. RETURN-TYPE AND PARAMETER ISSUES
+- getBean(String) returns Object (untyped) | SpringApplicationContext.java:111 | Low | The name-based lookup
+  forces a cast at every call site. Spring offers getBean(String, Class<T>) for a typed name-based lookup.
+  Recommend: add getBean(String name, Class<T> requiredType) returning T (delegating to
+  appContext.getBean(name, requiredType)). Confirming check: confirm callers want typed name-based lookups
+  (the class is internal, so impact is small).
+
+4. MISPLACED METHODS — None.
+5. MISSING METHODS — getBean(String, Class<T>) (see section 3).
+
+6. DEPRECATION / REMOVAL CANDIDATES
+- None. (Consider marking the class @Internal to match its documented "internal use only" status, but that is
+  an annotation/visibility decision, not an API-shape defect.)

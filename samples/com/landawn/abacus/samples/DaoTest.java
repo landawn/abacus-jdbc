@@ -48,7 +48,7 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.JdbcUtils;
+import com.landawn.abacus.jdbc.DataTransferUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlParser;
@@ -407,7 +407,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement("select * from user1");
              ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCsv(rs, IOUtil.newOutputStreamWriter(System.out));
+            DataTransferUtil.exportCsv(rs, IOUtil.newOutputStreamWriter(System.out));
         }
 
         N.println(IOUtil.LINE_SEPARATOR_UNIX);
@@ -416,7 +416,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement("select * from user1");
              ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCsv(rs, JdbcUtil.getColumnLabelList(rs), IOUtil.newOutputStreamWriter(System.out));
+            DataTransferUtil.exportCsv(rs, JdbcUtil.getColumnLabelList(rs), IOUtil.newOutputStreamWriter(System.out));
         }
 
         userDao.batchDelete(users);

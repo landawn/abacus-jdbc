@@ -1,0 +1,14 @@
+API Design Review — IsolationLevel.java (public enum)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+Healthy. Backing int via intValue() (195) and reverse-lookup via valueOf(int) (227) — this intValue()/
+valueOf(int) pairing is the established convention (shared with FetchDirection) and is internally
+consistent. NONE is appropriately @Deprecated. No actionable structural findings.
+
+2-6. Only one minor cross-class note (no action needed in isolation):
+- valueOf(int) | IsolationLevel.java:227 | Low | This custom int reverse-lookup overloads the enum's
+  compiler-generated valueOf(String name); both coexist with no ambiguity (distinct param types), but
+  reusing the name valueOf for a JDBC-int->enum lookup (vs name->enum) is slightly unusual. It is consistent
+  with FetchDirection.valueOf(int), so treat as the convention and KEEP. See SUMMARY for the broader
+  enum-accessor convention (intValue()/valueOf(int)) that OnDeleteAction diverges from.

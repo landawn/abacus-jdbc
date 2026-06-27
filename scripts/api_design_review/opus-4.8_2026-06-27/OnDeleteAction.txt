@@ -1,0 +1,29 @@
+API Design Review — OnDeleteAction.java (public enum)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+OnDeleteAction is an int-backed enum (NO_ACTION=0, SET_NULL=1, CASCADE=2) with value() and get(String).
+The ENTIRE enum is already @Deprecated (+@Beta) with the guidance to model delete actions in the DB schema.
+Given that, the items below are noted for the cross-class consistency record but warrant no action unless
+the type is un-deprecated.
+
+2. NAMING ISSUES
+- value() accessor vs the intValue() convention | OnDeleteAction.java:126 | Low | The int-wrapper enums
+  IsolationLevel and FetchDirection expose their backing int via intValue() (IsolationLevel.java:195,
+  FetchDirection.java:184), but OnDeleteAction (whose backing field is even named intValue, line 83) exposes
+  it via value(). This is a cross-enum accessor-naming inconsistency (see SUMMARY). Recommend: no action
+  (type is deprecated); if ever revived, rename to intValue() for consistency.
+- get(String) factory vs the valueOf(int) convention | OnDeleteAction.java:160 | Low | IsolationLevel and
+  FetchDirection provide a valueOf(int) reverse-lookup; OnDeleteAction provides get(String) (token lookup),
+  a different name and a different key type. Recommend: no action (deprecated).
+
+3. RETURN-TYPE AND PARAMETER ISSUES
+- None beyond the naming notes above.
+
+4. MISPLACED METHODS — None.
+5. MISSING METHODS — None.
+
+6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
+- The whole enum (and value()/get()) | OnDeleteAction.java:31, 126, 160 | (already handled) | Already
+  @Deprecated; replacement is database-schema-level ON DELETE constraints. Eligible for outright removal
+  under relaxed BC, but that is a project decision.

@@ -100,7 +100,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, PSC, ...);
 [Dataset](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dataset_view.html), 
 [Filters](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Filters_view.html), 
 [JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
-[JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
+[DataTransferUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataTransferUtil_view.html).
 
 ```java
 // Execute the sql by a PreparedQuery/NamedQuery/CallableQuery

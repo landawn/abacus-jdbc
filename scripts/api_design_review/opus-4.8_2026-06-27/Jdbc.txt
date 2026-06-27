@@ -1,0 +1,82 @@
+API Design Review — Jdbc.java (container of public nested functional interfaces)
+MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
+
+1. OVERALL ASSESSMENT
+Jdbc is a mature namespace of functional interfaces. The four Bi-mirror families
+(RowMapper/BiRowMapper, RowConsumer/BiRowConsumer, RowFilter/BiRowFilter,
+ResultExtractor/BiResultExtractor) are largely well-aligned: composition (andThen/and/or/negate),
+up-converters (toBiXxx), combine, toMap/groupTo/toMultimap/toList, toArray/toCollection/
+toDisposableObjArray, and the @Beta/@SequentialOnly/@Stateful markings are consistent, with the
+stateful-vs-stateless split between non-Bi and Bi factories intentional and correct (non-Bi caches
+column count; Bi receives labels). ColumnGetter, Columns.ColumnOne (GET_*/SET_* + get/set/readJson/
+readXml), RowExtractor/RowExtractorBuilder, OutParam/OutParamResult, Handler, and the DaoCache family
+are coherent. Deprecations are uniformly paired with replacements. The deliberate omission of
+down-converters on BiResultExtractor/BiRowFilter/BiRowConsumer (only BiRowMapper has a deprecated
+toRowMapper) is internally consistent and is NOT flagged. Findings: a few mirror gaps, two
+cross-family naming inconsistencies, and minor encapsulation/generics nits.
+
+2. NAMING ISSUES
+- HandlerFactory.create (3 overloads) | Jdbc.java:6614, 6646, 6683 | Medium | VERIFIED. The two
+  single-arg overloads create(TriConsumer beforeInvokeAction) and create(QuadConsumer afterInvokeAction)
+  are both named create and are disambiguated only by lambda arity (3 args=before, 4 args=after) — the
+  Javadoc even needs explicit (TriConsumer)null / (QuadConsumer)null casts (6605, 6637) to compile. It is
+  intent-unsafe: create(x -> ...) does not reveal whether a before- or after-hook is registered.
+  Recommend: add explicitly-named createForBeforeInvoke(...) / createForAfterInvoke(...); keep the 2-arg
+  create(before, after).
+- RowConsumer#oneOff / BiRowConsumer#oneOff vs RowMapper#toDisposableObjArray /
+  BiRowMapper#toDisposableObjArray | Jdbc.java:4505,4547,4708,4750 (oneOff) vs 1975,2023,3804,3845
+  (toDisposableObjArray) | Medium-Low | VERIFIED. The identical "wrap each row into a reusable
+  DisposableObjArray" concept is named toDisposableObjArray on the mapper interfaces but oneOff on the
+  consumer interfaces. oneOff is opaque and breaks cross-family naming. Recommend: rename the consumer
+  factories to toDisposableObjArray (or consumeDisposableObjArray) for consistency, or document the
+  rationale. (Cross-cuts AbstractQuery.foreach which delegates to oneOff — see SUMMARY.)
+- DaoCache#create(int,long) vs #createByMap(...) | Jdbc.java:6736, 6746, 6758 | Low | create is the
+  generic name yet denotes specifically the pooled/TTL-evicting variant, while the map-backed variant is
+  the more descriptive createByMap. Recommend: createWithEviction/createPooled for the first to make the
+  pair self-describing. Confirming check: no caller relies on the create name (pure rename; BC relaxed).
+
+3. RETURN-TYPE AND PARAMETER ISSUES
+- Columns.ColumnOne#set(Class<T>) | Jdbc.java:6053 | Low | VERIFIED. Uses invariant Class<T> whereas
+  every sibling type-keyed factory uses Class<? extends T> (ColumnOne.get 5965, readJson 6007, readXml
+  6028; ColumnGetter.get 5629). Recommend: set(final Class<? extends T> type) for consistency.
+- OutParamResult#getOutParamValues() / #getOutParams() | Jdbc.java:6258, 6275 | Low | VERIFIED. Both
+  return the live internal Map/List directly, allowing external mutation of a framework-produced result.
+  Recommend: return immutable views (N.unmodifiableMap / ImmutableList.wrap). Confirming check: ensure no
+  internal caller mutates the returned collections.
+- OutParam (Lombok @Data setters + @AllArgsConstructor) vs #of(int,int) | Jdbc.java:6112, 6159 | Low |
+  The documented parameterIndex>0 invariant is enforced only by of(...); the public all-args ctor and
+  setParameterIndex accept any value. Recommend: validate in setParameterIndex (and the all-args ctor) so
+  the invariant cannot be bypassed.
+
+4. MISPLACED METHODS
+- None material. ColumnOne.set(...) returning a writer (BiParametersSetter) under a "read column 1" type
+  is the deliberate "first parameter" symmetry and is documented; leave as-is.
+
+5. MISSING METHODS
+- BiResultExtractor lacks the Dataset / merged-list mirror of ResultExtractor | gap in BiResultExtractor
+  (~1209) vs ResultExtractor.toMergedList (1003/1031/1061), toDataset (1084/1106/1127/1138/1158),
+  toDatasetAndThen (1178) | Medium | VERIFIED: BiResultExtractor defines the TO_DATASET constant but none
+  of the toDataset(...)/toMergedList(...)/toDatasetAndThen(...) factories its mirror has. These produce a
+  label-aware Dataset and don't need the columnLabels arg, so each could be a thin delegate
+  ((rs,cols) -> ResultExtractor.toXxx(...).apply(rs)). Recommend: add the mirrors, or document the
+  asymmetry if Datasets are intentionally read via the constant only. Confirming check: whether callers
+  ever need a BiResultExtractor<Dataset> beyond TO_DATASET.
+- DaoCache#createByMap(int capacity) | Jdbc.java:6746/6758 (factories) vs DaoCacheByMap(int) ctor ~6956 |
+  Low | A capacity-sized map-backed cache constructor exists but is unreachable through the public
+  DaoCache factory surface (and DaoCacheByMap is package-private). Recommend: add
+  static DaoCache createByMap(int capacity). (Also: DaoCache's class Javadoc @see/@link a non-public
+  DaoCacheByMap — minor doc exposure.)
+
+6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
+- ResultExtractor#toMap(RowMapper,RowMapper,Collector[,Supplier]) | Jdbc.java:651, 673 | High | Already
+  @Deprecated; delegate to groupTo(...). Replacement: groupTo(keyExtractor, valueExtractor, downstream
+  [, supplier]). Removal candidates under relaxed BC.
+- BiResultExtractor#toMap(BiRowMapper,BiRowMapper,Collector[,Supplier]) | Jdbc.java:1401, 1423 | High |
+  Bi mirror of the above; replacement groupTo(...). Removal candidates.
+- BiRowMapper#toRowMapper() | Jdbc.java:2804 | Medium | Correctly @Deprecated (stateful, misuse-prone
+  down-converter); replacement is using BiRowMapper directly. Recommend keep deprecated rather than remove
+  (occasionally legitimately needed).
+- RowMapperBuilder#getObject(int) / BiRowMapperBuilder#getObject(String) / RowExtractorBuilder#getObject(int)
+  | Jdbc.java:2310, 4111, 5402 | Low | Consistently @Deprecated (default getter is already GET_OBJECT);
+  harmless and uniformly handled. The typed getObject(int/String, Class) overloads are the intended
+  survivors. No action.

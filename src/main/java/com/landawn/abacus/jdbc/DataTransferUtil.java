@@ -104,22 +104,22 @@ import com.landawn.abacus.util.stream.CharStream;
  * Dataset dataset = Dataset.of("name", "age", "email")
  *     .addRow("John Doe", 30, "john@example.com")
  *     .addRow("Jane Smith", 25, "jane@example.com");
- * int importedRows = JdbcUtils.importData(dataset, dataSource,
+ * int importedRows = DataTransferUtil.importData(dataset, dataSource,
  *     "INSERT INTO users (name, age, email) VALUES (?, ?, ?)");
  *
  * // Export query results to CSV file
- * long exportedRows = JdbcUtils.exportCsv(dataSource,
+ * long exportedRows = DataTransferUtil.exportCsv(dataSource,
  *     "SELECT * FROM users ORDER BY id",
  *     new File("export.csv"));
  *
  * // Copy data between databases
- * long copiedRows = JdbcUtils.copy(sourceDataSource,
+ * long copiedRows = DataTransferUtil.copy(sourceDataSource,
  *     "SELECT id, name, age FROM source_users WHERE active = true",
  *     targetDataSource,
  *     "INSERT INTO target_users (user_id, full_name, user_age) VALUES (?, ?, ?)");
  *
  * // Copy with custom fetch and batch sizes
- * copiedRows = JdbcUtils.copy(sourceDataSource,
+ * copiedRows = DataTransferUtil.copy(sourceDataSource,
  *     "SELECT customer_id, first_name, last_name, email FROM legacy_customers",
  *     50000,  // fetch size
  *     targetDataSource,
@@ -134,9 +134,9 @@ import com.landawn.abacus.util.stream.CharStream;
  * @see PreparedStatement
  * @see ResultSet
  */
-public final class JdbcUtils {
+public final class DataTransferUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(JdbcUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(DataTransferUtil.class);
 
     static final char[] ELEMENT_SEPARATOR_CHAR_ARRAY = Strings.ELEMENT_SEPARATOR.toCharArray();
 
@@ -144,7 +144,7 @@ public final class JdbcUtils {
 
     static final int DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER = 1024;
 
-    private JdbcUtils() {
+    private DataTransferUtil() {
         // Utility class - prevent instantiation.
     }
 
@@ -156,7 +156,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, dataSource, insertSql);
+     * int rowsImported = DataTransferUtil.importData(dataset, dataSource, insertSql);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -189,7 +189,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, connection, insertSql);
+     * int rowsImported = DataTransferUtil.importData(dataset, connection, insertSql);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -218,7 +218,7 @@ public final class JdbcUtils {
      * Dataset dataset = Dataset.of("id", "name", "age", "email").addRow(1, "John", 25, "john@email.com");
      * List<String> selectColumns = Arrays.asList("name", "age");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, selectColumns, connection, insertSql);
+     * int rowsImported = DataTransferUtil.importData(dataset, selectColumns, connection, insertSql);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -250,7 +250,7 @@ public final class JdbcUtils {
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * List<String> columns = Arrays.asList("name", "age");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, columns, connection, insertSql, 1000, 100);
+     * int rowsImported = DataTransferUtil.importData(dataset, columns, connection, insertSql, 1000, 100);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -287,7 +287,7 @@ public final class JdbcUtils {
      * // Only import adults (age >= 18)
      * Throwables.Predicate<Object[], RuntimeException> filter = row -> ((Integer) row[1]) >= 18;
      * String insertSql = "INSERT INTO adult_users (name, age) VALUES (?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, columns, filter, conn, insertSql, 1000, 0);
+     * int rowsImported = DataTransferUtil.importData(dataset, columns, filter, conn, insertSql, 1000, 0);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -331,7 +331,7 @@ public final class JdbcUtils {
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
      * String insertSql = "INSERT INTO users (name, birthdate) VALUES (?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, connection, insertSql, columnTypes);
+     * int rowsImported = DataTransferUtil.importData(dataset, connection, insertSql, columnTypes);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -369,7 +369,7 @@ public final class JdbcUtils {
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
      * columnTypes.put("score", Type.of(Double.class));
      * String insertSql = "INSERT INTO students (name, birthdate, score) VALUES (?, ?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, conn, insertSql, 1000, 0, columnTypes);
+     * int rowsImported = DataTransferUtil.importData(dataset, conn, insertSql, 1000, 0, columnTypes);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -412,7 +412,7 @@ public final class JdbcUtils {
      * // Only import active users
      * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * String insertSql = "INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)";
-     * int rowsImported = JdbcUtils.importData(dataset, filter, conn, insertSql, 500, 50, columnTypes);
+     * int rowsImported = DataTransferUtil.importData(dataset, filter, conn, insertSql, 500, 50, columnTypes);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -458,7 +458,7 @@ public final class JdbcUtils {
      *     query.setInt(2, (Integer) row[1]);
      *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = JdbcUtils.importData(dataset, connection, insertSql, setter);
+     * int rowsImported = DataTransferUtil.importData(dataset, connection, insertSql, setter);
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -486,7 +486,7 @@ public final class JdbcUtils {
      *     stmt.setInt(2, (Integer) row[1]);
      *     stmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = JdbcUtils.importData(dataset, conn, insertSql, 1000, 100, setter);
+     * int rowsImported = DataTransferUtil.importData(dataset, conn, insertSql, 1000, 100, setter);
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -521,7 +521,7 @@ public final class JdbcUtils {
      *     stmt.setInt(2, (Integer) row[1]);
      *     stmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = JdbcUtils.importData(dataset, filter, conn, insertSql, 500, 0, setter);
+     * int rowsImported = DataTransferUtil.importData(dataset, filter, conn, insertSql, 500, 0, setter);
      * }</pre>
      *
      * @param <E> exception type that filter might throw
@@ -553,7 +553,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = JdbcUtils.importData(dataset, stmt);
+     * int rowsImported = DataTransferUtil.importData(dataset, stmt);
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -574,7 +574,7 @@ public final class JdbcUtils {
      * Dataset dataset = Dataset.of("id", "name", "age", "email").addRow(1, "John", 25, "john@email.com");
      * List<String> selectColumns = Arrays.asList("name", "age");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = JdbcUtils.importData(dataset, selectColumns, stmt);
+     * int rowsImported = DataTransferUtil.importData(dataset, selectColumns, stmt);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -604,7 +604,7 @@ public final class JdbcUtils {
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * List<String> columns = Arrays.asList("name", "age");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = JdbcUtils.importData(dataset, columns, stmt, 1000, 100);
+     * int rowsImported = DataTransferUtil.importData(dataset, columns, stmt, 1000, 100);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -642,7 +642,7 @@ public final class JdbcUtils {
      * // Only import active users
      * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age) VALUES (?, ?)");
-     * int rowsImported = JdbcUtils.importData(dataset, columns, filter, stmt, 500, 0);
+     * int rowsImported = DataTransferUtil.importData(dataset, columns, filter, stmt, 500, 0);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -707,7 +707,7 @@ public final class JdbcUtils {
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, birthdate) VALUES (?, ?)");
-     * int rowsImported = JdbcUtils.importData(dataset, stmt, columnTypes);
+     * int rowsImported = DataTransferUtil.importData(dataset, stmt, columnTypes);
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -736,7 +736,7 @@ public final class JdbcUtils {
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
      * columnTypes.put("score", Type.of(Double.class));
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO students (name, birthdate, score) VALUES (?, ?, ?)");
-     * int rowsImported = JdbcUtils.importData(dataset, stmt, 1000, 0, columnTypes);
+     * int rowsImported = DataTransferUtil.importData(dataset, stmt, 1000, 0, columnTypes);
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -771,7 +771,7 @@ public final class JdbcUtils {
      * // Only import active users
      * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)");
-     * int rowsImported = JdbcUtils.importData(dataset, filter, stmt, 500, 50, columnTypes);
+     * int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 50, columnTypes);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -861,7 +861,7 @@ public final class JdbcUtils {
      *     query.setInt(2, (Integer) row[1]);
      *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = JdbcUtils.importData(dataset, stmt, setter);
+     * int rowsImported = DataTransferUtil.importData(dataset, stmt, setter);
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -888,7 +888,7 @@ public final class JdbcUtils {
      *     query.setInt(2, (Integer) row[1]);
      *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = JdbcUtils.importData(dataset, stmt, 1000, 100, setter);
+     * int rowsImported = DataTransferUtil.importData(dataset, stmt, 1000, 100, setter);
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -922,7 +922,7 @@ public final class JdbcUtils {
      *     query.setInt(2, (Integer) row[1]);
      *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = JdbcUtils.importData(dataset, filter, stmt, 500, 0, setter);
+     * int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 0, setter);
      * }</pre>
      *
      * @param <E> exception type that filter might throw
@@ -1000,7 +1000,7 @@ public final class JdbcUtils {
      *     String[] parts = line.split(",");
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
      * };
-     * long rowsImported = JdbcUtils.importData(csvFile, dataSource, insertSql, parser);
+     * long rowsImported = DataTransferUtil.importData(csvFile, dataSource, insertSql, parser);
      * }</pre>
      *
      * @param <E> exception type that function might throw
@@ -1037,7 +1037,7 @@ public final class JdbcUtils {
      *     if (parts.length < 3) return null;  // Skip invalid lines
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]), parts[2] };
      * };
-     * long rowsImported = JdbcUtils.importData(csvFile, connection, insertSql, 1000, 100, parser);
+     * long rowsImported = DataTransferUtil.importData(csvFile, connection, insertSql, 1000, 100, parser);
      * }</pre>
      *
      * @param <E> exception type that function might throw
@@ -1072,7 +1072,7 @@ public final class JdbcUtils {
      *     String[] parts = line.split("\\|");
      *     return new Object[] { parts[0], Double.parseDouble(parts[1]) };
      * };
-     * long rowsImported = JdbcUtils.importData(dataFile, stmt, 500, 50, parser);
+     * long rowsImported = DataTransferUtil.importData(dataFile, stmt, 500, 50, parser);
      * }</pre>
      *
      * @param <E> exception type that function might throw
@@ -1106,7 +1106,7 @@ public final class JdbcUtils {
      *     String[] parts = line.split(",");
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
      * };
-     * long rowsImported = JdbcUtils.importData(reader, dataSource, insertSql, parser);
+     * long rowsImported = DataTransferUtil.importData(reader, dataSource, insertSql, parser);
      * }</pre>
      *
      * @param <E> exception type that function might throw
@@ -1146,7 +1146,7 @@ public final class JdbcUtils {
      *         java.sql.Date.valueOf(parts[2])
      *     };
      * };
-     * long rowsImported = JdbcUtils.importData(reader, connection, insertSql, 2000, 200, parser);
+     * long rowsImported = DataTransferUtil.importData(reader, connection, insertSql, 2000, 200, parser);
      * }</pre>
      *
      * @param <E> exception type that function might throw
@@ -1188,7 +1188,7 @@ public final class JdbcUtils {
      *         new Timestamp(Long.parseLong(matcher.group(2)))
      *     };
      * };
-     * long rowsImported = JdbcUtils.importData(reader, stmt, 1000, 0, parser);
+     * long rowsImported = DataTransferUtil.importData(reader, stmt, 1000, 0, parser);
      * }</pre>
      *
      * @param <E> exception type that function might throw
@@ -1269,7 +1269,7 @@ public final class JdbcUtils {
      * DataSource dataSource = getDataSource();
      * String insertSql = "INSERT INTO users (id, name, email) VALUES (?, ?, ?)";
      *
-     * long rowsImported = JdbcUtils.importData(users.iterator(), dataSource, insertSql,
+     * long rowsImported = DataTransferUtil.importData(users.iterator(), dataSource, insertSql,
      *     (stmt, user) -> {
      *         stmt.setLong(1, user.getId());
      *         stmt.setString(2, user.getName());
@@ -1313,7 +1313,7 @@ public final class JdbcUtils {
      * String insertSql = "INSERT INTO products (sku, name, price, stock) VALUES (?, ?, ?, ?)";
      *
      * try {
-     *     long rowsImported = JdbcUtils.importData(products, conn, insertSql,
+     *     long rowsImported = DataTransferUtil.importData(products, conn, insertSql,
      *         5000,  // larger batch size for better performance
      *         100,   // 100ms pause between batches to avoid overwhelming the DB
      *         (stmt, product) -> {
@@ -1373,7 +1373,7 @@ public final class JdbcUtils {
      * try {
      *     // Import pending orders
      *     Iterator<Order> pendingOrders = getPendingOrders();
-     *     long pending = JdbcUtils.importData(pendingOrders, stmt, 1000, 0,
+     *     long pending = DataTransferUtil.importData(pendingOrders, stmt, 1000, 0,
      *         (query, order) -> {
      *             query.setLong(1, order.getId());
      *             query.setLong(2, order.getCustomerId());
@@ -1383,7 +1383,7 @@ public final class JdbcUtils {
      *
      *     // Reuse statement for completed orders
      *     Iterator<Order> completedOrders = getCompletedOrders();
-     *     long completed = JdbcUtils.importData(completedOrders, stmt, 1000, 0,
+     *     long completed = DataTransferUtil.importData(completedOrders, stmt, 1000, 0,
      *         (query, order) -> {
      *             query.setLong(1, order.getId());
      *             query.setLong(2, order.getCustomerId());
@@ -1464,7 +1464,7 @@ public final class JdbcUtils {
      * DataSource dataSource = getDataSource();
      * String insertSql = "INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)";
      *
-     * long rowsImported = JdbcUtils.importCsv(csvFile, dataSource, insertSql,
+     * long rowsImported = DataTransferUtil.importCsv(csvFile, dataSource, insertSql,
      *     (stmt, row) -> {
      *         stmt.setString(1, row[0]);   // name
      *         stmt.setString(2, row[1]);   // email
@@ -1510,7 +1510,7 @@ public final class JdbcUtils {
      * String insertSql = "INSERT INTO products (sku, name, category, price) VALUES (?, ?, ?, ?)";
      *
      * try {
-     *     long rowsImported = JdbcUtils.importCsv(csvFile, conn, insertSql,
+     *     long rowsImported = DataTransferUtil.importCsv(csvFile, conn, insertSql,
      *         2000,  // batch size
      *         50,    // 50ms pause between batches
      *         (stmt, row) -> {
@@ -1559,7 +1559,7 @@ public final class JdbcUtils {
      *     "INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)",
      *     Statement.RETURN_GENERATED_KEYS);
      *
-     * long rowsImported = JdbcUtils.importCsv(csvFile, stmt,
+     * long rowsImported = DataTransferUtil.importCsv(csvFile, stmt,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setBigDecimal(2, new BigDecimal(row[1]));
@@ -1601,7 +1601,7 @@ public final class JdbcUtils {
      *
      * AtomicLong processedRows = new AtomicLong(0);
      *
-     * long totalRows = JdbcUtils.importCsv(csvFile, stmt, 5000, 100,
+     * long totalRows = DataTransferUtil.importCsv(csvFile, stmt, 5000, 100,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1]);
@@ -1649,7 +1649,7 @@ public final class JdbcUtils {
      * // Filter to import only users with "ACTIVE" status (assuming status is in column 3)
      * Throwables.Predicate<String[], RuntimeException> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
      *
-     * long rowsImported = JdbcUtils.importCsv(csvFile, activeUsersFilter, stmt, 1000, 0,
+     * long rowsImported = DataTransferUtil.importCsv(csvFile, activeUsersFilter, stmt, 1000, 0,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1]);
@@ -1696,7 +1696,7 @@ public final class JdbcUtils {
      * DataSource dataSource = getDataSource();
      * String insertSql = "INSERT INTO people (name, age, city) VALUES (?, ?, ?)";
      *
-     * long rowsImported = JdbcUtils.importCsv(reader, dataSource, insertSql,
+     * long rowsImported = DataTransferUtil.importCsv(reader, dataSource, insertSql,
      *     (stmt, row) -> {
      *         stmt.setString(1, row[0]);
      *         stmt.setInt(2, Integer.parseInt(row[1]));
@@ -1741,7 +1741,7 @@ public final class JdbcUtils {
      * PreparedStatement stmt = conn.prepareStatement(
      *     "INSERT INTO data (col1, col2, col3) VALUES (?, ?, ?)");
      *
-     * long rowsImported = JdbcUtils.importCsv(reader, stmt,
+     * long rowsImported = DataTransferUtil.importCsv(reader, stmt,
      *     (query, row) -> {
      *         query.setString(1, row[0]);
      *         query.setString(2, row[1]);
@@ -1780,7 +1780,7 @@ public final class JdbcUtils {
      *     "INSERT INTO large_table (id, data, timestamp) VALUES (?, ?, ?)");
      *
      * long startTime = System.currentTimeMillis();
-     * long rowsImported = JdbcUtils.importCsv(reader, stmt, 10000, 200,
+     * long rowsImported = DataTransferUtil.importCsv(reader, stmt, 10000, 200,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1]);
@@ -1844,7 +1844,7 @@ public final class JdbcUtils {
      *     return allowedCountries.contains(row[3]);
      * };
      *
-     * long rowsImported = JdbcUtils.importCsv(reader, complexFilter, stmt, 2000, 0,
+     * long rowsImported = DataTransferUtil.importCsv(reader, complexFilter, stmt, 2000, 0,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1].toLowerCase());   // normalize email
@@ -1949,7 +1949,7 @@ public final class JdbcUtils {
      * String query = "SELECT id, name, email, registration_date FROM users WHERE active = true";
      * File outputFile = new File("active_users.csv");
      *
-     * long rowsExported = JdbcUtils.exportCsv(dataSource, query, outputFile);
+     * long rowsExported = DataTransferUtil.exportCsv(dataSource, query, outputFile);
      * System.out.println("Exported " + rowsExported + " active users to " + outputFile);
      * }</pre>
      *
@@ -1987,7 +1987,7 @@ public final class JdbcUtils {
      *     String query = "SELECT * FROM large_table WHERE created_date >= '2023-01-01'";
      *     File outputFile = new File("export_2023.csv");
      *
-     *     long rowsExported = JdbcUtils.exportCsv(conn, query, outputFile);
+     *     long rowsExported = DataTransferUtil.exportCsv(conn, query, outputFile);
      *     System.out.println("Successfully exported " + rowsExported + " rows");
      * } finally {
      *     conn.close();
@@ -2023,7 +2023,7 @@ public final class JdbcUtils {
      * Set<String> columnsToExport = Set.of("id", "name", "department");
      *
      * try {
-     *     long rowsExported = JdbcUtils.exportCsv(conn, query, columnsToExport, outputFile);
+     *     long rowsExported = DataTransferUtil.exportCsv(conn, query, columnsToExport, outputFile);
      *     System.out.println("Exported " + rowsExported + " employees (filtered columns)");
      * } finally {
      *     conn.close();
@@ -2068,7 +2068,7 @@ public final class JdbcUtils {
      * stmt.setString(3, "COMPLETED");
      *
      * File outputFile = new File("completed_orders_2023.csv");
-     * long rowsExported = JdbcUtils.exportCsv(stmt, outputFile);
+     * long rowsExported = DataTransferUtil.exportCsv(stmt, outputFile);
      *
      * System.out.println("Exported " + rowsExported + " completed orders for 2023");
      * }</pre>
@@ -2101,7 +2101,7 @@ public final class JdbcUtils {
      * Set<String> userColumns = Set.of("id", "name", "email", "country");
      * File outputFile = new File("us_users.csv");
      *
-     * long rowsExported = JdbcUtils.exportCsv(stmt, userColumns, outputFile);
+     * long rowsExported = DataTransferUtil.exportCsv(stmt, userColumns, outputFile);
      * System.out.println("Exported " + rowsExported + " US users");
      * }</pre>
      *
@@ -2143,7 +2143,7 @@ public final class JdbcUtils {
      * rs.absolute(100); // position on row 100; export begins with row 101
      *
      * File outputFile = new File("products_from_101.csv");
-     * long rowsExported = JdbcUtils.exportCsv(rs, outputFile);
+     * long rowsExported = DataTransferUtil.exportCsv(rs, outputFile);
      *
      * System.out.println("Exported " + rowsExported + " products (skipped first 100)");
      * }</pre>
@@ -2178,7 +2178,7 @@ public final class JdbcUtils {
      * Set<String> exportColumns = Set.of("order_id", "order_date", "customer_name", "total");
      * File outputFile = new File("order_summary.csv");
      *
-     * long rowsExported = JdbcUtils.exportCsv(rs, exportColumns, outputFile);
+     * long rowsExported = DataTransferUtil.exportCsv(rs, exportColumns, outputFile);
      * System.out.println("Exported " + rowsExported + " order summaries");
      * }</pre>
      *
@@ -2218,7 +2218,7 @@ public final class JdbcUtils {
      * Writer writer = new OutputStreamWriter(response.getOutputStream());
      * String query = "SELECT * FROM monthly_report WHERE month = CURRENT_MONTH()";
      *
-     * long rowsExported = JdbcUtils.exportCsv(dataSource, query, writer);
+     * long rowsExported = DataTransferUtil.exportCsv(dataSource, query, writer);
      * writer.flush();
      *
      * logger.info("Streamed " + rowsExported + " rows to client");
@@ -2256,7 +2256,7 @@ public final class JdbcUtils {
      * String query = "SELECT id, name, value FROM metrics WHERE date = CURRENT_DATE";
      *
      * try {
-     *     long rowsExported = JdbcUtils.exportCsv(conn, query, stringWriter);
+     *     long rowsExported = DataTransferUtil.exportCsv(conn, query, stringWriter);
      *     String csvData = stringWriter.toString();
      *
      *     // Process CSV data (e.g., send via email, store in cache, etc.)
@@ -2306,7 +2306,7 @@ public final class JdbcUtils {
      *      GZIPOutputStream gzos = new GZIPOutputStream(fos);
      *      Writer writer = new OutputStreamWriter(gzos, StandardCharsets.UTF_8)) {
      *
-     *     long rowsExported = JdbcUtils.exportCsv(rs, writer);
+     *     long rowsExported = DataTransferUtil.exportCsv(rs, writer);
      *     System.out.println("Exported " + rowsExported + " rows to compressed CSV");
      * }
      * }</pre>
@@ -2341,7 +2341,7 @@ public final class JdbcUtils {
      *
      * try (Writer writer = new FileWriter("users_export.csv")) {
      *     ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     *     long exported = JdbcUtils.exportCsv(rs, columns, writer);
+     *     long exported = DataTransferUtil.exportCsv(rs, columns, writer);
      *     System.out.println("Exported " + exported + " rows");
      * }
      * }</pre>
@@ -2475,7 +2475,7 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy entire table between databases
-     * long rowsCopied = JdbcUtils.copy(sourceDataSource, targetDataSource, "customers");
+     * long rowsCopied = DataTransferUtil.copy(sourceDataSource, targetDataSource, "customers");
      * System.out.println("Copied " + rowsCopied + " rows");
      * }</pre>
      *
@@ -2500,7 +2500,7 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy table to a backup table with different name
-     * long rowsCopied = JdbcUtils.copy(sourceDS, targetDS, "customers", "customers_backup");
+     * long rowsCopied = DataTransferUtil.copy(sourceDS, targetDS, "customers", "customers_backup");
      * System.out.println("Backed up " + rowsCopied + " customer records");
      * }</pre>
      *
@@ -2526,7 +2526,7 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy large table with custom batch size
-     * long rowsCopied = JdbcUtils.copy(sourceDS, targetDS, "large_table", "large_table", 5000);
+     * long rowsCopied = DataTransferUtil.copy(sourceDS, targetDS, "large_table", "large_table", 5000);
      * System.out.println("Copied " + rowsCopied + " rows in batches of 5000");
      * }</pre>
      *
@@ -2581,7 +2581,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * // Copy only specific columns
      * Set<String> columns = Set.of("id", "name", "email", "status");
-     * long rowsCopied = JdbcUtils.copy(sourceDS, targetDS, "users", "active_users", columns);
+     * long rowsCopied = DataTransferUtil.copy(sourceDS, targetDS, "users", "active_users", columns);
      * System.out.println("Copied " + rowsCopied + " users with selected columns");
      * }</pre>
      *
@@ -2609,7 +2609,7 @@ public final class JdbcUtils {
      * <pre>{@code
      * // Copy specific columns with large batch size for performance
      * List<String> columns = Arrays.asList("customer_id", "order_date", "total_amount");
-     * long rowsCopied = JdbcUtils.copy(sourceDS, targetDS, "orders", "order_summary",
+     * long rowsCopied = DataTransferUtil.copy(sourceDS, targetDS, "orders", "order_summary",
      *                                   columns, 10000);
      * System.out.println("Copied " + rowsCopied + " order summaries");
      * }</pre>
@@ -2663,7 +2663,7 @@ public final class JdbcUtils {
      * String selectSql = "SELECT id, name, status FROM users WHERE status = 'ACTIVE'";
      * String insertSql = "INSERT INTO active_users (id, name, status) VALUES (?, ?, ?)";
      *
-     * long rowsCopied = JdbcUtils.copy(sourceDS, selectSql, targetDS, insertSql);
+     * long rowsCopied = DataTransferUtil.copy(sourceDS, selectSql, targetDS, insertSql);
      * System.out.println("Copied " + rowsCopied + " active users");
      * }</pre>
      *
@@ -2693,7 +2693,7 @@ public final class JdbcUtils {
      * String selectSql = "SELECT * FROM transactions WHERE year = 2023";
      * String insertSql = "INSERT INTO transactions_archive VALUES (?, ?, ?, ?, ?)";
      *
-     * long rowsCopied = JdbcUtils.copy(sourceDS, selectSql, 50000, targetDS, insertSql, 5000);
+     * long rowsCopied = DataTransferUtil.copy(sourceDS, selectSql, 50000, targetDS, insertSql, 5000);
      * System.out.println("Archived " + rowsCopied + " transactions");
      * }</pre>
      *
@@ -2730,7 +2730,7 @@ public final class JdbcUtils {
      *     pq.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
      *
-     * long rowsCopied = JdbcUtils.copy(sourceDS, selectSql, targetDS, insertSql, setter);
+     * long rowsCopied = DataTransferUtil.copy(sourceDS, selectSql, targetDS, insertSql, setter);
      * }</pre>
      *
      * @param sourceDataSource the data source from which to copy data
@@ -2770,7 +2770,7 @@ public final class JdbcUtils {
      *     pq.setDate(3, rs.getDate("created"));
      * };
      *
-     * long rowsCopied = JdbcUtils.copy(
+     * long rowsCopied = DataTransferUtil.copy(
      *     sourceDS, "SELECT * FROM large_table", 100000,
      *     targetDS, "INSERT INTO processed_table VALUES (?, ?, ?)",
      *     5000, 1000, setter
@@ -2824,7 +2824,7 @@ public final class JdbcUtils {
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
      *
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn, "products");
+     *     long rowsCopied = DataTransferUtil.copy(sourceConn, targetConn, "products");
      *     System.out.println("Copied " + rowsCopied + " products");
      * }
      * }</pre>
@@ -2851,7 +2851,7 @@ public final class JdbcUtils {
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
      *
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn, "orders", "orders_archive");
+     *     long rowsCopied = DataTransferUtil.copy(sourceConn, targetConn, "orders", "orders_archive");
      *     System.out.println("Archived " + rowsCopied + " orders");
      * }
      * }</pre>
@@ -2881,7 +2881,7 @@ public final class JdbcUtils {
      *      Connection targetConn = targetDS.getConnection()) {
      *
      *     // Use larger batch size for better performance with large tables
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn,
+     *     long rowsCopied = DataTransferUtil.copy(sourceConn, targetConn,
      *                                       "large_table", "large_table_copy", 10000);
      *     System.out.println("Copied " + rowsCopied + " rows");
      * }
@@ -2938,7 +2938,7 @@ public final class JdbcUtils {
      *      Connection targetConn = targetDS.getConnection()) {
      *
      *     Set<String> columns = Set.of("id", "name", "price", "category");
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn,
+     *     long rowsCopied = DataTransferUtil.copy(sourceConn, targetConn,
      *                                       "products", "product_catalog", columns);
      *     System.out.println("Copied " + rowsCopied + " products to catalog");
      * }
@@ -2970,7 +2970,7 @@ public final class JdbcUtils {
      *      Connection targetConn = targetDS.getConnection()) {
      *
      *     List<String> essentialColumns = Arrays.asList("customer_id", "name", "email");
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, targetConn,
+     *     long rowsCopied = DataTransferUtil.copy(sourceConn, targetConn,
      *                                       "customers", "customer_summary",
      *                                       essentialColumns, 5000);
      *     System.out.println("Created summary with " + rowsCopied + " customers");
@@ -3100,7 +3100,7 @@ public final class JdbcUtils {
      *     String selectSql = "SELECT * FROM orders WHERE status = 'COMPLETED'";
      *     String insertSql = "INSERT INTO completed_orders VALUES (?, ?, ?, ?)";
      *
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, selectSql, targetConn, insertSql);
+     *     long rowsCopied = DataTransferUtil.copy(sourceConn, selectSql, targetConn, insertSql);
      *     System.out.println("Archived " + rowsCopied + " completed orders");
      * }
      * }</pre>
@@ -3133,7 +3133,7 @@ public final class JdbcUtils {
      *     String insertSql = "INSERT INTO huge_table_copy VALUES (?, ?, ?, ?, ?)";
      *
      *     // Large fetch size for reading, moderate batch size for writing
-     *     long rowsCopied = JdbcUtils.copy(sourceConn, selectSql, 100000,
+     *     long rowsCopied = DataTransferUtil.copy(sourceConn, selectSql, 100000,
      *                                       targetConn, insertSql, 5000);
      *     System.out.println("Copied " + rowsCopied + " rows efficiently");
      * }
@@ -3173,7 +3173,7 @@ public final class JdbcUtils {
      *     pq.setBoolean(4, "ACTIVE".equals(rs.getString("status")));
      * };
      *
-     * long rowsCopied = JdbcUtils.copy(sourceConn, selectSql, targetConn, insertSql, setter);
+     * long rowsCopied = DataTransferUtil.copy(sourceConn, selectSql, targetConn, insertSql, setter);
      * }</pre>
      *
      * @param sourceConn the connection to the source database
@@ -3211,7 +3211,7 @@ public final class JdbcUtils {
      *     pq.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
      *
-     * long rowsCopied = JdbcUtils.copy(
+     * long rowsCopied = DataTransferUtil.copy(
      *     sourceConn,
      *     "SELECT id, data FROM sensitive_table",
      *     50000,  // Large fetch size
@@ -3280,7 +3280,7 @@ public final class JdbcUtils {
      *     pq.setTimestamp(3, rs.getTimestamp(3));
      * };
      *
-     * long rowsCopied = JdbcUtils.copy(selectStmt, insertStmt, 1000, 0, setter);
+     * long rowsCopied = DataTransferUtil.copy(selectStmt, insertStmt, 1000, 0, setter);
      * System.out.println("Copied " + rowsCopied + " recent records");
      * }</pre>
      *
@@ -3377,10 +3377,10 @@ public final class JdbcUtils {
      * <pre>{@code
      * ColumnGetter<Object> getter = (rs, columnIndex) -> rs.getObject(columnIndex);
      * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter =
-     *     JdbcUtils.createParamSetter(getter);
+     *     DataTransferUtil.createParamSetter(getter);
      *
      * // Use in copy operation
-     * long copied = JdbcUtils.copy(sourceConn, selectSql, targetConn, insertSql, setter);
+     * long copied = DataTransferUtil.copy(sourceConn, selectSql, targetConn, insertSql, setter);
      * }</pre>
      *
      * @param columnGetterForAll the ColumnGetter to apply to each column index in every row
@@ -3422,7 +3422,7 @@ public final class JdbcUtils {
      * List<String> cols = Arrays.asList("name", "age");
      *
      * // Equivalent to importData(dataset, cols, filter, dataSource, insertSql, 1000, 0)
-     * int rowsImported = JdbcUtils.importFrom(dataset)
+     * int rowsImported = DataTransferUtil.importFrom(dataset)
      *         .selectColumns(cols)
      *         .filter(row -> ((Integer) row[1]) >= 18)
      *         .batchSize(1000)
@@ -3444,7 +3444,7 @@ public final class JdbcUtils {
     /**
      * A fluent builder that configures and runs the import of a {@link Dataset} into a database table.
      *
-     * <p>Obtain an instance via {@link JdbcUtils#importFrom(Dataset)}, chain any of the optional configuration
+     * <p>Obtain an instance via {@link DataTransferUtil#importFrom(Dataset)}, chain any of the optional configuration
      * methods, then call one of the terminal {@code into(...)} methods to run the import. Each configuration
      * method returns {@code this}, so calls can be chained.</p>
      *
@@ -3455,7 +3455,7 @@ public final class JdbcUtils {
      * imported in order. The {@link #filter(Throwables.Predicate)} is independent and may be combined with
      * any of them.</p>
      *
-     * @see JdbcUtils#importFrom(Dataset)
+     * @see DataTransferUtil#importFrom(Dataset)
      */
     public static final class DatasetImportBuilder {
         private final Dataset dataset;
@@ -3643,7 +3643,7 @@ public final class JdbcUtils {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * long copied = JdbcUtils.copyFrom(sourceDataSource, "SELECT id, name FROM users WHERE active = true")
+     * long copied = DataTransferUtil.copyFrom(sourceDataSource, "SELECT id, name FROM users WHERE active = true")
      *         .fetchSize(50000)
      *         .batchSize(5000)
      *         .to(targetDataSource, "INSERT INTO active_users (id, name) VALUES (?, ?)");
@@ -3668,7 +3668,7 @@ public final class JdbcUtils {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * long copied = JdbcUtils.copyFrom(sourceConn, "SELECT * FROM orders")
+     * long copied = DataTransferUtil.copyFrom(sourceConn, "SELECT * FROM orders")
      *         .batchSize(1000)
      *         .batchIntervalInMillis(100)
      *         .to(targetConn, "INSERT INTO orders_archive VALUES (?, ?, ?, ?)");
@@ -3696,7 +3696,7 @@ public final class JdbcUtils {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * long copied = JdbcUtils.copyFrom(selectStmt)
+     * long copied = DataTransferUtil.copyFrom(selectStmt)
      *         .batchSize(1000)
      *         .stmtSetter((pq, rs) -> { pq.setLong(1, rs.getLong(1)); pq.setString(2, rs.getString(2)); })
      *         .to(insertStmt);
@@ -3724,10 +3724,10 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy the whole table to a backup table
-     * long copied = JdbcUtils.copyTable(sourceDataSource, "users").to(targetDataSource, "users_backup");
+     * long copied = DataTransferUtil.copyTable(sourceDataSource, "users").to(targetDataSource, "users_backup");
      *
      * // Copy selected columns with a custom batch size
-     * long partial = JdbcUtils.copyTable(sourceDataSource, "users")
+     * long partial = DataTransferUtil.copyTable(sourceDataSource, "users")
      *         .selectColumns(List.of("id", "name", "email"))
      *         .batchSize(10000)
      *         .to(targetDataSource, "users_lite");
@@ -3752,7 +3752,7 @@ public final class JdbcUtils {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * long copied = JdbcUtils.copyTable(sourceConn, "users")
+     * long copied = DataTransferUtil.copyTable(sourceConn, "users")
      *         .selectColumns(List.of("id", "name"))
      *         .to(targetConn, "users_backup");
      * }</pre>
@@ -3772,9 +3772,9 @@ public final class JdbcUtils {
 
     /**
      * A fluent builder that copies the rows of a SELECT query from a source {@link javax.sql.DataSource} into a
-     * target table. Obtain an instance via {@link JdbcUtils#copyFrom(javax.sql.DataSource, String)}.
+     * target table. Obtain an instance via {@link DataTransferUtil#copyFrom(javax.sql.DataSource, String)}.
      *
-     * @see JdbcUtils#copyFrom(javax.sql.DataSource, String)
+     * @see DataTransferUtil#copyFrom(javax.sql.DataSource, String)
      */
     public static final class CopyFromDataSource {
         private final javax.sql.DataSource sourceDataSource;
@@ -3854,9 +3854,9 @@ public final class JdbcUtils {
 
     /**
      * A fluent builder that copies the rows of a SELECT query between two {@link Connection}s. Obtain an instance
-     * via {@link JdbcUtils#copyFrom(Connection, String)}.
+     * via {@link DataTransferUtil#copyFrom(Connection, String)}.
      *
-     * @see JdbcUtils#copyFrom(Connection, String)
+     * @see DataTransferUtil#copyFrom(Connection, String)
      */
     public static final class CopyFromConnection {
         private final Connection sourceConn;
@@ -3936,9 +3936,9 @@ public final class JdbcUtils {
 
     /**
      * A fluent builder that copies the rows produced by a source {@link PreparedStatement} into a target
-     * {@link PreparedStatement}. Obtain an instance via {@link JdbcUtils#copyFrom(PreparedStatement)}.
+     * {@link PreparedStatement}. Obtain an instance via {@link DataTransferUtil#copyFrom(PreparedStatement)}.
      *
-     * @see JdbcUtils#copyFrom(PreparedStatement)
+     * @see DataTransferUtil#copyFrom(PreparedStatement)
      */
     public static final class CopyFromStatement {
         private final PreparedStatement selectStmt;
@@ -4003,9 +4003,9 @@ public final class JdbcUtils {
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link javax.sql.DataSource}s,
      * generating the SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link JdbcUtils#copyTable(javax.sql.DataSource, String)}.
+     * {@link DataTransferUtil#copyTable(javax.sql.DataSource, String)}.
      *
-     * @see JdbcUtils#copyTable(javax.sql.DataSource, String)
+     * @see DataTransferUtil#copyTable(javax.sql.DataSource, String)
      */
     public static final class CopyTableFromDataSource {
         private final javax.sql.DataSource sourceDataSource;
@@ -4060,9 +4060,9 @@ public final class JdbcUtils {
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link Connection}s, generating the
      * SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link JdbcUtils#copyTable(Connection, String)}.
+     * {@link DataTransferUtil#copyTable(Connection, String)}.
      *
-     * @see JdbcUtils#copyTable(Connection, String)
+     * @see DataTransferUtil#copyTable(Connection, String)
      */
     public static final class CopyTableFromConnection {
         private final Connection sourceConn;

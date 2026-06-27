@@ -49,9 +49,9 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.RowDataset;
 import com.landawn.abacus.util.Throwables;
 
-public class JdbcUtilsTest extends TestBase {
+public class DataTransferUtilTest extends TestBase {
 
-    // TODO: The remaining JdbcUtils importData overload matrix shares the same batching core. Add focused coverage for
+    // TODO: The remaining DataTransferUtil importData overload matrix shares the same batching core. Add focused coverage for
     // still-uncovered delegating overloads when a reusable file/stream fixture set is available.
 
     @Mock
@@ -101,7 +101,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, mockDataSource, insertSql);
+        int result = DataTransferUtil.importData(mockDataset, mockDataSource, insertSql);
 
         // Verify
         assertEquals(2, result);
@@ -122,7 +122,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, mockConnection, insertSql);
+        int result = DataTransferUtil.importData(mockDataset, mockConnection, insertSql);
 
         // Verify
         assertEquals(1, result);
@@ -144,7 +144,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, selectColumns, mockConnection, insertSql);
+        int result = DataTransferUtil.importData(mockDataset, selectColumns, mockConnection, insertSql);
 
         // Verify
         assertEquals(1, result);
@@ -164,7 +164,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, selectColumns, mockConnection, insertSql, 2, 10);
+        int result = DataTransferUtil.importData(mockDataset, selectColumns, mockConnection, insertSql, 2, 10);
 
         // Verify
         assertEquals(5, result);
@@ -187,7 +187,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, selectColumns, filter, mockConnection, insertSql, 1, 0);
+        int result = DataTransferUtil.importData(mockDataset, selectColumns, filter, mockConnection, insertSql, 1, 0);
 
         // Verify
         assertEquals(2, result); // Only 2 valid rows
@@ -209,7 +209,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, mockConnection, insertSql, columnTypeMap);
+        int result = DataTransferUtil.importData(mockDataset, mockConnection, insertSql, columnTypeMap);
 
         // Verify
         assertEquals(1, result);
@@ -229,7 +229,7 @@ public class JdbcUtilsTest extends TestBase {
 
         final String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtils.importData(mockDataset, mockConnection, insertSql, columnTypeMap));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, mockConnection, insertSql, columnTypeMap));
     }
 
     @Test
@@ -245,7 +245,7 @@ public class JdbcUtilsTest extends TestBase {
 
         final String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
-        final int result = JdbcUtils.importData(mockDataset, mockConnection, insertSql, (Map<String, Type>) null);
+        final int result = DataTransferUtil.importData(mockDataset, mockConnection, insertSql, (Map<String, Type>) null);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement(insertSql);
@@ -264,7 +264,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, mockConnection, insertSql, stmtSetter);
+        int result = DataTransferUtil.importData(mockDataset, mockConnection, insertSql, stmtSetter);
 
         // Verify
         assertEquals(1, result);
@@ -278,7 +278,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.get(0)).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final int result = JdbcUtils.importData(mockDataset, mockPreparedStatement);
+        final int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement);
 
         assertEquals(1, result);
         verify(mockPreparedStatement).addBatch();
@@ -293,7 +293,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
 
-        final int result = JdbcUtils.importData(mockDataset, List.of("col1"), mockPreparedStatement, 1, 0);
+        final int result = DataTransferUtil.importData(mockDataset, List.of("col1"), mockPreparedStatement, 1, 0);
 
         assertEquals(2, result);
         verify(mockPreparedStatement, times(2)).addBatch();
@@ -304,7 +304,7 @@ public class JdbcUtilsTest extends TestBase {
     public void testImportDataWithSelectedColumnsRejectsUnknownColumn() {
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
 
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtils.importData(mockDataset, List.of("missing"), mockPreparedStatement));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, List.of("missing"), mockPreparedStatement));
     }
 
     // Tests for importData methods with File
@@ -321,7 +321,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importData(tempFile, mockDataSource, insertSql, func);
+        long result = DataTransferUtil.importData(tempFile, mockDataSource, insertSql, func);
 
         // Verify
         assertEquals(0, result); // Empty file
@@ -341,7 +341,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importData(tempFile, mockConnection, insertSql, 1, 0, func);
+        long result = DataTransferUtil.importData(tempFile, mockConnection, insertSql, 1, 0, func);
 
         // Verify
         assertEquals(2, result);
@@ -360,7 +360,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importData(reader, mockDataSource, insertSql, func);
+        long result = DataTransferUtil.importData(reader, mockDataSource, insertSql, func);
 
         // Verify
         assertEquals(2, result);
@@ -377,7 +377,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importData(reader, mockConnection, insertSql, 2, 0, func);
+        long result = DataTransferUtil.importData(reader, mockConnection, insertSql, 2, 0, func);
 
         // Verify
         assertEquals(3, result);
@@ -396,7 +396,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importData(iter, mockDataSource, insertSql, stmtSetter);
+        long result = DataTransferUtil.importData(iter, mockDataSource, insertSql, stmtSetter);
 
         // Verify
         assertEquals(2, result);
@@ -413,7 +413,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importData(iter, mockConnection, insertSql, 3, 10, stmtSetter);
+        long result = DataTransferUtil.importData(iter, mockConnection, insertSql, 3, 10, stmtSetter);
 
         // Verify
         assertEquals(5, result);
@@ -438,7 +438,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCsv(tempFile, mockDataSource, insertSql, stmtSetter);
+        long result = DataTransferUtil.importCsv(tempFile, mockDataSource, insertSql, stmtSetter);
 
         // Verify
         assertEquals(1, result); // 1 data row (header skipped)
@@ -462,7 +462,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCsv(tempFile, filter, mockPreparedStatement, 1, 0, stmtSetter);
+        long result = DataTransferUtil.importCsv(tempFile, filter, mockPreparedStatement, 1, 0, stmtSetter);
 
         // Verify
         assertEquals(2, result); // 2 valid rows
@@ -482,7 +482,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCsv(reader, mockDataSource, insertSql, stmtSetter);
+        long result = DataTransferUtil.importCsv(reader, mockDataSource, insertSql, stmtSetter);
 
         // Verify
         assertEquals(2, result); // 2 data rows
@@ -507,7 +507,7 @@ public class JdbcUtilsTest extends TestBase {
         String querySql = "SELECT * FROM test_table";
 
         // Execute
-        long result = JdbcUtils.exportCsv(mockDataSource, querySql, tempFile);
+        long result = DataTransferUtil.exportCsv(mockDataSource, querySql, tempFile);
 
         // Verify
         assertEquals(2, result);
@@ -531,7 +531,7 @@ public class JdbcUtilsTest extends TestBase {
         String querySql = "SELECT * FROM test_table";
 
         // Execute
-        long result = JdbcUtils.exportCsv(mockConnection, querySql, selectColumns, tempFile);
+        long result = DataTransferUtil.exportCsv(mockConnection, querySql, selectColumns, tempFile);
 
         // Verify
         assertEquals(1, result);
@@ -550,7 +550,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getString(1)).thenReturn("val2");
 
         // Execute
-        long result = JdbcUtils.exportCsv(mockResultSet, writer);
+        long result = DataTransferUtil.exportCsv(mockResultSet, writer);
 
         // Verify
         assertEquals(2, result);
@@ -573,7 +573,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getObject(2)).thenReturn(null);
 
         // Execute
-        long result = JdbcUtils.exportCsv(mockResultSet, writer);
+        long result = DataTransferUtil.exportCsv(mockResultSet, writer);
 
         // Verify
         assertEquals(1, result);
@@ -604,7 +604,7 @@ public class JdbcUtilsTest extends TestBase {
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.copy(mockDataSource, targetDataSource, "test_table");
+        long result = DataTransferUtil.copy(mockDataSource, targetDataSource, "test_table");
 
         // Verify
         assertEquals(1, result);
@@ -633,7 +633,7 @@ public class JdbcUtilsTest extends TestBase {
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.copy(mockDataSource, targetDataSource, "source_table", "target_table");
+        long result = DataTransferUtil.copy(mockDataSource, targetDataSource, "source_table", "target_table");
 
         // Verify
         assertEquals(2, result);
@@ -664,7 +664,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
 
-        final long result = JdbcUtils.copy(mockDataSource, targetDataSource, "source_table", "target_table");
+        final long result = DataTransferUtil.copy(mockDataSource, targetDataSource, "source_table", "target_table");
 
         assertEquals(1, result);
         verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
@@ -691,7 +691,7 @@ public class JdbcUtilsTest extends TestBase {
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.copy(mockDataSource, targetDataSource, "source_table", "target_table", selectColumns);
+        long result = DataTransferUtil.copy(mockDataSource, targetDataSource, "source_table", "target_table", selectColumns);
 
         // Verify
         assertEquals(1, result);
@@ -712,7 +712,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = JdbcUtils.copy(mockConnection, targetConnection, "source_table", "target_table", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table", selectColumns);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `created-date` FROM source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -734,7 +734,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = JdbcUtils.copy(mockConnection, targetConnection, "sales.source-table", "archive.target-table", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.source-table", "archive.target-table", selectColumns);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales`.`source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -756,7 +756,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = JdbcUtils.copy(mockConnection, targetConnection, "\"sales.source-table\"", "\"archive.target-table\"", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "\"sales.source-table\"", "\"archive.target-table\"", selectColumns);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales.source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -781,7 +781,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO target (col1) VALUES (?)";
 
         // Execute
-        long result = JdbcUtils.copy(mockDataSource, selectSql, targetDataSource, insertSql);
+        long result = DataTransferUtil.copy(mockDataSource, selectSql, targetDataSource, insertSql);
 
         // Verify
         assertEquals(1, result);
@@ -807,7 +807,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO target (name_upper) VALUES (?)";
 
         // Execute
-        long result = JdbcUtils.copy(mockDataSource, selectSql, targetDataSource, insertSql, stmtSetter);
+        long result = DataTransferUtil.copy(mockDataSource, selectSql, targetDataSource, insertSql, stmtSetter);
 
         // Verify
         assertEquals(1, result);
@@ -833,7 +833,7 @@ public class JdbcUtilsTest extends TestBase {
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.copy(mockConnection, targetConnection, "test_table");
+        long result = DataTransferUtil.copy(mockConnection, targetConnection, "test_table");
 
         // Verify
         assertEquals(2, result);
@@ -862,7 +862,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
 
-        final long result = JdbcUtils.copy(mockConnection, targetConnection, "source_table", "target_table");
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table");
 
         assertEquals(1, result);
         verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
@@ -881,7 +881,7 @@ public class JdbcUtilsTest extends TestBase {
         Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> stmtSetter = (pq, rs) -> pq.setObject(1, rs.getObject(1));
 
         // Execute
-        long result = JdbcUtils.copy(mockPreparedStatement, targetPreparedStatement, 2, 10, stmtSetter);
+        long result = DataTransferUtil.copy(mockPreparedStatement, targetPreparedStatement, 2, 10, stmtSetter);
 
         // Verify
         assertEquals(3, result);
@@ -901,7 +901,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
 
         // Execute
-        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = JdbcUtils.createParamSetter(columnGetter);
+        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.createParamSetter(columnGetter);
         assertNotNull(setter);
         setter.accept(preparedQuery, mockResultSet);
 
@@ -916,7 +916,7 @@ public class JdbcUtilsTest extends TestBase {
         PreparedQuery preparedQuery = mock(PreparedQuery.class);
         when(mockResultSetMetaData.getColumnCount()).thenReturn(0);
 
-        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = JdbcUtils.createParamSetter(columnGetter);
+        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.createParamSetter(columnGetter);
         assertNotNull(setter);
         setter.accept(preparedQuery, mockResultSet);
 
@@ -928,14 +928,14 @@ public class JdbcUtilsTest extends TestBase {
     @Test
     public void testImportDataWithZeroBatchSize() {
         assertThrows(IllegalArgumentException.class, () -> {
-            JdbcUtils.importData(mockDataset, Arrays.asList("col1"), mockConnection, "INSERT INTO test VALUES (?)", 0, 0);
+            DataTransferUtil.importData(mockDataset, Arrays.asList("col1"), mockConnection, "INSERT INTO test VALUES (?)", 0, 0);
         });
     }
 
     @Test
     public void testImportDataWithNegativeBatchInterval() {
         assertThrows(IllegalArgumentException.class, () -> {
-            JdbcUtils.importData(mockDataset, Arrays.asList("col1"), mockConnection, "INSERT INTO test VALUES (?)", 1, -1);
+            DataTransferUtil.importData(mockDataset, Arrays.asList("col1"), mockConnection, "INSERT INTO test VALUES (?)", 1, -1);
         });
     }
 
@@ -948,7 +948,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, mockConnection, insertSql);
+        int result = DataTransferUtil.importData(mockDataset, mockConnection, insertSql);
 
         // Verify
         assertEquals(0, result);
@@ -967,7 +967,7 @@ public class JdbcUtilsTest extends TestBase {
 
         // Execute & Verify
         assertThrows(IllegalArgumentException.class, () -> {
-            JdbcUtils.exportCsv(mockResultSet, selectColumns, writer);
+            DataTransferUtil.exportCsv(mockResultSet, selectColumns, writer);
         });
     }
 
@@ -984,7 +984,7 @@ public class JdbcUtilsTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = JdbcUtils.importData(mockDataset, selectColumns, null, mockConnection, insertSql, 1, 0);
+        int result = DataTransferUtil.importData(mockDataset, selectColumns, null, mockConnection, insertSql, 1, 0);
 
         // Verify
         assertEquals(1, result);
@@ -1004,7 +1004,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCsv(reader, filter, mockPreparedStatement, 1, 0, stmtSetter);
+        long result = DataTransferUtil.importCsv(reader, filter, mockPreparedStatement, 1, 0, stmtSetter);
 
         // Verify
         assertEquals(1, result); // Only 1 row matches filter
@@ -1025,7 +1025,7 @@ public class JdbcUtilsTest extends TestBase {
         long startTime = System.currentTimeMillis();
 
         // Execute
-        long result = JdbcUtils.copy(mockPreparedStatement, targetPreparedStatement, 1, 50, stmtSetter); // 50ms interval
+        long result = DataTransferUtil.copy(mockPreparedStatement, targetPreparedStatement, 1, 50, stmtSetter); // 50ms interval
 
         long endTime = System.currentTimeMillis();
 
@@ -1047,7 +1047,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, columnTypeMap);
+        int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement, columnTypeMap);
 
         assertEquals(1, result);
         verify(mockPreparedStatement).addBatch();
@@ -1066,7 +1066,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.get(1)).thenReturn(42); // col2 value (gets Object type)
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, columnTypeMap);
+        int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement, columnTypeMap);
         assertEquals(1, result);
     }
 
@@ -1083,7 +1083,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtils.importData(mockDataset, mockPreparedStatement, columnTypeMap));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, mockPreparedStatement, columnTypeMap));
     }
 
     // exportCsv(PreparedStatement, File) - delegates to column-filtering version (line 2012-2013)
@@ -1097,7 +1097,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(1)).thenReturn("val1");
 
-        long result = JdbcUtils.exportCsv(mockPreparedStatement, tempFile);
+        long result = DataTransferUtil.exportCsv(mockPreparedStatement, tempFile);
 
         assertEquals(1, result);
         assertTrue(tempFile.exists());
@@ -1115,7 +1115,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(1)).thenReturn(42);
 
-        long result = JdbcUtils.exportCsv(mockResultSet, tempFile);
+        long result = DataTransferUtil.exportCsv(mockResultSet, tempFile);
 
         assertEquals(1, result);
         assertTrue(tempFile.exists());
@@ -1132,7 +1132,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(1)).thenReturn("data");
 
-        long result = JdbcUtils.exportCsv(mockDataSource, "SELECT col1 FROM t", writer);
+        long result = DataTransferUtil.exportCsv(mockDataSource, "SELECT col1 FROM t", writer);
 
         assertEquals(1, result);
         assertTrue(writer.toString().contains("col1"));
@@ -1152,7 +1152,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getObject(1)).thenReturn("Alice", "Bob");
         when(mockResultSet.getObject(2)).thenReturn(30, 25);
 
-        long result = JdbcUtils.exportCsv(mockConnection, "SELECT name, age FROM users", writer);
+        long result = DataTransferUtil.exportCsv(mockConnection, "SELECT name, age FROM users", writer);
 
         assertEquals(2, result);
         String csv = writer.toString();
@@ -1189,7 +1189,7 @@ public class JdbcUtilsTest extends TestBase {
         Throwables.Predicate<Object[], Exception> filter = row -> "keep".equals(row[0]);
 
         // Execute: batchSize=1 so executeBatch is called after every accepted row
-        int result = JdbcUtils.importData(mockDataset, filter, mockPreparedStatement, 1, 0L, stmtSetter);
+        int result = DataTransferUtil.importData(mockDataset, filter, mockPreparedStatement, 1, 0L, stmtSetter);
 
         // Verify: exactly 2 rows accepted
         assertEquals(2, result);
@@ -1219,7 +1219,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("row1");
         when(targetStmt.executeBatch()).thenReturn(new int[] { 1 });
 
-        long result = JdbcUtils.copy(mockConnection, "SELECT * FROM src", targetConn, "INSERT INTO dst VALUES (?)");
+        long result = DataTransferUtil.copy(mockConnection, "SELECT * FROM src", targetConn, "INSERT INTO dst VALUES (?)");
 
         assertEquals(1, result);
         verify(targetStmt).addBatch();
@@ -1254,7 +1254,7 @@ public class JdbcUtilsTest extends TestBase {
 
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = JdbcUtils.importCsv(reader, filter, mockPreparedStatement, 10, 0L, stmtSetter);
+        final long result = DataTransferUtil.importCsv(reader, filter, mockPreparedStatement, 10, 0L, stmtSetter);
 
         assertEquals(1, result);
         // Accepted row's captured values must be exactly the keep row's values - no leakage from the rejected row.
@@ -1303,7 +1303,7 @@ public class JdbcUtilsTest extends TestBase {
         when(srcConn.getMetaData()).thenThrow(new SQLException("simulated generation failure"));
 
         try {
-            JdbcUtils.copy(srcDs, targetDs, "src_table", "dst_table", 100);
+            DataTransferUtil.copy(srcDs, targetDs, "src_table", "dst_table", 100);
             org.junit.jupiter.api.Assertions.fail("Expected SQLException or RuntimeException to propagate from copy()");
         } catch (final SQLException | RuntimeException expected) {
             // Either the generation failure or the close() failure may surface; we don't care
@@ -1315,7 +1315,7 @@ public class JdbcUtilsTest extends TestBase {
         verify(targetConn).close();
     }
 
-    // Regression: JdbcUtils.importData(Dataset, ..., PreparedStatement, ...) used to delegate the
+    // Regression: DataTransferUtil.importData(Dataset, ..., PreparedStatement, ...) used to delegate the
     // addBatch call via a PreparedQuery wrapper. AbstractQuery.addBatch closes the underlying
     // statement on failure (intended for fluent-API ownership), which violated the documented
     // contract that this method does NOT close the caller's stmt. The fix calls stmt.addBatch()
@@ -1333,7 +1333,7 @@ public class JdbcUtilsTest extends TestBase {
             // intentionally empty
         };
 
-        assertThrows(SQLException.class, () -> JdbcUtils.importData(dataset, stmt, noopSetter));
+        assertThrows(SQLException.class, () -> DataTransferUtil.importData(dataset, stmt, noopSetter));
 
         // Pre-fix: the wrapper's close-on-failure path called JdbcUtil.closeQuietly(stmt) which
         // invokes stmt.close(). Post-fix: stmt.close() must NOT have been called.
@@ -1356,7 +1356,7 @@ public class JdbcUtilsTest extends TestBase {
         when(md.getDatabaseProductName()).thenReturn("MariaDB");
         when(md.getDatabaseProductVersion()).thenReturn("11.0");
 
-        final java.lang.reflect.Method m = JdbcUtils.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
+        final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
         m.setAccessible(true);
         m.invoke(null, conn, stmt, 1000);
 
@@ -1377,7 +1377,7 @@ public class JdbcUtilsTest extends TestBase {
         when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(md.getDatabaseProductVersion()).thenReturn("16.0");
 
-        final java.lang.reflect.Method m = JdbcUtils.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
+        final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
         m.setAccessible(true);
         m.invoke(null, conn, stmt, 5000);
 
@@ -1410,7 +1410,7 @@ public class JdbcUtilsTest extends TestBase {
 
             try (Connection srcConn = srcDs.getConnection();
                  Connection tgtConn = tgtDs.getConnection()) {
-                long copied = JdbcUtils.copy(srcConn, tgtConn, "T_ORDER", "T_ORDER", 10);
+                long copied = DataTransferUtil.copy(srcConn, tgtConn, "T_ORDER", "T_ORDER", 10);
                 assertEquals(1L, copied);
             }
 
@@ -1431,7 +1431,7 @@ public class JdbcUtilsTest extends TestBase {
         }
     }
 
-    // importData(Dataset, PreparedStatement, stmtSetter) delegating overload (JdbcUtils L874).
+    // importData(Dataset, PreparedStatement, stmtSetter) delegating overload (DataTransferUtil L874).
     @Test
     public void testImportData_DatasetStmtStmtSetter() throws SQLException {
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (q, row) -> q.setString(1, (String) row[0]);
@@ -1440,14 +1440,14 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.get(0)).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, stmtSetter);
+        final int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement, stmtSetter);
 
         assertEquals(1, result);
         verify(mockPreparedStatement).setString(1, "value");
     }
 
     // importData(Dataset, PreparedStatement, batchSize, batchInterval, stmtSetter) delegating overload
-    // (JdbcUtils L904).
+    // (DataTransferUtil L904).
     @Test
     public void testImportData_DatasetStmtBatchConfigStmtSetter() throws SQLException {
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (q, row) -> q.setString(1, (String) row[0]);
@@ -1456,13 +1456,13 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.get(0)).thenReturn("a", "b");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
 
-        final int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, 1, 0L, stmtSetter);
+        final int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement, 1, 0L, stmtSetter);
 
         assertEquals(2, result);
         verify(mockPreparedStatement, times(2)).setString(anyInt(), anyString());
     }
 
-    // importData(Reader, ...): a func returning null skips that line (JdbcUtils L1227); batchSize=1 with
+    // importData(Reader, ...): a func returning null skips that line (DataTransferUtil L1227); batchSize=1 with
     // a positive batch interval triggers the post-batch sleep branch (L1240).
     @Test
     public void testImportDataFromReader_NullRowSkipped_AndBatchInterval() throws Exception {
@@ -1470,33 +1470,33 @@ public class JdbcUtilsTest extends TestBase {
         final Throwables.Function<String, Object[], Exception> func = line -> "SKIP".equals(line) ? null : new Object[] { line };
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = JdbcUtils.importData(reader, mockPreparedStatement, 1, 1L, func);
+        final long result = DataTransferUtil.importData(reader, mockPreparedStatement, 1, 1L, func);
 
         assertEquals(2, result); // "a" and "b" imported; "SKIP" produced a null row and was skipped
         verify(mockPreparedStatement, times(2)).addBatch();
     }
 
-    // importCsv with an empty reader returns 0 without touching the statement (JdbcUtils L1892-1893).
+    // importCsv with an empty reader returns 0 without touching the statement (DataTransferUtil L1892-1893).
     @Test
     public void testImportCsv_EmptyReader_ReturnsZero() throws Exception {
         final Reader reader = new StringReader("");
         final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
 
-        final long result = JdbcUtils.importCsv(reader, null, mockPreparedStatement, 1, 0L, stmtSetter);
+        final long result = DataTransferUtil.importCsv(reader, null, mockPreparedStatement, 1, 0L, stmtSetter);
 
         assertEquals(0, result);
         verify(mockPreparedStatement, never()).addBatch();
     }
 
     // importCsv with batchSize=1 and a positive interval exercises the post-batch sleep branch
-    // (JdbcUtils L1918).
+    // (DataTransferUtil L1918).
     @Test
     public void testImportCsv_BatchInterval() throws Exception {
         final Reader reader = new StringReader("col1\nv1\nv2");
         final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = JdbcUtils.importCsv(reader, null, mockPreparedStatement, 1, 1L, stmtSetter);
+        final long result = DataTransferUtil.importCsv(reader, null, mockPreparedStatement, 1, 1L, stmtSetter);
 
         assertEquals(2, result);
         verify(mockPreparedStatement, times(2)).addBatch();

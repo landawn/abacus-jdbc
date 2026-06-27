@@ -1,0 +1,56 @@
+API Design Review — JoinInfo.java
+MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
+
+1. OVERALL ASSESSMENT
+JoinInfo is annotated @Internal (line 108) — it is a low-level metadata/SQL-fragment holder used by the
+DAO join-entity helpers, and most of its logic lives in the constructor and private helpers. The public
+surface is small and largely healthy: the three static factories (getEntityJoinInfo, getPropJoinInfo,
+getJoinEntityPropNamesByType, ~1168/1235/1295) have consistent (daoClass, entityClass, tableName, ...)
+ordering and caching; the four "SQL plan" getter families (getSelectSqlPlan, getBatchSelectSqlPlan,
+getDeleteSqlPlan, getBatchDeleteSqlPlan) follow a consistent naming/return shape and each already has a
+deprecated *SqlBuilderAndParamSetter predecessor with a clean redirect (a well-managed rename). Because
+the class is @Internal, this report is kept proportionate; the actionable items are a stale parameter
+name shared by 8 methods, four already-deprecated methods that can now be removed, one confusing partial
+overload, and one built-but-never-exposed SQL plan (dead cached state or a missing getter).
+
+2. NAMING ISSUES
+- sbc parameter on getSelectSqlPlan/getBatchSelectSqlPlan/getDeleteSqlPlan/getBatchDeleteSqlPlan plus their
+  4 deprecated twins | JoinInfo.java:746, 781, 809, 844, 875, 907, 938, 974 | Medium (Low priority: class is
+  @Internal) | VERIFIED. The parameter is named `sbc` (legacy "SqlBuilder class") but its type is `Dsl` and
+  the Javadoc even calls it "the SQL builder class type". Recommend: rename the parameter to `dsl` across all
+  8 methods and correct the @param wording to describe a Dsl (PSC/PAC/PLC).
+
+3. RETURN-TYPE AND PARAMETER ISSUES
+- setJoinPropEntities(Collection, Collection) | JoinInfo.java:1011 | Low-Medium | This overload throws
+  UnsupportedOperationException for many-to-many joins, so the same-named two-Collection method works for
+  only a subset of JoinInfo instances and the caller cannot tell from the signature. Recommend: keep-but-noted
+  given @Internal; if a cleanup pass is acceptable, steer all callers to setJoinPropEntities(Collection, Map).
+- SQL-plan getters return raw Tuple2/Tuple3 of functions+setters | JoinInfo.java:746, 809, 875, 938 | Low |
+  The opaque Tuple2<Function<Collection<String>,String>, BiParametersSetter> / Tuple3 returns require callers
+  to remember positional _1/_2/_3 semantics (the Javadoc has to spell out "_2 always null"). Recommend: keep
+  (idiomatic here and @Internal); revisit only if exposed beyond the package. Confirming check: grep DaoImpl
+  callers to confirm positional access is localized.
+
+4. MISPLACED METHODS
+- None. Instance SQL-plan getters and setJoinPropEntities are correctly tied to per-relationship metadata;
+  the static factories are the correct entry points. Nothing belongs on JdbcUtil or a DAO helper.
+
+5. MISSING METHODS (with target class)
+- "set-null" SQL-plan getter (e.g. getSetNullSqlPlan(Dsl)) | field setNullSqlAndParamSetterPool at
+  JoinInfo.java:143, populated at 474 and 652, NO getter | Medium | VERIFIED. The constructor fully builds and
+  caches setNullSqlAndParamSetterPool (the UPDATE ... SET referenced-FK = default plan), paralleling the
+  delete/select pools — but unlike all four sibling pools it has no public getter and is never read anywhere
+  in the file (private field, unreachable). This is either a missing public method (the un-join / set-FK-null
+  operation is computed but unreachable) or dead cached state. Recommend: add a getSetNullSqlPlan(Dsl) getter
+  mirroring getDeleteSqlPlan, OR delete the pool and its two population blocks. Confirming check: grep the
+  package (DaoImpl, join-entity helpers) for any set-null/un-join SQL path.
+
+6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
+- getSelectSqlBuilderAndParamSetter(Dsl), getBatchSelectSqlBuilderAndParamSetter(Dsl),
+  getDeleteSqlAndParamSetter(Dsl), getBatchDeleteSqlBuilderAndParamSetter(Dsl) | JoinInfo.java:781, 844, 907,
+  974 | High | VERIFIED all four are @Deprecated (780/843/906/973), are one-line redirects to their *SqlPlan
+  replacements, and the class is @Internal (relaxed BC). Recommend: remove in favor of getSelectSqlPlan /
+  getBatchSelectSqlPlan / getDeleteSqlPlan / getBatchDeleteSqlPlan after repointing in-tree callers.
+  Confirming check before deleting: grep the repo for the four old names.
+- No other deprecation candidates: isManyToManyJoin(), the static factories, and the setJoinPropEntities pair
+  should be kept.

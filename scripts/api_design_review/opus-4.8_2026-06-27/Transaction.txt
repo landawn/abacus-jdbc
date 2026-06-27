@@ -1,0 +1,33 @@
+API Design Review — Transaction.java (public interface)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+Transaction is a small, clean contract: id(), isolationLevel(), status(), isActive(), commit(),
+rollback(), rollbackIfNotCommitted(), plus nested enums Status and Action. The accessor names follow
+the library's fluent no-"get" convention and are consistent with the SqlTransaction implementation.
+The only actionable issue is a cross-type deprecation/consistency gap around rollback().
+
+2. NAMING ISSUES
+- None.
+
+3. RETURN-TYPE AND PARAMETER ISSUES
+- None. All methods return appropriately (String/IsolationLevel/Status/boolean/void) and are documented
+  "never null" where relevant.
+
+4. MISPLACED METHODS
+- None.
+
+5. MISSING METHODS (with target class)
+- None required. (The concrete SqlTransaction adds connection()/runOutsideTransaction/callOutsideTransaction;
+  these are deliberately NOT on the interface and callers reach them via the concrete return type of
+  JdbcUtil.beginTransaction — acceptable. See SqlTransaction report.)
+
+6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
+- rollback() | Transaction.java:165 | Medium | The implementation SqlTransaction @Deprecates its rollback()
+  in favor of rollbackIfNotCommitted() (SqlTransaction.java:431), and this interface's own Javadoc notes the
+  deprecation in prose (158-159) — yet the interface method itself is NOT marked @Deprecated, and the
+  nested Action-enum Javadoc example (Transaction.java:266-271) still calls transaction.rollback(). A caller
+  holding a Transaction reference therefore sees no deprecation signal. Recommend: mark Transaction.rollback()
+  @Deprecated (replacement: rollbackIfNotCommitted()) for cross-type consistency, and update the Action-enum
+  example to rollbackIfNotCommitted(). Confirming check: confirm no implementation/caller depends on a
+  non-deprecated rollback() on the interface.

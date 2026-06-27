@@ -1,0 +1,8 @@
+API Design Review — EmptyHandler.java (public final, @Internal no-op)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+Healthy, no actionable findings. A @Internal Null-Object implementation of Jdbc.Handler<Dao> with only a
+public no-arg constructor; both beforeInvoke/afterInvoke hooks are inherited pass-throughs. Nothing to
+rename, change, move, add, or deprecate. (It is correctly annotated @Internal, signalling it is not for
+direct application use.)

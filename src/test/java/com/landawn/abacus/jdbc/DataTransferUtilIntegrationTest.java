@@ -28,14 +28,14 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Dataset;
 
 /**
- * End-to-end integration coverage for {@link JdbcUtils} table-to-table {@code copy} and CSV
+ * End-to-end integration coverage for {@link DataTransferUtil} table-to-table {@code copy} and CSV
  * {@code importCsv}/{@code exportCsv} bodies, backed by a real in-memory H2 database. The existing
- * {@code JdbcUtilsTest} mocks the {@code DataSource}/{@code Connection}, so the SQL-generating
+ * {@code DataTransferUtilTest} mocks the {@code DataSource}/{@code Connection}, so the SQL-generating
  * helpers ({@code generateSelectSql}/{@code generateInsertSql}), the streaming copy loop and the
  * file-based CSV round-trip never actually execute. This test drives them against live tables.
  */
 @TestInstance(Lifecycle.PER_CLASS)
-public class JdbcUtilsIntegrationTest extends TestBase {
+public class DataTransferUtilIntegrationTest extends TestBase {
 
     private DataSource ds;
 
@@ -86,7 +86,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     public void testCopy_TableToTable_AllColumns() throws SQLException {
         try (Connection src = ds.getConnection();
              Connection tgt = ds.getConnection()) {
-            final long copied = JdbcUtils.copy(src, tgt, "copy_src", "copy_tgt");
+            final long copied = DataTransferUtil.copy(src, tgt, "copy_src", "copy_tgt");
             assertEquals(3, copied);
         }
         assertEquals(3, count("copy_tgt"));
@@ -97,7 +97,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     public void testCopy_TableToTable_NullColumns_GeneratesFullSql() throws SQLException {
         try (Connection src = ds.getConnection();
              Connection tgt = ds.getConnection()) {
-            final long copied = JdbcUtils.copy(src, tgt, "copy_src", "copy_tgt", (Collection<String>) null);
+            final long copied = DataTransferUtil.copy(src, tgt, "copy_src", "copy_tgt", (Collection<String>) null);
             assertEquals(3, copied);
         }
         assertEquals(3, count("copy_tgt"));
@@ -108,7 +108,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     public void testCopy_TableToTable_ExplicitColumns() throws SQLException {
         try (Connection src = ds.getConnection();
              Connection tgt = ds.getConnection()) {
-            final long copied = JdbcUtils.copy(src, tgt, "copy_src", "copy_tgt", List.of("id", "name", "amount"));
+            final long copied = DataTransferUtil.copy(src, tgt, "copy_src", "copy_tgt", List.of("id", "name", "amount"));
             assertEquals(3, copied);
         }
         assertEquals(3, count("copy_tgt"));
@@ -122,7 +122,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
 
         try (Connection src = ds.getConnection();
              Connection tgt = ds.getConnection()) {
-            final long copied = JdbcUtils.copy(src, selectSql, tgt, insertSql, (pq, rs) -> {
+            final long copied = DataTransferUtil.copy(src, selectSql, tgt, insertSql, (pq, rs) -> {
                 pq.setLong(1, rs.getLong(1));
                 pq.setString(2, rs.getString(2));
                 pq.setDouble(3, rs.getDouble(3));
@@ -144,14 +144,14 @@ public class JdbcUtilsIntegrationTest extends TestBase {
              // (H2 upper-cases unquoted identifiers).
              PreparedStatement st = conn.prepareStatement("SELECT id AS \"id\", name AS \"name\", amount AS \"amount\" FROM copy_src ORDER BY id");
              ResultSet rs = st.executeQuery()) {
-            final long exported = JdbcUtils.exportCsv(rs, List.of("id", "name", "amount"), csv);
+            final long exported = DataTransferUtil.exportCsv(rs, List.of("id", "name", "amount"), csv);
             assertEquals(3, exported);
         }
 
         assertTrue(csv.length() > 0L);
 
         try (Connection conn = ds.getConnection()) {
-            final long imported = JdbcUtils.importCsv(csv, conn, "INSERT INTO csv_tgt (id, name, amount) VALUES (?, ?, ?)", 100, 0L, (pq, row) -> {
+            final long imported = DataTransferUtil.importCsv(csv, conn, "INSERT INTO csv_tgt (id, name, amount) VALUES (?, ?, ?)", 100, 0L, (pq, row) -> {
                 pq.setLong(1, Long.parseLong(row[0]));
                 pq.setString(2, row[1]);
                 pq.setDouble(3, Double.parseDouble(row[2]));
@@ -181,7 +181,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
         try (Connection conn = ds.getConnection();
              PreparedStatement st = conn.prepareStatement("SELECT id AS \"id\", name AS \"name\", amount AS \"amount\" FROM copy_src");
              ResultSet rs = st.executeQuery()) {
-            final long exported = JdbcUtils.exportCsv(rs, List.of("id", "name", "amount"), csv);
+            final long exported = DataTransferUtil.exportCsv(rs, List.of("id", "name", "amount"), csv);
             assertEquals(3, exported);
         }
 
@@ -209,7 +209,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     // importFrom(dataset).into(dataSource, insertSql) — default all-columns path.
     @Test
     public void testImportFrom_AllColumns_IntoDataSource() throws SQLException {
-        final int imported = JdbcUtils.importFrom(threeRowDataset()).into(ds, CSV_INSERT_SQL);
+        final int imported = DataTransferUtil.importFrom(threeRowDataset()).into(ds, CSV_INSERT_SQL);
 
         assertEquals(3, imported);
         assertEquals(3, count("csv_tgt"));
@@ -220,7 +220,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     @Test
     public void testImportFrom_SelectColumns_Filter_BatchSize() throws SQLException {
         try (Connection conn = ds.getConnection()) {
-            final int imported = JdbcUtils.importFrom(threeRowDataset())
+            final int imported = DataTransferUtil.importFrom(threeRowDataset())
                     .selectColumns(List.of("id", "name", "amount"))
                     .filter(row -> ((Double) row[2]) >= 20.0) // drops Alice (10.5)
                     .batchSize(1)
@@ -237,7 +237,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     public void testImportFrom_StmtSetter_IntoStatement() throws SQLException {
         try (Connection conn = ds.getConnection();
              PreparedStatement stmt = conn.prepareStatement(CSV_INSERT_SQL)) {
-            final int imported = JdbcUtils.importFrom(threeRowDataset()).stmtSetter((pq, row) -> {
+            final int imported = DataTransferUtil.importFrom(threeRowDataset()).stmtSetter((pq, row) -> {
                 pq.setLong(1, (Long) row[0]);
                 pq.setString(2, ((String) row[1]).toUpperCase());
                 pq.setDouble(3, (Double) row[2]);
@@ -256,7 +256,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     public void testImportFrom_ColumnTypeMap() throws SQLException {
         final Map<String, Type> columnTypeMap = Map.of("id", Type.of(Long.class), "name", Type.of(String.class), "amount", Type.of(Double.class));
 
-        final int imported = JdbcUtils.importFrom(threeRowDataset()).columnTypeMap(columnTypeMap).into(ds, CSV_INSERT_SQL);
+        final int imported = DataTransferUtil.importFrom(threeRowDataset()).columnTypeMap(columnTypeMap).into(ds, CSV_INSERT_SQL);
 
         assertEquals(3, imported);
         assertEquals(3, count("csv_tgt"));
@@ -265,7 +265,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     // Configuring more than one value-mapping strategy is rejected when the import runs.
     @Test
     public void testImportFrom_MutuallyExclusiveStrategies_Throws() {
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtils.importFrom(threeRowDataset())
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importFrom(threeRowDataset())
                 .selectColumns(List.of("id", "name", "amount"))
                 .stmtSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
                 .into(ds, CSV_INSERT_SQL));
@@ -287,7 +287,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     // copyFrom(DataSource, selectSql).fetchSize(..).batchSize(..).to(DataSource, insertSql)
     @Test
     public void testCopyFrom_DataSource_Sql() throws SQLException {
-        final long copied = JdbcUtils.copyFrom(ds, COPY_SELECT_SQL).fetchSize(1000).batchSize(2).to(ds, COPY_INSERT_SQL);
+        final long copied = DataTransferUtil.copyFrom(ds, COPY_SELECT_SQL).fetchSize(1000).batchSize(2).to(ds, COPY_INSERT_SQL);
 
         assertEquals(3, copied);
         assertEquals(3, count("copy_tgt"));
@@ -298,7 +298,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     public void testCopyFrom_Connection_Sql_WithStmtSetter() throws SQLException {
         try (Connection src = ds.getConnection();
              Connection tgt = ds.getConnection()) {
-            final long copied = JdbcUtils.copyFrom(src, COPY_SELECT_SQL).batchSize(1).stmtSetter((pq, rs) -> {
+            final long copied = DataTransferUtil.copyFrom(src, COPY_SELECT_SQL).batchSize(1).stmtSetter((pq, rs) -> {
                 pq.setLong(1, rs.getLong(1));
                 pq.setString(2, rs.getString(2).toUpperCase());
                 pq.setDouble(3, rs.getDouble(3));
@@ -318,7 +318,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
              Connection tgt = ds.getConnection();
              PreparedStatement sel = src.prepareStatement(COPY_SELECT_SQL);
              PreparedStatement ins = tgt.prepareStatement(COPY_INSERT_SQL)) {
-            final long copied = JdbcUtils.copyFrom(sel).batchSize(2).to(ins);
+            final long copied = DataTransferUtil.copyFrom(sel).batchSize(2).to(ins);
 
             assertEquals(3, copied);
         }
@@ -329,7 +329,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     // copyTable(DataSource, table).to(DataSource, table) — schema-derived all-columns copy.
     @Test
     public void testCopyTable_DataSource_AllColumns() throws SQLException {
-        final long copied = JdbcUtils.copyTable(ds, "copy_src").to(ds, "copy_tgt");
+        final long copied = DataTransferUtil.copyTable(ds, "copy_src").to(ds, "copy_tgt");
 
         assertEquals(3, copied);
         assertEquals(3, count("copy_tgt"));
@@ -341,7 +341,7 @@ public class JdbcUtilsIntegrationTest extends TestBase {
     public void testCopyTable_Connection_SelectColumns() throws SQLException {
         try (Connection src = ds.getConnection();
              Connection tgt = ds.getConnection()) {
-            final long copied = JdbcUtils.copyTable(src, "copy_src").selectColumns(List.of("id", "name")).batchSize(2).to(tgt, "copy_tgt");
+            final long copied = DataTransferUtil.copyTable(src, "copy_src").selectColumns(List.of("id", "name")).batchSize(2).to(tgt, "copy_tgt");
 
             assertEquals(3, copied);
         }

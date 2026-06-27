@@ -1,0 +1,14 @@
+API Design Review — DBVersion.java (public enum)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+Healthy. A vendor/version enum with two family-predicate helpers, isMySQL() (226) and isPostgreSQL() (253),
+implemented as name-prefix checks. Only MySQL and PostgreSQL have many version variants, so the asymmetry
+(no isOracle()/isSQLServer()/isDB2()/isH2()/isHSQLDB()/isMariaDB()) is reasonable — single-variant vendors
+are matched with ==. No actionable findings.
+
+2-6. One optional low-value note:
+- isMariaDB() absent / MariaDB excluded from isMySQL() | DBVersion.java:136, 226 | Low | MariaDB is a distinct
+  constant and isMySQL() returns false for it (the check is a "MySQL" name prefix). This is documented and
+  defensible, but callers treating MariaDB as MySQL-compatible may be surprised. Recommend: keep; optionally
+  add a class-doc note clarifying MariaDB is intentionally separate. No code change required.

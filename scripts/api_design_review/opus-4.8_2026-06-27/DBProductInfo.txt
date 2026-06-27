@@ -1,0 +1,7 @@
+API Design Review — DBProductInfo.java (public record)
+MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+
+1. OVERALL ASSESSMENT
+Healthy, no actionable findings. A 3-component record (productName, productVersion, version:DBVersion) with
+the standard generated accessors. Component nullability is documented. Nothing to rename, change, move, add,
+or deprecate.

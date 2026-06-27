@@ -35,7 +35,7 @@ import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.JdbcUtils;
+import com.landawn.abacus.jdbc.DataTransferUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.samples.dao.AddressDao;
@@ -522,7 +522,7 @@ public class JdbcTest {
 
             assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
 
-            JdbcUtils.copy(dataSource, dataSource2, "user1", "user2");
+            DataTransferUtil.copy(dataSource, dataSource2, "user1", "user2");
 
             assertEquals(JdbcUtil.prepareQuery(dataSource, "select * from user1").list(User.class),
                     JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class));
@@ -544,7 +544,7 @@ public class JdbcTest {
 
             assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
 
-            JdbcUtils.copy(dataSource, dataSource2, "user1", "user2", N.asList("first_name", "last_name", "email", "create_time"));
+            DataTransferUtil.copy(dataSource, dataSource2, "user1", "user2", N.asList("first_name", "last_name", "email", "create_time"));
 
             JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
