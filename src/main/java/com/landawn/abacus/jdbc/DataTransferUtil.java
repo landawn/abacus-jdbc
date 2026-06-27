@@ -3544,8 +3544,7 @@ public final class DataTransferUtil {
          * @param stmtSetter a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
          * @return this builder
          */
-        public DatasetImportBuilder stmtSetter(
-                final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) {
+        public DatasetImportBuilder stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) {
             this.stmtSetter = stmtSetter;
 
             return this;
@@ -3616,8 +3615,7 @@ public final class DataTransferUtil {
             }
 
             if (configuredStrategies > 1) {
-                throw new IllegalArgumentException(
-                        "Only one of 'selectColumns', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
+                throw new IllegalArgumentException("Only one of 'selectColumns', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
             }
 
             if (stmtSetter != null) {

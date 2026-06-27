@@ -3132,11 +3132,14 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testNullParameterValidation() {
-        assertThrows(IllegalArgumentException.class, () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.queryForSingleValue((Class<?>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.query((Jdbc.ResultExtractor<?>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.list((Jdbc.RowMapper<?>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.forEach((Jdbc.RowConsumer) null));
+        // A fresh (open) query per assertion: a failed null-check closes the query (see
+        // AbstractQuery#checkArgNotNull), and assertNotClosed() now runs before the arg check, so a
+        // null arg on an already-closed query would surface as IllegalStateException instead.
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setParameters((Jdbc.ParametersSetter<PreparedStatement>) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).queryForSingleValue((Class<?>) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).query((Jdbc.ResultExtractor<?>) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).list((Jdbc.RowMapper<?>) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).forEach((Jdbc.RowConsumer) null));
     }
 
     @Test

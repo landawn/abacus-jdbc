@@ -1356,7 +1356,8 @@ public class DataTransferUtilTest extends TestBase {
         when(md.getDatabaseProductName()).thenReturn("MariaDB");
         when(md.getDatabaseProductVersion()).thenReturn("11.0");
 
-        final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
+        final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class,
+                int.class);
         m.setAccessible(true);
         m.invoke(null, conn, stmt, 1000);
 
@@ -1377,7 +1378,8 @@ public class DataTransferUtilTest extends TestBase {
         when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(md.getDatabaseProductVersion()).thenReturn("16.0");
 
-        final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
+        final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class,
+                int.class);
         m.setAccessible(true);
         m.invoke(null, conn, stmt, 5000);
 

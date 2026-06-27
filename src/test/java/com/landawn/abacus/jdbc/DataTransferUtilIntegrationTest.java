@@ -192,8 +192,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     private static final String CSV_INSERT_SQL = "INSERT INTO csv_tgt (id, name, amount) VALUES (?, ?, ?)";
 
     private Dataset threeRowDataset() {
-        return Dataset.rows(List.of("id", "name", "amount"),
-                new Object[][] { { 1L, "Alice", 10.5 }, { 2L, "Bob", 20.0 }, { 3L, "Cara", 30.25 } });
+        return Dataset.rows(List.of("id", "name", "amount"), new Object[][] { { 1L, "Alice", 10.5 }, { 2L, "Bob", 20.0 }, { 3L, "Cara", 30.25 } });
     }
 
     private String nameOf(final long id) throws SQLException {
@@ -265,10 +264,11 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     // Configuring more than one value-mapping strategy is rejected when the import runs.
     @Test
     public void testImportFrom_MutuallyExclusiveStrategies_Throws() {
-        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importFrom(threeRowDataset())
-                .selectColumns(List.of("id", "name", "amount"))
-                .stmtSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
-                .into(ds, CSV_INSERT_SQL));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importFrom(threeRowDataset())
+                        .selectColumns(List.of("id", "name", "amount"))
+                        .stmtSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
+                        .into(ds, CSV_INSERT_SQL));
     }
 
     private static final String COPY_SELECT_SQL = "SELECT id, name, amount FROM copy_src";
