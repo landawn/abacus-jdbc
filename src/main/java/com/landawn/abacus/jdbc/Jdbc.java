@@ -65,6 +65,7 @@ import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.ImmutableList;
+import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.ListMultimap;
 import com.landawn.abacus.util.Multimap;
@@ -6378,10 +6379,10 @@ public final class Jdbc {
          * Object byName = all.get("result_name");  // value keyed by parameter name
          * }</pre>
          *
-         * @return a map of all output parameter values.
+         * @return an unmodifiable view of the map of all output parameter values.
          */
         public Map<Object, Object> getOutParamValues() {
-            return outParamValues;
+            return ImmutableMap.wrap(outParamValues);
         }
 
         /**
@@ -6395,10 +6396,10 @@ public final class Jdbc {
          * int firstIndex = defs.get(0).getParameterIndex(); // 1-based index of the first out-param
          * }</pre>
          *
-         * @return a list of {@code OutParam} objects.
+         * @return an unmodifiable view of the list of {@code OutParam} objects.
          */
         public List<OutParam> getOutParams() {
-            return outParams;
+            return ImmutableList.wrap(outParams);
         }
     }
 
@@ -6892,6 +6893,17 @@ public final class Jdbc {
             N.checkArgNotNull(map, "map");
 
             return new DaoCacheByMap(map);
+        }
+
+        /**
+         * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap} created with the
+         * given initial capacity. This cache does not perform automatic eviction.
+         *
+         * @param capacity the initial capacity of the backing map.
+         * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}.
+         */
+        static DaoCache createByMap(final int capacity) {
+            return new DaoCacheByMap(capacity);
         }
 
         /**

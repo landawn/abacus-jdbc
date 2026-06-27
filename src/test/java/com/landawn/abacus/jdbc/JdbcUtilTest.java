@@ -464,7 +464,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSet.getRow()).thenReturn(0, 2);
         when(mockResultSet.next()).thenReturn(true, true, false);
 
-        int skipped = JdbcUtil.skip(mockResultSet, 2);
+        long skipped = JdbcUtil.skip(mockResultSet, 2);
         assertEquals(2, skipped);
     }
 
@@ -473,7 +473,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSet.getRow()).thenReturn(0, 1);
         when(mockResultSet.next()).thenReturn(true, false);
 
-        int skipped = JdbcUtil.skip(mockResultSet, 1L);
+        long skipped = JdbcUtil.skip(mockResultSet, 1L);
         assertEquals(1, skipped);
     }
 
@@ -1334,7 +1334,7 @@ public class JdbcUtilTest extends TestBase {
         }
 
         TestEntity entity = new TestEntity();
-        Collection<String> propNames = JdbcUtil.getInsertPropNames(entity);
+        Collection<String> propNames = JdbcUtil.getInsertPropNames(entity.getClass());
 
         assertNotNull(propNames);
         assertFalse(propNames.contains("readOnlyField"));
@@ -2391,7 +2391,7 @@ public class JdbcUtilTest extends TestBase {
         when(freshRs.getRow()).thenReturn(Integer.MAX_VALUE - 1);
         when(freshRs.next()).thenReturn(true, false);
 
-        int skipped = JdbcUtil.skip(freshRs, 2L);
+        long skipped = JdbcUtil.skip(freshRs, 2L);
         assertEquals(1, skipped);
     }
 
@@ -2403,7 +2403,7 @@ public class JdbcUtilTest extends TestBase {
         when(freshRs.getRow()).thenReturn(0, 0, 3);
         when(freshRs.last()).thenReturn(true);
 
-        int skipped = JdbcUtil.skip(freshRs, 5L);
+        long skipped = JdbcUtil.skip(freshRs, 5L);
         assertEquals(3, skipped);
         verify(freshRs).afterLast();
     }
@@ -2415,7 +2415,7 @@ public class JdbcUtilTest extends TestBase {
         when(freshRs.getRow()).thenReturn(0, 0);
         when(freshRs.last()).thenReturn(false);
 
-        int skipped = JdbcUtil.skip(freshRs, 5L);
+        long skipped = JdbcUtil.skip(freshRs, 5L);
         assertEquals(0, skipped);
     }
 
@@ -2427,7 +2427,7 @@ public class JdbcUtilTest extends TestBase {
         doThrow(new SQLException("absolute not supported")).when(freshRs).absolute(anyInt());
         when(freshRs.next()).thenReturn(true, false);
 
-        int skipped = JdbcUtil.skip(freshRs, 2L);
+        long skipped = JdbcUtil.skip(freshRs, 2L);
         assertEquals(2, skipped);
     }
 
@@ -2467,7 +2467,7 @@ public class JdbcUtilTest extends TestBase {
 
         TestInsertEntity entity = new TestInsertEntity();
         Set<String> excluded = Set.of("lastName");
-        Collection<String> propNames = JdbcUtil.getInsertPropNames(entity, excluded);
+        Collection<String> propNames = JdbcUtil.getInsertPropNames(entity.getClass(), excluded);
 
         assertNotNull(propNames);
         assertFalse(propNames.contains("readOnlyField"));

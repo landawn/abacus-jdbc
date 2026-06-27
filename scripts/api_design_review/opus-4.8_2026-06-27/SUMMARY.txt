@@ -115,7 +115,24 @@ Effort: S(<=30m) / M(hours) / L(day+).  Compat: none / source-compat-add / break
    - L9  SpringApplicationContext: added getBean(String, Class<T>); class marked @Internal.
    - L11 OP / DBVersion: added class-doc notes (OP.DEFAULT casing is intentional; DBVersion.MariaDB is
          intentionally separate from isMySQL()). Javadoc-only.
+   - M6  JdbcUtil: added prepareNamedQueryForLargeResult(Connection, ParsedSql) (completes the matrix).
+   - H3  CallableQuery: added named setObject(String,Object,SQLType), setObject(String,Object,SQLType,int),
+         and setObject(String,T,Type<T>) — full mirror of NamedQuery (delegates to the driver by name).
+   - L5.1 Jdbc.Columns.ColumnOne.set(Class<T>) widened to set(Class<? extends T>).
+   - L5.2 Jdbc.OutParamResult.getOutParamValues()/getOutParams() now return unmodifiable views
+         (ImmutableMap.wrap / ImmutableList.wrap).
+   - L5.4 Jdbc.DaoCache.createByMap(int capacity) factory added.
+   - L7.1 JdbcUtil.skip(ResultSet,long) already returns long in the current tree; completed the test-caller
+         updates (int->long) that the signature change had left broken.
+   - L7.2 JdbcUtil.setSqlExtractor(null) now resets to DEFAULT_SQL_EXTRACTOR; getSqlExtractor() never returns null.
+   - L7.3 JdbcUtil.getInsertPropNames(Object) and (Object,Set) REMOVED (now Class-only, matching
+         getSelect/getUpdatePropNames); 2 test call sites repointed to the Class form. NOTE: this drops the
+         instance-aware behavior from the JdbcUtil facade (QueryUtil.getInsertPropNames(entity,…) still has it).
  WON'T FIX (user decision — keep flagged, do NOT implement):
+   - L5.3 OutParam.parameterIndex>0 enforcement in ctor/setter — NOT done: index <= 0 is the live sentinel for
+         NAME-based registration (CallableQuery.java:2124 `byIndex = getParameterIndex() > 0`; JdbcUtil.java:9370).
+         A blanket >0 guard would break name-based out-params; the of(int,int) factory validation is correctly
+         scoped to index-based registration. (Reclassified as not-applicable rather than a real defect.)
    - H2  JdbcCodeGenerationUtil generateEntityClassByQuery split — declined; (EntityCodeConfig) null casts kept.
    - M4  DataTransferUtil importData(Dataset) int-vs-long — the Dataset family is INTENTIONALLY int (a Dataset is
          int-bounded); the widening was implemented then reverted at user request. Not a defect.

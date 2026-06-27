@@ -50,6 +50,7 @@ import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.Dataset;
@@ -1506,6 +1507,78 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery setObject(final String parameterName, final Object value, final int sqlType, final int scaleOrLength) throws SQLException {
         cstmt.setObject(parameterName, value, sqlType, scaleOrLength);
+
+        return this;
+    }
+
+    /**
+     * Sets an object value for the specified named parameter using a JDBC 4.2 {@link SQLType}.
+     * The value may be {@code null} to set SQL {@code NULL}. This mirrors {@link NamedQuery#setObject(String, Object, SQLType)}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * query.setObject("amount", 123.45, JDBCType.DECIMAL);
+     * }</pre>
+     *
+     * @param parameterName the name of the parameter
+     * @param value the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
+     * @param sqlType the {@link SQLType} to be used
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
+     */
+    public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws SQLException {
+        cstmt.setObject(parameterName, value, sqlType);
+
+        return this;
+    }
+
+    /**
+     * Sets an object value for the specified named parameter using a JDBC 4.2 {@link SQLType} and a scale/length.
+     * This mirrors {@link NamedQuery#setObject(String, Object, SQLType, int)}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * query.setObject("price", new BigDecimal("99.999"), JDBCType.DECIMAL, 2);
+     * }</pre>
+     *
+     * @param parameterName the name of the parameter
+     * @param value the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
+     * @param sqlType the {@link SQLType} to be used
+     * @param scaleOrLength for DECIMAL/NUMERIC types, the scale (number of digits after the decimal point);
+     *                      for stream-backed types (e.g. {@code LONGVARCHAR}) the length of the data;
+     *                      for all other types this value is ignored
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
+     */
+    public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength) throws SQLException {
+        cstmt.setObject(parameterName, value, sqlType, scaleOrLength);
+
+        return this;
+    }
+
+    /**
+     * Sets an object value for the specified named parameter using a custom abacus {@link Type} handler,
+     * giving full control over how the Java value is converted to its SQL representation. This mirrors
+     * {@link NamedQuery#setObject(String, Object, Type)}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Type<UserPreferences> jsonType = N.typeOf(UserPreferences.class);
+     * query.setObject("preferences", userPrefs, jsonType);
+     * }</pre>
+     *
+     * @param <T> parameter value type
+     * @param parameterName the name of the parameter
+     * @param value the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
+     * @param type the {@link Type} handler to use for setting the parameter. Must not be {@code null}.
+     * @return this CallableQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code type} is {@code null}
+     * @throws SQLException if a database access error occurs
+     */
+    public <T> CallableQuery setObject(final String parameterName, final T value, final Type<T> type) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(type, cs.type);
+
+        type.set(cstmt, parameterName, value);
 
         return this;
     }

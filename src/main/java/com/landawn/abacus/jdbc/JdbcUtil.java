@@ -1704,7 +1704,7 @@ public final class JdbcUtil {
      * @see #skip(ResultSet, long)
      */
     public static int skip(final ResultSet rs, final int rowsToSkip) throws SQLException {
-        return skip(rs, (long) rowsToSkip);
+        return (int) skip(rs, (long) rowsToSkip);
     }
 
     private static final Set<Class<?>> resultSetClassNotSupportAbsolute = ConcurrentHashMap.newKeySet();
@@ -1737,14 +1737,14 @@ public final class JdbcUtil {
      * @throws SQLException if a database access error occurs.
      * @see ResultSet#absolute(int)
      */
-    public static int skip(final ResultSet rs, long rowsToSkip) throws SQLException {
+    public static long skip(final ResultSet rs, long rowsToSkip) throws SQLException {
         if (rowsToSkip <= 0) {
             return 0;
         } else if (rowsToSkip == 1) {
             return rs.next() ? 1 : 0;
         } else {
             final int currentRow = rs.getRow();
-            int skipped = 0;
+            long skipped = 0;
 
             if ((rowsToSkip > Integer.MAX_VALUE) || (rowsToSkip > Integer.MAX_VALUE - currentRow)
                     || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass()))) {
@@ -4350,6 +4350,26 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
+        return prepareNamedQuery(conn, namedSql).configureStatement(stmtSetterForBigQueryResult);
+    }
+
+    /**
+     * Prepares a named SQL query optimized for large result sets using the provided Connection and a pre-parsed {@link ParsedSql}.
+     * This method sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and a larger fetch size to improve performance when streaming many rows.
+     *
+     * <p><b>Important:</b> This method does not manage the lifecycle of the connection. The caller MUST close the provided {@code Connection} to avoid resource leaks.</p>
+     *
+     * <p>This is the {@link ParsedSql} counterpart of {@link #prepareNamedQueryForLargeResult(Connection, String)}, completing
+     * the {@code {DataSource, Connection} x {String, ParsedSql}} factory matrix that the non-large {@code prepareNamedQuery} already offers.</p>
+     *
+     * @param conn The Connection to use for the query
+     * @param namedSql The pre-parsed named SQL to prepare
+     * @return A NamedQuery object configured for big result sets
+     * @throws IllegalArgumentException if the Connection or named SQL is {@code null}
+     * @throws SQLException if a SQL exception occurs while preparing the query
+     */
+    @Beta
+    public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         return prepareNamedQuery(conn, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -9448,57 +9468,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the property names of {@code entity} that should be included in an {@code INSERT}
-     * statement.
-     *
-     * <p>Properties annotated with {@code @ReadOnly}, {@code @NonInsertable}, or {@code @Id} (when the
-     * id is auto-generated and not yet set on the instance) are excluded. The exact set is determined
-     * by {@link com.landawn.abacus.query.QueryUtil#getInsertPropNames(Object, Set)}.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * User user = new User();
-     * Collection<String> propNames = JdbcUtil.getInsertPropNames(user);
-     * // Returns property names that should be included in INSERT statement
-     * }</pre>
-     *
-     * @param entity the entity instance to analyze; the values stored on the instance can influence the
-     *               result (e.g., a non-default id is included whereas a default one is excluded)
-     * @return the collection of property names suitable for {@code INSERT}
-     * @see #getInsertPropNames(Object, Set)
-     */
-    public static Collection<String> getInsertPropNames(final Object entity) {
-        return getInsertPropNames(entity, null);
-    }
-
-    /**
-     * Returns the property names suitable for INSERT operations for the given entity, excluding
-     * the provided property names.
-     *
-     * <p>This method delegates to
-     * {@link com.landawn.abacus.query.QueryUtil#getInsertPropNames(Object, Set)}, which omits any
-     * names explicitly listed in {@code excludedPropNames}.</p>
-     *
-     * <p>Pass {@code null} to include all supported properties (subject to the entity-level rules).</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * User user = new User();
-     * Set<String> excludedProps = N.asSet("createdTime", "modifiedTime");
-     * Collection<String> propNames = JdbcUtil.getInsertPropNames(user, excludedProps);
-     * // Returns property names for INSERT, excluding createdTime and modifiedTime
-     * }</pre>
-     *
-     * @param entity the entity object to analyze
-     * @param excludedPropNames property names to exclude from the result, or {@code null} for none
-     * @return a collection of property names suitable for INSERT operations
-     * @throws IllegalArgumentException if the entity is not supported by QueryUtil introspection
-     */
-    public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
-        return QueryUtil.getInsertPropNames(entity, excludedPropNames);
-    }
-
-    /**
      * Returns the property names suitable for INSERT operations for the given entity class.
      * This method analyzes the class structure to determine which properties should be
      * included in INSERT statements.
@@ -10107,7 +10076,7 @@ public final class JdbcUtil {
      * String sql = extractor.apply(statement);
      * }</pre>
      *
-     * @return the current SQL extractor function (defaults to a built-in non-null extractor), or {@code null} if a {@code null} extractor was explicitly set
+     * @return the current SQL extractor function; never {@code null} (defaults to the built-in extractor, and a {@code null} passed to {@link #setSqlExtractor(Throwables.Function)} resets it to that default)
      */
     public static Throwables.Function<Statement, String, SQLException> getSqlExtractor() {
         return JdbcUtil._sqlExtractor;
@@ -10128,10 +10097,11 @@ public final class JdbcUtil {
      * });
      * }</pre>
      *
-     * @param sqlExtractor the SQL extractor function to set
+     * @param sqlExtractor the SQL extractor function to set; if {@code null}, the extractor is reset to the built-in default
+     *                     ({@link #DEFAULT_SQL_EXTRACTOR}) so that {@link #getSqlExtractor()} never returns {@code null}
      */
     public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
-        JdbcUtil._sqlExtractor = sqlExtractor;
+        JdbcUtil._sqlExtractor = sqlExtractor == null ? DEFAULT_SQL_EXTRACTOR : sqlExtractor;
     }
 
     /**
