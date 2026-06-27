@@ -191,6 +191,8 @@ public interface Transaction {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback attempt
+     * @throws IllegalStateException if the transaction is in an unexpected status (other than {@link Status#ACTIVE},
+     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}) when the rollback is actually performed
      */
     void rollbackIfNotCommitted() throws UncheckedSQLException;
 

@@ -2476,7 +2476,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * // Process the data set
      * dataset.forEach(row -> {
-     *     System.out.println(row.getString("name") + ": " + row.getInt("value"));
+     *     System.out.println(row.get(0) + ": " + row.get(1));
      * });
      *
      * // Get OUT parameters

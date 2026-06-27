@@ -157,7 +157,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SqlMapper sqlMapper = dao.sqlMapper();
-     * String query = sqlMapper.get("findUserByEmail");
+     * ParsedSql query = sqlMapper.get("findUserByEmail");
      * }</pre>
      *
      * @return the SqlMapper instance, never {@code null}

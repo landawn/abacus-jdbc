@@ -1188,6 +1188,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws SQLException {
         loadJoinEntitiesIfNull(entity, joinEntityPropName, null);
@@ -1238,6 +1239,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
         loadJoinEntitiesIfNull(entities, joinEntityPropName, null);

@@ -1548,7 +1548,7 @@ final class DaoImpl {
                 preparedQuery.setFetchSize(queryInfo.fetchSize);
             } else if (queryInfo.isSelect) {
                 if (mergedByIdAnno != null) {
-                    preparedQuery.configureStatement(JdbcUtil.stmtSetterForBigQueryResult); // ?
+                    preparedQuery.configureStatement(JdbcUtil.stmtSetterForBigQueryResult); // @MergedById may fetch a large multi-row result set to merge
                 } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
                     preparedQuery.setFetchSize(2);
                 } else if (op == OP.findFirst || op == OP.queryForSingle || op == OP.exists || isExistsQuery(method, op, fullClassMethodName)
@@ -2063,8 +2063,8 @@ final class DaoImpl {
 
         final SqlDialect sqlDialect = dsl.sqlDialect();
         final NamingPolicy namingPolicy = sqlDialect.namingPolicy() == null ? NamingPolicy.SNAKE_CASE : sqlDialect.namingPolicy();
-        final Dsl parameterizedDsl = DaoImpl.parameterizedDsl(dsl);
-        final Dsl namedDsl = DaoImpl.namedDsl(dsl);
+        final Dsl parameterizedDsl = parameterizedDsl(dsl);
+        final Dsl namedDsl = namedDsl(dsl);
 
         final Class<Object> entityClass = N.isEmpty(typeArguments) ? null : (Class) typeArguments[0];
         final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
@@ -5547,7 +5547,7 @@ final class DaoImpl {
                             if (!(returnType.equals(void.class) || idClass == null || ClassUtil.wrap(idClass).isAssignableFrom(ClassUtil.wrap(returnType))
                                     || u.Optional.class.isAssignableFrom(returnType))) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
-                                        + ") only can be: void or 'ID' type. It can't be: " + returnType);
+                                        + ") only can be: void, the 'ID' type, or Optional<ID>. It can't be: " + returnType);
                             }
 
                             call = (proxy, args) -> {
@@ -5569,7 +5569,7 @@ final class DaoImpl {
                         } else {
                             if (!(returnType.equals(void.class) || List.class.isAssignableFrom(returnType))) {
                                 throw new UnsupportedOperationException("The return type of batch insert operations(" + fullClassMethodName
-                                        + ")  only can be: void/List<ID>/Collection<ID>. It can't be: " + returnType);
+                                        + ") only can be: void/List<ID>. It can't be: " + returnType);
                             }
 
                             call = (proxy, args) -> {

@@ -285,7 +285,7 @@ public final class JdbcUtils {
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30).addRow("Bob", 15);
      * List<String> columns = Arrays.asList("name", "age");
      * // Only import adults (age >= 18)
-     * Predicate<Object[]> filter = row -> ((Integer) row[1]) >= 18;
+     * Throwables.Predicate<Object[], RuntimeException> filter = row -> ((Integer) row[1]) >= 18;
      * String insertSql = "INSERT INTO adult_users (name, age) VALUES (?, ?)";
      * int rowsImported = JdbcUtils.importData(dataset, columns, filter, conn, insertSql, 1000, 0);
      * }</pre>
@@ -410,7 +410,7 @@ public final class JdbcUtils {
      * columnTypes.put("age", Type.of(Integer.class));
      * columnTypes.put("status", Type.of(String.class));
      * // Only import active users
-     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
+     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * String insertSql = "INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)";
      * int rowsImported = JdbcUtils.importData(dataset, filter, conn, insertSql, 500, 50, columnTypes);
      * }</pre>
@@ -514,7 +514,7 @@ public final class JdbcUtils {
      *     .addRow("John", 25, "active")
      *     .addRow("Jane", 30, "inactive");
      * // Only import active users
-     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
+     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * String insertSql = "INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)";
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (stmt, row) -> {
      *     stmt.setString(1, (String) row[0]);
@@ -640,7 +640,7 @@ public final class JdbcUtils {
      *     .addRow("Jane", 30, "inactive");
      * List<String> columns = Arrays.asList("name", "age");
      * // Only import active users
-     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
+     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age) VALUES (?, ?)");
      * int rowsImported = JdbcUtils.importData(dataset, columns, filter, stmt, 500, 0);
      * }</pre>
@@ -769,7 +769,7 @@ public final class JdbcUtils {
      * columnTypes.put("age", Type.of(Integer.class));
      * columnTypes.put("status", Type.of(String.class));
      * // Only import active users
-     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
+     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)");
      * int rowsImported = JdbcUtils.importData(dataset, filter, stmt, 500, 50, columnTypes);
      * }</pre>
@@ -916,7 +916,7 @@ public final class JdbcUtils {
      *     .addRow("Jane", 30, "inactive");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)");
      * // Only import active users
-     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
+     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (query, row) -> {
      *     query.setString(1, (String) row[0]);
      *     query.setInt(2, (Integer) row[1]);
@@ -1647,7 +1647,7 @@ public final class JdbcUtils {
      *     "INSERT INTO active_users (id, name, email, status) VALUES (?, ?, ?, ?)");
      *
      * // Filter to import only users with "ACTIVE" status (assuming status is in column 3)
-     * Predicate<String[]> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
+     * Throwables.Predicate<String[], RuntimeException> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
      *
      * long rowsImported = JdbcUtils.importCsv(csvFile, activeUsersFilter, stmt, 1000, 0,
      *     (query, row) -> {
@@ -1829,7 +1829,7 @@ public final class JdbcUtils {
      *
      * // Complex filter: valid email, age >= 18, allowed countries
      * Set<String> allowedCountries = Set.of("US", "CA", "UK", "AU");
-     * Predicate<String[]> complexFilter = row -> {
+     * Throwables.Predicate<String[], RuntimeException> complexFilter = row -> {
      *     // Validate email format (simple check)
      *     if (!row[1].contains("@")) return false;
      *

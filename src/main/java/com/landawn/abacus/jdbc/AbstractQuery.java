@@ -5743,7 +5743,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Calculate average from query result
      * Double average = preparedQuery.queryThenApply(dataset ->
-     *     dataset.stream().mapToDouble(row -> row.getDouble("amount")).average().orElse(0.0)
+     *     dataset.<Number>stream("amount").mapToDouble(Number::doubleValue).average().orElse(0.0)
      * );
      * }</pre>
      *
@@ -5769,7 +5769,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Process User entities from query
      * List<String> names = preparedQuery.queryThenApply(User.class, dataset ->
-     *     dataset.stream().map(row -> row.getString("name")).toList()
+     *     dataset.<String>stream("name").toList()
      * );
      * }</pre>
      *

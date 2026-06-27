@@ -183,8 +183,8 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "{call getUsersAndOrders(?)}", op = OP.listAll, isProcedure = true)
-     * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
+     * @Query(value = "{call getUserBatches(?)}", op = OP.listAll, isProcedure = true)
+     * List<List<User>> getUserBatches(long departmentId);
      * }</pre>
      *
      */

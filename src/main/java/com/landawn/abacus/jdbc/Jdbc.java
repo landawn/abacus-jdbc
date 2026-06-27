@@ -4664,7 +4664,7 @@ public final class Jdbc {
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * // A consumer that prints each column's name and value.
+         * // A consumer that prints each column's index and value.
          * BiRowConsumer consumer = BiRowConsumer.create((rs, columnIndex) -> {
          *     System.out.println("Column index " + columnIndex + ": " + rs.getObject(columnIndex));
          * });

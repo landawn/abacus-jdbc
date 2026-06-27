@@ -1152,6 +1152,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
@@ -1207,6 +1208,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param entities the collection of entities to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {

@@ -2860,7 +2860,8 @@ public final class JdbcUtil {
      *     .setString(1, "Engineering")
      *     .query();
      * dataset.forEach(row -> {
-     *     System.out.println(row.get("name") + " - " + row.get("email"));
+     *     // Columns are positional, in SELECT order: name=0, email=1, age=2
+     *     System.out.println(row.get(0) + " - " + row.get(1));
      * });
      * }</pre>
      *
@@ -4922,15 +4923,16 @@ public final class JdbcUtil {
      *     "SELECT * FROM users WHERE age > ? AND city = ?",
      *     18, "New York");
      *
-     * result.forEach(row -> {
-     *     System.out.println(row.get("name") + " - " + row.get("email"));
-     * });
+     * for (int i = 0; i < result.size(); i++) {
+     *     System.out.println(result.get(i, result.getColumnIndex("name")) + " - "
+     *             + result.get(i, result.getColumnIndex("email")));
+     * }
      *
      * // Query returning single value
      * Dataset countResult = JdbcUtil.executeQuery(dataSource,
      *     "SELECT COUNT(*) as total FROM orders WHERE status = ?",
      *     "PENDING");
-     * long totalOrders = countResult.getRow(0).getLong("total");
+     * long totalOrders = ((Number) countResult.get(0, 0)).longValue();
      *
      * // Query with IN clause using multiple parameters
      * Dataset products = JdbcUtil.executeQuery(dataSource,
@@ -4939,7 +4941,7 @@ public final class JdbcUtil {
      *
      * // Iterate through results
      * for (int i = 0; i < products.size(); i++) {
-     *     System.out.println(products.get(i, "product_name"));
+     *     System.out.println(products.get(i, products.getColumnIndex("product_name")));
      * }
      *
      * // Query with no parameters
@@ -6153,8 +6155,8 @@ public final class JdbcUtil {
      * // Transform email addresses to lowercase during extraction
      * ResultSet rs = stmt.executeQuery("SELECT id, name, email FROM users");
      * RowExtractor emailNormalizer = RowExtractor.builder()
-     *              // normalize email is at index 2
-     *              .get(2, (rs, col) -> rs.getString(col).toLowerCase()).build();
+     *              // email is the 3rd column (1-based index 3)
+     *              .get(3, (rs, col) -> rs.getString(col).toLowerCase()).build();
      *
      * Dataset normalizedData = JdbcUtil.extractData(rs, emailNormalizer);
      * }</pre>
@@ -11641,6 +11643,128 @@ public final class JdbcUtil {
     }
 
     /**
+     * Enables DAO query result caching for the current thread.
+     * Creates a new thread-local cache that will be used by all DAOs in the current thread.
+     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
+     * try {
+     *     // DAO operations here will use the cache
+     *     userDao.findById(1L);   // First call hits database
+     *     userDao.findById(1L);   // Second call uses cache
+     * } finally {
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();
+     * }
+     * }</pre>
+     *
+     * @return the created DaoCache for the current thread
+     * @see Jdbc.DaoCache#createByMap()
+     * @see #closeDaoCacheOnCurrentThread()
+     */
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread() {
+        final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
+
+        return openDaoCacheOnCurrentThread(localThreadCache);
+    }
+
+    /**
+     * Enables the specified DAO cache for the current thread.
+     * The provided cache will be used by all DAOs in the current thread.
+     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Use a custom cache implementation
+     * Map<String, Object> cacheMap = new LRUMap<>(1000);
+     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
+     *
+     * JdbcUtil.openDaoCacheOnCurrentThread(cache);
+     * try {
+     *     // DAO operations use the custom cache
+     *     productDao.findPopular();
+     * } finally {
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();
+     * }
+     * }</pre>
+     *
+     * @param localThreadCache the cache to use for the current thread
+     * @return the specified localThreadCache
+     * @see Jdbc.DaoCache#createByMap()
+     * @see Jdbc.DaoCache#createByMap(Map)
+     * @see #closeDaoCacheOnCurrentThread()
+     */
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) {
+        localThreadCache_TL.set(localThreadCache);
+
+        return localThreadCache;
+    }
+
+    /**
+     * Closes and removes the DAO cache for the current thread.
+     * This method should always be called in a finally block after starting a thread-local cache
+     * to prevent memory leaks.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JdbcUtil.openDaoCacheOnCurrentThread();
+     * try {
+     *     // Use cached DAO operations
+     * } finally {
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();   // Always clean up
+     * }
+     * }</pre>
+     *
+     * @see #openDaoCacheOnCurrentThread()
+     * @see #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
+     */
+    public static void closeDaoCacheOnCurrentThread() {
+        localThreadCache_TL.remove();
+    }
+
+    @SuppressWarnings("unused")
+    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
+        String paramKey = null;
+
+        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
+
+        if (kryoParser != null) {
+            try {
+                paramKey = kryoParser.serialize(cacheKeyArgs);
+            } catch (final Exception e) {
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
+            }
+        } else {
+            final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
+                if (it == null) {
+                    return null;
+                }
+
+                final Type<?> type = N.typeOf(it.getClass());
+
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
+                    return it;
+                } else {
+                    return it.toString();
+                }
+            }).toList();
+
+            try {
+                paramKey = N.toJson(newArgs);
+            } catch (final Exception e) {
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
+            }
+        }
+
+        if (paramKey == null) {
+            return null;
+        }
+
+        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
+    }
+
+    /**
      * Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.
      * This method generates a runtime proxy that implements all methods in the DAO interface, automatically
      * handling CRUD operations, query execution, and transaction management based on method signatures and annotations.
@@ -11792,8 +11916,10 @@ public final class JdbcUtil {
      * <ul>
      *   <li><b>Cache the returned instance.</b> The DAO proxy is thread-safe and effectively
      *       stateless from the caller's perspective — create it once per
-     *       {@code (interface, DataSource)} pair and reuse it. Never call {@code createDao}
-     *       per request.</li>
+     *       {@code (interface, DataSource)} pair and reuse it. The factory does keep an internal
+     *       cache keyed on the identity of the supplied arguments, so a repeated call with the same
+     *       {@code daoInterface} and {@code DataSource} returns the same proxy rather than rebuilding
+     *       it; still, hold your own reference instead of calling {@code createDao} per request.</li>
      *   <li><b>Don't expect {@code @Lazy} on the DAO {@code @Bean} alone to defer cost.</b>
      *       Spring's {@code @Lazy} on a provider bean only defers instantiation until a
      *       <i>non-lazy consumer</i> needs it. If your {@code @Service} classes inject DAOs
@@ -11822,7 +11948,8 @@ public final class JdbcUtil {
      * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
      * @return a dynamically generated DAO instance implementing the specified interface with full CRUD capabilities.
      *         Cache and reuse this instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, or if
+     *         {@code daoInterface} is not an interface
      * @see Dao
      * @see CrudDao
      * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
@@ -11833,34 +11960,54 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a DAO instance using the customization options specified in {@code daoCreationOptions}.
+     * Creates a dynamic DAO implementation for the specified interface and {@link javax.sql.DataSource},
+     * customized by the supplied {@link DaoCreationOptions}.
      *
-     * <p>This is the configurable counterpart to {@link #createDao(Class, javax.sql.DataSource)}: it accepts
-     * a {@link DaoCreationOptions} bundle carrying the optional target table name, SQL builder dialect,
-     * {@link SqlMapper}, {@link Jdbc.DaoCache} and {@link Executor}. Any option left unset (or a {@code null}
-     * {@code daoCreationOptions}) falls back to the same defaults as the two-argument overload: {@link Dsl#PSC}
-     * for the SQL builder and the shared async executor.</p>
+     * <p>This is the configurable counterpart to {@link #createDao(Class, javax.sql.DataSource)}: it accepts a
+     * {@link DaoCreationOptions} bundle carrying the optional settings below. Any option left unset (or a
+     * {@code null} {@code daoCreationOptions}) falls back to the same default as the two-argument overload:</p>
+     * <ul>
+     *   <li>{@code targetTableName} — overrides the table the DAO operates on; defaults to the table derived
+     *       from the entity class.</li>
+     *   <li>{@code dsl} — the SQL builder dialect used to generate CRUD SQL; defaults to {@link Dsl#PSC}. Its
+     *       {@code sqlDialect().sqlPolicy()} must be {@code null} or
+     *       {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}; named-SQL
+     *       dialects are rejected.</li>
+     *   <li>{@code sqlMapper} — externalized, pre-defined SQL keyed by ID for {@code @Query(id = ...)} methods;
+     *       defaults to none.</li>
+     *   <li>{@code cache} — a {@link Jdbc.DaoCache} for {@code @CacheResult} methods; defaults to none. Only
+     *       permitted for DAO interfaces that extend {@code NoUpdateDao} (see below).</li>
+     *   <li>{@code executor} — the {@link Executor} backing the DAO's asynchronous methods; defaults to the
+     *       shared async executor.</li>
+     * </ul>
+     *
+     * <p>See {@link DaoCreationOptions} for the full description of each option.</p>
+     *
+     * <p>All behavior, performance characteristics, and best practices documented on
+     * {@link #createDao(Class, javax.sql.DataSource)} apply equally here.</p>
      *
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * UserDao dao = JdbcUtil.createDao(UserDao.class, dataSource,
      *         JdbcUtil.DaoCreationOptions.builder()
      *                 .targetTableName("app_users")
-     *                 .dsl(Dsl.PSC)
+     *                 .sqlMapper(sqlMapper)
      *                 .build());
      * }</pre>
      *
      * @param <TD> the type parameter of the DAO interface, must extend {@link Dao}
-     * @param daoInterface the DAO interface class to implement, must not be {@code null}
+     * @param daoInterface the DAO interface class to implement, must not be {@code null} and must be an interface
      * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
      * @param daoCreationOptions the creation options; when {@code null}, all defaults are applied (equivalent
      *                           to {@link #createDao(Class, javax.sql.DataSource)})
      * @return a dynamically generated DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, or daoCreationOptions.dsl().sqlDialect().sqlPolicy() is not null and is not SqlPolicy.PARAMETERIZED_SQL
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, if
+     *         {@code daoInterface} is not an interface, or if the supplied {@code dsl}'s SQL policy is neither
+     *         {@code null} nor {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}
      * @throws UnsupportedOperationException if a non-{@code null} {@code cache} option is supplied for a DAO
-     *         interface that supports update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao}
-     *         types may be cached)
+     *         interface that supports update/delete operations (only interfaces extending {@code NoUpdateDao} —
+     *         such as {@code NoUpdateCrudDao} and the unchecked variants — may be cached)
      * @see #createDao(Class, javax.sql.DataSource)
      * @see DaoCreationOptions
      */
@@ -11871,128 +12018,6 @@ public final class JdbcUtil {
         final Executor executor = options.executor() == null ? JdbcUtil.asyncExecutor.getExecutor() : options.executor();
 
         return DaoImpl.createDao(daoInterface, options.targetTableName(), ds, dsl, options.sqlMapper(), options.cache(), executor);
-    }
-
-    /**
-     * Enables DAO query result caching for the current thread.
-     * Creates a new thread-local cache that will be used by all DAOs in the current thread.
-     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
-     * try {
-     *     // DAO operations here will use the cache
-     *     userDao.findById(1L);   // First call hits database
-     *     userDao.findById(1L);   // Second call uses cache
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();
-     * }
-     * }</pre>
-     *
-     * @return the created DaoCache for the current thread
-     * @see Jdbc.DaoCache#createByMap()
-     * @see #closeDaoCacheOnCurrentThread()
-     */
-    public static Jdbc.DaoCache openDaoCacheOnCurrentThread() {
-        final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
-
-        return openDaoCacheOnCurrentThread(localThreadCache);
-    }
-
-    /**
-     * Enables the specified DAO cache for the current thread.
-     * The provided cache will be used by all DAOs in the current thread.
-     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Use a custom cache implementation
-     * Map<String, Object> cacheMap = new LRUMap<>(1000);
-     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
-     *
-     * JdbcUtil.openDaoCacheOnCurrentThread(cache);
-     * try {
-     *     // DAO operations use the custom cache
-     *     productDao.findPopular();
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();
-     * }
-     * }</pre>
-     *
-     * @param localThreadCache the cache to use for the current thread
-     * @return the specified localThreadCache
-     * @see Jdbc.DaoCache#createByMap()
-     * @see Jdbc.DaoCache#createByMap(Map)
-     * @see #closeDaoCacheOnCurrentThread()
-     */
-    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) {
-        localThreadCache_TL.set(localThreadCache);
-
-        return localThreadCache;
-    }
-
-    /**
-     * Closes and removes the DAO cache for the current thread.
-     * This method should always be called in a finally block after starting a thread-local cache
-     * to prevent memory leaks.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * JdbcUtil.openDaoCacheOnCurrentThread();
-     * try {
-     *     // Use cached DAO operations
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();   // Always clean up
-     * }
-     * }</pre>
-     *
-     * @see #openDaoCacheOnCurrentThread()
-     * @see #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
-     */
-    public static void closeDaoCacheOnCurrentThread() {
-        localThreadCache_TL.remove();
-    }
-
-    @SuppressWarnings("unused")
-    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
-        String paramKey = null;
-
-        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
-
-        if (kryoParser != null) {
-            try {
-                paramKey = kryoParser.serialize(cacheKeyArgs);
-            } catch (final Exception e) {
-                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
-            }
-        } else {
-            final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
-                if (it == null) {
-                    return null;
-                }
-
-                final Type<?> type = N.typeOf(it.getClass());
-
-                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
-                    return it;
-                } else {
-                    return it.toString();
-                }
-            }).toList();
-
-            try {
-                paramKey = N.toJson(newArgs);
-            } catch (final Exception e) {
-                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
-            }
-        }
-
-        if (paramKey == null) {
-            return null;
-        }
-
-        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
     }
 
     /**
@@ -12025,7 +12050,10 @@ public final class JdbcUtil {
 
         /**
          * The SQL builder dialect used to generate CRUD SQL. When {@code null} (the default), {@link Dsl#PSC}
-         * is used.
+         * is used. Its {@code sqlDialect().sqlPolicy()} must be {@code null} or
+         * {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}; supplying a
+         * named-SQL dialect causes {@link JdbcUtil#createDao(Class, javax.sql.DataSource, DaoCreationOptions)} to
+         * fail with {@link IllegalArgumentException}.
          */
         private Dsl dsl;
 
@@ -12037,9 +12065,9 @@ public final class JdbcUtil {
 
         /**
          * An optional {@link Jdbc.DaoCache} for caching results of methods annotated with {@code @CacheResult}.
-         * May be {@code null}. Supplying a non-{@code null} cache is only permitted for
-         * {@code NoUpdateDao}/{@code NoUpdateCrudDao} interfaces; otherwise DAO creation fails with
-         * {@link UnsupportedOperationException}.
+         * May be {@code null}. Supplying a non-{@code null} cache is only permitted for interfaces extending
+         * {@code NoUpdateDao} (such as {@code NoUpdateCrudDao} and the unchecked variants); otherwise DAO
+         * creation fails with {@link UnsupportedOperationException}.
          */
         private Jdbc.DaoCache cache;
 
