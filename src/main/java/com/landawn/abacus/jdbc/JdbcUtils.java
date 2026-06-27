@@ -3407,4 +3407,710 @@ public final class JdbcUtils {
             }
         };
     }
+
+    /**
+     * Creates a fluent builder for importing the data of a {@link Dataset} into a database table.
+     *
+     * <p>The returned {@link DatasetImportBuilder} lets you configure the optional aspects of the import
+     * (selected columns, row filter, batch size/interval, column-type mapping or a custom statement setter)
+     * through chained calls, and then run the import with one of the terminal {@code into(...)} methods.
+     * It is an ergonomic alternative to the many positional {@code importData(Dataset, ...)} overloads.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * List<String> cols = Arrays.asList("name", "age");
+     *
+     * // Equivalent to importData(dataset, cols, filter, dataSource, insertSql, 1000, 0)
+     * int rowsImported = JdbcUtils.importFrom(dataset)
+     *         .selectColumns(cols)
+     *         .filter(row -> ((Integer) row[1]) >= 18)
+     *         .batchSize(1000)
+     *         .into(dataSource, "INSERT INTO users (name, age) VALUES (?, ?)");
+     * }</pre>
+     *
+     * @param dataset the Dataset whose data will be imported (must not be {@code null})
+     * @return a {@link DatasetImportBuilder} for configuring and running the import
+     * @see DatasetImportBuilder
+     * @see #importData(Dataset, javax.sql.DataSource, String)
+     */
+    @Beta
+    public static DatasetImportBuilder importFrom(final Dataset dataset) {
+        N.checkArgNotNull(dataset, cs.dataset);
+
+        return new DatasetImportBuilder(dataset);
+    }
+
+    /**
+     * A fluent builder that configures and runs the import of a {@link Dataset} into a database table.
+     *
+     * <p>Obtain an instance via {@link JdbcUtils#importFrom(Dataset)}, chain any of the optional configuration
+     * methods, then call one of the terminal {@code into(...)} methods to run the import. Each configuration
+     * method returns {@code this}, so calls can be chained.</p>
+     *
+     * <p>The three value-mapping strategies &mdash; {@link #selectColumns(Collection)},
+     * {@link #columnTypeMap(Map)} and {@link #stmtSetter(Throwables.BiConsumer)} &mdash; are mutually
+     * exclusive; configuring more than one causes the terminal {@code into(...)} call to throw
+     * {@link IllegalArgumentException}. When none of them is configured, all columns of the dataset are
+     * imported in order. The {@link #filter(Throwables.Predicate)} is independent and may be combined with
+     * any of them.</p>
+     *
+     * @see JdbcUtils#importFrom(Dataset)
+     */
+    public static final class DatasetImportBuilder {
+        private final Dataset dataset;
+        private Collection<String> selectColumnNames;
+        private Throwables.Predicate<? super Object[], SQLException> filter;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        private long batchIntervalInMillis = 0;
+        @SuppressWarnings("rawtypes")
+        private Map<String, ? extends Type> columnTypeMap;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter;
+
+        DatasetImportBuilder(final Dataset dataset) {
+            this.dataset = dataset;
+        }
+
+        /**
+         * Restricts the import to the specified columns, in the given order. The order must match the
+         * parameter placeholders of the insert SQL. Mutually exclusive with {@link #columnTypeMap(Map)}
+         * and {@link #stmtSetter(Throwables.BiConsumer)}.
+         *
+         * @param selectColumnNames the column names to import; {@code null} or empty imports all columns
+         * @return this builder
+         */
+        public DatasetImportBuilder selectColumns(final Collection<String> selectColumnNames) {
+            this.selectColumnNames = selectColumnNames;
+
+            return this;
+        }
+
+        /**
+         * Imports only the rows for which the given predicate returns {@code true}. The predicate receives
+         * the row as an {@code Object[]} of all dataset column values, in dataset column order.
+         *
+         * @param filter the row filter; {@code null} imports every row
+         * @return this builder
+         */
+        public DatasetImportBuilder filter(final Throwables.Predicate<? super Object[], SQLException> filter) {
+            this.filter = filter;
+
+            return this;
+        }
+
+        /**
+         * Sets the number of rows inserted per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code into(...)} is called)
+         * @return this builder
+         */
+        public DatasetImportBuilder batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the pause between consecutive batch executions.
+         *
+         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code into(...)} is called)
+         * @return this builder
+         */
+        public DatasetImportBuilder batchIntervalInMillis(final long batchIntervalInMillis) {
+            this.batchIntervalInMillis = batchIntervalInMillis;
+
+            return this;
+        }
+
+        /**
+         * Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
+         * Mutually exclusive with {@link #selectColumns(Collection)} and {@link #stmtSetter(Throwables.BiConsumer)}.
+         *
+         * @param columnTypeMap a map of column name to {@link Type}; keys must be columns of the dataset
+         * @return this builder
+         */
+        @SuppressWarnings("rawtypes")
+        public DatasetImportBuilder columnTypeMap(final Map<String, ? extends Type> columnTypeMap) {
+            this.columnTypeMap = columnTypeMap;
+
+            return this;
+        }
+
+        /**
+         * Supplies a custom setter that maps each row to the statement parameters, giving full control over
+         * how values are bound. Mutually exclusive with {@link #selectColumns(Collection)} and
+         * {@link #columnTypeMap(Map)}.
+         *
+         * @param stmtSetter a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
+         * @return this builder
+         */
+        public DatasetImportBuilder stmtSetter(
+                final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) {
+            this.stmtSetter = stmtSetter;
+
+            return this;
+        }
+
+        /**
+         * Runs the import against a connection obtained from the given DataSource. The connection is released
+         * back to the DataSource when the import completes.
+         *
+         * @param targetDataSource the DataSource to obtain a database connection from
+         * @param insertSql the SQL insert statement with placeholders
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
+         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         is not a column of the dataset
+         * @throws SQLException if a database access error occurs
+         */
+        public int into(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+            final Connection conn = JdbcUtil.getConnection(targetDataSource);
+
+            try {
+                return into(conn, insertSql);
+            } finally {
+                JdbcUtil.releaseConnection(conn, targetDataSource);
+            }
+        }
+
+        /**
+         * Runs the import against the given Connection.
+         *
+         * @param conn the Connection to the database
+         * @param insertSql the SQL insert statement with placeholders
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
+         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         is not a column of the dataset
+         * @throws SQLException if a database access error occurs
+         */
+        public int into(final Connection conn, final String insertSql) throws SQLException {
+            try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
+                return into(stmt);
+            }
+        }
+
+        /**
+         * Runs the import against the given PreparedStatement. The statement is not closed by this method.
+         *
+         * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
+         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         is not a column of the dataset
+         * @throws SQLException if a database access error occurs
+         */
+        public int into(final PreparedStatement stmt) throws SQLException {
+            int configuredStrategies = 0;
+
+            if (N.notEmpty(selectColumnNames)) {
+                configuredStrategies++;
+            }
+
+            if (N.notEmpty(columnTypeMap)) {
+                configuredStrategies++;
+            }
+
+            if (stmtSetter != null) {
+                configuredStrategies++;
+            }
+
+            if (configuredStrategies > 1) {
+                throw new IllegalArgumentException(
+                        "Only one of 'selectColumns', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
+            }
+
+            if (stmtSetter != null) {
+                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            } else if (N.notEmpty(columnTypeMap)) {
+                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+            } else {
+                final Collection<String> columnNames = N.isEmpty(selectColumnNames) ? dataset.columnNames() : selectColumnNames;
+
+                return importData(dataset, columnNames, filter, stmt, batchSize, batchIntervalInMillis);
+            }
+        }
+    }
+
+    /**
+     * Creates a fluent builder for copying the rows of a SELECT query from a source {@link javax.sql.DataSource}
+     * into a target table, using explicit SELECT and INSERT SQL.
+     *
+     * <p>The returned {@link CopyFromDataSource} lets you configure {@code fetchSize}, {@code batchSize},
+     * {@code batchIntervalInMillis} and a custom {@code stmtSetter} through chained calls, then run the copy
+     * with {@link CopyFromDataSource#to(javax.sql.DataSource, String)}. It is an ergonomic alternative to the
+     * positional {@code copy(DataSource, String, ..., DataSource, String, ...)} overloads.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * long copied = JdbcUtils.copyFrom(sourceDataSource, "SELECT id, name FROM users WHERE active = true")
+     *         .fetchSize(50000)
+     *         .batchSize(5000)
+     *         .to(targetDataSource, "INSERT INTO active_users (id, name) VALUES (?, ?)");
+     * }</pre>
+     *
+     * @param sourceDataSource the data source to read from (must not be {@code null})
+     * @param selectSql the SQL query selecting the rows to copy
+     * @return a {@link CopyFromDataSource} for configuring and running the copy
+     * @see CopyFromDataSource
+     * @see #copy(javax.sql.DataSource, String, javax.sql.DataSource, String)
+     */
+    @Beta
+    public static CopyFromDataSource copyFrom(final javax.sql.DataSource sourceDataSource, final String selectSql) {
+        N.checkArgNotNull(sourceDataSource, cs.dataSource);
+
+        return new CopyFromDataSource(sourceDataSource, selectSql);
+    }
+
+    /**
+     * Creates a fluent builder for copying the rows of a SELECT query from a source {@link Connection} into a
+     * target table on another {@link Connection}, using explicit SELECT and INSERT SQL.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * long copied = JdbcUtils.copyFrom(sourceConn, "SELECT * FROM orders")
+     *         .batchSize(1000)
+     *         .batchIntervalInMillis(100)
+     *         .to(targetConn, "INSERT INTO orders_archive VALUES (?, ?, ?, ?)");
+     * }</pre>
+     *
+     * @param sourceConn the connection to read from (must not be {@code null})
+     * @param selectSql the SQL query selecting the rows to copy
+     * @return a {@link CopyFromConnection} for configuring and running the copy
+     * @see CopyFromConnection
+     * @see #copy(Connection, String, Connection, String)
+     */
+    @Beta
+    public static CopyFromConnection copyFrom(final Connection sourceConn, final String selectSql) {
+        N.checkArgNotNull(sourceConn, cs.conn);
+
+        return new CopyFromConnection(sourceConn, selectSql);
+    }
+
+    /**
+     * Creates a fluent builder for copying the rows produced by a source {@link PreparedStatement} into a
+     * target {@link PreparedStatement}.
+     *
+     * <p>Because the select statement is supplied directly, the fetch size is whatever the caller configured on
+     * it; the builder does not expose {@code fetchSize}.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * long copied = JdbcUtils.copyFrom(selectStmt)
+     *         .batchSize(1000)
+     *         .stmtSetter((pq, rs) -> { pq.setLong(1, rs.getLong(1)); pq.setString(2, rs.getString(2)); })
+     *         .to(insertStmt);
+     * }</pre>
+     *
+     * @param selectStmt the statement that produces the rows to copy (must not be {@code null}; not closed by the copy)
+     * @return a {@link CopyFromStatement} for configuring and running the copy
+     * @see CopyFromStatement
+     * @see #copy(PreparedStatement, PreparedStatement, int, long, Throwables.BiConsumer)
+     */
+    @Beta
+    public static CopyFromStatement copyFrom(final PreparedStatement selectStmt) {
+        N.checkArgNotNull(selectStmt, cs.stmt);
+
+        return new CopyFromStatement(selectStmt);
+    }
+
+    /**
+     * Creates a fluent builder for copying a whole table (or selected columns) from a source
+     * {@link javax.sql.DataSource} to a target table, generating the SELECT and INSERT SQL from the table schema.
+     *
+     * <p>The returned {@link CopyTableFromDataSource} lets you configure {@code selectColumns} and
+     * {@code batchSize}, then run the copy with {@link CopyTableFromDataSource#to(javax.sql.DataSource, String)}.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Copy the whole table to a backup table
+     * long copied = JdbcUtils.copyTable(sourceDataSource, "users").to(targetDataSource, "users_backup");
+     *
+     * // Copy selected columns with a custom batch size
+     * long partial = JdbcUtils.copyTable(sourceDataSource, "users")
+     *         .selectColumns(List.of("id", "name", "email"))
+     *         .batchSize(10000)
+     *         .to(targetDataSource, "users_lite");
+     * }</pre>
+     *
+     * @param sourceDataSource the data source to read from (must not be {@code null})
+     * @param sourceTableName the name of the source table
+     * @return a {@link CopyTableFromDataSource} for configuring and running the copy
+     * @see CopyTableFromDataSource
+     * @see #copy(javax.sql.DataSource, javax.sql.DataSource, String, String)
+     */
+    @Beta
+    public static CopyTableFromDataSource copyTable(final javax.sql.DataSource sourceDataSource, final String sourceTableName) {
+        N.checkArgNotNull(sourceDataSource, cs.dataSource);
+
+        return new CopyTableFromDataSource(sourceDataSource, sourceTableName);
+    }
+
+    /**
+     * Creates a fluent builder for copying a whole table (or selected columns) from a source {@link Connection}
+     * to a target table on another {@link Connection}, generating the SELECT and INSERT SQL from the table schema.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * long copied = JdbcUtils.copyTable(sourceConn, "users")
+     *         .selectColumns(List.of("id", "name"))
+     *         .to(targetConn, "users_backup");
+     * }</pre>
+     *
+     * @param sourceConn the connection to read from (must not be {@code null})
+     * @param sourceTableName the name of the source table
+     * @return a {@link CopyTableFromConnection} for configuring and running the copy
+     * @see CopyTableFromConnection
+     * @see #copy(Connection, Connection, String, String)
+     */
+    @Beta
+    public static CopyTableFromConnection copyTable(final Connection sourceConn, final String sourceTableName) {
+        N.checkArgNotNull(sourceConn, cs.conn);
+
+        return new CopyTableFromConnection(sourceConn, sourceTableName);
+    }
+
+    /**
+     * A fluent builder that copies the rows of a SELECT query from a source {@link javax.sql.DataSource} into a
+     * target table. Obtain an instance via {@link JdbcUtils#copyFrom(javax.sql.DataSource, String)}.
+     *
+     * @see JdbcUtils#copyFrom(javax.sql.DataSource, String)
+     */
+    public static final class CopyFromDataSource {
+        private final javax.sql.DataSource sourceDataSource;
+        private final String selectSql;
+        private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        private long batchIntervalInMillis = 0;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter;
+
+        CopyFromDataSource(final javax.sql.DataSource sourceDataSource, final String selectSql) {
+            this.sourceDataSource = sourceDataSource;
+            this.selectSql = selectSql;
+        }
+
+        /**
+         * Sets the number of rows fetched from the source at a time (should be {@code >=} the batch size).
+         *
+         * @param fetchSize the fetch size
+         * @return this builder
+         */
+        public CopyFromDataSource fetchSize(final int fetchSize) {
+            this.fetchSize = fetchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the number of rows inserted into the target per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyFromDataSource batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the pause between consecutive batch executions.
+         *
+         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyFromDataSource batchIntervalInMillis(final long batchIntervalInMillis) {
+            this.batchIntervalInMillis = batchIntervalInMillis;
+
+            return this;
+        }
+
+        /**
+         * Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters. When
+         * {@code null} (the default), all columns are copied by index.
+         *
+         * @param stmtSetter the parameter setter
+         * @return this builder
+         */
+        public CopyFromDataSource stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) {
+            this.stmtSetter = stmtSetter;
+
+            return this;
+        }
+
+        /**
+         * Runs the copy into the given target DataSource and insert SQL.
+         *
+         * @param targetDataSource the data source to write to
+         * @param insertSql the SQL insert statement with placeholders matching the selected columns
+         * @return the number of rows copied
+         * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+         * @throws SQLException if a database access error occurs
+         */
+        public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+            return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
+        }
+    }
+
+    /**
+     * A fluent builder that copies the rows of a SELECT query between two {@link Connection}s. Obtain an instance
+     * via {@link JdbcUtils#copyFrom(Connection, String)}.
+     *
+     * @see JdbcUtils#copyFrom(Connection, String)
+     */
+    public static final class CopyFromConnection {
+        private final Connection sourceConn;
+        private final String selectSql;
+        private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        private long batchIntervalInMillis = 0;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter;
+
+        CopyFromConnection(final Connection sourceConn, final String selectSql) {
+            this.sourceConn = sourceConn;
+            this.selectSql = selectSql;
+        }
+
+        /**
+         * Sets the number of rows fetched from the source at a time (should be {@code >=} the batch size).
+         *
+         * @param fetchSize the fetch size
+         * @return this builder
+         */
+        public CopyFromConnection fetchSize(final int fetchSize) {
+            this.fetchSize = fetchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the number of rows inserted into the target per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyFromConnection batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the pause between consecutive batch executions.
+         *
+         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyFromConnection batchIntervalInMillis(final long batchIntervalInMillis) {
+            this.batchIntervalInMillis = batchIntervalInMillis;
+
+            return this;
+        }
+
+        /**
+         * Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters. When
+         * {@code null} (the default), all columns are copied by index.
+         *
+         * @param stmtSetter the parameter setter
+         * @return this builder
+         */
+        public CopyFromConnection stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) {
+            this.stmtSetter = stmtSetter;
+
+            return this;
+        }
+
+        /**
+         * Runs the copy into the given target Connection and insert SQL.
+         *
+         * @param targetConn the connection to write to
+         * @param insertSql the SQL insert statement with placeholders matching the selected columns
+         * @return the number of rows copied
+         * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+         * @throws SQLException if a database access error occurs
+         */
+        public long to(final Connection targetConn, final String insertSql) throws SQLException {
+            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
+        }
+    }
+
+    /**
+     * A fluent builder that copies the rows produced by a source {@link PreparedStatement} into a target
+     * {@link PreparedStatement}. Obtain an instance via {@link JdbcUtils#copyFrom(PreparedStatement)}.
+     *
+     * @see JdbcUtils#copyFrom(PreparedStatement)
+     */
+    public static final class CopyFromStatement {
+        private final PreparedStatement selectStmt;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        private long batchIntervalInMillis = 0;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter;
+
+        CopyFromStatement(final PreparedStatement selectStmt) {
+            this.selectStmt = selectStmt;
+        }
+
+        /**
+         * Sets the number of rows inserted into the target per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyFromStatement batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the pause between consecutive batch executions.
+         *
+         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyFromStatement batchIntervalInMillis(final long batchIntervalInMillis) {
+            this.batchIntervalInMillis = batchIntervalInMillis;
+
+            return this;
+        }
+
+        /**
+         * Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters. When
+         * {@code null} (the default), all columns are copied by index.
+         *
+         * @param stmtSetter the parameter setter
+         * @return this builder
+         */
+        public CopyFromStatement stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) {
+            this.stmtSetter = stmtSetter;
+
+            return this;
+        }
+
+        /**
+         * Runs the copy into the given target statement.
+         *
+         * @param insertStmt the statement to insert into (not closed by this method)
+         * @return the number of rows copied
+         * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+         * @throws SQLException if a database access error occurs
+         */
+        public long to(final PreparedStatement insertStmt) throws SQLException {
+            return copy(selectStmt, insertStmt, batchSize, batchIntervalInMillis, stmtSetter);
+        }
+    }
+
+    /**
+     * A fluent builder that copies a table (or selected columns) between two {@link javax.sql.DataSource}s,
+     * generating the SELECT and INSERT SQL from the table schema. Obtain an instance via
+     * {@link JdbcUtils#copyTable(javax.sql.DataSource, String)}.
+     *
+     * @see JdbcUtils#copyTable(javax.sql.DataSource, String)
+     */
+    public static final class CopyTableFromDataSource {
+        private final javax.sql.DataSource sourceDataSource;
+        private final String sourceTableName;
+        private Collection<String> selectColumnNames;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+
+        CopyTableFromDataSource(final javax.sql.DataSource sourceDataSource, final String sourceTableName) {
+            this.sourceDataSource = sourceDataSource;
+            this.sourceTableName = sourceTableName;
+        }
+
+        /**
+         * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
+         *
+         * @param selectColumnNames the column names to copy
+         * @return this builder
+         */
+        public CopyTableFromDataSource selectColumns(final Collection<String> selectColumnNames) {
+            this.selectColumnNames = selectColumnNames;
+
+            return this;
+        }
+
+        /**
+         * Sets the number of rows copied per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyTableFromDataSource batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Runs the copy into the given target DataSource and table.
+         *
+         * @param targetDataSource the data source to write to
+         * @param targetTableName the name of the target table
+         * @return the number of rows copied
+         * @throws IllegalArgumentException if {@code batchSize <= 0}
+         * @throws SQLException if a database access error occurs
+         */
+        public long to(final javax.sql.DataSource targetDataSource, final String targetTableName) throws SQLException {
+            return N.isEmpty(selectColumnNames) ? copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, batchSize)
+                    : copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, selectColumnNames, batchSize);
+        }
+    }
+
+    /**
+     * A fluent builder that copies a table (or selected columns) between two {@link Connection}s, generating the
+     * SELECT and INSERT SQL from the table schema. Obtain an instance via
+     * {@link JdbcUtils#copyTable(Connection, String)}.
+     *
+     * @see JdbcUtils#copyTable(Connection, String)
+     */
+    public static final class CopyTableFromConnection {
+        private final Connection sourceConn;
+        private final String sourceTableName;
+        private Collection<String> selectColumnNames;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+
+        CopyTableFromConnection(final Connection sourceConn, final String sourceTableName) {
+            this.sourceConn = sourceConn;
+            this.sourceTableName = sourceTableName;
+        }
+
+        /**
+         * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
+         *
+         * @param selectColumnNames the column names to copy
+         * @return this builder
+         */
+        public CopyTableFromConnection selectColumns(final Collection<String> selectColumnNames) {
+            this.selectColumnNames = selectColumnNames;
+
+            return this;
+        }
+
+        /**
+         * Sets the number of rows copied per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
+         * @return this builder
+         */
+        public CopyTableFromConnection batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Runs the copy into the given target Connection and table.
+         *
+         * @param targetConn the connection to write to
+         * @param targetTableName the name of the target table
+         * @return the number of rows copied
+         * @throws IllegalArgumentException if {@code batchSize <= 0}
+         * @throws SQLException if a database access error occurs
+         */
+        public long to(final Connection targetConn, final String targetTableName) throws SQLException {
+            return N.isEmpty(selectColumnNames) ? copy(sourceConn, targetConn, sourceTableName, targetTableName, batchSize)
+                    : copy(sourceConn, targetConn, sourceTableName, targetTableName, selectColumnNames, batchSize);
+        }
+    }
 }

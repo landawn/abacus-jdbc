@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -11,6 +12,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.Dataset;
 
 /**
  * End-to-end integration coverage for {@link JdbcUtils} table-to-table {@code copy} and CSV
@@ -183,5 +187,166 @@ public class JdbcUtilsIntegrationTest extends TestBase {
 
         assertTrue(csv.exists());
         assertTrue(csv.length() > 0L);
+    }
+
+    private static final String CSV_INSERT_SQL = "INSERT INTO csv_tgt (id, name, amount) VALUES (?, ?, ?)";
+
+    private Dataset threeRowDataset() {
+        return Dataset.rows(List.of("id", "name", "amount"),
+                new Object[][] { { 1L, "Alice", 10.5 }, { 2L, "Bob", 20.0 }, { 3L, "Cara", 30.25 } });
+    }
+
+    private String nameOf(final long id) throws SQLException {
+        try (Connection conn = ds.getConnection();
+             PreparedStatement st = conn.prepareStatement("SELECT name FROM csv_tgt WHERE id = ?")) {
+            st.setLong(1, id);
+            try (ResultSet rs = st.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
+    }
+
+    // importFrom(dataset).into(dataSource, insertSql) — default all-columns path.
+    @Test
+    public void testImportFrom_AllColumns_IntoDataSource() throws SQLException {
+        final int imported = JdbcUtils.importFrom(threeRowDataset()).into(ds, CSV_INSERT_SQL);
+
+        assertEquals(3, imported);
+        assertEquals(3, count("csv_tgt"));
+        assertEquals("Alice", nameOf(1));
+    }
+
+    // importFrom(dataset).selectColumns(..).filter(..).batchSize(..).into(conn, insertSql)
+    @Test
+    public void testImportFrom_SelectColumns_Filter_BatchSize() throws SQLException {
+        try (Connection conn = ds.getConnection()) {
+            final int imported = JdbcUtils.importFrom(threeRowDataset())
+                    .selectColumns(List.of("id", "name", "amount"))
+                    .filter(row -> ((Double) row[2]) >= 20.0) // drops Alice (10.5)
+                    .batchSize(1)
+                    .into(conn, CSV_INSERT_SQL);
+
+            assertEquals(2, imported);
+        }
+
+        assertEquals(2, count("csv_tgt"));
+    }
+
+    // importFrom(dataset).stmtSetter(..).into(stmt) — custom parameter binding, terminal PreparedStatement.
+    @Test
+    public void testImportFrom_StmtSetter_IntoStatement() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(CSV_INSERT_SQL)) {
+            final int imported = JdbcUtils.importFrom(threeRowDataset()).stmtSetter((pq, row) -> {
+                pq.setLong(1, (Long) row[0]);
+                pq.setString(2, ((String) row[1]).toUpperCase());
+                pq.setDouble(3, (Double) row[2]);
+            }).into(stmt);
+
+            assertEquals(3, imported);
+        }
+
+        assertEquals(3, count("csv_tgt"));
+        assertEquals("ALICE", nameOf(1));
+    }
+
+    // importFrom(dataset).columnTypeMap(..).into(dataSource, insertSql) — type-mapped value binding.
+    @SuppressWarnings("rawtypes")
+    @Test
+    public void testImportFrom_ColumnTypeMap() throws SQLException {
+        final Map<String, Type> columnTypeMap = Map.of("id", Type.of(Long.class), "name", Type.of(String.class), "amount", Type.of(Double.class));
+
+        final int imported = JdbcUtils.importFrom(threeRowDataset()).columnTypeMap(columnTypeMap).into(ds, CSV_INSERT_SQL);
+
+        assertEquals(3, imported);
+        assertEquals(3, count("csv_tgt"));
+    }
+
+    // Configuring more than one value-mapping strategy is rejected when the import runs.
+    @Test
+    public void testImportFrom_MutuallyExclusiveStrategies_Throws() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtils.importFrom(threeRowDataset())
+                .selectColumns(List.of("id", "name", "amount"))
+                .stmtSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
+                .into(ds, CSV_INSERT_SQL));
+    }
+
+    private static final String COPY_SELECT_SQL = "SELECT id, name, amount FROM copy_src";
+    private static final String COPY_INSERT_SQL = "INSERT INTO copy_tgt (id, name, amount) VALUES (?, ?, ?)";
+
+    private String copyTgtName(final long id) throws SQLException {
+        try (Connection conn = ds.getConnection();
+             PreparedStatement st = conn.prepareStatement("SELECT name FROM copy_tgt WHERE id = ?")) {
+            st.setLong(1, id);
+            try (ResultSet rs = st.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
+    }
+
+    // copyFrom(DataSource, selectSql).fetchSize(..).batchSize(..).to(DataSource, insertSql)
+    @Test
+    public void testCopyFrom_DataSource_Sql() throws SQLException {
+        final long copied = JdbcUtils.copyFrom(ds, COPY_SELECT_SQL).fetchSize(1000).batchSize(2).to(ds, COPY_INSERT_SQL);
+
+        assertEquals(3, copied);
+        assertEquals(3, count("copy_tgt"));
+    }
+
+    // copyFrom(Connection, selectSql).stmtSetter(..).to(Connection, insertSql)
+    @Test
+    public void testCopyFrom_Connection_Sql_WithStmtSetter() throws SQLException {
+        try (Connection src = ds.getConnection();
+             Connection tgt = ds.getConnection()) {
+            final long copied = JdbcUtils.copyFrom(src, COPY_SELECT_SQL).batchSize(1).stmtSetter((pq, rs) -> {
+                pq.setLong(1, rs.getLong(1));
+                pq.setString(2, rs.getString(2).toUpperCase());
+                pq.setDouble(3, rs.getDouble(3));
+            }).to(tgt, COPY_INSERT_SQL);
+
+            assertEquals(3, copied);
+        }
+
+        assertEquals(3, count("copy_tgt"));
+        assertEquals("ALICE", copyTgtName(1));
+    }
+
+    // copyFrom(PreparedStatement).to(PreparedStatement)
+    @Test
+    public void testCopyFrom_Statement_To_Statement() throws SQLException {
+        try (Connection src = ds.getConnection();
+             Connection tgt = ds.getConnection();
+             PreparedStatement sel = src.prepareStatement(COPY_SELECT_SQL);
+             PreparedStatement ins = tgt.prepareStatement(COPY_INSERT_SQL)) {
+            final long copied = JdbcUtils.copyFrom(sel).batchSize(2).to(ins);
+
+            assertEquals(3, copied);
+        }
+
+        assertEquals(3, count("copy_tgt"));
+    }
+
+    // copyTable(DataSource, table).to(DataSource, table) — schema-derived all-columns copy.
+    @Test
+    public void testCopyTable_DataSource_AllColumns() throws SQLException {
+        final long copied = JdbcUtils.copyTable(ds, "copy_src").to(ds, "copy_tgt");
+
+        assertEquals(3, copied);
+        assertEquals(3, count("copy_tgt"));
+        assertEquals("Alice", copyTgtName(1));
+    }
+
+    // copyTable(Connection, table).selectColumns(..).batchSize(..).to(Connection, table)
+    @Test
+    public void testCopyTable_Connection_SelectColumns() throws SQLException {
+        try (Connection src = ds.getConnection();
+             Connection tgt = ds.getConnection()) {
+            final long copied = JdbcUtils.copyTable(src, "copy_src").selectColumns(List.of("id", "name")).batchSize(2).to(tgt, "copy_tgt");
+
+            assertEquals(3, copied);
+        }
+
+        assertEquals(3, count("copy_tgt"));
+        assertEquals("Alice", copyTgtName(1));
     }
 }

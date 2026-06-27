@@ -442,4 +442,8 @@ public final class cs { // NOSONAR
      * Parameter name for database table names.
      */
     public static final String tableName = "tableName";
+    /**
+     * Parameter name for {@link com.landawn.abacus.util.Dataset} objects to be imported or exported.
+     */
+    public static final String dataset = "dataset";
 }
