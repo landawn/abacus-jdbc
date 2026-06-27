@@ -16,6 +16,8 @@
 
 package com.landawn.abacus.jdbc;
 
+import com.landawn.abacus.annotation.Internal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -62,6 +64,7 @@ import org.springframework.context.ApplicationContext;
  *
  * @see org.springframework.context.ApplicationContext
  */
+@Internal
 public final class SpringApplicationContext {
 
     @Autowired // NOSONAR
@@ -131,5 +134,29 @@ public final class SpringApplicationContext {
      */
     public <T> T getBean(final Class<T> requiredType) {
         return appContext == null ? null : appContext.getBean(requiredType);
+    }
+
+    /**
+     * Retrieves a bean from the Spring ApplicationContext by name, requiring it to be of the given type.
+     *
+     * <p>This is the typed counterpart of {@link #getBean(String)}: the bean is returned already cast to
+     * {@code requiredType}, removing the need for a cast at the call site.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * DataSource dataSource = springAppContext.getBean("myDataSource", DataSource.class);
+     * }</pre>
+     *
+     * @param <T> the bean type to be retrieved from the Spring context
+     * @param name the name of the bean to retrieve
+     * @param requiredType the class object representing the required type of the bean
+     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found
+     * @throws org.springframework.beans.factory.BeanNotOfRequiredTypeException if the bean is not of the required type
+     *
+     * @see ApplicationContext#getBean(String, Class)
+     */
+    public <T> T getBean(final String name, final Class<T> requiredType) {
+        return appContext == null ? null : appContext.getBean(name, requiredType);
     }
 }

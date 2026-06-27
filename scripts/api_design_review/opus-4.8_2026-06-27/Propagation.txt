@@ -1,9 +1,13 @@
 API Design Review — Propagation.java (public enum)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+RE-VERIFIED 2026-06-27 against current source — CONFIRMED-CLEAN; unchanged.
 
 1. OVERALL ASSESSMENT
-Healthy, no actionable API-design findings. Six well-documented constants (REQUIRED, SUPPORTS, MANDATORY,
-REQUIRES_NEW, NOT_SUPPORTED, NEVER) consumed by @Transactional; no methods. Naming mirrors the widely-known
-Spring propagation vocabulary. (The omission of NESTED is a deliberate design choice — savepoint-based
-nested transactions are not modeled — and is not flagged. Whether every constant is fully honored by the
-runtime is an implementation-behavior question outside this public-API review.)
+Healthy, no actionable API-design findings. Six well-documented constants consumed by @Transactional; no
+methods. Naming mirrors the widely-known Spring propagation vocabulary. The omission of NESTED is a
+deliberate design choice (savepoint-based nested transactions are not modeled) and is not flagged.
+Whether every constant is fully honored by the runtime is an implementation-behavior question outside this
+public-API review. Current evidence:
+  Propagation.java:28 -> "public enum Propagation {"
+  Propagation.java:41/53/65/77/90/102 -> REQUIRED / SUPPORTS / MANDATORY / REQUIRES_NEW / NOT_SUPPORTED /
+  NEVER  (exactly six constants, no methods; NESTED absent).

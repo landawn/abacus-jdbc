@@ -120,7 +120,7 @@ class CodeGenerationUtilTest {
         ecc.setTableAnnotationClass(com.landawn.abacus.annotation.Table.class);
         ecc.setGenerateFieldNameTable(true);
         // ecc.setClassNamesToImport(N.asList("codes.entity.User", "jakarta.persistence.Column"));
-        str = JdbcCodeGenerationUtil.generateEntityClass(dataSource, "UserQueryAllResult", "select * from user1", ecc);
+        str = JdbcCodeGenerationUtil.generateEntityClassByQuery(dataSource, "UserQueryAllResult", "select * from user1", ecc);
         System.out.println(str);
 
         IOUtil.deleteIfExists(new File("./samples/codes/entity/User1.java"));

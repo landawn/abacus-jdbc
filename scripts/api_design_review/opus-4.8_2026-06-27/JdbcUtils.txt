@@ -1,69 +1,134 @@
-API Design Review — JdbcUtils.java
-MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
+API Design Review — DataTransferUtil.java (formerly JdbcUtils)
+MODEL=opus-4.8  DATE=2026-06-27
+RE-VERIFIED 2026-06-27 against current source (class renamed JdbcUtils->DataTransferUtil, no shim).
+Builder terminal renamed: DatasetImportBuilder.into(...) -> to(...). New copyFrom/copyTable fluent builders added.
+Every line number below re-mapped to DataTransferUtil.java and each quoted line is the ACTUAL current source.
 
 1. OVERALL ASSESSMENT
-JdbcUtils is a well-structured bulk-data-movement utility (distinct from JdbcUtil) with five healthy
-families: importData (Dataset/File/Reader/Iterator -> table), importCsv (File/Reader -> table),
-exportCsv (DataSource/Connection/PreparedStatement/ResultSet -> File/Writer), copy
-(DataSource/Connection/PreparedStatement, same- or cross-DB), and the createParamSetter factory plus the
-new importFrom(...) / DatasetImportBuilder fluent API. Parameter ordering is disciplined
-(batchSize/batchIntervalInMillis consistently last before the trailing mapper; selectColumnNames/filter
-precede the target), and Csv capitalization is uniform across importCsv/exportCsv. The actionable issues
-are (a) one return-type inconsistency in importData, (b) several genuine matrix gaps on the Writer-output
-side of exportCsv and the Reader+Connection side of importCsv, and (c) a couple of low-severity parameter
-notes largely superseded by the new builder.
+DataTransferUtil (class decl line 159: "public final class DataTransferUtil {") is a well-structured
+bulk-data-movement utility (distinct from JdbcUtil) with these healthy families: importData
+(Dataset/File/Reader/Iterator -> table), importCsv (File/Reader -> table), exportCsv
+(DataSource/Connection/PreparedStatement/ResultSet -> File/Writer), copy
+(DataSource/Connection/PreparedStatement, same- or cross-DB), the createParamSetter factory, and the
+fluent builders importFrom(...) -> DatasetImportBuilder, copyFrom(...) -> CopyFrom* and
+copyTable(...) -> CopyTable*. Parameter ordering is disciplined (batchSize/batchIntervalInMillis
+consistently last before the trailing mapper; selectColumnNames/filter precede the target), and Csv
+capitalization is uniform. The actionable issues are unchanged by the rename: (a) the importData
+int-vs-long return-type inconsistency PERSISTS and is now ALSO visible at the fluent-terminal level
+(DatasetImportBuilder.to(...) returns int while every copy builder's to(...) returns long), (b) several
+genuine matrix gaps on the Writer-output side of exportCsv and the Reader+Connection side of importCsv,
+and (c) low-severity positional-parameter notes largely superseded by the new builders.
 
 2. NAMING ISSUES
-- None actionable. importData / importCsv / exportCsv / copy are accurate; Csv capitalization is consistent.
-  (importData(File/Reader, ...func) vs importCsv(File/Reader, ...) look overlapping by name but are
-  genuinely distinct: the former takes a generic line->Object[] parser, the latter a CSV tokenizer
-  producing String[]. Keep both.)
+- STILL-VALID (no actionable change). importData / importCsv / exportCsv / copy are accurate; Csv
+  capitalization is consistent. importData(File/Reader, ...func) vs importCsv(File/Reader, ...) look
+  overlapping by name but are genuinely distinct (generic line->Object[] parser vs CSV tokenizer
+  producing String[]). Keep both.
+- NOTE (rename side-effect, non-issue): the new builders standardize the terminal verb on to(...) —
+  importFrom(d).to(ds,sql) (3460/3587), copyFrom(...).to(...) (3679/3876), copyTable(...).to(...)
+  (3763/4096). The old into(...) terminal is gone (no shim). Terminal naming is now uniform across all
+  three builder families; this is an improvement, not a defect.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- importData(Dataset, ...) returns int vs importData(File/Reader/Iterator, ...) returns long |
-  JdbcUtils.java:174-989 (all int; builder into(...) 3565/3586/3602 also int) vs 1016, 1122, 1290 (long) |
-  Medium | VERIFIED. The same method name returns two different primitive widths. A Dataset is int-bounded
-  so int is technically sufficient, but the inconsistent contract is a wart. Recommend: change the Dataset
-  importData family AND DatasetImportBuilder.into(...) to return long for family-wide consistency.
-- Dataset importData value-mapping arg placement is inconsistent | selectColumnNames at position 2 (239)
-  vs columnTypeMap last (353/394) vs stmtSetter last (471/502) | Medium | The three mutually-exclusive
-  mapping strategies sit in different positions. This is exactly what importFrom(...) fixes. Recommend:
-  keep the builder as the canonical path; do not add further positional permutations.
-- batchSize (int) immediately followed by batchIntervalInMillis (long) | e.g. 274, 627, 903 | Low | Two
-  adjacent integer-accepting params are silently swappable (long only weakly disambiguates). Inherent to
-  the positional design; resolved only by steering callers to the builder's named setters. Recommend: keep.
-- DatasetImportBuilder.filter pins the thrown exception to SQLException (3494) vs positional
-  importData(..., Throwables.Predicate<? super Object[], E>, ...) (314/440/540) | Low | A filter throwing
-  a non-SQLException checked exception works positionally but not via the builder. Recommend: keep
-  (acceptable builder simplification). Confirming check: no internal caller needs a non-SQLException
-  checked filter.
+- STILL-VALID: importData(Dataset, ...) returns int vs importData(File/Reader/Iterator, ...) returns long |
+  DataTransferUtil.java: Dataset family all int — 196 "public static int importData(final Dataset dataset,
+  final javax.sql.DataSource targetDataSource, final String insertSql) ..." through 925; builder terminal
+  also int — 3587 "public int to(final javax.sql.DataSource targetDataSource, final String insertSql)
+  throws SQLException {" (also 3608, 3624). File/Reader/Iterator return long — 1038 "public static <E
+  extends Exception> long importData(final File file, ...", 1144 "... long importData(final Reader reader,
+  ...", 1312 "public static <T> long importData(final Iterator<? extends T> iter, ..." | Medium | Same
+  method name returns two different primitive widths. A Dataset is int-bounded so int is technically
+  sufficient, but the inconsistent contract is a wart. The rename/builder did NOT fix this — into->to was a
+  pure name change; to(...) still returns int. Recommend: widen the Dataset importData family AND
+  DatasetImportBuilder.to(...) to long for family-wide consistency.
+- STILL-VALID: Dataset importData value-mapping arg placement inconsistent | selectColumnNames at position 2
+  — 261 "public static int importData(final Dataset dataset, final Collection<String> selectColumnNames,
+  final Connection conn, final String insertSql)"; columnTypeMap last — 375 "... importData(final Dataset
+  dataset, final Connection conn, final String insertSql, final Map<String, ? extends Type> columnTypeMap)"
+  (also 416); stmtSetter last — 493 (also 524) | Medium | The three mutually-exclusive mapping strategies
+  sit in different positions. This is exactly what importFrom(...) fixes (selectColumns/columnTypeMap/
+  stmtSetter are named setters, mutually exclusive, enforced at to(...)). Recommend: keep the builder as the
+  canonical path; do not add further positional permutations.
+- STILL-VALID: batchSize (int) immediately followed by batchIntervalInMillis (long) | e.g. 296 "... final
+  int batchSize, final long batchIntervalInMillis)" (also 649, 925) | Low | Two adjacent integer-accepting
+  params are silently swappable (long only weakly disambiguates). Inherent to the positional design;
+  resolved only by steering callers to the builder's named setters (batchSize(int) 3529 / batchIntervalInMillis(long) 3541).
+  Recommend: keep.
+- STILL-VALID: DatasetImportBuilder.filter pins the thrown exception to SQLException vs positional generic E |
+  builder — 3517 "public DatasetImportBuilder filter(final Throwables.Predicate<? super Object[],
+  SQLException> filter) {" (field 3485) vs positional — 337/462/562 "... final Throwables.Predicate<?
+  super Object[], E> filter, ..." (also 691/820/962; importCsv equivalents 1698/1893 use Predicate<? super
+  String[], E>) | Low | A filter throwing a non-SQLException checked exception works positionally but not
+  via the builder. Recommend: keep (acceptable builder simplification); no internal caller needs a
+  non-SQLException checked filter.
 
 4. MISPLACED METHODS (with target class)
-- None. All bulk import/export/copy methods and createParamSetter (3394) belong in JdbcUtils, not JdbcUtil.
+- STILL-VALID (none misplaced). All bulk import/export/copy methods and createParamSetter (3416 "public
+  static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> createParamSetter(final
+  ColumnGetter<?> columnGetterForAll) {") belong in DataTransferUtil, not JdbcUtil. The rename actually
+  SHARPENS this: the class is now named for exactly this responsibility (data transfer), removing the prior
+  JdbcUtil/JdbcUtils near-collision.
 
-5. MISSING METHODS (with target class)  [all VERIFIED against the exportCsv/importCsv signature matrices]
-- exportCsv(PreparedStatement, Writer) and exportCsv(PreparedStatement, Collection<String>, Writer) |
-  gap vs File-output equivalents JdbcUtils.java:2082 / 2116 | High | The File side supports PreparedStatement
-  (and +cols); the Writer side (2320/2357) only supports ResultSet. You can export a PreparedStatement to a
-  File but not to a Writer. Recommend: add both Writer overloads.
-- exportCsv(Connection, String querySql, Collection<String> selectColumnNames, Writer) | gap vs 2042
-  (Connection+cols->File) and 2277 (Connection->Writer, no cols) | High | Column selection is available for
-  File output but not Writer output from a Connection. Recommend: add this overload.
-- exportCsv(DataSource, String querySql, Collection<String> selectColumnNames, File/Writer) | gap vs 1963 /
-  2234 (DataSource variants have no selectColumnNames) | Medium | The DataSource entry points cannot select
-  columns at all. Recommend: add the two column-selecting DataSource overloads (or document DataSource as
-  all-columns-only).
-- importCsv(Reader, Connection, String insertSql, int batchSize, long batchIntervalInMillis, stmtSetter) |
-  gap vs 1540 (importCsv(File, Connection, ...) exists) and 1165 (importData(Reader, Connection, ...) exists)
-  | High | The Reader CSV family (1717/1761/1804) has NO Connection overload though both its File sibling and
-  the parallel importData(Reader) family do. Recommend: add the Reader+Connection importCsv overload.
-- Configured Dataset import via DataSource | only the 3-arg importData(Dataset, DataSource, String) exists
-  (174) | Low | Every configured Dataset import via a DataSource currently requires a Connection or the
-  builder. Recommend: KEEP — do not add positional DataSource overloads; importFrom(dataset)...into(dataSource,
-  sql) (3565) already covers this ergonomically.
+5. MISSING METHODS (with target class)  [all re-verified against the current exportCsv/importCsv matrices]
+- STILL-VALID: exportCsv(PreparedStatement, Writer) and exportCsv(PreparedStatement, Collection<String>,
+  Writer) | File side supports PreparedStatement: 2104 "public static long exportCsv(final PreparedStatement
+  stmt, final File output) ..." / 2138 "... exportCsv(final PreparedStatement stmt, final Collection<String>
+  selectColumnNames, final File output) ..."; Writer side (2342 "... exportCsv(final ResultSet rs, final
+  Writer output) ...", 2379 "... exportCsv(final ResultSet rs, final Collection<String> selectColumnNames,
+  final Writer output)") supports ONLY ResultSet | High | You can export a PreparedStatement to a File but
+  not to a Writer. Recommend: add both Writer overloads.
+- STILL-VALID: exportCsv(Connection, String selectSql, Collection<String> selectColumnNames, Writer) | File
+  side has it — 2064 "public static long exportCsv(final Connection conn, final String selectSql, final
+  Collection<String> selectColumnNames, final File output)"; Writer side from a Connection has NO cols —
+  only 2299 "public static long exportCsv(final Connection conn, final String selectSql, final Writer
+  output) ..." | High | Column selection is available for File output but not Writer output from a
+  Connection. Recommend: add this overload.
+- STILL-VALID: exportCsv(DataSource, String selectSql, Collection<String> selectColumnNames, File/Writer) |
+  the DataSource entry points have NO cols variant at all — 1985 "public static long exportCsv(final
+  javax.sql.DataSource sourceDataSource, final String selectSql, final File output) ..." and 2256 "...
+  exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final Writer output) ..."
+  are the only two | Medium | DataSource entry points cannot select columns. Recommend: add the two
+  column-selecting DataSource overloads, or document DataSource as all-columns-only.
+- STILL-VALID: importCsv(Reader, Connection, String insertSql, int batchSize, long batchIntervalInMillis,
+  stmtSetter) | File CSV sibling exists — 1562 "public static long importCsv(final File file, final
+  Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, ...";
+  importData(Reader, Connection, ...) exists — 1187 "public static <E extends Exception> long
+  importData(final Reader reader, final Connection conn, ..."; but the Reader CSV family (1739 DataSource /
+  1783, 1826 PreparedStatement) has NO Connection overload | High | Recommend: add the Reader+Connection
+  importCsv overload.
+- NO-LONGER-APPLIES (resolved by builder; recommendation was already KEEP): Configured Dataset import via
+  DataSource | the only positional DataSource entry is the 3-arg 196 "public static int importData(final
+  Dataset dataset, final javax.sql.DataSource targetDataSource, final String insertSql)", but the new
+  builder fully covers configured DataSource imports: importFrom(dataset) 3460 ...
+  .to(targetDataSource, insertSql) 3587 | Low | Keep — do NOT add positional DataSource overloads;
+  the builder path is the ergonomic, canonical answer. (Tagged NO-LONGER-APPLIES as a MISSING-method item:
+  the capability now exists via importFrom/to.)
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
-- No @Deprecated members currently exist. Optional/Low: if the team wants to curb the ~30-overload
-  positional importData(Dataset, ...) surface, the natural replacement is importFrom(Dataset) +
-  DatasetImportBuilder (3437/3459). Do NOT mass-deprecate now — the positional path is the documented,
-  tested one and the builder is brand-new/unmarked; revisit after bake-in. No removals recommended.
+- STILL-VALID: No @Deprecated members exist (grep for @Deprecated in DataTransferUtil.java: 0 hits).
+  Optional/Low: if the team wants to curb the large positional importData(Dataset, ...) surface (~16
+  overloads), the natural replacement is importFrom(Dataset) 3460 + DatasetImportBuilder 3482. Do NOT
+  mass-deprecate now — the positional path is the documented, tested one and the builders are still
+  new/unmarked; revisit after bake-in. No removals recommended.
+
+7. NEW ISSUES EXPOSED BY THE RENAME / BUILDER CHANGES
+- NEW (High visibility / Medium severity): inconsistent terminal return type across the now-uniformly-named
+  to(...) terminals. DatasetImportBuilder.to(...) returns int (3587/3608/3624) while EVERY copy builder's
+  to(...) returns long — CopyFromDataSource 3876, CopyFromConnection 3963, CopyFromStatement 4035,
+  CopyTableFromDataSource 4096, CopyTableFromConnection 4157. Because all six builders share the identical
+  terminal verb to(...), the int/long split is now jarring side-by-side in autocomplete and chained code.
+  This is the same underlying defect as section-3 finding 1, but the builder rename made it MORE prominent,
+  not less. Recommend: fold into the "widen DatasetImportBuilder.to(...) to long" fix so all to(...)
+  terminals return long.
+- NEW (Low): copyFrom vs copyTable builder configuration asymmetry. copyFrom* builders expose
+  fetchSize/batchSize/batchIntervalInMillis/stmtSetter (CopyFromDataSource 3824/3836/3848/3861;
+  CopyFromConnection 3911/3923/3935/3948; CopyFromStatement 3996/4008/4021 — no fetchSize, since the
+  select stmt is caller-supplied), whereas copyTable* builders expose only selectColumns/batchSize
+  (CopyTableFromDataSource 4069/4081; CopyTableFromConnection 4130/4142 — no fetchSize, no
+  batchIntervalInMillis, no stmtSetter). This faithfully mirrors the positional copy(...) vs copyTable(...)
+  surface (copyTable positional likewise has no fetchSize/interval/stmtSetter), so it is INTENTIONAL and
+  internally consistent. Flagged only for awareness; recommend keep.
+- NEW (Low, naming-consistency, non-issue): the builders use the setter name selectColumns(Collection)
+  (DatasetImportBuilder 3504, CopyTableFromDataSource 4069, CopyTableFromConnection 4130) while the
+  positional API uses the parameter name selectColumnNames. The builder name is consistent across all
+  builders and reads well fluently; no change recommended.

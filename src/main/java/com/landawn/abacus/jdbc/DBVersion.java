@@ -32,6 +32,10 @@ import com.landawn.abacus.util.Strings;
  * specific major versions), Oracle, DB2, and SQL Server, along with generic
  * {@code OTHERS} (and {@code MySQL_OTHERS}/{@code PostgreSQL_OTHERS}) categories for broader compatibility.</p>
  *
+ * <p>Note: {@link #MariaDB} is modeled as a distinct database from MySQL; {@link #isMySQL()} returns
+ * {@code false} for it. This is intentional &mdash; even though MariaDB is wire-compatible with MySQL, match it
+ * explicitly with {@code == DBVersion.MariaDB} when MariaDB-specific handling is required.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Example: Adapting SQL syntax based on detected database version
@@ -207,6 +211,10 @@ public enum DBVersion {
      *
      * <p>The check is performed by verifying if the enum constant's name starts
      * with "MySQL" (case-insensitive).</p>
+     *
+     * <p>Note: {@link #MariaDB} is intentionally NOT matched by this method (its name does not start with
+     * "MySQL"), even though MariaDB is wire-compatible with MySQL. Test for it explicitly with
+     * {@code == DBVersion.MariaDB} when MySQL-compatible handling is desired.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

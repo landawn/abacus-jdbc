@@ -276,11 +276,6 @@ public class csTest extends TestBase {
     }
 
     @Test
-    public void testResultSetLowercaseConstant() {
-        assertEquals("resultSet", cs.resultSet);
-    }
-
-    @Test
     public void testReturnColumnIndexesConstant() {
         assertEquals("returnColumnIndexes", cs.returnColumnIndexes);
     }

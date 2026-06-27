@@ -1579,7 +1579,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#namedParameters(String)
      */
-    public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws IllegalArgumentException, SQLException {
+    public CallableQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
         checkArgNotNull(parameterNames, cs.parameterNames);
 

@@ -1,66 +1,93 @@
 API Design Review — CallableQuery.java
-MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
+MODEL=opus-4.8  DATE=2026-06-27  RE-VERIFIED 2026-06-27 against current source
+(every finding re-checked against CURRENT CallableQuery.java + NamedQuery.java; line numbers refreshed)
 
 1. OVERALL ASSESSMENT
 CallableQuery extends AbstractQuery<CallableStatement, CallableQuery> and inherits the positional
 setXxx + terminal-op API; its own additions are (a) a named setXxx(String,...) family that mirrors
-NamedQuery, (b) the 12-overload registerOutParameter family, and (c) the *AndGetOutParameters terminal
-ops. The bulk is healthy. registerOutParameter is a complete, faithful mirror of CallableStatement
-across all three axes (index vs name; int sqlType vs SQLType; scale/typeName variants) with consistent
-validation. The index-vs-name registerOutParameter(int,int) "two swappable ints" hazard is inherent to
-the JDBC contract and already mitigated by the SQLType overloads (keep). The executeThenApply/Accept
-additions and the query/list/queryAll/listAll...AndGetOutParameters ladder are sound. There are no
-@Deprecated members and nothing is misplaced. Findings concentrate on real gaps where the named family
-falls short of NamedQuery's mirror, plus minor inconsistencies in the multi-result-set ops.
+NamedQuery, (b) the registerOutParameter family (index/name x int-sqlType/SQLType x scale/typeName), and
+(c) the *AndGetOutParameters terminal ops. The bulk is healthy. KEY MIRROR DISTINCTION re-confirmed this
+pass: CallableQuery's named setters delegate parameter NAMES directly to the driver (e.g. setObject ->
+`N.typeOf(...).set(cstmt, parameterName, value)` at 1460; setNString -> `cstmt.setNString(name,value)` at
+735) and therefore do NOT perform a name->index lookup and do NOT throw IllegalArgumentException for an
+unknown name — so their `throws SQLException`-only clauses are CORRECT, not an inconsistency (contrast
+NamedQuery, which resolves name->index and throws IAE). Findings still concentrate on real gaps where the
+named family falls short of NamedQuery's mirror, plus the multi-result-set BiResultExtractor-only ops. The
+drain-correctness concern from the prior pass is now RESOLVED (confirming check passed).
 
 2. NAMING ISSUES
-- query2ResultSetsAndGetOutParameters / query3ResultSetsAndGetOutParameters | CallableQuery.java:2822,
-  2913 | Low | The embedded digit is awkward but an established convention used consistently across the
-  file's @see links; keep. Confirming check: grep the codebase for other *2ResultSets*/*3* names — the
-  convention is referenced in the Javadoc @see tags here and in AbstractQuery.
-- Otherwise the set/registerOutParameter/query/list/*AndGetOutParameters conventions are accurate and
-  consistent.
+- STATUS: STILL-VALID (non-actionable, keep) — query2ResultSetsAndGetOutParameters /
+  query3ResultSetsAndGetOutParameters | CallableQuery.java:2840, 2931 | Low | The embedded digit is
+  awkward but is an established convention referenced consistently in the @see tags here and in
+  AbstractQuery (query2ResultSets/query3ResultSets). Keep.
+- Otherwise set/registerOutParameter/query/list/*AndGetOutParameters conventions are accurate.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- setParameters(Object entity, List<String> parameterNames) | CallableQuery.java:1581 | Medium | VERIFIED.
-  Uses List<String>, but the mirroring NamedQuery.setParameters(Object, Collection<String>) (NamedQuery
-  4017) uses the wider Collection<String>. Recommend: widen to Collection<String> for consistency and to
-  accept Set/other collections.
-- queryAllResultSetsAndGetOutParameters / the listAllResultSetsAndGetOutParameters overloads |
-  CallableQuery.java:2673, 2746, 3343, 3418, 3495, 3578, 3675 | Low | Unlike query2/query3...AndGet...
-  (which explicitly call drainRemainingResultsForOutParams() before reading OUT params, 2849/2947), the
-  "All" variants rely solely on iterateAllResultSets exhausting the iterator and never drain trailing
-  update counts afterward — a potential stale-OUT-param risk on SQL Server/Oracle. Confirming check: read
-  JdbcUtil.iterateAllResultSets to verify it advances past trailing update counts after the final result
-  set; if not, add a drain call for parity. (This is a behavior/correctness check, not purely API.)
+- STATUS: STILL-VALID — setParameters(Object entity, List<String> parameterNames) |
+  CallableQuery.java:1582 | Medium | The signature still narrows to List<String>, whereas the mirroring
+  NamedQuery.setParameters(Object, Collection<String>) (NamedQuery.java:4025) uses the wider
+  Collection<String>. Evidence:
+    CallableQuery 1582: `public CallableQuery setParameters(final Object entity, final List<String> parameterNames)`
+    NamedQuery  4025: `public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames)`
+  Recommend: widen to Collection<String> for consistency and to accept Set/other collections.
+- STATUS: NO-LONGER-APPLIES (confirming check passed) — queryAllResultSetsAndGetOutParameters /
+  listAllResultSetsAndGetOutParameters drain-correctness | CallableQuery.java:2691, 2764, 3361, 3436,
+  3513, 3596, 3693 | Low | The prior "stale-OUT-param risk" was conditional on iterateAllResultSets NOT
+  advancing past trailing update counts. It DOES: JdbcUtil.iterateAllResultSets (JdbcUtil.java:7166) loops
+  in hasNext() — `else if (stmt.getUpdateCount() != -1) { isNextResultSet = stmt.getMoreResults(); } else
+  { noMoreResult = true; break; }` (7189-7194) — so `while (iter.hasNext())` only terminates after every
+  remaining result set AND trailing update count is consumed; getOutParameters() (called right after the
+  loop, e.g. 2709/2782) then reads reliable OUT values. No separate drain call is needed for the "All"
+  variants; the explicit drainRemainingResultsForOutParams() in query2/query3 (2867/2965) is needed only
+  because those stop after 2/3 result sets. Not a defect.
 
 4. MISPLACED METHODS
-- None. Every public method is intrinsic to a CallableStatement wrapper.
+- STATUS: STILL-VALID (none). Every public method is intrinsic to a CallableStatement wrapper.
 
 5. MISSING METHODS (with target class)
-- setObject(String, Object, SQLType) and setObject(String, Object, SQLType, int scaleOrLength) |
-  CallableQuery.java:1455-1506 (named setObject family ends at the int-sqlType form) | High | VERIFIED.
-  The named setObject family stops at the int sqlType variants; NamedQuery provides both SQLType overloads
-  (NamedQuery 3630, 3704) and CallableStatement natively supports them. Given the class already embraces
-  SQLType throughout registerOutParameter, this is a real gap. Recommend: add both SQLType overloads
-  (target: CallableQuery).
-- setParameters(Object bean) single-arg | CallableQuery.java:1533 (Map), 1581 (Object,List) only | Low |
-  VERIFIED: CallableQuery offers setParameters(Map) and setParameters(Object, List<String>) but not the
-  single-arg bean overload setParameters(Object) that NamedQuery has (NamedQuery 3924). Recommend: add
-  setParameters(Object) for mirror parity, unless procedures intentionally require explicit names.
-- query2/query3ResultSetsAndGetOutParameters(ResultExtractor, ...) | CallableQuery.java:2822, 2913 |
-  Medium | These accept only BiResultExtractor, whereas queryAndGetOutParameters and
-  queryAllResultSetsAndGetOutParameters each offer both ResultExtractor and BiResultExtractor. (Same
-  pattern as AbstractQuery.query2/query3ResultSets — cross-class; see SUMMARY.) Recommend: add the plain
-  ResultExtractor overloads, or document the @Beta restriction.
-- setNString(String, CharSequence) | CallableQuery.java:~734 (setNString family) | Low | NamedQuery offers
-  this convenience (NamedQuery ~1323); CallableQuery does not. Recommend: add for a clean mirror.
-  Confirming check: CallableStatement supports setNString(String,String) by name (it does). NOTE:
-  setRef/setArray by name (present in NamedQuery) are correctly ABSENT here because CallableStatement has
-  no name-based setRef/setArray — do NOT add those. The setInt(String, char/Character) pair is optional
-  (and itself debatable).
+- STATUS: STILL-VALID — setObject(String, Object, SQLType) and setObject(String, Object, SQLType, int) |
+  named setObject family ends at CallableQuery.java:1507 (the int-sqlType / int-sqlType+scaleOrLength
+  forms) | High | CallableQuery's named setObject still stops at the int-sqlType variants (1456, 1483,
+  1507); NamedQuery provides both SQLType overloads (NamedQuery.java:3637, 3711) and CallableStatement
+  natively supports setObject(String,Object,SQLType[,int]). Given registerOutParameter embraces SQLType
+  throughout, this is a real gap. Recommend: add both SQLType overloads (target: CallableQuery).
+- STATUS: STILL-VALID — setParameters(Object bean) single-arg | CallableQuery.java offers only
+  setParameters(Map) (1534) and setParameters(Object, List<String>) (1582) | Low | The single-arg bean
+  overload setParameters(Object) that NamedQuery has (NamedQuery.java:3932) is still absent. Recommend:
+  add for mirror parity, unless procedures intentionally require explicit names.
+- STATUS: STILL-VALID — query2/query3ResultSetsAndGetOutParameters accept only BiResultExtractor |
+  CallableQuery.java:2840 (query2, @Beta 2839), 2931 (query3, @Beta 2930) | Medium | Both take only
+  Jdbc.BiResultExtractor parameters, whereas queryAndGetOutParameters offers BOTH ResultExtractor (2547)
+  and BiResultExtractor (2601), and queryAllResultSetsAndGetOutParameters offers BOTH (2691 / 2764).
+  (Same cross-class pattern as AbstractQuery.query2/query3ResultSets.) Recommend: add the plain
+  ResultExtractor overloads, or keep documenting the @Beta restriction.
+- STATUS: STILL-VALID — setNString(String, CharSequence) | CallableQuery.java has only
+  setNString(String, String) at 734 | Low | NamedQuery offers the CharSequence convenience
+  (NamedQuery.java:1329); CallableQuery does not. Evidence:
+    CallableQuery 734: `public CallableQuery setNString(final String parameterName, final String value)`
+    NamedQuery  1329: `public NamedQuery setNString(final String parameterName, final CharSequence value)`
+  Recommend: add for a clean mirror. NOTE (unchanged & correct): setRef/setArray by name remain ABSENT
+  here and that is CORRECT — CallableStatement has no name-based setRef/setArray (NamedQuery's setRef
+  3278 / setArray 3343 resolve name->index first). Do NOT add those.
+- STATUS: NEW (Low) — setObject(String, T, Type<T>) | named setObject family ends at 1507 | Low |
+  NamedQuery adds the abacus-Type overload setObject(String, T, Type<T>) (NamedQuery.java:3786);
+  CallableQuery lacks it. Unlike setRef/setArray this one is technically feasible by name — abacus Type
+  exposes a name-based set (CallableQuery already calls `N.typeOf(...).set(cstmt, parameterName, value)`
+  at 1460). Recommend: add for parity OR accept the omission deliberately (positional Type<T> setObject
+  is inherited from AbstractQuery).
 
 6. DEPRECATION / REMOVAL CANDIDATES
-- None. No existing @Deprecated members; no method warrants new deprecation. The two @Beta markers on
-  query2/query3ResultSetsAndGetOutParameters (2821, 2912) are appropriate and should remain until the
-  missing ResultExtractor overloads (section 5) are resolved.
+- STATUS: STILL-VALID (none). No existing @Deprecated members warrant change. The two @Beta markers on
+  query2/query3ResultSetsAndGetOutParameters (2839, 2930) remain appropriate and should stay until the
+  missing ResultExtractor overloads (section 5) are resolved. (@Beta at 608 is on the deprecated
+  setInt(String,char)-style helper, intrinsic to the family.)
+
+NEW ISSUES INTRODUCED/EXPOSED BY RECENT CHANGES
+- N1 | DOC, positive | CallableQuery.java:1525-1527 | The recent Javadoc pass ADDED an explicit
+  contrast on setParameters(Map): "Unlike NamedQuery#setParameters(Map) (which silently ignores keys not
+  declared in the SQL), a key here that is not a parameter ... results in a driver SQLException." This is
+  accurate (the body forwards EVERY map entry via setObject at 1538-1540, no name filtering) and partly
+  addresses NamedQuery finding #2's "make the asymmetry explicit" recommendation. No action.
+- N2 | None new beyond the above. The named-setter `throws SQLException`-only clauses (setNull 164/190,
+  setString 634/654/671/690/710, setObject 1456/1483/1507, setNString 734) are CORRECT for CallableQuery
+  (direct driver delegation, no IAE) and must NOT be "fixed" to match NamedQuery — see Overall Assessment.

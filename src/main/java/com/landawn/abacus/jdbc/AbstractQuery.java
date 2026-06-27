@@ -1063,27 +1063,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets a BigInteger parameter value as a String.
-     * This is useful for databases that don't have native support for arbitrarily large integers.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * BigInteger largeNumber = new BigInteger("99999999999999999999999999999");
-     * query.setBigIntegerAsString(1, largeNumber);
-     * }</pre>
-     *
-     * @param parameterIndex the 1-based index of the parameter to set
-     * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
-     * @return this AbstractQuery instance for method chaining
-     * @throws SQLException if a database access error occurs
-     * @see #setString(int, BigInteger)
-     */
-    @Beta
-    public This setBigIntegerAsString(final int parameterIndex, final BigInteger value) throws SQLException {
-        return setString(parameterIndex, value);
-    }
-
-    /**
      * Sets a String parameter value.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1187,6 +1166,27 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
 
         return (This) this;
+    }
+
+    /**
+     * Sets a BigInteger parameter value as a String.
+     * This is useful for databases that don't have native support for arbitrarily large integers.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * BigInteger largeNumber = new BigInteger("99999999999999999999999999999");
+     * query.setBigIntegerAsString(1, largeNumber);
+     * }</pre>
+     *
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
+     * @return this AbstractQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
+     * @see #setString(int, BigInteger)
+     */
+    @Beta
+    public This setBigIntegerAsString(final int parameterIndex, final BigInteger value) throws SQLException {
+        return setString(parameterIndex, value);
     }
 
     /**
@@ -3149,6 +3149,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
+    // Rename to setParametersOnQuery?
     public This settParameters(final Jdbc.ParametersSetter<? super This> parametersSetter) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
@@ -3196,6 +3197,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
+    // Rename to setParametersOnQuery?
     public <T> This settParameters(final T parameters, final Jdbc.BiParametersSetter<? super This, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
@@ -7716,143 +7718,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
-
-    //    /**
-    //     * Streams all the {@code ResultSets}.
-    //     * Usually, this method is used to retrieve multiple results from a stored procedure.
-    //     *
-    //     * <br />
-    //     * lazy-execution, lazy-fetch.
-    //     *
-    //     * <br />
-    //     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-    //     *
-    //     * @param <T> The type of the elements in the stream.
-    //     * @param targetType the class of the type to be extracted from the {@code ResultSets}.
-    //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException if the provided {@code targetType} is invalid.
-    //     * @throws IllegalStateException if this is closed.
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultSets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException {
-    //        checkArgNotNull(targetType, s.targetType);
-    //        assertNotClosed();
-    //
-    //        final Supplier<Boolean> supplier = createExecuteSupplier();
-    //
-    //        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, targetType)).onClose(this::closeAfterExecutionIfAllowed);
-    //
-    //    }
-    //
-    //    /**
-    //     * Streams all the {@code ResultSets}.
-    //     * Usually, this method is used to retrieve multiple results from a stored procedure.
-    //     *
-    //     * <br />
-    //     * lazy-execution, lazy-fetch.
-    //     *
-    //     * <br />
-    //     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-    //     *
-    //     * @param <T> The type of the elements in the stream.
-    //     * @param rowMapper the {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
-    //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException if the provided {@code RowMapper} is invalid.
-    //     * @throws IllegalStateException if this is closed.
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
-    //        checkArgNotNull(rowMapper, s.rowMapper);
-    //        assertNotClosed();
-    //
-    //        final Supplier<Boolean> supplier = createExecuteSupplier();
-    //
-    //        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
-    //    }
-    //
-    //    /**
-    //     * Streams all the {@code ResultSets}.
-    //     * Usually, this method is used to retrieve multiple results from a stored procedure.
-    //     *
-    //     * <br />
-    //     * lazy-execution, lazy-fetch.
-    //     *
-    //     * <br />
-    //     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-    //     *
-    //     * @param <T> The type of the elements in the stream.
-    //     * @param rowFilter the {@code RowFilter} to filter rows of the {@code ResultSet}.
-    //     * @param rowMapper the {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
-    //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException if the provided {@code RowFilter} or {@code RowMapper} is invalid.
-    //     * @throws IllegalStateException if this is closed.
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
-    //            throws IllegalArgumentException, IllegalStateException {
-    //        checkArgNotNull(rowFilter, s.rowFilter);
-    //        checkArgNotNull(rowMapper, s.rowMapper);
-    //        assertNotClosed();
-    //
-    //        final Supplier<Boolean> supplier = createExecuteSupplier();
-    //
-    //        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
-    //    }
-    //
-    //    /**
-    //     * Streams all the {@code ResultSets}.
-    //     * Usually, this method is used to retrieve multiple results from a stored procedure.
-    //     *
-    //     * <br />
-    //     * lazy-execution, lazy-fetch.
-    //     *
-    //     * <br />
-    //     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-    //     *
-    //     * @param <T> The type of the elements in the stream.
-    //     * @param rowMapper the {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
-    //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException if the provided {@code rowMapper} is invalid.
-    //     * @throws IllegalStateException if this is closed.
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
-    //        checkArgNotNull(rowMapper, s.rowMapper);
-    //        assertNotClosed();
-    //
-    //        final Supplier<Boolean> supplier = createExecuteSupplier();
-    //
-    //        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
-    //    }
-    //
-    //    /**
-    //     * Streams all the {@code ResultSets}.
-    //     * Usually, this method is used to retrieve multiple results from a stored procedure.
-    //     *
-    //     * <br />
-    //     * lazy-execution, lazy-fetch.
-    //     *
-    //     * <br />
-    //     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-    //     *
-    //     * @param <T> The type of the elements in the stream.
-    //     * @param rowFilter the {@code BiRowFilter} to filter rows of the {@code ResultSet}.
-    //     * @param rowMapper the {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
-    //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException if the provided {@code rowFilter} or {@code rowMapper} is invalid.
-    //     * @throws IllegalStateException if this is closed.
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
-    //            throws IllegalArgumentException, IllegalStateException {
-    //        checkArgNotNull(rowFilter, s.rowFilter);
-    //        checkArgNotNull(rowMapper, s.rowMapper);
-    //        assertNotClosed();
-    //
-    //        final Supplier<Boolean> supplier = createExecuteSupplier();
-    //
-    //        return Stream.just(supplier).flatMap(it -> JdbcUtil.<T> streamAllResultSets(stmt, rowFilter, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
-    //    }
 
     /**
      * Returns all result sets produced by this query as a lazy stream of {@link Dataset} objects.

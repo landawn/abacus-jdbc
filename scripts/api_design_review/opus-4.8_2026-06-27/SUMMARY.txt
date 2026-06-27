@@ -1,135 +1,218 @@
 API DESIGN REVIEW — CROSS-CLASS SUMMARY
 Package: com.landawn.abacus.jdbc (top-level public types)
 MODEL=opus-4.8   DATE=2026-06-27
-Mode: PARALLEL (one sub-agent per large class to surface candidates; orchestrator verified EVERY finding
-      against source by reading the cited lines, then authored the reports). Small classes reviewed directly.
+RE-VERIFIED 2026-06-27 against CURRENT source. Every per-class report in this folder was re-checked
+finding-by-finding against the live code (line numbers re-mapped; statuses assigned), then every
+re-verification claim was independently re-confirmed against source by the orchestrator.
+
 Scope: 22 public top-level types. Package-private files (DaoImpl, JdbcSettings, ResultSetProxy, SqlExecutor,
-      SqlLogConfig) excluded — no public API surface.
-
-Overall: the package is mature and largely consistent. The fluent query hierarchy, the JdbcUtil facade
-families, the Jdbc functional-interface mirrors, and the JdbcUtils bulk-IO families are all in good shape,
-and existing @Deprecated members nearly always name a correct replacement. The findings are consistency and
-hygiene issues, not structural defects. One genuine duplicate (setBigIntegerAsString == setString(BigInteger))
-is the only High-confidence "two methods do exactly the same thing" case.
+SqlLogConfig) excluded — no public API surface. NOTE: the class formerly named JdbcUtils was RENAMED to
+DataTransferUtil (its report file is JdbcUtils.txt, title updated inside).
 
 ============================================================
-1. CONSISTENCY ISSUES SPANNING MULTIPLE CLASSES
+0. WHAT CHANGED SINCE THE ORIGINAL 04:42 REVIEW (closed / resolved items)
 ============================================================
+- [CLOSED] OnDeleteAction enum-accessor inconsistency. value()->intValue() and get(String)->valueOf(int)
+  were applied (OnDeleteAction.java:126 intValue(), 159 valueOf(int)). It now matches the
+  IsolationLevel/FetchDirection convention. SUMMARY item "G" is RESOLVED. The enum is still @Deprecated+@Beta.
+- [CLOSED] JdbcUtil getColumnNameList / getColumnLabelList deprecated twins were HARD-REMOVED (grep: 0 hits).
+  Section-1 "verified deprecated delegators" list updated accordingly in JdbcUtil.txt.
+- [RENAME, not a fix] JdbcUtils -> DataTransferUtil (no shim); DatasetImportBuilder.into(...) -> to(...);
+  Jdbc.ColumnGetter SAM apply->get and factory get(Class/Type)->forType; Jdbc.RowExtractor createBy->forType;
+  Jdbc.BiParametersSetter createForArray/createForList->forArray/forList; Jdbc.RowConsumer/BiRowConsumer
+  create(ObjIntConsumer)->forEachColumn (oneOff KEPT). These renames did NOT resolve any open finding; in two
+  cases they SHARPENED one (see B/D below). They DID retire two prior cross-family nits (RowExtractor/
+  ColumnGetter now share the verb forType; the builder terminal verb is now uniformly to(...)).
+- [CLOSED] CallableQuery "*AllResultSetsAndGetOutParameters might read stale OUT params" — the confirming
+  check passed: JdbcUtil.iterateAllResultSets (7166) drains trailing update counts via the
+  getUpdateCount()!=-1 -> getMoreResults() loop (7189-7192) before iteration ends. NO-LONGER-APPLIES.
+- [CONFIRMED-CLEAN] IsolationLevel, FetchDirection, DBVersion, Propagation, DBProductInfo, EmptyHandler,
+  PreparedQuery: re-verified, still no actionable findings.
+- [PARTIALLY-ADDRESSED by the Javadoc pass] AbstractQuery settParameters vs setParameters now has a class-doc
+  disambiguation block (115-125); JoinInfo "sbc" @param wording corrected to describe a Dsl (745);
+  JdbcUtil getSqlExtractor null-return now documented; NamedQuery Map-vs-bean asymmetry better documented.
+  In every case the underlying code-shape finding REMAINS open (doc-only fixes).
 
-A. Case-only / arity-only overload disambiguation (lambda-ambiguity workarounds) — AbstractQuery, Jdbc.
-   foreach vs forEach and settParameters vs setParameters (AbstractQuery 8925/8975, 3140/3187), and
-   HandlerFactory.create's two single-arg overloads distinguished only by lambda arity (Jdbc 6614/6646).
-   These are intent-unsafe: a typo or a casual reader silently selects the wrong method. Want one uniform,
-   explicit disambiguation-naming convention (e.g. forEachRow / configParameters / createForBeforeInvoke /
-   createForAfterInvoke).
+The package remains mature and consistent: the findings are consistency/hygiene issues, not structural defects.
+The single genuine "two methods do exactly the same thing" case (setBigIntegerAsString == setString(BigInteger))
+is unchanged and still the only High-confidence duplicate.
 
-B. Named-setter mirror divergence: NamedQuery vs CallableQuery (mirror by design).
-   CallableQuery lacks setObject(String,Object,SQLType[,int]), setParameters(Object) bean, and
-   setNString(String,CharSequence); uses List<String> where NamedQuery uses Collection<String>; and
-   NamedQuery.setNull(String,int)/setString(String,String) carry a narrower throws clause than the rest of
-   the family. Align the two named families (and their throws clauses).
+============================================================
+1. CONSISTENCY ISSUES SPANNING MULTIPLE CLASSES (current)
+============================================================
+A. Case-only / arity-only overload disambiguation (lambda-ambiguity workarounds) — STILL-VALID.
+   AbstractQuery foreach vs forEach (8941/8995 vs 8696+); settParameters vs setParameters (3152/3199,
+   class-doc added but not renamed); Jdbc HandlerFactory.create two single-arg overloads disambiguated only by
+   lambda arity (6747/6779, still needs (TriConsumer)/(QuadConsumer) null casts to compile). Intent-unsafe.
+
+B. Cross-family naming after the for*-verb migration — STILL-VALID, SHARPENED.
+   RowConsumer/BiRowConsumer.oneOff (Jdbc 4586/4628/4789/4831) still names the "wrap row into reusable
+   DisposableObjArray" concept differently from RowMapper/BiRowMapper.toDisposableObjArray (2021+). The rename
+   moved create(ObjIntConsumer)->forEachColumn right next to the un-renamed oneOff, making the odd-one-out more
+   conspicuous. (Resolved by the same wave: ColumnGetter.forType (5751) and RowExtractor.forType (5159) now
+   share a verb — do NOT re-flag.)
 
 C. Numbered multi-result-set methods accept only BiResultExtractor while single query() accepts both —
-   in BOTH AbstractQuery (query2/query3ResultSets) and CallableQuery (...AndGetOutParameters). Add the
-   ResultExtractor overloads or document the restriction uniformly.
+   STILL-VALID in BOTH AbstractQuery (query2/query3ResultSets 5505/5571) and CallableQuery
+   (query2/query3ResultSetsAndGetOutParameters 2840/2931). Add the ResultExtractor overloads or document.
 
-D. Deprecation-policy inconsistency inside AbstractQuery: a deprecated method's replacement is still reachable
-   un-deprecated (list maxResult 2-arg vs 3-arg; findFirst(filter) deprecated but list/forEach/count(filter)
-   not; count() deprecated but count(filter) not). Pick one stance for in-Java filtering and for maxResult.
+D. DataTransferUtil terminal/return-width inconsistency — STILL-VALID, SHARPENED by the into->to rename.
+   importData(Dataset) returns int (196..925) while importData(File/Reader/Iterator) returns long
+   (1038/1144/1312); and now DatasetImportBuilder.to(...) returns int (3587/3608/3624) while every copy
+   builder's identically-named to(...) returns long (3876/3963/4035/4096/4157) — jarring side-by-side.
 
-E. Incomplete factory matrices (DataSource/Connection and output-target gaps) — JdbcUtil
-   (prepareNamedQueryForLargeResult missing (Connection,ParsedSql); DDL helpers Connection-only),
-   JdbcCodeGenerationUtil (convertInsertSqlToUpdateSql DataSource-only), JdbcUtils (exportCsv Writer side and
-   importCsv Reader side both miss overloads their File/Connection siblings have).
+E. Deprecation-policy inconsistency inside AbstractQuery — STILL-VALID. list(maxResult) 2-arg deprecated
+   (6627/6692/6847) but 3-arg (filter,mapper,maxResult) not (6761/6919); findFirst(filter) deprecated
+   (6244/6304) but list/forEach/count(filter) not; count() deprecated (8293) but count(filter) not (8335/8384).
 
-F. Row-count width int vs long — JdbcUtils.importData (int for Dataset, long for File/Reader/Iterator) and
-   JdbcUtil.skip(long)->int. Standardize on long for "rows affected/processed".
+F. Incomplete factory matrices — STILL-VALID. JdbcUtil prepareNamedQueryForLargeResult missing
+   (Connection,ParsedSql) (4285/4319/4352); DDL/getColumnNames Connection-only (8384/8433/1859).
+   JdbcCodeGenerationUtil convertInsertSqlToUpdateSql DataSource-only (1859/1896); generateSelectSql lacks the
+   excluded-only 3-arg form (942+). DataTransferUtil exportCsv Writer side + DataSource cols gaps; importCsv
+   Reader+Connection gap (see section 2).
 
-G. Enum int-accessor convention — intValue()/valueOf(int) is the convention (IsolationLevel, FetchDirection);
-   OnDeleteAction diverges with value()/get(String) but is already @Deprecated (no action unless revived).
+G. [RESOLVED] Enum int-accessor convention — OnDeleteAction realigned to intValue()/valueOf(int). No action.
 
-H. null vs Optional/Nullable returns — DBLock.lock() and SpringApplicationContext.getBean return null where the
-   library otherwise favors Optional/Nullable. Low priority (both have idiomatic justifications).
+H. null vs Optional/Nullable returns — STILL-VALID (Low). DBLock.lock() (338/381/428/485) and
+   SpringApplicationContext.getBean (111) return null where the library otherwise favors Optional/Nullable.
+   Both have idiomatic justifications.
 
-I. Cross-type deprecation gap — SqlTransaction.rollback() is @Deprecated but the Transaction interface's
-   rollback() is not (and its Action example still calls it).
+I. Cross-type deprecation gap — STILL-VALID. SqlTransaction.rollback() @Deprecated (474) but
+   Transaction.rollback() (165) is not, and the Transaction.Action example still calls rollback() (270).
 
-J. Dead/orphan public members & removable deprecated aliases — DBLock.UNLOCKED; JdbcCodeGenerationUtil
-   S/SF/MIN_FUNC/MAX_FUNC/extendFieldNameTableClassName; JoinInfo.setNullSqlAndParamSetterPool (built+unused)
-   and its 4 deprecated *SqlBuilderAndParamSetter aliases; SqlTransaction runNotInMe/callNotInMe.
+J. Dead/orphan public members & removable deprecated aliases — STILL-VALID. DBLock.UNLOCKED (133);
+   JdbcCodeGenerationUtil S/SF (113/119), MIN_FUNC/MAX_FUNC (141/161, now only unit-tested),
+   EntityCodeConfig.extendFieldNameTableClassName (2375); JoinInfo.setNullSqlAndParamSetterPool (150,
+   built at 481/659 but never read, no getter) and its 4 deprecated *SqlBuilderAndParamSetter aliases
+   (792/859/925/994); SqlTransaction runNotInMe/callNotInMe (1014/1064).
 
-K. Vocabulary drift — JdbcUtil.getColumn2FieldNameMap ("Field") vs the "Prop" naming everywhere else;
-   targetType/targetValueType/targetClass/cls param-name drift (visible in cs.java).
+K. Vocabulary drift — STILL-VALID. JdbcUtil.getColumn2FieldNameMap ("Field", body returns
+   getColumn2PropNameMap, 2643/2644) vs the "Prop" naming everywhere else; targetType/targetValueType/
+   targetClass/cls param-name drift (faithfully reflected in cs.java; fix in the real APIs, not cs).
+
+L. NamedQuery vs CallableQuery named-setter mirror divergence — STILL-VALID (refined). CallableQuery lacks
+   setObject(String,Object,SQLType[,int]) (NamedQuery 3637/3711), setObject(String,T,Type<T>) (NamedQuery
+   3786), single-arg setParameters(Object) bean (NamedQuery 3932), setNString(String,CharSequence)
+   (NamedQuery 1329); and uses List<String> (CQ 1582) where NamedQuery uses Collection<String> (4025).
+   REFINEMENT: NamedQuery's two throws-clause outliers (setNull(String,int) 153, setString(String,String)
+   1112 declare only SQLException) should be fixed ON NAMEDQUERY ONLY — CallableQuery's named setters declare
+   SQLException-only correctly (they delegate to the driver by name and never do the name->index lookup that
+   throws IAE). Do NOT propagate IAE onto CallableQuery's signatures.
 
 ============================================================
-2. PRIORITIZED ACTION PLAN
+2. PRIORITIZED ACTION PLAN (current — open items only)
 ============================================================
-Tags: P1=clear win/low risk · P2=worthwhile/needs a design decision · P3=nice-to-have.
-Effort: S(≤30m) · M(hours) · L(day+).  Compat: none / source-compat-add / breaking.
+Severity = API-design impact (these are all report-only design/consistency items; none is a runtime bug).
+Effort: S(<=30m) / M(hours) / L(day+).  Compat: none / source-compat-add / breaking.
 
--- P1 ------------------------------------------------------
-P1.1  [S, breaking-but-relaxed] Resolve setBigIntegerAsString(int,BigInteger) == setString(int,BigInteger)
-      duplicate: keep setBigIntegerAsString, remove the setString(BigInteger) overload; apply in AbstractQuery
-      + Named + Callable mirrors. (AbstractQuery 1069/1170.)  [High-confidence duplicate]
-P1.2  [S, source-compat-add] JdbcUtil: add getColumn2PropNameMap(Class); deprecate getColumn2FieldNameMap. (2704)
-P1.3  [S, source-compat-add] DBLock: add `implements AutoCloseable`. (109/655)
-P1.4  [S, breaking-but-relaxed] DBLock: remove (or @Deprecate) the unused UNLOCKED constant. (123)
-P1.5  [S, breaking-but-relaxed] JdbcCodeGenerationUtil: remove dead S/SF constants (113/119); remove or
-      implement EntityCodeConfig.extendFieldNameTableClassName (2347).
-P1.6  [S, breaking-but-relaxed] JoinInfo (@Internal): remove the 4 deprecated *SqlBuilderAndParamSetter
-      (781/844/907/974); rename param `sbc`->`dsl` across the 8 SQL-plan getters.
-P1.7  [S, breaking-but-relaxed] SqlTransaction: remove runNotInMe/callNotInMe (963/1012, delegate to
-      *OutsideTransaction).
-P1.8  [S, source-compat-add] Transaction: @Deprecate rollback() (replacement rollbackIfNotCommitted()); fix the
-      Action-enum example. (165/266-271)
-P1.9  [M, source-compat-add] JdbcUtils: add the missing exportCsv Writer/column overloads
-      (exportCsv(PreparedStatement,Writer), (PreparedStatement,cols,Writer), (Connection,sql,cols,Writer)) and
-      importCsv(Reader,Connection,sql,batchSize,interval,stmtSetter).
-P1.10 [S, source-compat-add] JdbcUtil: add prepareNamedQueryForLargeResult(Connection,ParsedSql). (4346-4413)
-P1.11 [M, source-compat-add] CallableQuery: add setObject(String,Object,SQLType[,int]) (mirror NamedQuery);
-      add setParameters(Object) bean overload; widen setParameters(Object,List<String>) -> Collection<String>.
-P1.12 [S, source-compat] NamedQuery: add IllegalArgumentException to the declared throws of setNull(String,int)
-      (147) and setString(String,String) (1106) to match the family and their own Javadoc.
-P1.13 [S, breaking-but-relaxed] cs: fold ResultSet ("ResultSet") into resultSet ("resultSet") after fixing the
-      one capitalized parameter name. (56/252)
+>>> DISPOSITION UPDATE 2026-06-27 (after user review of this batch) <<<
+ DONE (implemented):
+   - M1  Jdbc.HandlerFactory.create single-arg overloads renamed to createForBeforeInvoke / createForAfterInvoke
+         (user performed the rename; Javadoc examples at Jdbc.java 6733/6765 + unit tests updated accordingly).
+   - L8  cs: folded into the capitalized `ResultSet` constant (removed `resultSet`; repointed the 9 JdbcUtil
+         null-checks to cs.ResultSet; csTest updated). NOTE per user: standardized on `ResultSet` (the IAE
+         message label is now "ResultSet").
+   - L9  SpringApplicationContext: added getBean(String, Class<T>); class marked @Internal.
+   - L11 OP / DBVersion: added class-doc notes (OP.DEFAULT casing is intentional; DBVersion.MariaDB is
+         intentionally separate from isMySQL()). Javadoc-only.
+ WON'T FIX (user decision — keep flagged, do NOT implement):
+   - H2  JdbcCodeGenerationUtil generateEntityClassByQuery split — declined; (EntityCodeConfig) null casts kept.
+   - M4  DataTransferUtil importData(Dataset) int-vs-long — the Dataset family is INTENTIONALLY int (a Dataset is
+         int-bounded); the widening was implemented then reverted at user request. Not a defect.
+   - M8  DBLock lock(String,long) positional-swap trap — neither dropped nor doc-warned.
+   - M9  DBLock implements AutoCloseable — will not be added.
+   - M12 Transaction.rollback() @Deprecated + Action-example fix — interface will NOT be deprecated
+         (SqlTransaction.rollback() stays @Deprecated as-is).
+ (Other H/M/L items below remain OPEN unless separately actioned by the user.)
 
--- P2 ------------------------------------------------------
-P2.1  [M, design] Unify the case-only/arity-only overload disambiguation (foreach/forEach, settParameters,
-      HandlerFactory.create) under one explicit-naming convention; keep old names as deprecated aliases.
-P2.2  [M, design] Decide the in-Java-filtering / maxResult deprecation stance in AbstractQuery and apply it
-      consistently across findFirst/list/forEach/count filter overloads and the maxResult overloads.
-P2.3  [M, source-compat-add] Add ResultExtractor overloads to query2/query3ResultSets (AbstractQuery) and
-      query2/query3ResultSetsAndGetOutParameters (CallableQuery), or document the BiResultExtractor-only rule.
-P2.4  [M, source-compat-add] Jdbc: add the BiResultExtractor toDataset/toMergedList/toDatasetAndThen mirror of
-      ResultExtractor (thin delegates).
-P2.5  [M, design/breaking] DBLock: the lock(String,long) [=timeout] vs lock(String,long,long) [liveTime,timeout]
-      positional swap trap — drop the 2-arg overload or otherwise make the order unambiguous.
-P2.6  [M, breaking-but-relaxed] JdbcUtils: change importData(Dataset,...) and DatasetImportBuilder.into(...) to
-      return long for family-wide consistency.
-P2.7  [M, source-compat-add] JdbcCodeGenerationUtil: split the entity-from-query path into
-      generateEntityClassByQuery(...) to remove the generateEntityClass overload ambiguity (the (EntityCodeConfig)
-      null casts). Add convertInsertSqlToUpdateSql(Connection,...). Add generateSelectSql(ds/conn,table,excludedCols).
-P2.8  [S, breaking-but-relaxed] Jdbc: rename RowConsumer/BiRowConsumer oneOff -> toDisposableObjArray (match the
-      mapper interfaces); keep oneOff as a deprecated alias.
+-- HIGH ----------------------------------------------------
+H1 [AbstractQuery+NamedQuery+CallableQuery; S; breaking-or-add] setBigIntegerAsString(int,BigInteger) ==
+   setString(int,BigInteger) genuine duplicate (AbstractQuery 1082 body `return setString(...)` vs 1182;
+   mirrored Named 1092, Callable). Keep setBigIntegerAsString; remove/deprecate the misleading
+   setString(BigInteger) overload across all three families.
+H2 [JdbcCodeGenerationUtil; M; source-compat-add] generateEntityClass 3-arg overload ambiguity: (DS,String,
+   EntityCodeConfig) 259 vs (DS,String,String) 283 (and Connection pair 362/381) collide — delegators must
+   write (EntityCodeConfig) null casts (233/338) and the 2nd param means tableName in one overload set but
+   entityName in the other. Split the query path into generateEntityClassByQuery(ds/conn, entityName, query
+   [,config]) to remove the collision.
+H3 [CallableQuery; M; source-compat-add] Missing named setObject SQLType overloads: setObject(String,Object,
+   SQLType) and setObject(String,Object,SQLType,int) (CQ named family stops at int-sqlType 1483/1507;
+   NamedQuery has both 3637/3711). Real capability gap. Add both (and optionally setObject(String,T,Type<T>),
+   NamedQuery 3786).
+H4 [DataTransferUtil; M; source-compat-add] exportCsv Writer-output matrix gaps: add exportCsv(PreparedStatement,
+   Writer) and (PreparedStatement,cols,Writer) (Writer side is ResultSet-only 2342/2379 while File side has PS
+   2104/2138); add exportCsv(Connection,sql,cols,Writer) (2299 has no cols). Plus importCsv(Reader,Connection,
+   sql,batchSize,interval,stmtSetter) (Reader CSV family 1739/1783/1826 has no Connection overload though both
+   its File sibling 1562 and importData(Reader,Connection) 1187 do).
 
--- P3 ------------------------------------------------------
-P3.1  [S] DBLock.lock(): consider Optional<String> instead of null (library consistency).
-P3.2  [S] SpringApplicationContext: add getBean(String,Class<T>); consider marking the class @Internal.
-P3.3  [S] JdbcUtil: skip(ResultSet,long)->long; getSqlExtractor/setSqlExtractor null symmetry;
-      getInsertPropNames(Object/Class) disambiguation; optional DataSource DDL overloads.
-P3.4  [S] AbstractQuery: complete setXxxForIndices (Byte/Short/Float/BigDecimal/Bytes) and the primitive-array
-      setParameters set, or document the @Beta subset; resolve the queryForBigInteger/BigDecimal @Beta outliers.
-P3.5  [S] NamedQuery/CallableQuery: add (or deliberately document) the default-for-null and Calendar-aware named
-      overloads; reconcile setLong(BigInteger) across all three query classes (keep or deprecate together).
-P3.6  [S] Jdbc: ColumnOne.set(Class<T>) -> Class<? extends T>; OutParamResult getters return immutable views;
-      enforce OutParam.parameterIndex>0 in setter/all-args ctor; DaoCache naming (create->createWithEviction)
-      and add createByMap(int).
-P3.7  [S] JoinInfo: add getSetNullSqlPlan(Dsl) getter or delete the unused setNullSqlAndParamSetterPool.
-P3.8  [S] JdbcCodeGenerationUtil: relocate/clarify MIN_FUNC/MAX_FUNC; make JsonXmlConfig final/@NoArgsConstructor;
-      deprecate EntityCodeConfig.idField toward idFields.
-P3.9  [S] OP: class-doc note on the DEFAULT casing. DBVersion: class-doc note that MariaDB is intentionally
-      separate from isMySQL(). OnDeleteAction: no action (already deprecated).
+-- MEDIUM --------------------------------------------------
+M1 [Jdbc; M; design] HandlerFactory.create arity-only disambiguation (6747/6779/6816). Add explicitly-named
+   createForBeforeInvoke / createForAfterInvoke; keep the 2-arg create.
+M2 [AbstractQuery; M; design] Resolve the in-Java-filtering / maxResult deprecation stance consistently across
+   findFirst/list/forEach/count filter overloads and the maxResult overloads (section 1.E).
+M3 [AbstractQuery+CallableQuery; M; source-compat-add] Add ResultExtractor overloads to query2/query3ResultSets
+   (5505/5571) and query2/query3ResultSetsAndGetOutParameters (2840/2931), or document the BiResultExtractor-only
+   rule uniformly.
+M4 [DataTransferUtil; M; breaking-or-add] Widen importData(Dataset,...) AND DatasetImportBuilder.to(...) to long
+   so all importData and all builder to(...) terminals share one return width (section 1.D).
+M5 [JdbcUtil; S; source-compat-add] Add getColumn2PropNameMap(Class); deprecate getColumn2FieldNameMap (2643).
+M6 [JdbcUtil; S; source-compat-add] Add prepareNamedQueryForLargeResult(Connection,ParsedSql) (gap at 4285/4319/
+   4352).
+M7 [Jdbc; M; source-compat-add] Add the BiResultExtractor toDataset/toMergedList/toDatasetAndThen mirror of
+   ResultExtractor (thin delegates; BiResultExtractor has only the TO_DATASET constant ~1230).
+M8 [DBLock; S; design/breaking] lock(String,long)=timeout (381) vs lock(String,long,long)=liveTime,timeout (428)
+   positional-swap trap (both long). Drop the 2-arg overload or document the hazard prominently.
+M9 [DBLock; S; source-compat-add] Add `implements AutoCloseable` (class 119; close() 682 already idempotent).
+M10 [CallableQuery; S; source-compat] Widen setParameters(Object,List<String>) (1582) to Collection<String>
+   to match NamedQuery (4025).
+M11 [NamedQuery; S; source-compat] Add IllegalArgumentException to the declared throws of setNull(String,int)
+   (153) and setString(String,String) (1112) to match the family and their own Javadoc. (NamedQuery only.)
+M12 [Transaction+SqlTransaction; S; source-compat-add] @Deprecate Transaction.rollback() (165) toward
+   rollbackIfNotCommitted(); fix the Action-enum example (270). (SqlTransaction.rollback() already deprecated.)
+M13 [JdbcCodeGenerationUtil; M; source-compat-add] Add convertInsertSqlToUpdateSql(Connection,...) (DataSource-
+   only 1859/1896); add generateSelectSql(ds/conn, tableName, excludedColumnNames) excluded-only 3-arg (942+).
+M14 [JdbcCodeGenerationUtil; S; breaking-or-document] EntityCodeConfig.extendFieldNameTableClassName (2375) is a
+   no-op config flag exposed via public Lombok accessors — implement it or remove it.
+M15 [JoinInfo (@Internal); S; design] setNullSqlAndParamSetterPool (150) is fully built (481/659) but has no
+   getter and is never read — add getSetNullSqlPlan(Dsl) or delete the pool + its two population blocks.
+M16 [DataTransferUtil; M; source-compat-add] exportCsv DataSource entry points cannot select columns at all
+   (1985/2256) — add the two column-selecting DataSource overloads or document DataSource as all-columns-only.
 
-NOTE ON BC: backward compatibility was treated as low-priority per the brief, so several P1/P2 items are
-"breaking-but-relaxed" (remove/replace). If BC must be preserved, convert each removal into add-new +
-@Deprecate-old.
+-- LOW -----------------------------------------------------
+L1  [DBLock; S; breaking-or-deprecate] Remove/deprecate the dead UNLOCKED constant (133; only LOCKED is written).
+L2  [JdbcCodeGenerationUtil; S; breaking-or-deprecate] Remove the confirmed-dead S/SF constants (113/119); the
+    MIN_FUNC/MAX_FUNC public TriFunctions (141/161) have no production consumer (only unit tests) — relocate to
+    CodeGenerationUtil or document as pass-through helpers.
+L3  [JoinInfo (@Internal); S; breaking] Remove the 4 deprecated *SqlBuilderAndParamSetter one-line redirects
+    (792/859/925/994); rename param sbc->dsl across the 8 SQL-plan getters (756+).
+L4  [SqlTransaction; S; breaking] Remove runNotInMe/callNotInMe (1014/1064; delegate to *OutsideTransaction).
+L5  [Jdbc; S] ColumnOne.set(Class<T>) (6178) -> Class<? extends T> (siblings use it, e.g. ColumnGetter.forType
+    5751); OutParamResult getters (6383/6400) return live map/list -> immutable views; enforce
+    OutParam.parameterIndex>0 in setter/all-args ctor (only of() guards, 6285); add DaoCache.createByMap(int)
+    factory (ctor 7184 unreachable); consider DaoCache create->createWithEviction naming (6869).
+L6  [AbstractQuery; S] Complete setXxxForIndices (Byte/Short/Float/BigDecimal/Bytes; 3239-3586) and the
+    primitive-array setParameters set (2683/2701/2719), or document the @Beta subset; resolve the
+    queryForBigInteger/BigDecimal @Beta outliers (4806/4840); reconcile setLong(int,BigInteger) (802) across
+    all three families (keep or deprecate together).
+L7  [JdbcUtil; S] skip(ResultSet,long)->long (1740, int overflow); reject null in setSqlExtractor (10133) for a
+    guaranteed non-null getter; getInsertPropNames(Object/Class) disambiguation (9470/9515); optional public
+    executeLargeUpdate single-statement variant (pkg-private 5847); optional DataSource DDL overloads
+    (8384/8433/1859); isNullOrDefault(Object) (9819) arguably belongs in N.
+L8  [cs; S; breaking] Fold ResultSet ("ResultSet", 56) into resultSet ("resultSet", 252) after fixing the one
+    capitalized parameter name.
+L9  [SpringApplicationContext; S; source-compat-add] Add getBean(String,Class<T>) (111); consider @Internal.
+L10 [NamedQuery; S] Document (or add) the boxed default-for-null and Calendar-aware named overloads
+    (intentionally omitted, consistent with CallableQuery); setParameters(Map) lenient vs bean strict is now
+    documented — optionally unify.
+L11 [OP/DBVersion; S] OP class-doc note on the DEFAULT casing (312); DBVersion class-doc note that MariaDB is
+    intentionally separate from isMySQL(). (No code change.)
+L12 [JdbcCodeGenerationUtil; S] Make JsonXmlConfig final + @NoArgsConstructor (2403/2443); deprecate
+    EntityCodeConfig.idField (2300) toward idFields (2294).
+
+NOTE ON BC: backward compatibility was treated as low-priority per the brief, so several items are
+"breaking-or-add". If BC must be preserved, convert each removal into add-new + @Deprecate-old.
+
+Per-class re-verified reports: AbstractQuery, Jdbc, JdbcUtil, JdbcUtils(=DataTransferUtil), CallableQuery,
+NamedQuery, JdbcCodeGenerationUtil, JoinInfo, SqlTransaction, Transaction, DBLock, cs, OP, OnDeleteAction(CLOSED),
+IsolationLevel, FetchDirection, DBVersion, Propagation, SpringApplicationContext, DBProductInfo, EmptyHandler,
+PreparedQuery.

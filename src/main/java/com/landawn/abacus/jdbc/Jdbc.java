@@ -6730,12 +6730,12 @@ public final class Jdbc {
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * Handler<UserDao> handler = HandlerFactory.create(
+         * Handler<UserDao> handler = HandlerFactory.createForBeforeInvoke(
          *     (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()));
          * // The handler's beforeInvoke runs the action; afterInvoke is a no-op.
          * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..."
          *
-         * HandlerFactory.create((Throwables.TriConsumer<Object, Object[],
+         * HandlerFactory.createForBeforeInvoke((Throwables.TriConsumer<Object, Object[],
          *         Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException
          * }</pre>
          *
@@ -6744,7 +6744,7 @@ public final class Jdbc {
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}.
          */
-        public static <T> Handler<T> create(
+        public static <T> Handler<T> createForBeforeInvoke(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> beforeInvokeAction)
                 throws IllegalArgumentException {
             N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction);
@@ -6762,12 +6762,12 @@ public final class Jdbc {
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * Handler<UserDao> handler = HandlerFactory.create(
+         * Handler<UserDao> handler = HandlerFactory.createForAfterInvoke(
          *     (result, proxy, args, sig) -> System.out.println("After: " + result));
          * // The handler's afterInvoke runs the action; beforeInvoke is a no-op.
          * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..."
          *
-         * HandlerFactory.create((Throwables.QuadConsumer<Object, Object, Object[],
+         * HandlerFactory.createForAfterInvoke((Throwables.QuadConsumer<Object, Object, Object[],
          *         Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException
          * }</pre>
          *
@@ -6776,7 +6776,7 @@ public final class Jdbc {
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}.
          */
-        public static <T> Handler<T> create(
+        public static <T> Handler<T> createForAfterInvoke(
                 final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> afterInvokeAction)
                 throws IllegalArgumentException {
             N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction);

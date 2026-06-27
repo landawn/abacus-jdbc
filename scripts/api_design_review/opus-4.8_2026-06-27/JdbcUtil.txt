@@ -1,8 +1,9 @@
 API Design Review — JdbcUtil.java
-MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
+MODEL=opus-4.8  DATE=2026-06-27  (original) — RE-VERIFIED 2026-06-27 against current source
+Current file size: 12130 lines. All line numbers below are CURRENT (re-located via Grep/Read).
 
 1. OVERALL ASSESSMENT
-JdbcUtil is a large (~12k line) but well-organized static facade and is in healthy shape.
+JdbcUtil is a large (~12.1k line) but well-organized static facade and is in healthy shape.
 The major families are consistent in naming, ordering, and return types: resource management
 (close/closeQuietly with the Connection-closing forms correctly deprecated toward
 releaseConnection), the prepareQuery/prepareNamedQuery/prepareCallableQuery factory matrices
@@ -10,64 +11,98 @@ releaseConnection), the prepareQuery/prepareNamedQuery/prepareCallableQuery fact
 executeQuery/executeUpdate/executeBatchUpdate/executeLargeBatchUpdate/execute execution family,
 the extractData / stream / streamAllResultSets / queryByPage extraction families, the
 asyncRun/asyncCall arity sets, the blob/clob helpers, and the transaction family
-(beginTransaction/runInTransaction/callInTransaction/run|callOutsideTransaction). All existing
-@Deprecated public methods name a correct replacement and are thin delegators (verified:
-getColumnNameList->getColumnNames, getColumnLabelList->getColumnLabels, doesTableExist->tableExists,
-label-based getColumnValue perf deprecations, call|runNotInStartedTransaction->*OutsideTransaction,
-close|closeQuietly(Connection)->releaseConnection). Findings below are minor consistency gaps,
-not structural problems.
+(beginTransaction/runInTransaction/callInTransaction/run|callOutsideTransaction). Findings below
+are minor consistency gaps, not structural problems.
+
+VERIFIED @Deprecated thin-delegator list (UPDATED — two twins removed since original report):
+  - [REMOVED] getColumnNameList -> getColumnNames : NO LONGER EXISTS. Grep for getColumnNameList
+    returns 0 matches in source; only the internal local var `columnNameList` (1894/1965) and the
+    live getColumnNames(Connection,String) at 1859 remain. The deprecated twin was hard-deleted.
+  - [REMOVED] getColumnLabelList -> getColumnLabels : NO LONGER EXISTS. Grep for getColumnLabelList
+    returns 0 matches; live getColumnLabels(ResultSet) at 2011 remains.
+  - [STILL EXISTS] doesTableExist -> tableExists : @Deprecated at 8004 (DataSource form, 8005:
+    `public static boolean doesTableExist(final javax.sql.DataSource ds, ...)` -> `return tableExists(ds, tableName);`)
+    and 8123 (Connection form, 8124 -> `return tableExists(conn, tableName);`).
+  - [STILL EXISTS] label-based getColumnValue perf deprecations : @Deprecated at 2326
+    (`getColumnValue(rs, columnLabel)`) and 2618 (`getColumnValue(rs, columnLabel, Class)`).
+  - [STILL EXISTS] callNotInStartedTransaction/runNotInStartedTransaction -> *OutsideTransaction :
+    @Deprecated @Beta at 11209/11255 (call) and 11296/11333 (run); replacements
+    callOutsideTransaction (10892/10982) and runOutsideTransaction (11064/11141) are present.
+  - [STILL EXISTS] close(Connection)/closeQuietly(Connection) -> releaseConnection : @Deprecated at
+    1212 (`close(Connection)`) and 1564 (`closeQuietly(Connection)`); releaseConnection(Connection,
+    DataSource) at 1000.
 
 2. NAMING ISSUES
-- getColumn2FieldNameMap(Class) | JdbcUtil.java:2704 | Medium | Rename to getColumn2PropNameMap
-  (or add it and deprecate the old name). The body delegates directly to
-  QueryUtil.getColumn2PropNameMap (line 2705), and every other entity-metadata accessor here uses
-  the library's "prop" vocabulary (getInsertPropNames/getSelectPropNames/getUpdatePropNames,
-  ~9425-9586). "FieldName" is the lone outlier and even contradicts the value it returns.
+- STILL-VALID | getColumn2FieldNameMap(Class) | JdbcUtil.java:2643 | Medium | Rename to
+  getColumn2PropNameMap (or add it and deprecate the old name). The body still delegates directly to
+  QueryUtil.getColumn2PropNameMap (2644: `return QueryUtil.getColumn2PropNameMap(entityClass);`), and
+  every other entity-metadata accessor here uses the library's "prop" vocabulary
+  (getInsertPropNames/getSelectPropNames/getUpdatePropNames, 9470-9630). "FieldName" is the lone
+  outlier and contradicts the value it returns. NOTE: a getColumn2PropNameMap facade was NOT added to
+  JdbcUtil — the only occurrence is the delegated QueryUtil call.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- skip(ResultSet, long rowsToSkip) | JdbcUtil.java:1736 | Low | Returns int while accepting a long
-  count and accumulating into an int; skipping > Integer.MAX_VALUE rows overflows the reported
-  total. The sibling skip(ResultSet, int) (1702) legitimately returns int. Recommend: change the
-  long overload's return type to long. Confirming check: confirm callers don't rely on the int
-  return (a widened return is source-compatible for assignment-to-long but not for overload-sensitive
-  callers).
-- getInsertPropNames(Object) vs getInsertPropNames(Class) | JdbcUtil.java:9425 / 9470 | Low | The
-  Object/Class overload pair is an easily-confused dispatch: passing a Class value selects the
-  class overload, not the instance overload. (getSelectPropNames/getUpdatePropNames deliberately
-  offer only the Class form.) Recommend: keep, but if the confusion risk is real, use distinct
-  names (...ForEntity / ...ForClass). Confirming check: audit call sites for a Class passed where
-  an instance was intended.
-- getSqlExtractor() / setSqlExtractor(Function) | JdbcUtil.java:10067 / 10088 | Low | Asymmetric
-  null contract: the setter accepts null and the getter then returns null (internal logging defends
-  with N.defaultIfNull(...DEFAULT_SQL_EXTRACTOR) at ~10026). Recommend: reject null in the setter
-  (fall back to DEFAULT_SQL_EXTRACTOR) and document a guaranteed non-null getter. Confirming check:
-  confirm no caller reads back the null it set.
+- STILL-VALID | skip(ResultSet, long rowsToSkip) | JdbcUtil.java:1740 | Low | Still returns int while
+  accepting a long count and accumulating into an int (`int skipped = 0;` at 1747; `skipped++` at
+  1752/1761). Skipping > Integer.MAX_VALUE rows overflows the reported total. The sibling
+  skip(ResultSet, int) (1706) legitimately returns int. Recommend: change the long overload's return
+  type to long. (Confirming check unchanged: a widened return is source-compatible for
+  assignment-to-long but not for overload-sensitive callers.)
+- STILL-VALID | getInsertPropNames(Object) vs getInsertPropNames(Class) | JdbcUtil.java:9470 / 9515 |
+  Low | The Object/Class overload pair still exists and is an easily-confused dispatch: passing a
+  Class value selects the class overload, not the instance overload. (getSelectPropNames (9552)/
+  getUpdatePropNames (9610) deliberately offer only the Class form.) Recommend: keep, but if confusion
+  risk is real, use distinct names (...ForEntity / ...ForClass).
+- PARTIALLY-ADDRESSED | getSqlExtractor() / setSqlExtractor(Function) | JdbcUtil.java:10112 / 10133 |
+  Low | Asymmetric null contract is UNCHANGED in behavior: setter still stores raw null
+  (10134: `JdbcUtil._sqlExtractor = sqlExtractor;`) and getter still returns it raw
+  (10113: `return JdbcUtil._sqlExtractor;`); internal logging still defends with
+  N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR) at 10071. The getter Javadoc
+  was UPDATED to document the asymmetry (10110: "... or {@code null} if a {@code null} extractor was
+  explicitly set"), so the doc gap is closed but the design recommendation (reject null in setter ->
+  fall back to DEFAULT_SQL_EXTRACTOR; guarantee non-null getter) still stands.
 
 4. MISPLACED METHODS (with target class)
-- isNullOrDefault(Object) | JdbcUtil.java:9774 | Low | Generic value/default check with no JDBC
-  dependency; conceptually belongs in com.landawn.abacus.util.N. Recommend: keep as a deliberate
-  DAO/id-layer convenience OR move to N. Confirming check: whether N already exposes an equivalent.
-- getInsertPropNames/getSelectPropNames/getUpdatePropNames (9425-9586) and getColumn2FieldNameMap
-  (2704) | Low | Pure facade re-exports of QueryUtil; they live correctly in QueryUtil and are kept
-  here only as facade convenience. No action beyond the section-2 rename.
+- STILL-VALID | isNullOrDefault(Object) | JdbcUtil.java:9819 | Low | Generic value/default check with
+  no JDBC dependency (9820-9821: `(value == null) || (value instanceof Number num && num.doubleValue()
+  == 0) || (value instanceof Boolean b && !b) || N.equals(value, N.defaultValueOf(value.getClass()))`);
+  conceptually belongs in com.landawn.abacus.util.N. Recommend: keep as deliberate DAO/id-layer
+  convenience OR move to N.
+- STILL-VALID | getInsertPropNames/getSelectPropNames/getUpdatePropNames (9470-9630) and
+  getColumn2FieldNameMap (2643) | Low | Pure facade re-exports of QueryUtil; they live correctly in
+  QueryUtil and are kept here as facade convenience. No action beyond the section-2 rename.
 
 5. MISSING METHODS (with target class)
-- prepareNamedQueryForLargeResult(Connection, ParsedSql) | JdbcUtil.java:4346/4380/4413 | Medium |
-  The large-result variant exists for (DataSource,String), (DataSource,ParsedSql) and
-  (Connection,String) but NOT (Connection,ParsedSql) — verified there is no such overload — even
-  though the non-large prepareNamedQuery provides the full {DataSource,Connection}x{String,ParsedSql}
-  matrix. Add it (target: JdbcUtil).
-- public executeLargeUpdate(DataSource|Connection, String, Object...) | JdbcUtil.java:~5808 | Low |
-  executeLargeBatchUpdate is public (5495) but its non-batch counterpart executeLargeUpdate is only
-  package-private on PreparedStatement; add a public long-returning single-statement variant paralleling
-  executeUpdate (5116/5169). Confirming check: confirm the omission is an oversight, not a deliberate
-  "use batch for large" stance.
-- DataSource overloads for createTableIfNotExists / dropTableIfExists / getColumnNames |
-  JdbcUtil.java:8339 / 8388 / 1855 | Low | tableExists offers both (DataSource,...) and (Connection,...)
-  forms; these three related DDL/metadata helpers are Connection-only — an asymmetry. Confirming check:
-  whether DDL-via-DataSource is intentionally discouraged.
+- STILL-VALID | prepareNamedQueryForLargeResult(Connection, ParsedSql) | JdbcUtil.java:4285/4319/4352 |
+  Medium | The large-result variant exists for (DataSource,String) at 4285, (DataSource,ParsedSql) at
+  4319, and (Connection,String) at 4352, but STILL NOT (Connection,ParsedSql) — re-verified: Grep for
+  prepareNamedQueryForLargeResult yields exactly those three signatures — even though the non-large
+  prepareNamedQuery provides the full {DataSource,Connection}x{String,ParsedSql} matrix. Add it
+  (target: JdbcUtil).
+- STILL-VALID | public executeLargeUpdate(DataSource|Connection, String, Object...) | JdbcUtil.java |
+  Low | executeLargeBatchUpdate is public (DataSource forms 5400/5434, Connection forms 5497/5535) but
+  its non-batch counterpart executeLargeUpdate is still only package-private on a PreparedStatement
+  (5847: `static long executeLargeUpdate(final PreparedStatement stmt)`). Add a public long-returning
+  single-statement variant paralleling executeUpdate (public at 5055/5108).
+- STILL-VALID | DataSource overloads for createTableIfNotExists / dropTableIfExists / getColumnNames |
+  JdbcUtil.java:8384 / 8433 / 1859 | Low | tableExists offers both (DataSource,...) at 7971 and
+  (Connection,...) at 8036; these three related DDL/metadata helpers remain Connection-only
+  (createTableIfNotExists(Connection,String,String) 8384; dropTableIfExists(Connection,String) 8433;
+  getColumnNames(Connection,String) 1859 — no DataSource overload of any) — an asymmetry. Confirming
+  check: whether DDL-via-DataSource is intentionally discouraged.
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
-- None new. All currently @Deprecated public methods already name a correct replacement and are thin
-  delegators (verified list in section 1). They are eligible for outright removal under the relaxed
-  backward-compat constraint, but that is a project decision, not an API defect.
+- UPDATED | Two prior deprecated thin-delegators (getColumnNameList, getColumnLabelList) have ALREADY
+  BEEN REMOVED since the original report — confirming the "eligible for outright removal under the
+  relaxed backward-compat constraint" path is being exercised. All remaining @Deprecated public methods
+  (doesTableExist x2, getColumnValue(label) x2, call/runNotInStartedTransaction x4, close/closeQuietly
+  (Connection) x2) still name a correct replacement and are thin delegators; eligible for removal at
+  project discretion, not an API defect.
+
+NEW ISSUES (introduced/exposed by recent changes)
+- None. The only material change to this file since the original report is the hard-deletion of the two
+  deprecated getColumnNameList/getColumnLabelList twins (which removes, rather than introduces, surface).
+  The getColumns helpers are now exposed only under the canonical getColumnNames/getColumnLabels names —
+  no replacement gap, no orphaned references (Grep for the old names = 0 hits). The getSqlExtractor
+  Javadoc was tightened to document the null-return asymmetry (see section 3, PARTIALLY-ADDRESSED). No
+  new naming, return-type, placement, or missing-method defects were exposed.

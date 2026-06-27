@@ -1,8 +1,12 @@
 API Design Review — FetchDirection.java (public enum)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+RE-VERIFIED 2026-06-27 against current source — CONFIRMED-CLEAN; line numbers unchanged.
 
 1. OVERALL ASSESSMENT
 Healthy, no actionable findings. FORWARD/REVERSE/UNKNOWN wrap the ResultSet.FETCH_* constants; the
-accessor intValue() (184) and reverse-lookup valueOf(int) (146) match the IsolationLevel convention and
-are internally consistent. No methods to rename, no return/parameter issues, nothing misplaced or missing,
-no deprecation candidates.
+accessor intValue() and reverse-lookup valueOf(int) match the IsolationLevel convention (and now also
+OnDeleteAction) and are internally consistent. No methods to rename, no return/parameter issues, nothing
+misplaced or missing, no deprecation candidates. Current evidence:
+  FetchDirection.java:146 -> "public static FetchDirection valueOf(final int intValue) {"
+  FetchDirection.java:184 -> "public int intValue() {"
+  FetchDirection.java:78/90/101 -> FORWARD/REVERSE/UNKNOWN wrapping ResultSet.FETCH_FORWARD/REVERSE/UNKNOWN.

@@ -6407,7 +6407,7 @@ public final class JdbcUtil {
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgNotNegative(offset, cs.offset);
         N.checkArgNotNegative(count, cs.count);
         N.checkArgNotNull(filter, cs.filter);
@@ -6563,7 +6563,7 @@ public final class JdbcUtil {
      */
     public static <T> Stream<T> stream(final ResultSet rs, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(targetClass, cs.targetClass);
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
 
         return stream(rs, BiRowMapper.to(targetClass));
     }
@@ -6588,7 +6588,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
         return Stream.of(iterate(rs, rowMapper, null));
@@ -6700,7 +6700,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -6708,7 +6708,7 @@ public final class JdbcUtil {
     }
 
     static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
-        N.checkArgNotNull(resultSet, cs.resultSet);
+        N.checkArgNotNull(resultSet, cs.ResultSet);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -6791,7 +6791,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
         return Stream.of(iterate(rs, rowMapper, null));
@@ -6922,7 +6922,7 @@ public final class JdbcUtil {
      */
     public static <T> Stream<T> stream(final ResultSet rs, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -6997,7 +6997,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final int columnIndex) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgPositive(columnIndex, cs.columnIndex);
 
         final boolean checkDateType = JdbcUtil.checkDateType(rs);
@@ -7027,7 +7027,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final String columnName) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.resultSet);
+        N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgNotEmpty(columnName, cs.columnName);
 
         final RowMapper<? extends T> rowMapper = new RowMapper<>() {

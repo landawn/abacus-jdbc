@@ -150,7 +150,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
-    public NamedQuery setNull(final String parameterName, final int sqlType) throws SQLException {
+    public NamedQuery setNull(final String parameterName, final int sqlType) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -1109,7 +1109,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setString(final String parameterName, final String value) throws SQLException {
+    public NamedQuery setString(final String parameterName, final String value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 

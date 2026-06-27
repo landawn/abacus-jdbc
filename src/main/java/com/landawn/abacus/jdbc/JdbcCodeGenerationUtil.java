@@ -258,59 +258,7 @@ public final class JdbcCodeGenerationUtil {
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
-            return generateEntityClass(conn, tableName, createQueryByTableName(conn, tableName), config);
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    /**
-     * Generates an entity class using a custom SQL query to determine the entity structure.
-     * This method allows using complex queries (e.g., joins, views) to define the entity.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * String query = "SELECT u.id, u.name, p.profile_data FROM users u JOIN profiles p ON u.id = p.user_id";
-     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "UserProfile", query);
-     * }</pre>
-     *
-     * @param ds the data source to connect to the database
-     * @param entityName the name of the entity class to generate
-     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
-     * @return the generated entity class as a string containing the complete Java source code
-     * @throws UncheckedSQLException if a database access error occurs
-     */
-    public static String generateEntityClass(final DataSource ds, final String entityName, final String query) {
-        return generateEntityClass(ds, entityName, query, null);
-    }
-
-    /**
-     * Generates an entity class using a custom SQL query and configuration.
-     * This method provides maximum flexibility by allowing both custom queries and configuration.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * String query = "SELECT * FROM user_view WHERE 1=0";
-     * EntityCodeConfig config = EntityCodeConfig.builder()
-     *     .idFields(Arrays.asList("userId"))
-     *     .readOnlyFields(Arrays.asList("createdDate"))
-     *     .build();
-     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "UserView", query, config);
-     * }</pre>
-     *
-     * @param ds the data source to connect to the database
-     * @param entityName the name of the entity class to generate
-     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
-     * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
-     * @return the generated entity class as a string containing the complete Java source code
-     * @throws UncheckedSQLException if a database access error occurs
-     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
-     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
-     */
-    public static String generateEntityClass(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config) {
-        try (Connection conn = ds.getConnection()) {
-            return generateEntityClass(conn, entityName, query, config);
-
+            return generateEntityClassByQuery(conn, tableName, createQueryByTableName(conn, tableName), config);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -360,7 +308,59 @@ public final class JdbcCodeGenerationUtil {
      * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
-        return generateEntityClass(conn, tableName, createQueryByTableName(conn, tableName), config);
+        return generateEntityClassByQuery(conn, tableName, createQueryByTableName(conn, tableName), config);
+    }
+
+    /**
+     * Generates an entity class using a custom SQL query to determine the entity structure.
+     * This method allows using complex queries (e.g., joins, views) to define the entity.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * String query = "SELECT u.id, u.name, p.profile_data FROM users u JOIN profiles p ON u.id = p.user_id";
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClassByQuery(ds, "UserProfile", query);
+     * }</pre>
+     *
+     * @param ds the data source to connect to the database
+     * @param entityName the name of the entity class to generate
+     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+     * @return the generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query) {
+        return generateEntityClassByQuery(ds, entityName, query, null);
+    }
+
+    /**
+     * Generates an entity class using a custom SQL query and configuration.
+     * This method provides maximum flexibility by allowing both custom queries and configuration.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * String query = "SELECT * FROM user_view WHERE 1=0";
+     * EntityCodeConfig config = EntityCodeConfig.builder()
+     *     .idFields(Arrays.asList("userId"))
+     *     .readOnlyFields(Arrays.asList("createdDate"))
+     *     .build();
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClassByQuery(ds, "UserView", query, config);
+     * }</pre>
+     *
+     * @param ds the data source to connect to the database
+     * @param entityName the name of the entity class to generate
+     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+     * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
+     * @return the generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
+     */
+    public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config) {
+        try (Connection conn = ds.getConnection()) {
+            return generateEntityClassByQuery(conn, entityName, query, config);
+
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
     /**
@@ -369,7 +369,7 @@ public final class JdbcCodeGenerationUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT id, name, email FROM users WHERE 1=0";
-     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "SimpleUser", query);
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "SimpleUser", query);
      * }</pre>
      *
      * @param conn the database connection to use
@@ -378,8 +378,8 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      */
-    public static String generateEntityClass(final Connection conn, final String entityName, final String query) {
-        return generateEntityClass(conn, entityName, query, null);
+    public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query) {
+        return generateEntityClassByQuery(conn, entityName, query, null);
     }
 
     /**
@@ -394,7 +394,7 @@ public final class JdbcCodeGenerationUtil {
      *     .packageName("com.example.entity")
      *     .fieldNameConverter((table, column) -> Strings.toCamelCase(column.toLowerCase()))
      *     .build();
-     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "ComplexEntity", query, config);
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "ComplexEntity", query, config);
      * }</pre>
      *
      * @param conn the database connection to use
@@ -406,7 +406,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
-    public static String generateEntityClass(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
+    public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              ResultSet rs = stmt.executeQuery()) {
 
@@ -2367,12 +2367,12 @@ public final class JdbcCodeGenerationUtil {
          */
         private boolean generateFieldNameTable;
 
-        /**
-         * Reserved configuration flag intended to extend the field-name table class name with additional context.
-         * Currently unused by the generator; retained for binary compatibility and future extension.
-         * Default is {@code false}.
-         */
-        private boolean extendFieldNameTableClassName;
+        //    /**
+        //     * Reserved configuration flag intended to extend the field-name table class name with additional context.
+        //     * Currently unused by the generator; retained for binary compatibility and future extension.
+        //     * Default is {@code false}.
+        //     */
+        //    private boolean extendFieldNameTableClassName;
         // private String fieldNameTableClassName; // Always be "NT";
 
         // private List<Tuple2<String, String>> customizedJsonFields;

@@ -1,26 +1,32 @@
 API Design Review — cs.java (public final class of parameter-name String constants)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+RE-VERIFIED 2026-06-27 against current source — finding STILL-VALID, line numbers unchanged.
 
 1. OVERALL ASSESSMENT
-cs is a utility holder of ~90 public static final String constants whose values are the literal
+cs is a utility holder of ~95 public static final String constants whose values are the literal
 parameter names used across the library (consumed as N.checkArgNotNull(x, cs.x)). The convention is
 camelCase identifiers whose value equals the identifier. The set is internally consistent; the only
-actionable item is a single casing/duplication outlier.
+actionable item is a single casing/duplication outlier, which is still present.
 
 2. NAMING ISSUES
-- ResultSet ("ResultSet", capitalized) coexisting with resultSet ("resultSet") | cs.java:56 and 252 | Low |
+- [STILL-VALID] ResultSet ("ResultSet", capitalized) coexisting with resultSet ("resultSet") |
+  cs.java:56 and 252 | Low | Current evidence:
+  cs.java:56  -> "public static final String ResultSet = "ResultSet";"
+  cs.java:252 -> "public static final String resultSet = "resultSet"; // NOSONAR"
   Every other constant is camelCase with a lowercase first letter; ResultSet is the lone capitalized
-  identifier, and a near-duplicate resultSet already exists with a different value. This is confusing (two
-  constants differing only by first-letter case and value). Recommend: standardize on resultSet and update
-  the few call sites whose parameter is literally named "ResultSet" to match, then remove the capitalized
-  constant. Confirming check: grep for cs.ResultSet usages and confirm the underlying parameter name can be
-  lower-cased without breaking a reflective/name-based lookup.
+  identifier, and a near-duplicate resultSet already exists with a different value. Two constants
+  differing only by first-letter case and value remain confusing. Recommend: standardize on resultSet and
+  update the few call sites whose parameter is literally named "ResultSet" to match, then remove the
+  capitalized constant. Confirming check: grep cs.ResultSet usages and confirm the underlying parameter
+  name can be lower-cased without breaking a reflective/name-based lookup.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- None (constants only). Note: the cluster targetClass / targetType / targetValueType / cls / entityClass
-  (cs.java:328/332/356/424/144) mirrors an underlying parameter-naming inconsistency in the real APIs; that
-  is a finding for those classes, not for cs (which faithfully reflects the actual names).
+- [STILL-VALID / not a cs defect] None (constants only). The cluster targetClass / targetType /
+  targetValueType / cls / entityClass still mirrors an underlying parameter-naming inconsistency in the
+  real APIs; that is a finding for those classes, not for cs. Current lines:
+  cs.java:328 targetClass, 332 targetType, 356 targetValueType, 424 cls, 144 entityClass — unchanged.
 
-4. MISPLACED METHODS — None.
-5. MISSING METHODS — None (constants are added as new parameter names appear).
+4. MISPLACED METHODS — [CONFIRMED-CLEAN] None.
+5. MISSING METHODS — [CONFIRMED-CLEAN] None (constants are added as new parameter names appear; class has
+   grown to ~95 constants, ending with cs.java:448 "dataset").
 6. DEPRECATION / REMOVAL CANDIDATES — None beyond folding ResultSet into resultSet (section 2).

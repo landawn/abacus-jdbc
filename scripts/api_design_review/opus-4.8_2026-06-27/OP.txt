@@ -1,30 +1,28 @@
 API Design Review — OP.java (public enum)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
+RE-VERIFIED 2026-06-27 against current source — findings STILL-VALID; line numbers shifted (javadoc pass).
 
 1. OVERALL ASSESSMENT
 OP is an enum of execution modes consumed by AbstractQuery and @Query. The constants map cleanly to the
-AbstractQuery terminal-op family (exists/findOnlyOne/findFirst/list/queryForSingle/queryForUnique/
-listAll/queryAll/streamAll/executeAndGetOutParameters/update/largeUpdate) and each is well documented with
-a correct @see. It has no methods. Two minor items: one casing inconsistency and two already-deprecated
-constants.
+AbstractQuery terminal-op family and each is well documented with a correct @see. It has no methods. Two
+minor items remain: one casing inconsistency (DEFAULT) and two already-deprecated constants (query, stream).
 
 2. NAMING ISSUES
-- DEFAULT (UPPER_CASE) vs all other constants in camelCase (exists, findOnlyOne, findFirst, list,
-  queryForSingle, ...) | OP.java:306 (DEFAULT) vs 43-284 | Low | The camelCase constants deliberately mirror
-  AbstractQuery method names; DEFAULT is a meta-sentinel with no corresponding method, which is why it is
-  upper-cased. The inconsistency is intentional but stands out. Recommend: keep (the mirror-the-method-name
-  convention is the more valuable consistency), but consider a class-doc note explaining the DEFAULT casing.
-  Confirming check: none needed — purely cosmetic.
+- [STILL-VALID] DEFAULT (UPPER_CASE) vs all other constants in camelCase (exists, findOnlyOne, findFirst,
+  list, queryForSingle, ...) | OP.java:312 (DEFAULT) vs 49-290 (camelCase constants) | Low | Current
+  evidence: OP.java:312 -> "DEFAULT"; OP.java:49 -> "exists,". The camelCase constants deliberately mirror
+  AbstractQuery method names; DEFAULT is a meta-sentinel with no corresponding method, hence upper-cased.
+  Intentional but stands out. Recommend: keep (the mirror-the-method-name convention is more valuable);
+  optionally add a class-doc note explaining the DEFAULT casing. Purely cosmetic.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- None (enum has no methods).
+- [CONFIRMED-CLEAN] None (enum has no methods).
 
-4. MISPLACED METHODS
-- None.
-
-5. MISSING METHODS (with target class)
-- None.
+4. MISPLACED METHODS — [CONFIRMED-CLEAN] None.
+5. MISSING METHODS (with target class) — [CONFIRMED-CLEAN] None.
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
-- query, stream | OP.java:113, 133 | (already handled) | Both already @Deprecated with the correct guidance
-  to rely on DEFAULT (the framework infers the op from the method return type). No action.
+- [STILL-VALID, already handled] query, stream | OP.java:119 (query), 139 (stream) | Current evidence:
+  OP.java:118-119 -> "@Deprecated\n    query,"; OP.java:138-139 -> "@Deprecated\n    stream,". Both remain
+  @Deprecated with the correct guidance to rely on DEFAULT (the framework infers the op from the method
+  return type). No action.

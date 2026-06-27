@@ -247,10 +247,6 @@ public final class cs { // NOSONAR
      */
     public static final String resultExtractor3 = "resultExtractor3";
     /**
-     * Parameter name for ResultSet objects (camelCase form, used when the parameter is named {@code resultSet}).
-     */
-    public static final String resultSet = "resultSet"; // NOSONAR
-    /**
      * Parameter name for arrays of column indexes to be returned from insert operations.
      */
     public static final String returnColumnIndexes = "returnColumnIndexes";

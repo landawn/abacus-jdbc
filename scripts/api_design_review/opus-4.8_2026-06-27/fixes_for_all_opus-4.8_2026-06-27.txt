@@ -1,0 +1,59 @@
+
+----------
+  Re-review and refresh EVERY API design review report in
+  ./scripts/api_design_review/opus-4.8_2026-06-27/ against the CURRENT code.
+  Process every *.txt report in that folder, EXCLUDING all *fixes*.txt files.
+
+  Context: a lot of code has changed since these reports were generated, so their findings
+  may be stale — already fixed, no longer applicable, or superseded by new behavior.
+
+  For EACH report:
+  1. Read the report and, for EACH finding, open the current source and verify it against
+     the live code before trusting it (do not assume the report is still accurate).
+  2. Mark each finding with a status: STILL-VALID / ALREADY-FIXED / NO-LONGER-APPLIES /
+     PARTIALLY-ADDRESSED, with a one-line justification + file:line evidence.
+  3. Add any NEW issues introduced or exposed by the recent changes.
+  4. Update the report file IN PLACE to reflect current reality (keep it self-consistent).
+     (You may review reports in parallel, but verify every agent's claims against the code yourself.)
+
+  Final deliverable (required): a single prioritized summary across all reports — for every
+  remaining-open and newly-found issue, list it with a SEVERITY (High/Medium/Low), the
+  affected report/class, file:line, and a recommended action. Sort by severity.
+
+  Report-only — do not change production code unless I approve.
+
+----------
+
+    Read every issue in ./scripts/api_design_review/opus-4.8_2026-06-27/xxx.txt, EXCLUDING all *fixes*.txt files.
+    For each one, fix only the issues that can be fully resolved by
+    editing Javadoc/comments alone.
+
+    Fix (in scope): issues resolvable purely by improving Javadoc or
+    comments — e.g. wrong/missing @param/@return/@throws,
+    inaccurate example outputs, stale or misleading descriptions,
+    missing @see/cross-links, unclear wording. The fix must not
+    change any code, signature, or runtime behavior.
+
+    Do NOT touch (out of scope): any issue that implies a real
+    defect or requires a code change — correctness/logic bugs,
+    behavioral inconsistencies between siblings/overloads, API
+    design problems, renames, or new/changed/removed methods. If
+    "fixing the Javadoc" would mean documenting behavior that is
+    itself wrong or inconsistent, leave it and flag it instead — do
+    not paper over a bug with a doc edit.
+
+    Before editing: for each issue, verify the claim against the
+    current Strings.java source, Javadoc, and comments — the review
+    file may be stale or wrong. Only act on what you confirm against
+    the live code.
+
+    Constraints:
+    - Javadoc examples must reference real API and show correct
+    outputs (verify, don't assume).
+    - Keep the existing comment style/formatting of the file.
+    - mvn -o clean compile must stay green afterward.
+
+    Report: a per-issue ledger — issue → classification
+    (fixed-javadoc / skipped-code-bug / already-correct /
+    claim-invalid) → one-line reason. List the skipped code/design
+    issues separately so I can review them.

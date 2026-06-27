@@ -2010,7 +2010,7 @@ public class JdbcTest extends TestBase {
     public void testHandlerFactoryCreateWithBeforeInvoke() {
         List<String> calls = new ArrayList<>();
 
-        Jdbc.Handler<Object> handler = Jdbc.HandlerFactory.create((target, args, methodSig) -> calls.add("before"));
+        Jdbc.Handler<Object> handler = Jdbc.HandlerFactory.createForBeforeInvoke((target, args, methodSig) -> calls.add("before"));
 
         Method method = Object.class.getMethods()[0];
         ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
@@ -2027,7 +2027,7 @@ public class JdbcTest extends TestBase {
         List<String> calls = new ArrayList<>();
 
         Jdbc.Handler<Object> handler = Jdbc.HandlerFactory
-                .create((Throwables.QuadConsumer<Object, Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (result,
+                .createForAfterInvoke((Throwables.QuadConsumer<Object, Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (result,
                         target, args, methodSig) -> calls.add("after"));
 
         Method method = Object.class.getMethods()[0];
@@ -2727,7 +2727,7 @@ public class JdbcTest extends TestBase {
         final boolean[] called = { false };
         @SuppressWarnings("unchecked")
         final Jdbc.Handler<Object> handler = Jdbc.HandlerFactory
-                .create((Throwables.TriConsumer<Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (proxy, args,
+                .createForBeforeInvoke((Throwables.TriConsumer<Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (proxy, args,
                         sig) -> called[0] = true);
 
         handler.beforeInvoke(new Object(), new Object[0], null);
@@ -2739,7 +2739,7 @@ public class JdbcTest extends TestBase {
         final boolean[] called = { false };
         @SuppressWarnings("unchecked")
         final Jdbc.Handler<Object> handler = Jdbc.HandlerFactory
-                .create((Throwables.QuadConsumer<Object, Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (result, proxy,
+                .createForAfterInvoke((Throwables.QuadConsumer<Object, Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (result, proxy,
                         args, sig) -> called[0] = true);
 
         handler.afterInvoke(null, new Object(), new Object[0], null);
