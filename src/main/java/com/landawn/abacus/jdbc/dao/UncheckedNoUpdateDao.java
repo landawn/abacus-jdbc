@@ -91,7 +91,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     @Override
     @Deprecated
     default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -107,7 +107,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     @Deprecated
     @Override
     default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -123,7 +123,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     @Deprecated
     @Override
     default int update(final T entity, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -140,7 +140,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     @Deprecated
     @Override
     default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -156,7 +156,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     @Deprecated
     @Override
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -172,7 +172,7 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     @Deprecated
     @Override
     default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -187,6 +187,6 @@ public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
     @Deprecated
     @Override
     default int delete(final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 }

@@ -101,7 +101,7 @@ public interface NoUpdateCrudDaoL<T, TD extends NoUpdateCrudDaoL<T, TD>> extends
     @Deprecated
     @Override
     default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -117,7 +117,7 @@ public interface NoUpdateCrudDaoL<T, TD extends NoUpdateCrudDaoL<T, TD>> extends
     @Deprecated
     @Override
     default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
     /**
@@ -132,6 +132,6 @@ public interface NoUpdateCrudDaoL<T, TD extends NoUpdateCrudDaoL<T, TD>> extends
     @Deprecated
     @Override
     default int deleteById(final long id) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO.");
+        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 }

@@ -118,7 +118,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Deprecated
     @Override
     default ID insert(final T entityToInsert) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
@@ -133,22 +133,22 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Deprecated
     @Override
     default ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
      * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named parameter SQL insert statement
-     * @param entityToSave the entity whose properties are bound to the named parameters
+     * @param entityToInsert the entity whose properties are bound to the named parameters
      * @return never returns normally
      * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
-    default ID insert(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+    default ID insert(final String namedInsertSql, final T entityToInsert) throws UnsupportedOperationException {
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
@@ -162,7 +162,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Deprecated
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
@@ -177,7 +177,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Deprecated
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
@@ -192,7 +192,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Deprecated
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
@@ -209,7 +209,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
@@ -224,7 +224,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Deprecated
     @Override
     default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
@@ -241,6 +241,6 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     @Override
     default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO.");
+        throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 }
