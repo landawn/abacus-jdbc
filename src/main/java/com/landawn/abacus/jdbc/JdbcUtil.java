@@ -1720,7 +1720,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * ResultSet rs = statement.executeQuery("SELECT * FROM event_log");
      * long largeNumberOfRowsToSkip = 100000L;
-     * int skipped = JdbcUtil.skip(rs, largeNumberOfRowsToSkip);
+     * long skipped = JdbcUtil.skip(rs, largeNumberOfRowsToSkip);
      *
      * System.out.println("Skipped " + skipped + " rows.");
      *

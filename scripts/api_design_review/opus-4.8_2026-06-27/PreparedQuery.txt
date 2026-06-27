@@ -1,6 +1,6 @@
 API Design Review — PreparedQuery.java (public final extends AbstractQuery)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
-RE-VERIFIED 2026-06-27 against current source — CONFIRMED-CLEAN; line numbers shifted slightly.
+RE-VERIFIED (round 2) 2026-06-27 against current committed source — CONFIRMED-CLEAN; line numbers unchanged.
 
 1. OVERALL ASSESSMENT
 Healthy, no actionable findings. PreparedQuery adds NO public methods of its own — it only declares a
@@ -8,5 +8,8 @@ package-private constructor and inherits the entire positional fluent API from A
 API is therefore reviewed entirely under AbstractQuery. Nothing to rename, change, move, add, or deprecate
 here. Current evidence:
   PreparedQuery.java:34 -> "public final class PreparedQuery extends AbstractQuery<PreparedStatement, PreparedQuery> {"
-  PreparedQuery.java:51-53 -> "PreparedQuery(final PreparedStatement stmt) { super(stmt); }"  (package-private;
-  the only member declared — no public methods). Class body spans lines 34-54.
+  PreparedQuery.java:51-53 -> "PreparedQuery(final PreparedStatement stmt) {\n        super(stmt);\n    }"
+  (package-private; the only member declared — no public methods). Class body spans lines 34-54.
+
+2-6. CONFIRMED-CLEAN | None.
+</content>

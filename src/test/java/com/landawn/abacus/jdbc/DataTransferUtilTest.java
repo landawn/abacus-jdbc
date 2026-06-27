@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import javax.sql.DataSource;
 
@@ -175,7 +176,7 @@ public class DataTransferUtilTest extends TestBase {
     public void testImportDataWithFilter() throws SQLException, Exception {
         // Setup
         List<String> selectColumns = Arrays.asList("col1");
-        Throwables.Predicate<Object[], Exception> filter = row -> "valid".equals(row[0]);
+        Predicate<Object[]> filter = row -> "valid".equals(row[0]);
 
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(3);
@@ -452,7 +453,7 @@ public class DataTransferUtilTest extends TestBase {
         tempFile.deleteOnExit();
         java.nio.file.Files.write(tempFile.toPath(), Arrays.asList("col1,col2", "valid,val2", "invalid,val3", "valid,val4"));
 
-        Throwables.Predicate<String[], Exception> filter = row -> "valid".equals(row[0]);
+        Predicate<String[]> filter = row -> "valid".equals(row[0]);
         Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> {
             stmt.setString(1, row[0]);
             stmt.setString(2, row[1]);
@@ -995,7 +996,7 @@ public class DataTransferUtilTest extends TestBase {
     public void testImportCSVWithSkippedRows() throws SQLException, IOException, Exception {
         // Setup
         Reader reader = new StringReader("col1,col2\nval1,val2\nval3,val4");
-        Throwables.Predicate<String[], Exception> filter = row -> row[0].equals("val1");
+        Predicate<String[]> filter = row -> row[0].equals("val1");
         Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> {
             stmt.setString(1, row[0]);
             stmt.setString(2, row[1]);
@@ -1186,7 +1187,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
 
         Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (pq, row) -> pq.setString(1, (String) row[0]);
-        Throwables.Predicate<Object[], Exception> filter = row -> "keep".equals(row[0]);
+        Predicate<Object[]> filter = row -> "keep".equals(row[0]);
 
         // Execute: batchSize=1 so executeBatch is called after every accepted row
         int result = DataTransferUtil.importData(mockDataset, filter, mockPreparedStatement, 1, 0L, stmtSetter);
@@ -1242,7 +1243,7 @@ public class DataTransferUtilTest extends TestBase {
         final String csv = "c1,c2,c3\nreject,REJ_B,REJ_C\nkeep,K_B,K_C";
 
         final Reader reader = new StringReader(csv);
-        final Throwables.Predicate<String[], Exception> filter = row -> "keep".equals(row[0]);
+        final Predicate<String[]> filter = row -> "keep".equals(row[0]);
 
         final java.util.concurrent.atomic.AtomicReference<String[]> capturedRow = new java.util.concurrent.atomic.AtomicReference<>();
         final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (pq, row) -> {

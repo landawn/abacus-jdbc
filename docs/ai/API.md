@@ -14830,31 +14830,31 @@ Interface for handling join entities in database operations.
   - `executor` (`Executor`) — the executor to use for parallel loading
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-##### loadJoinEntitiesIfNull(...) -> void
-- **Signature:** `default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws SQLException`
+##### loadJoinEntitiesIfAbsent(...) -> void
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws SQLException`
 - **Summary:** Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null} .
 - **Contract:**
   - Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null} .
   - If multiple properties in the entity class are joined to the specified type, only those whose value is {@code null} are loaded.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfNull(user, Order.class); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, Order.class); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity for which to load join entities
   - `joinEntityClass` (`Class<?>`) — the class of the join entities to load
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException`
 - **Summary:** Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null} , with specific property selection.
 - **Contract:**
   - Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null} , with specific property selection.
   - If multiple properties in the entity class are joined to the specified type, only those whose value is {@code null} are loaded.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfNull(user, Address.class, Arrays.asList("street", "city")); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, Address.class, Arrays.asList("street", "city")); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity for which to load join entities
   - `joinEntityClass` (`Class<?>`) — the class of the join entities to load
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException`
 - **Summary:** Loads join entities of the specified type for a collection of entities only if the corresponding join properties are currently {@code null} .
 - **Contract:**
   - Loads join entities of the specified type for a collection of entities only if the corresponding join properties are currently {@code null} .
@@ -14863,7 +14863,7 @@ Interface for handling join entities in database operations.
   - `joinEntityClass` (`Class<?>`) — the class of the join entities to load
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException`
 - **Summary:** Loads join entities of the specified type for a collection of entities only if the corresponding join properties are currently {@code null} , with specific property selection.
 - **Contract:**
   - Loads join entities of the specified type for a collection of entities only if the corresponding join properties are currently {@code null} , with specific property selection.
@@ -14873,28 +14873,28 @@ Interface for handling join entities in database operations.
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws SQLException`
 - **Summary:** Loads join entities for a single entity by property name only if the property is currently {@code null} .
 - **Contract:**
   - Loads join entities for a single entity by property name only if the property is currently {@code null} .
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfNull(user, "orders"); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, "orders"); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity for which to load join entities
   - `joinEntityPropName` (`String`) — the property name of the join entities to load
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException`
 - **Summary:** Loads join entities for a single entity by property name only if the property is currently {@code null} , with specific property selection.
 - **Contract:**
   - Loads join entities for a single entity by property name only if the property is currently {@code null} , with specific property selection.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfNull(user, "addresses", Arrays.asList("city", "country")); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, "addresses", Arrays.asList("city", "country")); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity for which to load join entities
   - `joinEntityPropName` (`String`) — the property name of the join entities to load
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws SQLException`
 - **Summary:** Loads join entities for a collection of entities by property name only if the property is currently {@code null} .
 - **Contract:**
   - Loads join entities for a collection of entities by property name only if the property is currently {@code null} .
@@ -14903,7 +14903,7 @@ Interface for handling join entities in database operations.
   - `joinEntityPropName` (`String`) — the property name of the join entities to load
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException`
 - **Summary:** Loads join entities for a collection of entities by property name only if the property is currently {@code null} , with specific property selection.
 - **Contract:**
   - Loads join entities for a collection of entities by property name only if the property is currently {@code null} , with specific property selection.
@@ -14913,7 +14913,7 @@ Interface for handling join entities in database operations.
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws SQLException`
 - **Summary:** Loads multiple join entities for a single entity by property names only if they are currently {@code null} .
 - **Contract:**
   - Loads multiple join entities for a single entity by property names only if they are currently {@code null} .
@@ -14922,7 +14922,7 @@ Interface for handling join entities in database operations.
   - `joinEntityPropNames` (`Collection<String>`) — the property names of the join entities to load
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException`
 - **Summary:** Loads multiple join entities for a single entity only if they are currently {@code null} , with optional parallel execution.
 - **Contract:**
   - Loads multiple join entities for a single entity only if they are currently {@code null} , with optional parallel execution.
@@ -14932,7 +14932,7 @@ Interface for handling join entities in database operations.
   - `inParallel` (`boolean`) — if {@code true} , join entities will be loaded in parallel
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException`
+- **Signature:** `@Beta default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException`
 - **Summary:** Loads multiple join entities for a single entity only if they are currently {@code null} , using a custom executor for parallel execution.
 - **Contract:**
   - Loads multiple join entities for a single entity only if they are currently {@code null} , using a custom executor for parallel execution.
@@ -14942,7 +14942,7 @@ Interface for handling join entities in database operations.
   - `executor` (`Executor`) — the executor to use for parallel loading
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException`
+- **Signature:** `default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException`
 - **Summary:** Loads multiple join entities for a collection of entities by property names only if they are currently {@code null} .
 - **Contract:**
   - Loads multiple join entities for a collection of entities by property names only if they are currently {@code null} .
@@ -14951,7 +14951,7 @@ Interface for handling join entities in database operations.
   - `joinEntityPropNames` (`Collection<String>`) — the property names of the join entities to load
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException`
 - **Summary:** Loads multiple join entities for a collection of entities only if they are currently {@code null} , with optional parallel execution.
 - **Contract:**
   - Loads multiple join entities for a collection of entities only if they are currently {@code null} , with optional parallel execution.
@@ -14961,7 +14961,7 @@ Interface for handling join entities in database operations.
   - `inParallel` (`boolean`) — if {@code true} , join entities will be loaded in parallel
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException`
+- **Signature:** `@Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException`
 - **Summary:** Loads multiple join entities for a collection of entities only if they are currently {@code null} , using a custom executor for parallel execution.
 - **Contract:**
   - Loads multiple join entities for a collection of entities only if they are currently {@code null} , using a custom executor for parallel execution.
@@ -14971,7 +14971,7 @@ Interface for handling join entities in database operations.
   - `executor` (`Executor`) — the executor to use for parallel loading
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") default void loadJoinEntitiesIfNull(final T entity) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") default void loadJoinEntitiesIfAbsent(final T entity) throws SQLException`
 - **Summary:** Loads all join entities for a single entity only if they are currently {@code null} .
 - **Contract:**
   - Loads all join entities for a single entity only if they are currently {@code null} .
@@ -14979,7 +14979,7 @@ Interface for handling join entities in database operations.
   - `entity` (`T`) — the entity for which to load join entities
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws SQLException`
 - **Summary:** Loads all join entities for a single entity only if they are currently {@code null} , with optional parallel execution.
 - **Contract:**
   - Loads all join entities for a single entity only if they are currently {@code null} , with optional parallel execution.
@@ -14988,7 +14988,7 @@ Interface for handling join entities in database operations.
   - `inParallel` (`boolean`) — if {@code true} , join entities will be loaded in parallel
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfAbsent(final T entity, final Executor executor) throws SQLException`
 - **Summary:** Loads all join entities for a single entity only if they are currently {@code null} , using a custom executor for parallel execution.
 - **Contract:**
   - Loads all join entities for a single entity only if they are currently {@code null} , using a custom executor for parallel execution.
@@ -14997,7 +14997,7 @@ Interface for handling join entities in database operations.
   - `executor` (`Executor`) — the executor to use for parallel loading
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") default void loadJoinEntitiesIfNull(final Collection<T> entities) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") default void loadJoinEntitiesIfAbsent(final Collection<T> entities) throws SQLException`
 - **Summary:** Loads all join entities for a collection of entities only if they are currently {@code null} .
 - **Contract:**
   - Loads all join entities for a collection of entities only if they are currently {@code null} .
@@ -15005,7 +15005,7 @@ Interface for handling join entities in database operations.
   - `entities` (`Collection<T>`) — the collection of entities for which to load join entities
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel) throws SQLException`
 - **Summary:** Loads all join entities for a collection of entities only if they are currently {@code null} , with optional parallel execution.
 - **Contract:**
   - Loads all join entities for a collection of entities only if they are currently {@code null} , with optional parallel execution.
@@ -15014,7 +15014,7 @@ Interface for handling join entities in database operations.
   - `inParallel` (`boolean`) — if {@code true} , join entities will be loaded in parallel
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws SQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws SQLException`
 - **Summary:** Loads all join entities for a collection of entities only if they are currently {@code null} , using a custom executor for parallel execution.
 - **Contract:**
   - Loads all join entities for a collection of entities only if they are currently {@code null} , using a custom executor for parallel execution.
@@ -18605,36 +18605,36 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-##### loadJoinEntitiesIfNull(...) -> void
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException`
+##### loadJoinEntitiesIfAbsent(...) -> void
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException`
 - **Summary:** Loads join entities of the specified class only if they are currently {@code null} .
 - **Contract:**
   - Loads join entities of the specified class only if they are currently {@code null} .
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Only load orders if not already loaded userDao.loadJoinEntitiesIfNull(user, Order.class); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Only load orders if not already loaded userDao.loadJoinEntitiesIfAbsent(user, Order.class); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to conditionally load join entities for
   - `joinEntityClass` (`Class<?>`) — the class of the join entities to load
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException`
 - **Summary:** Loads join entities of the specified class with selected properties only if they are currently {@code null} .
 - **Contract:**
   - Loads join entities of the specified class with selected properties only if they are currently {@code null} .
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartiallyLoadedUser(); // Load profile with specific fields if not already loaded userDao.loadJoinEntitiesIfNull( user, UserProfile.class, Arrays.asList("bio", "avatarUrl", "preferences") ); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartiallyLoadedUser(); // Load profile with specific fields if not already loaded userDao.loadJoinEntitiesIfAbsent( user, UserProfile.class, Arrays.asList("bio", "avatarUrl", "preferences") ); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to conditionally load join entities for
   - `joinEntityClass` (`Class<?>`) — the class of the join entities to load
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException`
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException`
 - **Summary:** Loads join entities of the specified class for multiple entities only where they are {@code null} .
 - **Parameters:**
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load join entities for
   - `joinEntityClass` (`Class<?>`) — the class of the join entities to load
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException`
 - **Summary:** Loads join entities of the specified class with selected properties for multiple entities only where they are {@code null} .
 - **Parameters:**
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load join entities for
@@ -18642,36 +18642,36 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws UncheckedSQLException`
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws UncheckedSQLException`
 - **Summary:** Loads join entities for a specific property only if it is currently {@code null} .
 - **Contract:**
   - Loads join entities for a specific property only if it is currently {@code null} .
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Only load profile if user.getProfile() is null userDao.loadJoinEntitiesIfNull(user, "profile"); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Only load profile if user.getProfile() is null userDao.loadJoinEntitiesIfAbsent(user, "profile"); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to conditionally load join entities for
   - `joinEntityPropName` (`String`) — the property name of the join entities to load
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException`
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException`
 - **Summary:** Loads join entities for a specific property with selected fields only if the property is {@code null} .
 - **Contract:**
   - Loads join entities for a specific property with selected fields only if the property is {@code null} .
   - If the property already holds a non- {@code null} value, it is left unchanged and no query is executed.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Load addresses with specific fields if not already loaded userDao.loadJoinEntitiesIfNull( user, "addresses", Arrays.asList("street", "city", "postalCode") ); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Load addresses with specific fields if not already loaded userDao.loadJoinEntitiesIfAbsent( user, "addresses", Arrays.asList("street", "city", "postalCode") ); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to conditionally load join entities for
   - `joinEntityPropName` (`String`) — the property name of the join entities to load
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException`
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException`
 - **Summary:** Loads join entities for a specific property for multiple entities only where the property is {@code null} .
 - **Parameters:**
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load join entities for
   - `joinEntityPropName` (`String`) — the property name of the join entities to load
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException`
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException`
 - **Summary:** Loads join entities for a specific property with selected fields for multiple entities only where {@code null} .
 - **Parameters:**
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
@@ -18679,17 +18679,17 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected from the join entities. If {@code null} , all properties of the join entities are selected
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException`
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException`
 - **Summary:** Loads multiple join properties only if they are {@code null} for a single entity.
 - **Contract:**
   - Loads multiple join properties only if they are {@code null} for a single entity.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartialUser(); // Load multiple properties if not already loaded userDao.loadJoinEntitiesIfNull( user, Arrays.asList("orders", "profile", "preferences") ); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartialUser(); // Load multiple properties if not already loaded userDao.loadJoinEntitiesIfAbsent( user, Arrays.asList("orders", "profile", "preferences") ); } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to conditionally load join entities for
   - `joinEntityPropNames` (`Collection<String>`) — the property names of the join entities to load. If {@code null} or empty, this method returns immediately
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException`
 - **Summary:** Loads multiple join properties only if they are {@code null} , optionally in parallel.
 - **Contract:**
   - Loads multiple join properties only if they are {@code null} , optionally in parallel.
@@ -18699,7 +18699,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `inParallel` (`boolean`) — if {@code true} , join properties are loaded in parallel; if {@code false} , loaded sequentially
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException`
+- **Signature:** `@Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException`
 - **Summary:** Loads multiple join properties only if they are {@code null} using a custom executor.
 - **Contract:**
   - Loads multiple join properties only if they are {@code null} using a custom executor.
@@ -18709,14 +18709,14 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException`
+- **Signature:** `@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException`
 - **Summary:** Loads multiple join properties for multiple entities only where they are {@code null} .
 - **Parameters:**
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
   - `joinEntityPropNames` (`Collection<String>`) — the property names of the join entities to load. If {@code null} or empty, this method returns immediately
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException`
 - **Summary:** Loads multiple join properties for multiple entities only where {@code null} , optionally in parallel.
 - **Parameters:**
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load join entities for
@@ -18724,7 +18724,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `inParallel` (`boolean`) — if {@code true} , join properties are loaded in parallel; if {@code false} , loaded sequentially
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException`
+- **Signature:** `@Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException`
 - **Summary:** Loads multiple join properties for multiple entities only where {@code null} using a custom executor.
 - **Parameters:**
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load join entities for
@@ -18732,7 +18732,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfNull(final T entity) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfAbsent(final T entity) throws UncheckedSQLException`
 - **Summary:** Loads all join entities only if they are {@code null} for a single entity.
 - **Contract:**
   - Loads all join entities only if they are {@code null} for a single entity.
@@ -18740,7 +18740,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `entity` (`T`) — the entity to conditionally load all join entities for
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws UncheckedSQLException`
 - **Summary:** Loads all join entities only if they are {@code null} , optionally in parallel.
 - **Contract:**
   - Loads all join entities only if they are {@code null} , optionally in parallel.
@@ -18749,7 +18749,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `inParallel` (`boolean`) — if {@code true} , all join properties are loaded in parallel; if {@code false} , loaded sequentially
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final Executor executor) throws UncheckedSQLException`
 - **Summary:** Loads all join entities only if they are {@code null} using a custom executor.
 - **Contract:**
   - Loads all join entities only if they are {@code null} using a custom executor.
@@ -18758,7 +18758,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfNull(final Collection<T> entities) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities) throws UncheckedSQLException`
 - **Summary:** Loads all join entities only if they are {@code null} for multiple entities.
 - **Contract:**
   - Loads all join entities only if they are {@code null} for multiple entities.
@@ -18766,7 +18766,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `entities` (`Collection<T>`) — the collection of entities to conditionally load all join entities for
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException`
 - **Summary:** Loads all join entities only if they are {@code null} for multiple entities, optionally in parallel.
 - **Contract:**
   - Loads all join entities only if they are {@code null} for multiple entities, optionally in parallel.
@@ -18775,7 +18775,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `inParallel` (`boolean`) — if {@code true} , all join properties are loaded in parallel; if {@code false} , loaded sequentially
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws UncheckedSQLException`
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws UncheckedSQLException`
 - **Summary:** Loads all join entities only if they are {@code null} for multiple entities using a custom executor.
 - **Contract:**
   - Loads all join entities only if they are {@code null} for multiple entities using a custom executor.

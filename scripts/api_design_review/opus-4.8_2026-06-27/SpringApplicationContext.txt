@@ -1,27 +1,26 @@
 API Design Review — SpringApplicationContext.java (public final util)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
-RE-VERIFIED 2026-06-27 against current source — findings STILL-VALID; line numbers unchanged.
+RE-VERIFIED (round 2) 2026-06-27 against current committed source — both prior findings ALREADY-FIXED.
 
 1. OVERALL ASSESSMENT
-A small Spring ApplicationContext bridge with getBean(String)->Object and getBean(Class<T>)->T. The class
-Javadoc still states it is "intended for internal framework use only" (SpringApplicationContext.java:60-61),
-yet it is public and not @Internal. The two getBean overloads are consistent with Spring's own API. Minor,
-low-priority findings only — still present.
+A small Spring ApplicationContext bridge. Since the prior report two fixes landed: the class is now
+annotated @Internal, and a typed name-based lookup getBean(String, Class<T>) was added. Nothing actionable
+remains; CONFIRMED-CLEAN.
 
-2. NAMING ISSUES — [CONFIRMED-CLEAN] None.
+2. NAMING ISSUES — CONFIRMED-CLEAN | None.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- [STILL-VALID] getBean(String) returns Object (untyped) | SpringApplicationContext.java:111 | Low | Current
-  evidence: SpringApplicationContext.java:111 -> "public Object getBean(final String name) {". The
-  name-based lookup forces a cast at every call site. Spring offers getBean(String, Class<T>) for a typed
-  name-based lookup, which is still ABSENT here (only getBean(String) at 111 and getBean(Class<T>) at 132
-  exist). Recommend: add getBean(String name, Class<T> requiredType) returning T (delegating to
-  appContext.getBean(name, requiredType)). Confirming check: confirm callers want typed name-based lookups
-  (class is internal, so impact is small).
+- getBean(String) returns Object (untyped) | ALREADY-FIXED | SpringApplicationContext.java:159 | The typed
+  counterpart now exists: SpringApplicationContext.java:159 -> "public <T> T getBean(final String name, final
+  Class<T> requiredType) {" (delegates to appContext.getBean(name, requiredType), null-safe). Callers
+  wanting a typed name-based lookup no longer need a cast. The untyped getBean(String) (line 114) and
+  getBean(Class<T>) (line 135) remain as the Spring-mirroring overloads.
 
-4. MISPLACED METHODS — [CONFIRMED-CLEAN] None.
-5. MISSING METHODS — [STILL-VALID] getBean(String, Class<T>) absent (see section 3).
+4. MISPLACED METHODS — CONFIRMED-CLEAN | None.
+5. MISSING METHODS — ALREADY-FIXED | getBean(String, Class<T>) is now present (line 159).
 
 6. DEPRECATION / REMOVAL CANDIDATES
-- None. [STILL-VALID note] Consider marking the class @Internal to match its documented "internal use only"
-  status (SpringApplicationContext.java:60-61) — annotation/visibility decision, not an API-shape defect.
+- @Internal visibility note | ALREADY-FIXED | SpringApplicationContext.java:67-68 | The class is now
+  annotated @Internal: line 67 -> "@Internal", line 68 -> "public final class SpringApplicationContext {",
+  matching its documented "intended for internal framework use only" status (Javadoc lines 62-63).
+</content>

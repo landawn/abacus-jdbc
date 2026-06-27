@@ -1,9 +1,22 @@
 API Design Review — AbstractQuery.java
 MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
-RE-VERIFIED 2026-06-27 against current source
+RE-VERIFIED (round 2) 2026-06-27 against current committed source
 
 STATUS LEGEND: STILL-VALID | PARTIALLY-ADDRESSED | ALREADY-FIXED | NO-LONGER-APPLIES
-All line numbers below are CURRENT (re-located by Grep/Read on the live file).
+All line numbers below are CURRENT (re-located by Grep/Read on the live file; file is now 10205 lines).
+
+WHAT CHANGED SINCE ROUND 1 (commit 49ced369 "aaa", 23 insertions / 158 deletions ≈ 181 lines):
+  (a) setBigIntegerAsString(int,BigInteger) was MOVED to sit AFTER setString(int,BigInteger)
+      (now 1188 vs 1161; previously the reverse order). BOTH still exist — duplicate NOT removed.
+  (b) Two new in-source TODO comments `// Rename to setParametersOnQuery?` were added directly
+      above each settParameters(...) (3152, 3200).
+  (c) ~143 lines of ALREADY-COMMENTED-OUT streamAllResultSets(Stream<Stream<T>>) dead code were
+      deleted (the bulk of the 158 deletions). This was dead code; the REAL streamAllResultSets()
+      / (ResultExtractor) / (BiResultExtractor) methods remain (7748/7785/7838) and every @see
+      target (#streamAllResultSets() 5634, (ResultExtractor) 5662, (BiResultExtractor) 5718)
+      still resolves → NO dangling @see/@link introduced.
+  Net effect on findings: 0 findings flipped to ALREADY-FIXED; the duplicate and all
+  deprecation-consistency gaps survive unchanged.
 
 1. OVERALL ASSESSMENT
 AbstractQuery<Stmt,This> is the fluent base for PreparedQuery/NamedQuery/CallableQuery; the bulk of
@@ -19,42 +32,47 @@ stream, insert, batchInsert. The findings concentrate on one genuine duplicate, 
 deprecation-consistency gaps, and a few capitalization-based naming hazards.
 
 RE-VERIFICATION SUMMARY: Of the 13 findings, 11 are STILL-VALID, 1 is PARTIALLY-ADDRESSED
-(settParameters now has a class-doc disambiguation block, but is not renamed), and 1 was already
-correct and remains so (NO-LONGER-APPLIES — no action). The known package renames (JdbcUtils ->
-DataTransferUtil, ColumnGetter apply->get / get->forType, RowExtractor.createBy->forType, etc.) do
-NOT touch AbstractQuery's public surface: this file references none of those renamed symbols (grep
-for createBy/createForArray/ColumnGetter/JdbcUtils/getColumnNameList = 0 hits), and its `.apply(...)`
-call sites are all RowMapper/BiRowMapper/ResultExtractor (SAM still `apply`). No NEW public-API
-inconsistencies were introduced.
+(settParameters now carries both a class-doc disambiguation block AND a new `// Rename to
+setParametersOnQuery?` TODO comment, but is not renamed), and 1 was already correct and remains so
+(NO-LONGER-APPLIES — no action). The known package renames (JdbcUtils -> DataTransferUtil,
+ColumnGetter apply->get / get->forType, RowExtractor.createBy->forType, etc.) do NOT touch
+AbstractQuery's public surface: this file references none of those renamed symbols
+(grep for createBy/createForArray/ColumnGetter/JdbcUtils/getColumnNameList = 0 hits), and its
+`.apply(...)` call sites are all RowMapper/BiRowMapper/ResultExtractor (SAM still `apply`).
+No NEW public-API inconsistencies were introduced by the recent deletions.
 
 2. NAMING ISSUES
 - [STILL-VALID] foreach(Consumer<DisposableObjArray>) / foreach(Class, Consumer<DisposableObjArray>)
-  vs the forEach(RowConsumer ...) family | AbstractQuery.java:8941, 8995 (vs forEach 8696/8738/8790/8848) |
+  vs the forEach(RowConsumer ...) family | AbstractQuery.java:8806, 8860 (vs forEach 8561/8603/8655/8713) |
   Medium | The two families differ ONLY by letter case (foreach vs forEach) and take different
   callback contracts; a one-character typo silently selects a different method. The Javadoc documents
-  the hazard (8908-8911) and an in-source "NAMING-REVIEW SUGGESTION (2026-06-27)" comment at
-  8937-8939 / 8991-8993 proposes rename `forEachRow`, but no rename was made.
-  Current evidence: `public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR` (8941);
-  `public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR` (8995).
+  the hazard (8773-8776 / 8819-8822) and an in-source "NAMING-REVIEW SUGGESTION (2026-06-27)" comment
+  at 8802-8804 / 8856-8858 proposes rename `forEachRow`, but no rename was made.
+  Current evidence: `public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR` (8806);
+  `public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR` (8860);
+  comment `// NAMING-REVIEW SUGGESTION (2026-06-27): \`foreach\` differs from the sibling \`forEach(...)\` only by` (8802).
   Recommend: add an unambiguous name (e.g. forEachRow) and keep foreach only as a deprecated alias.
-- [PARTIALLY-ADDRESSED] settParameters(...) (double-t) vs setParameters(...) | AbstractQuery.java:3152, 3199 |
+- [PARTIALLY-ADDRESSED] settParameters(...) (double-t) vs setParameters(...) | AbstractQuery.java:3153, 3201 |
   Low | Same capitalization/typo hazard; the double-t disambiguates ParametersSetter<? super This>
-  from ParametersSetter<? super Stmt>. SINCE THE STALE REVIEW, a class-level doc block was added
-  (lines 115-125) explicitly explaining the distinction ("the extra {@code t} is not a typo, and
-  because both compile, the compiler will not flag a wrong choice"), which addresses the
-  documentation gap; the naming hazard itself remains (no rename).
-  Current evidence: `public This settParameters(final Jdbc.ParametersSetter<? super This> parametersSetter)...` (3152);
-  class-doc `<li>{@code settParameters(...)} instead hands you <i>this</i> query ({@code This})...` (122).
-  Recommend (optional): a clearer name (configParameters / setParametersForQuery). Confirming check
-  noted in stale report stands: a single setParameters name would cause lambda-inference ambiguity.
+  from ParametersSetter<? super Stmt>. A class-level doc block (115-125) explicitly explains the
+  distinction ("the extra {@code t} is not a typo, and because both compile, the compiler will not
+  flag a wrong choice"), and a per-method note exists (3132). The recent commit ADDED an in-source
+  TODO `// Rename to setParametersOnQuery?` above each overload (3152, 3200) — so the maintainers
+  are now actively considering a rename, yet none has been made; the naming hazard itself remains.
+  Note: the new TODO mildly contradicts the doc's "the extra t is not a typo / intentional" framing.
+  Current evidence: `public This settParameters(final Jdbc.ParametersSetter<? super This> parametersSetter) throws IllegalArgumentException, SQLException {` (3153);
+  `// Rename to setParametersOnQuery?` (3152); class-doc `<li>{@code settParameters(...)} instead hands you <i>this</i> query ({@code This})...` (122).
+  Recommend (optional): a clearer name (setParametersOnQuery / configParameters). The confirming note
+  from round 1 stands: a single setParameters name would cause lambda-inference ambiguity.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
 - [STILL-VALID] query2ResultSets / query3ResultSets accept only BiResultExtractor |
-  AbstractQuery.java:5505, 5571 | Low | The single-result query(...) and queryAllResultSets(...) each
-  offer BOTH ResultExtractor and BiResultExtractor variants (queryAllResultSets at 5662 ResultExtractor /
-  5718 BiResultExtractor), but the numbered multi-result-set methods offer only BiResultExtractor.
+  AbstractQuery.java:5507, 5573 | Low | The single-result query(...) and queryAllResultSets(...) each
+  offer BOTH ResultExtractor and BiResultExtractor variants (queryAllResultSets ResultExtractor 5664 /
+  BiResultExtractor 5720), but the numbered multi-result-set methods offer only BiResultExtractor.
   (CallableQuery's query2/query3ResultSetsAndGetOutParameters share the limitation — cross-class.)
-  Current evidence: `public <R1, R2> Tuple2<R1, R2> query2ResultSets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1, final Jdbc.BiResultExtractor<? extends R2> resultExtractor2)...` (5505-5506).
+  Current evidence: `public <R1, R2> Tuple2<R1, R2> query2ResultSets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,` (5507);
+  `public <R1, R2, R3> Tuple3<R1, R2, R3> query3ResultSets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,` (5573).
   Recommend: add the ResultExtractor overloads for parity, or document the intentional restriction.
 - [STILL-VALID — intentional omission documented in-source] setParameters(String,String) exists but
   no setParameters(Object,Object) | AbstractQuery.java:2270 (fixed-arity String overloads start at 2
@@ -73,71 +91,89 @@ inconsistencies were introduced.
   (named params, out-params) are correctly absent.
 
 5. MISSING METHODS
-- [STILL-VALID] setXxxForIndices family is partial | AbstractQuery.java:3239-3586 | Low | Covers
-  Null(3239)/Boolean(3264)/Int(3290)/Long(3354)/Double(3379)/String(3404)/Date(3430,3456)/
-  Time(3482,3508)/Timestamp(3534,3560)/Object(3586) but omits Byte/Short/Float/BigDecimal (and Bytes).
-  The family is @Beta. Current evidence: `public This setObjectForIndices(final Object parameterValue, final int... parameterIndices)...` (3586); no setByteForIndices/setShortForIndices/setFloatForIndices/setBigDecimalForIndices exist.
+- [STILL-VALID] setXxxForIndices family is partial | AbstractQuery.java:3241-3588 | Low | Covers
+  Null(3241)/Boolean(3266)/Int(3292)/Long(3356)/Double(3381)/String(3406)/Date(3432,3458)/
+  Time(3484,3510)/Timestamp(3536,3562)/Object(3588) but omits Byte/Short/Float/BigDecimal (and Bytes).
+  The family is @Beta. (A setLongForIndices(long) and setIntegerForIndices(Integer) are commented out
+  at 3303-3331 for ambiguity reasons — orthogonal to the missing types.)
+  Current evidence: `public This setObjectForIndices(final Object parameterValue, final int... parameterIndices) throws SQLException {` (3588);
+  grep for setByteForIndices/setShortForIndices/setFloatForIndices/setBigDecimalForIndices = 0 hits.
   Recommend: complete the set or document the intentional subset.
 - [STILL-VALID] No primitive-array setParameters beyond int[]/long[]/String[] |
   AbstractQuery.java:2683, 2701, 2719 | Low | setParameters(double[]/boolean[]/short[]/...) are absent
   and won't bind via the generic setParameters(T[]) (primitive arrays don't match T[]).
-  Current evidence: `public This setParameters(final int[] parameters)...` (2683); `...(final long[] parameters)...` (2701); `...(final String[] parameters)...` (2719); next array-ish overload is `setParameters(final Collection<?> parameters)` (2758).
+  Current evidence: `public This setParameters(final int[] parameters) throws IllegalArgumentException, SQLException {` (2683);
+  `public This setParameters(final long[] parameters) ...` (2701); `public This setParameters(final String[] parameters) ...` (2719);
+  next array-ish overload is `public This setParameters(final Collection<?> parameters) ...` (2758).
   Recommend: add the remaining primitive-array overloads or document.
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
 - [STILL-VALID] setBigIntegerAsString(int, BigInteger) duplicates setString(int, BigInteger) |
-  AbstractQuery.java:1082 vs 1182 | High | VERIFIED byte-for-byte equivalent — setBigIntegerAsString's
-  body is literally `return setString(parameterIndex, value);` (1083); each @see's the other; both @Beta
-  (1081 / 1181). setString(int, BigInteger) binds the BigInteger as a base-10 VARCHAR (1186
+  AbstractQuery.java:1188 vs 1161 | High | Recent commit MOVED setBigIntegerAsString below setString
+  but did NOT remove either. Still byte-for-byte equivalent — setBigIntegerAsString's body is literally
+  `return setString(parameterIndex, value);` (1189); each @see's the other; both @Beta (1160 / 1187).
+  setString(int, BigInteger) binds the BigInteger as a base-10 VARCHAR (1165
   `stmt.setString(parameterIndex, value.toString(10));`).
-  Current evidence: `public This setBigIntegerAsString(final int parameterIndex, final BigInteger value) throws SQLException { return setString(parameterIndex, value); }` (1082-1084);
-  `@Beta public This setString(final int parameterIndex, final BigInteger value)...` (1181-1182).
+  Current evidence: `public This setBigIntegerAsString(final int parameterIndex, final BigInteger value) throws SQLException {` (1188), body `return setString(parameterIndex, value);` (1189);
+  `public This setString(final int parameterIndex, final BigInteger value) throws SQLException {` (1161).
   Recommend: keep the explicitly-named setBigIntegerAsString and remove the surprising
   setString(int, BigInteger) overload (a setString taking BigInteger is itself misleading).
 - [STILL-VALID] list(..., int maxResult) deprecation is inconsistent | deprecated:
-  AbstractQuery.java:6627 list(Class,int) [@Deprecated 6626], 6692 list(RowMapper,int) [6691],
-  6847 list(BiRowMapper,int) [6846]; NOT deprecated: 6761 list(RowFilter,RowMapper,int),
-  6919 list(BiRowFilter,BiRowMapper,int) | Medium | VERIFIED. The 2-arg maxResult forms are
-  @Deprecated ("limit on the DB side") yet the 3-arg maxResult forms they delegate to are not — the
-  discouraged concept stays fully reachable without warning.
-  Current evidence: `public <T> List<T> list(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper, int maxResult)` (6761) has NO @Deprecated on the preceding lines.
+  AbstractQuery.java:6629 list(Class,int) [@Deprecated 6628], 6694 list(RowMapper,int), 6849
+  list(BiRowMapper,int); NOT deprecated: 6763 list(RowFilter,RowMapper,int),
+  6921 list(BiRowFilter,BiRowMapper,int) | Medium | VERIFIED. The 2-arg maxResult forms are
+  @Deprecated ("result size should be limited on the database server side ... Use SQL's LIMIT/TOP/ROWNUM")
+  yet the 3-arg maxResult forms they delegate to are not — the discouraged concept stays fully
+  reachable without warning.
+  Current evidence: `@Deprecated` (6628) above `public <T> List<T> list(final Class<? extends T> targetType, final int maxResult) throws SQLException {` (6629);
+  `public <T> List<T> list(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper, int maxResult)` (6763) has NO @Deprecated on preceding lines.
   Recommend: deprecate the (Filter,Mapper,int) variants too, or un-deprecate the 2-arg ones.
 - [STILL-VALID] Filter+mapper terminal-op deprecation is inconsistent | deprecated:
-  AbstractQuery.java:6244 findFirst(RowFilter,RowMapper) [@Deprecated 6243], 6304
-  findFirst(BiRowFilter,BiRowMapper) [6303], 6429 findFirstOrNull(RowFilter,...) [6428], 6510
-  findFirstOrNull(BiRowFilter,...) [6509] (all "use stream(...).first()"); NOT deprecated: 6761/6919
-  list(filter,mapper,...), 8738/8848 forEach(filter,...), 8335/8384 count(filter) | Medium | VERIFIED.
+  AbstractQuery.java:6246 findFirst(RowFilter,RowMapper) [@Deprecated 6245], 6306
+  findFirst(BiRowFilter,BiRowMapper), 6431 findFirstOrNull(RowFilter,...), 6512
+  findFirstOrNull(BiRowFilter,...) (all "use stream(...).first()"); NOT deprecated: 6763/6921
+  list(filter,mapper,...), 8603/8713 forEach(filter,...), 8200/8249 count(filter) | Medium | VERIFIED.
   If in-Java row filtering is discouraged enough to deprecate the findFirst filter overloads, the
   analogous list/forEach/count filter overloads are inconsistent in remaining blessed.
-  Current evidence: `@deprecated Use {@code stream(RowFilter, RowMapper).first()} instead` (6241) above the deprecated findFirst; `public void forEach(final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)` (8738) is NOT deprecated.
+  Current evidence: `@deprecated Use {@code stream(RowFilter, RowMapper).first()} instead` (6243) + `@Deprecated` (6245) above `public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {` (6246);
+  `public void forEach(final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)` (8603) is NOT deprecated.
   Recommend: pick one policy and apply it across the filter overloads.
 - [STILL-VALID] count() deprecated while count(RowFilter)/count(BiRowFilter) are not |
-  AbstractQuery.java:8293 (deprecated, [@Deprecated 8292]), 8335 (count(RowFilter), @Beta), 8384
+  AbstractQuery.java:8158 (deprecated, [@Deprecated 8157]), 8200 (count(RowFilter), @Beta 8199), 8249
   (count(BiRowFilter)) | Low | VERIFIED. count() is deprecated as inefficient (full client-side scan);
   the filtered forms do the same full scan but are kept (justified by predicate logic not expressible
-  in SQL). The filtered-form Javadoc now acknowledges the cost ("it still requires fetching all rows
-  and can be inefficient for large result sets" at 8313-8314), partially addressing the prior note.
-  Current evidence: `@Deprecated public int count() throws IllegalStateException, SQLException {` (8292-8293);
-  `@Beta public int count(final Jdbc.RowFilter rowFilter)...` (8334-8335).
-  Recommend: keep the cost note (already present on RowFilter form; consider mirroring on BiRowFilter), or deprecate for consistency.
-- [STILL-VALID] @Beta inconsistency within queryForXxx | AbstractQuery.java:4806 queryForBigInteger
-  (@Beta 4805), 4840 queryForBigDecimal (@Beta 4839) vs non-Beta queryForString/Date/Time/Timestamp/
+  in SQL). The count(RowFilter) Javadoc acknowledges the cost ("it still requires fetching all rows
+  and can be inefficient for large result sets" at 8178-8179), partially addressing the prior note;
+  count(BiRowFilter) (8224-) lacks the same explicit cost sentence.
+  Current evidence: `@Deprecated` (8157) above `public int count() throws IllegalStateException, SQLException {` (8158);
+  `@Beta` (8199) above `public int count(final Jdbc.RowFilter rowFilter) throws IllegalStateException, IllegalArgumentException, SQLException {` (8200).
+  Recommend: keep the cost note (already on RowFilter form; consider mirroring on BiRowFilter), or deprecate for consistency.
+- [STILL-VALID] @Beta inconsistency within queryForXxx | AbstractQuery.java:4808 queryForBigInteger
+  (@Beta 4807), 4842 queryForBigDecimal (@Beta 4841) vs non-Beta queryForString/Date/Time/Timestamp/
   Bytes | Low | These two are @Beta while their sibling Nullable-returning query-for methods are stable.
-  Current evidence: `@Beta public Nullable<BigInteger> queryForBigInteger()...` (4805-4806);
-  `@Beta public Nullable<BigDecimal> queryForBigDecimal()...` (4839-4840).
+  Current evidence: `@Beta` (4807) above `public Nullable<BigInteger> queryForBigInteger() throws IllegalStateException, SQLException {` (4808);
+  `@Beta` (4841) above `public Nullable<BigDecimal> queryForBigDecimal() throws IllegalStateException, SQLException {` (4842).
   Recommend: promote out of @Beta or document why they remain provisional.
 - [STILL-VALID] setLong(int, BigInteger) | AbstractQuery.java:802 | Low | Surprising signature
   (setLong with a BigInteger; throws ArithmeticException on overflow via longValueExact, and closes the
   query before propagating). Mirrored across Named/Callable.
-  Current evidence: `public This setLong(final int parameterIndex, final BigInteger value) throws SQLException {` (802), body `stmt.setLong(parameterIndex, value.longValueExact());` (809).
+  Current evidence: `public This setLong(final int parameterIndex, final BigInteger value) throws SQLException {` (802),
+  body `stmt.setLong(parameterIndex, value.longValueExact());` (809) with `close();` in the finally on failure (813).
   Recommend: keep (cross-family consistency + documentation) or deprecate in all three families together
   toward setBigDecimal/setBigIntegerAsString.
 - [NO-LONGER-APPLIES — already correct, no action] setInt(int, char)/setInt(int, Character) |
   AbstractQuery.java:645/670 | Already @Deprecated+@Beta with the correct replacement
   setString(int, char/Character). Remains correct in the current source.
-  Current evidence: `@Deprecated @Beta public This setInt(final int parameterIndex, final char value)...` (643-645);
-  `@Deprecated @Beta public This setInt(final int parameterIndex, final Character value)...` (668-670).
+  Current evidence: `@Deprecated` (643) + `@Beta` (644) above `public This setInt(final int parameterIndex, final char value) throws SQLException {` (645);
+  `@Deprecated` (668) + `@Beta` (669) above `public This setInt(final int parameterIndex, final Character value) throws SQLException {` (670).
 
-NEW ISSUES (introduced/exposed by recent changes): NONE among public API. The added class-doc
-(115-141) and the foreach NAMING-REVIEW comments are documentation-only and consistent with the
-existing findings. No renamed package symbols appear in this file's public signatures.
+NEW ISSUES (introduced/exposed by recent changes):
+- [NONE — public surface]. The 158-line deletion removed only ALREADY-COMMENTED-OUT
+  streamAllResultSets(Stream<Stream<T>>) dead code; no public method was removed and no @see/@link was
+  orphaned (verified: the three live #streamAllResultSets(...) targets at 5634/5662/5718 all resolve to
+  existing methods 7748/7785/7838).
+- [MINOR — internal/doc consistency, not public API] The new TODO comments `// Rename to
+  setParametersOnQuery?` (3152, 3200) sit directly above the same overloads whose Javadoc (3132) and
+  class-doc (115-125) assert the double-"t" name "is intentional" / "is not a typo". This is a benign
+  internal contradiction (an open design question recorded inline) — worth resolving the rename
+  question one way and then aligning the doc, but it changes no signature today.

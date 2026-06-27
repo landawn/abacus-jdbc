@@ -1,68 +1,74 @@
 API Design Review — SqlTransaction.java
 MODEL=opus-4.8  DATE=2026-06-27
-RE-VERIFIED 2026-06-27 against current source (all line numbers refreshed; original report's lines were stale)
+RE-VERIFIED (round 2) 2026-06-27 against current committed source (every finding re-checked via Grep+Read; all
+line numbers re-confirmed against current source; JdbcUtil call-site citations refreshed — they had drifted)
 
 1. OVERALL ASSESSMENT
-SqlTransaction is a final class implementing Transaction + AutoCloseable (line 80) and is handed out as
-the concrete type by JdbcUtil.beginTransaction(...) (confirmed: callers receive SqlTransaction, e.g.
-JdbcUtil.java:5217 `final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);`), so its extra public
-methods beyond the interface (connection(), runOutsideTransaction, callOutsideTransaction) are reachable by
-normal callers without casting. The accessor family (id() 205, connection() 233, isolationLevel() 259,
-status() 281, isActive() 305) is healthy, accurate, and consistent with the interface and with the class's
-fluent no-"get" convention. The lifecycle set (commit() 349, rollback() 474, rollbackIfNotCommitted() 552,
-close() 1085) is correctly implemented with sound double-commit / close-after-commit / nested-scope
-semantics, delegating to package-private commit(Runnable)/rollback(Runnable) workhorses. The only
-actionable issues are deprecation hygiene.
+SqlTransaction is a final class implementing Transaction + AutoCloseable (`public final class SqlTransaction
+implements Transaction, AutoCloseable {`, line 80) and is handed out as the concrete type by
+JdbcUtil.beginTransaction(...) (return type re-confirmed: `public static SqlTransaction beginTransaction(final
+javax.sql.DataSource ds)` at JdbcUtil.java:10434; real callers assign to a SqlTransaction var, e.g.
+JdbcUtil.java:5237 `final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);`), so its extra public methods
+beyond the interface (connection(), runOutsideTransaction, callOutsideTransaction) are reachable by normal
+callers without casting. The accessor family (id() 205, connection() 233, isolationLevel() 259, status() 281,
+isActive() 305) is healthy, accurate, and consistent with the interface and with the class's fluent no-"get"
+convention. The lifecycle set (commit() 349, rollback() 474, rollbackIfNotCommitted() 552, close() 1085) is
+correctly implemented with sound double-commit / close-after-commit / nested-scope semantics, delegating to
+package-private commit(Runnable) 372 / rollback(Runnable) 493 workhorses. The only actionable issues are
+deprecation hygiene. NO CODE CHANGES since the prior re-verification — all carried findings reproduce verbatim.
 
 2. NAMING ISSUES
 - STILL-VALID | runNotInMe(Throwables.Runnable) / callNotInMe(Throwables.Callable) | SqlTransaction.java:1015,
-  1064 | High | The "NotInMe" names are non-descriptive and inconsistent with the rest of the surface;
-  already superseded by the clearer runOutsideTransaction/callOutsideTransaction (885/951). Treated as one
-  unit — see section 6 (remove). Current: `public <E extends Throwable> void runNotInMe(final
-  Throwables.Runnable<E> cmd) throws E {` (1015); `public <R, E extends Throwable> R callNotInMe(final
-  Throwables.Callable<? extends R, E> cmd) throws E {` (1064). connection() (233) intentionally follows the
+  1064 | High | The "NotInMe" names are non-descriptive and inconsistent with the rest of the surface; already
+  superseded by the clearer runOutsideTransaction/callOutsideTransaction (885/951). Treated as one unit — see
+  section 6 (remove). Current: `public <E extends Throwable> void runNotInMe(final Throwables.Runnable<E> cmd)
+  throws E {` (1015); `public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<? extends R, E>
+  cmd) throws E {` (1064). connection() (233 — `public Connection connection() {`) intentionally follows the
   no-"get" accessor style (matching id/status/isolationLevel) and is consistent, not a defect.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- None actionable. The void-vs-R split across runOutsideTransaction/callOutsideTransaction (and the
-  deprecated runNotInMe/callNotInMe) is the correct Runnable-vs-Callable mirror. The post-action overloads
-  carrying a Runnable (commit(Runnable) 372, rollback(Runnable) 493) are package-private (out of the public
-  surface).
+- None actionable. The void-vs-R split across runOutsideTransaction/callOutsideTransaction (and the deprecated
+  runNotInMe/callNotInMe) is the correct Runnable-vs-Callable mirror. The post-action overloads carrying a
+  Runnable (commit(Runnable) 372 `void commit(final Runnable actionAfterCommit)`, rollback(Runnable) 493 `void
+  rollback(final Runnable actionAfterRollback)`) are package-private (out of the public surface).
 
 4. MISPLACED METHODS
 - None. connection() (233), runOutsideTransaction (885) and callOutsideTransaction (951) operate on this
   transaction's owned connection / thread registration and belong here.
 
 5. MISSING METHODS (with target class)
-- NO-LONGER-APPLIES (as a defect) | connection(), runOutsideTransaction(...), callOutsideTransaction(...)
-  exist only on the concrete SqlTransaction, not on the Transaction interface | SqlTransaction.java:233, 885,
-  951 | Low | Acceptable because JdbcUtil.beginTransaction returns SqlTransaction (not Transaction), so
-  callers get them. Re-verified: every JdbcUtil.beginTransaction call site assigns to a SqlTransaction
-  variable (e.g. JdbcUtil.java:5217, 5457, 10337, 10394, 10410) — no public API returns the bare Transaction
-  type. Recommend: keep as-is unless the library starts returning the Transaction interface type.
+- NO-LONGER-APPLIES (as a defect) | connection(), runOutsideTransaction(...), callOutsideTransaction(...) exist
+  only on the concrete SqlTransaction, not on the Transaction interface | SqlTransaction.java:233, 885, 951 |
+  Low | Acceptable because JdbcUtil.beginTransaction returns SqlTransaction (not Transaction), so callers get
+  them. Re-verified (round 2): the public return type is SqlTransaction (JdbcUtil.java:10434) and real call
+  sites assign to a SqlTransaction variable (e.g. JdbcUtil.java:5237, 5477) — no public API returns the bare
+  Transaction type. Recommend: keep as-is unless the library starts returning the Transaction interface type.
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
 - STILL-VALID | runNotInMe / callNotInMe | SqlTransaction.java:1014-1016, 1063-1065 | High | VERIFIED both
-  still @Deprecated, pure one-line delegations. Current: `@Deprecated` (1014) ... `runOutsideTransaction(cmd);`
-  (1016); `@Deprecated` (1063) ... `return callOutsideTransaction(cmd);` (1065). No production callers (only
-  SqlTransactionTest:283/293 exercise them). Recommend: remove (replacement = *OutsideTransaction). BC relaxed.
-- STILL-VALID | rollback() | SqlTransaction.java:472-475 | Medium | VERIFIED still @Deprecated @Override in
+  still @Deprecated, pure one-line delegations. Current: `@Deprecated` (1014) / `runOutsideTransaction(cmd);`
+  (1016); `@Deprecated` (1063) / `return callOutsideTransaction(cmd);` (1065); javadoc `@deprecated replaced by
+  {@link #runOutsideTransaction(Throwables.Runnable)}` (1012) and `@deprecated replaced by {@link
+  #callOutsideTransaction(Throwables.Callable)}` (1061). No production callers (only SqlTransactionTest:283/293
+  exercise them). Recommend: remove (replacement = *OutsideTransaction). BC relaxed.
+- STILL-VALID | rollback() | SqlTransaction.java:472-474 | Medium | VERIFIED still @Deprecated @Override in
   favor of rollbackIfNotCommitted() (552). Current: `@Deprecated` (472), `@Override` (473), `public void
   rollback() throws UncheckedSQLException {` (474); javadoc tag `@deprecated replaced by {@link
   #rollbackIfNotCommitted()}` (470). However the deprecation is STILL NOT reflected on the Transaction
-  interface — Transaction.rollback() (Transaction.java:165) is not @Deprecated (only prose at Transaction.java
-  158-159 mentions it, and the Action-enum Javadoc example at Transaction.java:270 still calls
-  transaction.rollback()). Recommend: for cross-type consistency, also @Deprecated Transaction.rollback() and
-  update its example to rollbackIfNotCommitted(). WON'T FIX (user decision 2026-06-27): the interface-level
-  deprecation (M12) will NOT be applied; SqlTransaction.rollback() stays @Deprecated as-is. (See SUMMARY and
-  the Transaction report.)
+  interface — Transaction.rollback() (Transaction.java:165 `void rollback() throws UncheckedSQLException;`) is
+  not @Deprecated (only prose at Transaction.java:158-159 mentions it, and the Action-enum Javadoc example at
+  Transaction.java:270 still calls transaction.rollback()). Recommend: for cross-type consistency, also
+  @Deprecated Transaction.rollback() and update its example to rollbackIfNotCommitted(). WON'T FIX (user
+  decision 2026-06-27 — M12, considered then REVERTED; not implemented): the interface-level deprecation will
+  NOT be applied; SqlTransaction.rollback() stays @Deprecated as-is. (See SUMMARY and the Transaction report.)
 - STILL-VALID (no action) | CreatedBy.SQL_EXECUTOR | SqlTransaction.java:1165-1166 | Low | Already @Deprecated
-  ("no longer used"), and the enclosing CreatedBy enum is package-private (declared `enum CreatedBy {` at
-  1155 — out of the public surface). Current: `@Deprecated` (1165), `SQL_EXECUTOR` (1166). Keep for ordinal
-  stability; no public-API action.
+  ("no longer used"), and the enclosing CreatedBy enum is package-private (declared `enum CreatedBy {` at 1155
+  — out of the public surface). Current: javadoc `@deprecated no longer used` (1163), `@Deprecated` (1165),
+  `SQL_EXECUTOR` (1166). Keep for ordinal stability; no public-API action.
 
 NEW ISSUES (introduced/exposed by recent changes)
-- None. The Javadoc-only fix pass left the public surface unchanged; all three carried findings reproduce
-  verbatim in current source. (Note: the deprecated runNotInMe/callNotInMe Javadoc usage examples at
-  992/1004/1036/1040/1051 still demonstrate the deprecated methods rather than the *OutsideTransaction
-  replacements — cosmetic, folded into the section-6 removal recommendation, not a separate finding.)
+- None. Source unchanged since the prior re-verification; the only edit to this report is refreshing stale
+  JdbcUtil cross-reference line numbers (5217→5237, 5457→5477, 10337/10394/10410→10307/10364/10405; the
+  beginTransaction declaration is now line 10434). The deprecated runNotInMe/callNotInMe Javadoc usage examples
+  at 992/1004/1036/1040/1051 still demonstrate the deprecated methods rather than the *OutsideTransaction
+  replacements — cosmetic, folded into the section-6 removal recommendation, not a separate finding.

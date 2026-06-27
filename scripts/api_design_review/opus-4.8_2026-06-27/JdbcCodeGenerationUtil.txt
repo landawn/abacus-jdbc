@@ -1,116 +1,166 @@
 API Design Review — JdbcCodeGenerationUtil.java
-MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
-RE-VERIFIED 2026-06-27 against current source (post Javadoc-fix pass; all line numbers re-located via Grep/Read)
+MODEL=opus-4.8  DATE=2026-06-27
+RE-VERIFIED (round 2) 2026-06-27 against current committed source (all line numbers re-located via Grep/Read)
 
 1. OVERALL ASSESSMENT
-A healthy, well-organized static codegen utility. Two big families dominate: generateEntityClass (the
-DataSource/Connection x table-name/custom-query x with/without EntityCodeConfig matrix) and the
-generate{Select,Insert,NamedInsert,Update,NamedUpdate}Sql builders. Both follow a consistent
+A healthy, well-organized static codegen utility. Two big families dominate: the entity-class generators
+and the generate{Select,Insert,NamedInsert,Update,NamedUpdate}Sql builders. Both follow a consistent
 (DataSource...) -> (Connection...) delegation pattern, return String, throw UncheckedSQLException, and
-route through the same checkTableName/checkColumnName/checkColumnLabels validators. The
-EntityCodeConfig/JsonXmlConfig Lombok builder pair is well documented. Actionable issues: a real
-overload-ambiguity hazard in generateEntityClass (the authors still insert (EntityCodeConfig) null
-casts to work around it), a few dead/orphan public members, and convertInsertSqlToUpdateSql breaking the
-family's DataSource+Connection convention.
+route through the same checkTableName/checkColumnName/checkColumnLabels validators.
 
-RE-VERIFY SUMMARY: No structural changes since the original report — no generateEntityClassByQuery split
-was added, the (EntityCodeConfig) null casts remain, and S/SF/MIN_FUNC/MAX_FUNC/extendFieldNameTableClassName
-all still exist. Recent changes were Javadoc-only. Net status: 9/9 findings STILL-VALID (one with a new
-nuance: MIN_FUNC/MAX_FUNC now have dedicated unit tests). Line numbers refreshed below.
+WHAT CHANGED SINCE LAST REVIEW (the ~116-line committed change): the entity-generator family was SPLIT.
+The custom-query path was RENAMED out of generateEntityClass into a new, distinctly named
+generateEntityClassByQuery(ds/conn, entityName, query[, config]) family (4 overloads at 330/357/381/409).
+The table path (generateEntityClass) now ALWAYS means tableName; the query path
+(generateEntityClassByQuery) now ALWAYS means entityName. This is exactly the "split" the previous round
+recorded as WON'T-FIX — the user actually performed it. Net effect: the section-2 naming hazard and the
+section-3 (EntityCodeConfig vs String) overload collision are BOTH RESOLVED. Separately,
+EntityCodeConfig.extendFieldNameTableClassName was removed (commented out), and JsonXmlConfig is now final.
 
-2. NAMING ISSUES
-- STILL-VALID — WON'T FIX (user decision 2026-06-27: no generateEntityClassByQuery split) |
-  generateEntityClass(DataSource, String, String) / (Connection, String, String) |
-  JdbcCodeGenerationUtil.java:283, 381 | High | The 2nd param is `tableName` in the table-based
-  overloads (232/259/337/362) but `entityName` in these query-based overloads, and the 3rd is a raw SQL
-  query — the same positional slot carries two meanings across one overload family. No
-  generateEntityClassByQuery split was added.
-  Evidence (283): `public static String generateEntityClass(final DataSource ds, final String entityName, final String query) {`
-  Evidence (381): `public static String generateEntityClass(final Connection conn, final String entityName, final String query) {`
-  Recommend: add distinctly named generateEntityClassByQuery(ds/conn, entityName, query[, config]) for the
-  query path (this also fixes section 3).
+RE-VERIFY SUMMARY (8 original findings):
+  ALREADY-FIXED: 2  — (1) generateEntityClass overload ambiguity [naming + return/param collision];
+                       (2) extendFieldNameTableClassName unused field.
+  PARTIALLY-FIXED: 1 — JsonXmlConfig (now final; still hand-rolls no-arg ctor).
+  STILL-VALID: 5     — generateSelectSql excluded-only 3-arg; MIN_FUNC/MAX_FUNC; convertInsertSqlToUpdateSql
+                       Connection overload; S/SF dead constants; idField vs idFields.
 
-3. RETURN-TYPE AND PARAMETER ISSUES
-- STILL-VALID — WON'T FIX (user decision 2026-06-27: overload split declined; (EntityCodeConfig) null casts
-  and the dispatch ambiguity are accepted) | generateEntityClass(DataSource, String, EntityCodeConfig) vs
-  (DataSource, String, String) [and the Connection pair] | JdbcCodeGenerationUtil.java:259 vs 283; 362 vs 381 | High | These 3-arg
-  overloads still differ only in the last param type (EntityCodeConfig vs String).
-  generateEntityClass(ds, "users", null) remains ambiguous and does not compile without a cast — the
-  internal delegators still write the (EntityCodeConfig) null cast. CONFIRMED both casts present:
+================================================================================
+COMPACT LEDGER  <finding> | STATUS | file:line | evidence
+================================================================================
+
+generateEntityClass overload ambiguity (tableName-vs-entityName dual meaning; naming) | ALREADY-FIXED |
+  JdbcCodeGenerationUtil.java:330,357,381,409 | Query path renamed to a separate method; every
+  generateEntityClass overload now uses `tableName`, every generateEntityClassByQuery overload uses
+  `entityName`. Evidence (330): `public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query) {`
+
+generateEntityClass(DataSource,String,EntityCodeConfig) vs (DataSource,String,String) collision +
+  (EntityCodeConfig)null casts | ALREADY-FIXED (casts now vestigial) |
+  JdbcCodeGenerationUtil.java:259 / 233,286 | The colliding (DataSource,String,String) and
+  (Connection,String,String) 3-arg overloads no longer exist (renamed to generateEntityClassByQuery), so
+  the only 3-arg generateEntityClass per receiver is the EntityCodeConfig form — no ambiguity remains.
+  Evidence (259): `public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {`
+  NOTE: the `(EntityCodeConfig) null` casts SURVIVE at 233 & 286 but are now unnecessary — see NEW ISSUE N1.
   Evidence (233): `return generateEntityClass(ds, tableName, (EntityCodeConfig) null);`
-  Evidence (338): `return generateEntityClass(conn, tableName, (EntityCodeConfig) null);`
-  Recommend: split the query path into a separately named method (section 2), removing the collision.
-- STILL-VALID | generateSelectSql family lacks the excluded-only 3-arg form |
-  JdbcCodeGenerationUtil.java:942, 970, 1006, 1037 | Medium | The family still offers only a 2-arg form
-  (942 DS / 970 Conn) and a 4-arg (tableName, excludedColumnNames, whereClause) form (1006 DS / 1037 Conn),
-  but no 3-arg (tableName, excludedColumnNames) — whereas generateInsertSql (1143 DS / 1175 Conn) and
-  generateNamedInsertSql (1280 DS / 1312 Conn) both provide the excluded-only 3-arg overload. To exclude
-  columns from a SELECT a caller must still pass a nullable whereClause.
+  Evidence (286): `return generateEntityClass(conn, tableName, (EntityCodeConfig) null);`
+
+generateSelectSql lacks excluded-only 3-arg form | STILL-VALID |
+  JdbcCodeGenerationUtil.java:942,970,1006,1037 | Family offers only 2-arg (942 DS / 970 Conn) and 4-arg
+  (tableName, excludedColumnNames, whereClause) (1006 DS / 1037 Conn); no 3-arg
+  (tableName, excludedColumnNames) — whereas generateInsertSql (1143 DS / 1175 Conn) and
+  generateNamedInsertSql (1280 DS / 1312 Conn) both provide the excluded-only 3-arg overload.
   Evidence (1006): `public static String generateSelectSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final String whereClause)`
   Evidence (1143): `public static String generateInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames)`
-  Recommend: add generateSelectSql(ds/conn, tableName, Collection<String> excludedColumnNames).
-- STILL-VALID | JsonXmlConfig nested class | JdbcCodeGenerationUtil.java:2403 | Low | Still declared
-  `public static class` (non-final) while its parent EntityCodeConfig is `public static final class` (2207),
-  and it still hand-rolls a no-arg ctor (2443) instead of @NoArgsConstructor (it carries @Builder/@Data/
-  @AllArgsConstructor/@Accessors but NOT @NoArgsConstructor at 2399-2402).
-  Evidence (2207): `public static final class EntityCodeConfig {`
-  Evidence (2403): `public static class JsonXmlConfig {`
-  Evidence (2443): `public JsonXmlConfig() {`
-  Recommend: make it final and use @NoArgsConstructor for consistency. (No subclass of JsonXmlConfig exists.)
 
-4. MISPLACED METHODS (with target class)
-- STILL-VALID (new nuance) | MIN_FUNC / MAX_FUNC constants | JdbcCodeGenerationUtil.java:141, 161 |
-  Low-Medium | These public TriFunction constants produce "min(prop)"/"max(prop)" but are still not
-  consumed by any method in THIS class (the only production references are their own declarations + Javadoc
-  examples). NEW since original report: they now have dedicated unit-test coverage
-  (JdbcCodeGenerationUtilTest.java:71-78 call MIN_FUNC.apply/MAX_FUNC.apply) — so they are exercised but
-  remain orphan production API. The @see target is com.landawn.abacus.util.CodeGenerationUtil's
-  prop-name-table generation.
+JsonXmlConfig non-final / hand-rolled no-arg ctor | PARTIALLY-FIXED |
+  JdbcCodeGenerationUtil.java:2403,2443 | Now declared `public static final class` (non-final defect FIXED,
+  matching parent EntityCodeConfig at 2207). STILL hand-rolls a no-arg ctor at 2443 instead of
+  @NoArgsConstructor (annotations at 2399-2402 are @Builder/@Data/@AllArgsConstructor/@Accessors — no
+  @NoArgsConstructor).
+  Evidence (2403): `public static final class JsonXmlConfig {`
+  Evidence (2443): `public JsonXmlConfig() {`
+
+MIN_FUNC / MAX_FUNC unused public constants | STILL-VALID |
+  JdbcCodeGenerationUtil.java:141,161 | Public TriFunction constants producing "min(prop)"/"max(prop)",
+  not consumed by any production method in this class (only own declarations + Javadoc examples). Exercised
+  only by tests (JdbcCodeGenerationUtilTest.java:71-78). @see target is abacus-common CodeGenerationUtil.
   Evidence (141): `public static final TriFunction<Class<?>, Class<?>, String, String> MIN_FUNC = (entityClass, propClass, propName) -> {`
   Evidence (161): `public static final TriFunction<Class<?>, Class<?>, String, String> MAX_FUNC = (entityClass, propClass, propName) -> {`
-  Recommend: relocate to CodeGenerationUtil (abacus-common) or document explicitly as helpers meant to be
-  passed into it. (If CodeGenerationUtil already exposes equivalents, remove these as dupes.)
 
-5. MISSING METHODS (with target class)
-- STILL-VALID | convertInsertSqlToUpdateSql(Connection, ...) | JdbcCodeGenerationUtil.java:1859, 1896 |
-  Medium | Still exists only as (DataSource, insertSql) and (DataSource, insertSql, whereClause); every
-  other generate* family exposes both a DataSource and a Connection overload. A caller holding a Connection
-  cannot use it. The method only needs DBProductInfo (resolved via JdbcUtil.getDBProductInfo(ds) at 1898).
+convertInsertSqlToUpdateSql(Connection, ...) missing | STILL-VALID |
+  JdbcCodeGenerationUtil.java:1859,1896 | Exists only as (DataSource, insertSql) and
+  (DataSource, insertSql, whereClause); breaks the family's DataSource+Connection pairing. Method only
+  needs DBProductInfo, resolved via JdbcUtil.getDBProductInfo(ds) at 1898.
   Evidence (1859): `public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql) {`
   Evidence (1896): `public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause) {`
   Evidence (1898): `final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);`
-  Recommend: add convertInsertSqlToUpdateSql(Connection, insertSql[, whereClause]). (A (DBProductInfo, ...)
-  or DB-less overload would be even cleaner, but the Connection overload is the minimum to match the family.)
 
-6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
-- STILL-VALID | S ("s") and SF ("sf") constants | JdbcCodeGenerationUtil.java:113, 119 | High | Still dead
-  public API — their own Javadoc still states they are "currently NOT consumed by this generator ... Only
-  {@link #X} is actually emitted." Only X (line 127) is real.
+S ("s") and SF ("sf") dead public constants | STILL-VALID |
+  JdbcCodeGenerationUtil.java:113,119 | Still dead public API; their own Javadoc states they are "currently
+  NOT consumed by this generator ... Only {@link #X} is actually emitted." Only X (127) is real.
   Evidence (113): `public static final String S = "s";`
   Evidence (119): `public static final String SF = "sf";`
   Evidence (127): `public static final String X = "x";`
-  Recommend: remove them. If kept for parity with CodeGenerationUtil, at minimum mark @Deprecated.
-- STILL-VALID | EntityCodeConfig.extendFieldNameTableClassName (+ generated accessors) |
-  JdbcCodeGenerationUtil.java:2375 | Medium | Still documented "Currently unused by the generator; retained
-  for binary compatibility and future extension." A no-op config flag exposed via public Lombok accessors
-  (the generated interface name is still hardcoded to X).
-  Evidence (2375): `private boolean extendFieldNameTableClassName;`
-  Evidence (2372 doc): `* Currently unused by the generator; retained for binary compatibility and future extension.`
-  Recommend: remove the field+accessors, or implement it so it actually varies the name.
-- STILL-VALID | EntityCodeConfig.idField (singular) alongside idFields | JdbcCodeGenerationUtil.java:2300
-  vs 2294 | Low | idField is still merged into idFields at generation time (443-444), so it is pure
-  redundancy.
+
+EntityCodeConfig.extendFieldNameTableClassName unused field | ALREADY-FIXED (removed) |
+  JdbcCodeGenerationUtil.java:2370-2376 | The field + its Javadoc are now fully COMMENTED OUT — no longer a
+  real field and no generated Lombok accessors. The no-op config flag is gone from the public surface.
+  Evidence (2375): `//    private boolean extendFieldNameTableClassName;`
+  Evidence (2376): `// private String fieldNameTableClassName; // Always be "NT";`
+
+EntityCodeConfig.idField (singular) alongside idFields | STILL-VALID |
+  JdbcCodeGenerationUtil.java:2294 vs 2300 | idField is still merged into idFields at generation time
+  (443-444), so it is pure redundancy (documented single-PK convenience).
   Evidence (2294): `private Collection<String> idFields;`
   Evidence (2300): `private String idField;`
-  Evidence (443-444): `if (Strings.isNotEmpty(configToUse.getIdField())) {` / `    idFields.add(configToUse.getIdField());`
-  Recommend: keep (documented single-PK convenience) but consider deprecating toward idFields. (No caller
-  relies on idField precedence/ordering distinct from idFields — impl shows identical merge semantics.)
+  Evidence (443): `if (Strings.isNotEmpty(configToUse.getIdField())) {`
+  Evidence (444): `    idFields.add(configToUse.getIdField());`
 
-7. NEW ISSUES (introduced/exposed by recent changes)
-- None of consequence. The query-path 3-arg delegator generateEntityClass(ds/conn, entityName, query) now
-  passes a bare `null` (line 284 / 382) rather than a cast — this is correct because the 4-arg
-  (.., String query, EntityCodeConfig config) target is unambiguous; only the table-path 3-arg delegators
-  (233/338) require the (EntityCodeConfig) null cast. No new API-design defects observed; recent edits were
-  Javadoc-only.
-</content>
-</invoke>
+================================================================================
+2. NAMING ISSUES
+================================================================================
+- ALREADY-FIXED | generateEntityClass / generateEntityClassByQuery dual-meaning 2nd param |
+  JdbcCodeGenerationUtil.java:232-409 | The previous round's High-severity hazard (same positional slot
+  meaning tableName in some overloads and entityName in others) is gone. The custom-query overloads were
+  renamed into a separate generateEntityClassByQuery family, so each family's 2nd parameter has a single
+  meaning. No further action.
+
+================================================================================
+3. RETURN-TYPE AND PARAMETER ISSUES
+================================================================================
+- ALREADY-FIXED | generateEntityClass 3-arg overload collision (EntityCodeConfig vs String) |
+  JdbcCodeGenerationUtil.java:259,310 | The (DataSource/Connection, String, String) query overloads that
+  collided with the (.., String, EntityCodeConfig) config overloads were renamed to
+  generateEntityClassByQuery. Only one 3-arg generateEntityClass per receiver remains; the call
+  generateEntityClass(ds, "users", null) now resolves unambiguously. (See NEW ISSUE N1 re: the leftover
+  casts.)
+- STILL-VALID | generateSelectSql family lacks the excluded-only 3-arg form |
+  JdbcCodeGenerationUtil.java:942,970,1006,1037 | To exclude columns from a SELECT a caller must still pass a
+  nullable whereClause; the INSERT and NamedINSERT families both expose the cleaner 3-arg form.
+  Recommend: add generateSelectSql(ds/conn, tableName, Collection<String> excludedColumnNames).
+- PARTIALLY-FIXED | JsonXmlConfig nested class | JdbcCodeGenerationUtil.java:2403,2443 | Now final
+  (consistency defect resolved); still hand-rolls the no-arg ctor (2443) rather than @NoArgsConstructor.
+  Recommend: drop the explicit ctor and add @NoArgsConstructor for parity with EntityCodeConfig (2203).
+
+================================================================================
+4. MISPLACED METHODS (with target class)
+================================================================================
+- STILL-VALID | MIN_FUNC / MAX_FUNC constants | JdbcCodeGenerationUtil.java:141,161 | Low-Medium | Public
+  helper TriFunctions not consumed by any method in THIS class; only test-exercised
+  (JdbcCodeGenerationUtilTest.java:71-78). Recommend: relocate to abacus-common CodeGenerationUtil or
+  document as helpers meant to be passed into it.
+
+================================================================================
+5. MISSING METHODS (with target class)
+================================================================================
+- STILL-VALID | convertInsertSqlToUpdateSql(Connection, ...) | JdbcCodeGenerationUtil.java:1859,1896 |
+  Medium | A caller holding a Connection cannot use it; every other generate* family exposes both a
+  DataSource and a Connection overload. Recommend: add convertInsertSqlToUpdateSql(Connection, insertSql
+  [, whereClause]).
+
+================================================================================
+6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
+================================================================================
+- STILL-VALID | S ("s") and SF ("sf") constants | JdbcCodeGenerationUtil.java:113,119 | High | Dead public
+  API per their own Javadoc; only X (127) is emitted. Recommend: remove (or @Deprecated if kept for parity
+  with CodeGenerationUtil).
+- ALREADY-FIXED | EntityCodeConfig.extendFieldNameTableClassName | JdbcCodeGenerationUtil.java:2370-2376 |
+  The no-op flag + accessors were removed (commented out). No further action.
+- STILL-VALID | EntityCodeConfig.idField (singular) alongside idFields | JdbcCodeGenerationUtil.java:2300 vs
+  2294 | Low | idField is merged into idFields at generation (443-444) — pure redundancy. Recommend: keep
+  as documented single-PK convenience but consider deprecating toward idFields.
+
+================================================================================
+7. NEW ISSUES (introduced/exposed by the generateEntityClassByQuery split)
+================================================================================
+- N1 (Low, cleanup) | Vestigial (EntityCodeConfig) null casts |
+  JdbcCodeGenerationUtil.java:233,286 | The two no-arg delegators still write
+  `generateEntityClass(ds/conn, tableName, (EntityCodeConfig) null)`. These casts existed solely to break
+  the old (String vs EntityCodeConfig) overload ambiguity; now that the query overloads are renamed away,
+  the cast is no longer required to compile and can be reduced to a bare `null` (mirroring the
+  generateEntityClassByQuery delegators at 331/382, which already pass bare `null`). Harmless but dead.
+  Evidence (233): `return generateEntityClass(ds, tableName, (EntityCodeConfig) null);`
+  Evidence (286): `return generateEntityClass(conn, tableName, (EntityCodeConfig) null);`
+- No new API-design defects of consequence. The table-path generators correctly delegate through
+  generateEntityClassByQuery(conn, tableName, createQueryByTableName(conn, tableName), config) (261/311);
+  EntityCodeConfig's @see at 2199 still points at the live generateEntityClass(DataSource,String,
+  EntityCodeConfig). Javadoc on the new byQuery overloads is consistent with the family.

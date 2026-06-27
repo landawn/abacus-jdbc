@@ -1,150 +1,126 @@
 API Design Review — Jdbc.java (container of public nested functional interfaces)
 MODEL=opus-4.8  DATE=2026-06-27  (verified against source by orchestrator)
-RE-VERIFIED 2026-06-27 against current source (line numbers re-pointed; renames confirmed)
+RE-VERIFIED (round 2) 2026-06-27 against current committed source
+(line numbers re-pointed via Grep/Read; the round-1 fix wave was re-checked symbol-by-symbol)
 
-NOTE ON RENAMES SINCE ORIGINAL REPORT (all confirmed in live source):
-  - Jdbc.ColumnGetter: SAM apply(rs,int) -> get(rs,int) [5730: "V get(ResultSet rs, int columnIndex) throws SQLException;"];
-    factory get(Class)/get(Type) -> forType(...) [5751, 5769].
-  - Jdbc.RowExtractor: factory createBy -> forType [5159, 5177, 5195, 5215].
-  - Jdbc.BiParametersSetter: createForArray/createForList -> forArray/forList [273, 341].
-  - Jdbc.RowConsumer / BiRowConsumer: create(ObjIntConsumer) -> forEachColumn [4540, 4761]; oneOff KEPT [4586,4628,4789,4831].
-  - Jdbc.DaoCache.createByMap was NOT renamed [6879, 6891].
-  None of these renames FIXED a section-2..6 finding (the findings concern the symbols that were *kept*),
-  but two renames AMPLIFY existing findings and one RESOLVES a latent cross-family nit — see section 7 (NEW).
+ROUND-2 SUMMARY OF FIX-WAVE VERIFICATION:
+  - HandlerFactory: the two single-arg create(...) overloads WERE renamed to createForBeforeInvoke / createForAfterInvoke;
+    the 2-arg create(before, after) was KEPT. => §2-HandlerFactory ALREADY-FIXED.
+  - OutParamResult.getOutParamValues()/getOutParams() now return immutable views (ImmutableMap.wrap / ImmutableList.wrap).
+    => §3-OutParamResult ALREADY-FIXED.
+  - DaoCache.createByMap(int capacity) factory WAS added (6905 -> new DaoCacheByMap(capacity)). => §5-createByMap(int) ALREADY-FIXED.
+  - OutParam parameterIndex>0: class-doc now explicitly documents index<=0 as the live sentinel for name-based
+    registration (6213-6216). Per the do-not-reflag directive this is intentional. => §3-OutParam NO-LONGER-APPLIES.
+  - DISCREPANCY: Columns.ColumnOne.set(Class<T>) was reported in the change-list as "widened to Class<? extends T>",
+    but CURRENT source still reads `set(final Class<T> type)` at 6179 — the widening was NOT committed. => STILL-VALID.
 
 1. OVERALL ASSESSMENT
-Jdbc is a mature namespace of functional interfaces. The four Bi-mirror families
-(RowMapper/BiRowMapper, RowConsumer/BiRowConsumer, RowFilter/BiRowFilter,
-ResultExtractor/BiResultExtractor) are largely well-aligned: composition (andThen/and/or/negate),
-up-converters (toBiXxx), combine, toMap/groupTo/toMultimap/toList, toArray/toCollection/
-toDisposableObjArray, and the @Beta/@SequentialOnly/@Stateful markings are consistent, with the
-stateful-vs-stateless split between non-Bi and Bi factories intentional and correct (non-Bi caches
-column count; Bi receives labels). ColumnGetter, Columns.ColumnOne (GET_*/SET_* + get/set/readJson/
-readXml), RowExtractor/RowExtractorBuilder, OutParam/OutParamResult, Handler, and the DaoCache family
-are coherent. Deprecations are uniformly paired with replacements. The deliberate omission of
-down-converters on BiResultExtractor/BiRowFilter/BiRowConsumer (only BiRowMapper has a deprecated
-toRowMapper) is internally consistent and is NOT flagged. Findings: a few mirror gaps, two
-cross-family naming inconsistencies, and minor encapsulation/generics nits. The post-report rename
-wave (get->forType, createBy->forType, createForArray->forArray, create(ObjIntConsumer)->forEachColumn)
-migrated most type/shape factories to descriptive for* verbs, leaving the still-create-named
-HandlerFactory.create and DaoCache.create/createByMap as the remaining outliers (see 2 + 7).
+Unchanged from round 1: Jdbc is a mature namespace of well-aligned Bi-mirror functional-interface families.
+Round-1 fixes closed 3 findings (HandlerFactory arity-ambiguity, OutParamResult mutable-view leak, DaoCache
+createByMap(int) gap) and made 1 finding moot (OutParam invariant — now documented sentinel). The remaining open
+findings are mirror gaps, two cross-family naming nits, and the still-invariant ColumnOne.set generic. The for*-verb
+migration is intact (ColumnGetter.forType, RowExtractor.forType, forArray/forList, forEachColumn); HandlerFactory's
+new createForBeforeInvoke/createForAfterInvoke keep a create* prefix rather than a bare for* verb (minor — see §7).
 
 2. NAMING ISSUES
-- [STILL-VALID] HandlerFactory.create (3 overloads) | Jdbc.java:6747, 6779, 6816 | Medium | The two
-  single-arg overloads create(TriConsumer beforeInvokeAction) [6747] and create(QuadConsumer afterInvokeAction)
-  [6779] are both named create and are disambiguated only by lambda arity (3 args=before, 4 args=after) — the
-  Javadoc still needs explicit (TriConsumer)null / (QuadConsumer)null casts to compile:
-  6738: "HandlerFactory.create((Throwables.TriConsumer<Object, Object[],"
-  6770: "HandlerFactory.create((Throwables.QuadConsumer<Object, Object, Object[],".
-  It is intent-unsafe: create(x -> ...) does not reveal whether a before- or after-hook is registered.
-  Recommend: add explicitly-named createForBeforeInvoke(...) / createForAfterInvoke(...); keep the 2-arg
-  create(before, after) [6816]. (Amplified by the for*-verb migration — see section 7.)
+- [ALREADY-FIXED] HandlerFactory.create single-arg arity-ambiguity | Jdbc.java:6748,6780,6817 | (was Medium) | The two
+  single-arg overloads were renamed: 6748 "public static <T> Handler<T> createForBeforeInvoke(" and 6780
+  "public static <T> Handler<T> createForAfterInvoke(". The 2-arg create(before, after) was kept at 6817
+  "public static <T, E extends RuntimeException> Handler<T> create(". Javadoc examples updated to the new names
+  (6739 createForBeforeInvoke((Throwables.TriConsumer...)), 6771 createForAfterInvoke((Throwables.QuadConsumer...))).
+  Intent is now explicit; arity-disambiguation no longer required. Closed.
 - [STILL-VALID] RowConsumer#oneOff / BiRowConsumer#oneOff vs RowMapper#toDisposableObjArray /
-  BiRowMapper#toDisposableObjArray | Jdbc.java:4586,4628,4789,4831 (oneOff) vs 2021,2069,3862,3903
-  (toDisposableObjArray) | Medium-Low | The identical "wrap each row into a reusable DisposableObjArray"
-  concept is named toDisposableObjArray on the mapper interfaces but oneOff on the consumer interfaces.
-  4586: "static RowConsumer oneOff(final Consumer<DisposableObjArray> consumer) {"
-  2021: "static RowMapper<DisposableObjArray> toDisposableObjArray() {"
-  oneOff is opaque and breaks cross-family naming. Recommend: rename the consumer factories to
-  toDisposableObjArray (or consumeDisposableObjArray), or document the rationale. NOW SHARPER: the sibling
-  per-column factory was renamed create(ObjIntConsumer) -> forEachColumn [4540], so within the SAME interface
-  a descriptive verb (forEachColumn) now sits next to the opaque oneOff. (Cross-cuts AbstractQuery.foreach
-  which delegates to oneOff — in AbstractQuery.java, not re-verified here.)
-- [STILL-VALID] DaoCache#create(int,long) vs #createByMap(...) | Jdbc.java:6869, 6879, 6891 | Low | create is
-  the generic name yet denotes specifically the pooled/TTL-evicting variant:
-  6869: "static DaoCache create(final int capacity, final long evictDelay) {"
-  6879: "static DaoCache createByMap() {"  /  6891: "static DaoCache createByMap(Map<String, Object> map) {"
-  while the map-backed variant is the more descriptive createByMap. Recommend: createWithEviction/createPooled
-  for the first to make the pair self-describing. Confirming check: no caller relies on the create name (pure
-  rename; BC relaxed). NOTE: createByMap was deliberately NOT renamed in the rename wave.
+  BiRowMapper#toDisposableObjArray | Jdbc.java:4587,4629,4790,4832 (oneOff) vs 2022,2070,3863,3904
+  (toDisposableObjArray) | Medium-Low | Same "wrap each row into a reusable DisposableObjArray" concept named
+  toDisposableObjArray on mappers but oneOff on consumers. 4587: "static RowConsumer oneOff(final
+  Consumer<DisposableObjArray> consumer) {"  vs  2022: "static RowMapper<DisposableObjArray> toDisposableObjArray() {".
+  Still sharper because the sibling per-column factory is the descriptive forEachColumn (4541, 4762) sitting beside
+  the opaque oneOff inside the SAME interface. Recommend rename to toDisposableObjArray/consumeDisposableObjArray or document.
+- [STILL-VALID] DaoCache#create(int,long) vs #createByMap(...) | Jdbc.java:6870, 6880, 6892, 6905 | Low | create is the
+  generic name yet denotes the pooled/TTL-evicting variant: 6870 "static DaoCache create(final int capacity, final long
+  evictDelay) {" while the map-backed family is the descriptive createByMap (6880 createByMap(), 6892 createByMap(Map),
+  6905 createByMap(int) — the last newly added). Recommend createWithEviction/createPooled for the first so the pair
+  self-describes. (createByMap intentionally not renamed.) Pure-rename; BC relaxed.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- [STILL-VALID] Columns.ColumnOne#set(Class<T>) | Jdbc.java:6178 | Low | Uses invariant Class<T> whereas
-  every sibling type-keyed factory uses Class<? extends T>:
-  6178: "public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {"
-  vs ColumnOne.get 6090 ("get(final Class<? extends T> firstColumnType)"), readJson 6132, readXml 6153,
-  ColumnGetter.forType 5751 ("forType(final Class<? extends T> cls)"). Recommend: set(final Class<? extends T> type).
-- [STILL-VALID] OutParamResult#getOutParamValues() / #getOutParams() | Jdbc.java:6383, 6400 | Low | Both
-  return the live internal Map/List directly, allowing external mutation of a framework-produced result:
-  6384: "return outParamValues;"  /  6401: "return outParams;"  (fields 6319-6320, both final references but the
-  collections themselves are exposed mutable). Recommend: return immutable views (N.unmodifiableMap /
-  ImmutableList.wrap). Confirming check: ensure no internal caller mutates the returned collections.
-- [STILL-VALID] OutParam (Lombok @Data setters + @AllArgsConstructor) vs #of(int,int) | Jdbc.java:6237 (class),
-  6284 (of) | Low | The documented parameterIndex>0 invariant is enforced only by of(...):
-  6285: "N.checkArgument(parameterIndex > 0, ...)"  — the @AllArgsConstructor (6234) and Lombok-generated
-  setParameterIndex accept any value. The class Javadoc itself acknowledges this (6212-6215). Recommend:
-  validate in setParameterIndex (and the all-args ctor) so the invariant cannot be bypassed.
+- [STILL-VALID] Columns.ColumnOne#set(Class<T>) | Jdbc.java:6179 | Low | Still invariant Class<T> whereas every sibling
+  type-keyed factory uses Class<? extends T>: 6179 "public static <T> BiParametersSetter<AbstractQuery, T> set(final
+  Class<T> type) {" vs ColumnOne.get 6091 "get(final Class<? extends T> firstColumnType)", ColumnGetter.forType 5752
+  "forType(final Class<? extends T> cls)". NOTE: change-list claimed this was widened — NOT reflected in committed source.
+  Recommend set(final Class<? extends T> type).
+- [ALREADY-FIXED] OutParamResult#getOutParamValues() / #getOutParams() | Jdbc.java:6384, 6401 | (was Low) | Now return
+  immutable wrappers: 6385 "return ImmutableMap.wrap(outParamValues);" and 6402 "return ImmutableList.wrap(outParams);".
+  Javadoc updated to "an unmodifiable view ..." (6382, 6399). External mutation no longer possible. Closed.
+- [NO-LONGER-APPLIES] OutParam parameterIndex>0 not enforced in ctor/setter | Jdbc.java:6238 (class), 6285 (of) | Per
+  do-not-reflag directive: index<=0 is the LIVE SENTINEL for name-based OUT-param registration (CallableQuery byIndex =
+  getParameterIndex() > 0; JdbcUtil if(outParam.getParameterIndex() > 0)). of(int,int) correctly validates the index-based
+  path: 6286 "N.checkArgument(parameterIndex > 0, ...)". Class-doc now documents this intentionally (6213-6216: "accept
+  any value (e.g. a placeholder 0 to be set later)"). Not a defect.
 
 4. MISPLACED METHODS
-- None material. ColumnOne.set(...) returning a writer (BiParametersSetter) under a "read column 1" type
-  is the deliberate "first parameter" symmetry and is documented; leave as-is.
+- None material (unchanged). ColumnOne.set(...) returning a BiParametersSetter writer under a "read column 1" type is the
+  deliberate, documented "first parameter" symmetry.
 
 5. MISSING METHODS
-- [STILL-VALID] BiResultExtractor lacks the Dataset / merged-list mirror of ResultExtractor | gap in
-  BiResultExtractor (interface starts 1222; defines TO_DATASET constant at 1230 but no toDataset/toMergedList/
-  toDatasetAndThen factories) vs ResultExtractor.toMergedList (1014/1042/1072), toDataset (1096/1119/1140/
-  1151/1171), toDatasetAndThen (1191) | Medium | BiResultExtractor has toList(Class) at 1737 but NO
-  toMergedList(...) and NO toDataset(...)/toDatasetAndThen(...). 1230: "BiResultExtractor<Dataset> TO_DATASET =
-  (rs, columnLabels) -> {". These produce a label-aware Dataset and don't need the columnLabels arg, so each
-  could be a thin delegate ((rs,cols) -> ResultExtractor.toXxx(...).apply(rs)). Recommend: add the mirrors, or
-  document the asymmetry if Datasets are intentionally read via the constant only.
-- [STILL-VALID] DaoCache#createByMap(int capacity) | Jdbc.java:6879/6891 (factories) vs DaoCacheByMap(int) ctor
-  7184 | Low | A capacity-sized map-backed cache constructor exists but is unreachable through the public
-  DaoCache factory surface. 7184: "public DaoCacheByMap(final int capacity) {" — and DaoCacheByMap is now a
-  package-private record: 7171: "record DaoCacheByMap(Map<String, Object> cache) implements DaoCache {".
-  Recommend: add static DaoCache createByMap(int capacity). (Also: DaoCache's class Javadoc @see/@link a
-  non-public DaoCacheByMap at 6853/6857 and 7168-7169 — minor doc exposure.)
+- [STILL-VALID] BiResultExtractor lacks the Dataset / merged-list mirror of ResultExtractor | BiResultExtractor interface
+  at 1223 (TO_DATASET constant 1231, toList 1738) — but NO toMergedList/toDataset/toDatasetAndThen factories | Medium |
+  ResultExtractor has toMergedList (1015/1043/1073), toDataset (1097/1120/1141/1152/1172), toDatasetAndThen (1192); the Bi
+  mirror has only the TO_DATASET constant (1231 "BiResultExtractor<Dataset> TO_DATASET = (rs, columnLabels) -> {") and
+  toList(Class) (1738). These produce label-aware Datasets and ignore the columnLabels arg, so each could be a thin
+  delegate. Recommend add the mirrors or document the asymmetry.
+- [ALREADY-FIXED] DaoCache#createByMap(int capacity) | Jdbc.java:6905 | (was Low) | The capacity-sized map-backed
+  constructor is now reachable: 6905 "static DaoCache createByMap(final int capacity) {" -> 6906 "return new
+  DaoCacheByMap(capacity);" (ctor at 7196 "public DaoCacheByMap(final int capacity) {"). @see entries updated
+  (7180-7181). Closed. (Residual minor: DaoCache class-doc still @see/@link the package-private DaoCacheByMap at
+  6854/6858 and 7180-7181 — non-public doc exposure; unchanged, Low.)
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
-- [STILL-VALID] ResultExtractor#toMap(RowMapper,RowMapper,Collector[,Supplier]) | Jdbc.java:656, 679 | High |
-  Still @Deprecated (655, 678); delegate chain confirmed — 658: "return toMap(keyExtractor, valueExtractor,
-  downstream, Suppliers.ofMap());" and 681: "return groupTo(keyExtractor, valueExtractor, downstream, supplier);".
-  Replacement: groupTo(keyExtractor, valueExtractor, downstream[, supplier]). Removal candidates under relaxed BC.
-- [STILL-VALID] BiResultExtractor#toMap(BiRowMapper,BiRowMapper,Collector[,Supplier]) | Jdbc.java:1419, 1442 |
-  High | Bi mirror; still @Deprecated (1418, 1441); 1444: "return groupTo(keyExtractor, valueExtractor,
-  downstream, supplier);". Replacement groupTo(...). Removal candidates.
-- [STILL-VALID] BiRowMapper#toRowMapper() | Jdbc.java:2851 | Medium | Correctly @Deprecated (2848, also
-  @SequentialOnly/@Stateful 2849-2850; stateful, misuse-prone down-converter); 2851: "default RowMapper<T>
-  toRowMapper() {". Replacement is using BiRowMapper directly. Recommend keep deprecated rather than remove.
-- [STILL-VALID] RowMapperBuilder#getObject(int) / BiRowMapperBuilder#getObject(String) /
-  RowExtractorBuilder#getObject(int) | Jdbc.java:2357, 4182, 5496 | Low | Consistently @Deprecated (2356,
-  4181, 5495; default getter is already GET_OBJECT); harmless and uniformly handled. The typed getObject(int/
-  String, Class) overloads (2378, 4203, 5509) are the intended survivors. No action.
+- [STILL-VALID] ResultExtractor#toMap(RowMapper,RowMapper,Collector[,Supplier]) | Jdbc.java:657, 680 | High | Still
+  @Deprecated (656, 679); 659 "return toMap(keyExtractor, valueExtractor, downstream, Suppliers.ofMap());" and 682
+  "return groupTo(keyExtractor, valueExtractor, downstream, supplier);". Replacement: groupTo(...). Removal candidate (BC relaxed).
+- [STILL-VALID] BiResultExtractor#toMap(BiRowMapper,BiRowMapper,Collector[,Supplier]) | Jdbc.java:1420, 1443 | High | Bi
+  mirror; still @Deprecated (1419, 1442); 1445 "return groupTo(keyExtractor, valueExtractor, downstream, supplier);".
+  Replacement groupTo(...). Removal candidate.
+- [STILL-VALID] BiRowMapper#toRowMapper() | Jdbc.java:2852 | Medium | Correctly @Deprecated (2849; also @SequentialOnly/
+  @Stateful 2850-2851); 2852 "default RowMapper<T> toRowMapper() {". Stateful, misuse-prone down-converter. Replacement:
+  use BiRowMapper directly. Keep deprecated rather than remove.
+- [STILL-VALID] RowMapperBuilder#getObject(int) / BiRowMapperBuilder#getObject(String) / RowExtractorBuilder#getObject(int)
+  | Jdbc.java:2358, 4183, 5497 | Low | Consistently @Deprecated (2357, 4182, 5496; default getter is already GET_OBJECT).
+  Typed getObject(...,Class) overloads (2379, 4204, 5510) are the intended survivors. No action.
 
-7. NEW ISSUES / RE-VERIFICATION NOTES INTRODUCED BY THE RENAMES
-- [NEW — Low, amplifies §2] for*-verb migration left create-named factories as outliers. The rename wave moved
-  type/shape factories to descriptive for* verbs (ColumnGetter.forType 5751/5769; RowExtractor.forType 5159..5215;
-  BiParametersSetter.forArray 273 / forList 341; RowConsumer.forEachColumn 4540 / BiRowConsumer.forEachColumn 4761).
-  The ONLY remaining create-prefixed factories in the file are now HandlerFactory.create (6747/6779/6816) and
-  DaoCache.create/createByMap (6869/6879/6891) — i.e. the file is mid-migration, which increases the visual
-  inconsistency and strengthens findings §2-HandlerFactory and §2-DaoCache.
-- [NEW — Low, amplifies §2] forEachColumn vs oneOff style clash WITHIN RowConsumer/BiRowConsumer. After
-  create(ObjIntConsumer) -> forEachColumn (4540, 4761), each consumer interface now exposes a descriptive
-  verb-phrase factory (forEachColumn) right beside the opaque oneOff (4586/4628 and 4789/4831). The rename made
-  the oneOff naming gap more conspicuous, not less.
-- [RESOLVED — do NOT re-flag] ColumnGetter and RowExtractor type-keyed factories now share one verb. Both were
-  unified to forType (ColumnGetter formerly get(Class/Type); RowExtractor formerly createBy). 5751:
-  "static <T> ColumnGetter<T> forType(final Class<? extends T> cls)" and 5159: "static RowExtractor
-  forType(final Class<?> entityClassForFetch)". Any prior cross-family nit between these two is now resolved.
+7. NEW ISSUES / RE-VERIFICATION NOTES (round 2)
+- [NEW — Low, naming consistency] HandlerFactory's new factories use a create* prefix, not a bare for* verb. The round-1
+  rename produced createForBeforeInvoke (6748) / createForAfterInvoke (6780), whereas the rest of the for*-migration uses
+  bare verbs (ColumnGetter.forType 5752/5770, RowExtractor.forType 5160..5216, BiParametersSetter.forArray 274/forList 342,
+  RowConsumer/BiRowConsumer.forEachColumn 4541/4762). Minor: these produce a Handler so a create* prefix is defensible;
+  flag only as a consistency observation, not a defect.
+- [UPDATED — §2/§7 "create-named outliers" now reduced] After the HandlerFactory single-arg rename, the only remaining
+  bare create-named factories are HandlerFactory.create(before,after) (6817, intentionally kept) and DaoCache.create(int,long)
+  (6870) + the createByMap family (6880/6892/6905). The mid-migration visual inconsistency is smaller than round 1; the
+  surviving DaoCache.create naming nit (§2) stands.
+- [STILL-VALID — Low, amplifies §2] forEachColumn vs oneOff style clash WITHIN RowConsumer/BiRowConsumer. Descriptive
+  forEachColumn (4541, 4762) sits beside opaque oneOff (4587/4629 and 4790/4832) in each consumer interface.
+- [RESOLVED — do NOT re-flag] ColumnGetter and RowExtractor type-keyed factories share the forType verb: 5752 "static <T>
+  ColumnGetter<T> forType(final Class<? extends T> cls)" and 5160 "static RowExtractor forType(final Class<?>
+  entityClassForFetch)". Prior cross-family nit resolved.
 - [INTENTIONAL — do NOT re-flag] ColumnOne keeps get/set/readJson/readXml while ColumnGetter moved get->forType.
-  ColumnOne.get(Class/Type) [6090/6112] returns a RowMapper that reads COLUMN 1 (6113: "rs -> type.get(rs, 1)"),
-  a different concept from ColumnGetter.forType building a reusable getter. The divergent verbs are deliberate
-  (per project design notes); record here so the divergence is not mistaken for a regression introduced by the rename.
+  ColumnOne.get(Class/Type) [6091/6113] returns a RowMapper reading COLUMN 1, a different concept from ColumnGetter.forType
+  building a reusable getter. Divergent verbs are deliberate; not a regression.
 
-LEDGER (finding | STATUS | current file:line):
-  HandlerFactory.create 3-overload arity-ambiguity            | STILL-VALID            | Jdbc.java:6747,6779,6816
-  RowConsumer/BiRowConsumer oneOff vs toDisposableObjArray    | STILL-VALID (amplified)| Jdbc.java:4586,4628,4789,4831
-  DaoCache create vs createByMap                              | STILL-VALID            | Jdbc.java:6869,6879,6891
-  ColumnOne.set(Class<T>) invariance                          | STILL-VALID            | Jdbc.java:6178
-  OutParamResult returns live map/list                        | STILL-VALID            | Jdbc.java:6383,6400
-  OutParam invariant enforced only by of(...)                 | STILL-VALID            | Jdbc.java:6237,6284
-  BiResultExtractor lacks toDataset/toMergedList mirror       | STILL-VALID            | Jdbc.java:1222(TO_DATASET 1230)
-  DaoCache.createByMap(int) unreachable                       | STILL-VALID            | Jdbc.java:6879/6891 vs ctor 7184
-  ResultExtractor.toMap deprecated->groupTo                   | STILL-VALID            | Jdbc.java:656,679
-  BiResultExtractor.toMap deprecated->groupTo                 | STILL-VALID            | Jdbc.java:1419,1442
-  BiRowMapper.toRowMapper deprecated (keep)                   | STILL-VALID            | Jdbc.java:2851
-  *Builder.getObject(int/String) deprecated (no action)       | STILL-VALID            | Jdbc.java:2357,4182,5496
-  NEW: create-named factories are now outliers post-migration | NEW (Low)              | Jdbc.java:6747+,6869+
-  NEW: forEachColumn vs oneOff style clash in consumers       | NEW (Low)              | Jdbc.java:4540/4586,4761/4789
-  ColumnGetter/RowExtractor forType unification               | RESOLVED               | Jdbc.java:5751,5159
-  ColumnOne.get vs ColumnGetter.forType verb divergence       | INTENTIONAL            | Jdbc.java:6090,5751
+LEDGER (finding | STATUS | current file:line | evidence):
+  HandlerFactory single-arg arity-ambiguity        | ALREADY-FIXED       | Jdbc.java:6748,6780,6817 | "createForBeforeInvoke("/"createForAfterInvoke("; 2-arg create kept
+  RowConsumer/BiRowConsumer oneOff vs toDispObjArr  | STILL-VALID (amp)   | Jdbc.java:4587,4629,4790,4832 vs 2022,2070,3863,3904 | "static RowConsumer oneOff(...)" vs "toDisposableObjArray()"
+  DaoCache create vs createByMap naming             | STILL-VALID         | Jdbc.java:6870,6880,6892,6905 | "static DaoCache create(final int capacity, final long evictDelay)"
+  ColumnOne.set(Class<T>) invariance                | STILL-VALID         | Jdbc.java:6179 | "set(final Class<T> type)" (claimed-widened NOT in source)
+  OutParamResult returns live map/list              | ALREADY-FIXED       | Jdbc.java:6385,6402 | "return ImmutableMap.wrap(outParamValues);"/"ImmutableList.wrap(outParams);"
+  OutParam invariant enforced only by of(...)       | NO-LONGER-APPLIES   | Jdbc.java:6238,6285 | index<=0 = name-based sentinel; doc 6213-6216; of() validates 6286
+  BiResultExtractor lacks toDataset/toMergedList     | STILL-VALID         | Jdbc.java:1223 (TO_DATASET 1231, toList 1738) | no toMergedList/toDataset factories in Bi family
+  DaoCache.createByMap(int) unreachable             | ALREADY-FIXED       | Jdbc.java:6905 | "static DaoCache createByMap(final int capacity)" -> new DaoCacheByMap(capacity)
+  ResultExtractor.toMap deprecated->groupTo         | STILL-VALID         | Jdbc.java:657,680 | @Deprecated 656,679; 682 "return groupTo(...)"
+  BiResultExtractor.toMap deprecated->groupTo       | STILL-VALID         | Jdbc.java:1420,1443 | @Deprecated 1419,1442; 1445 "return groupTo(...)"
+  BiRowMapper.toRowMapper deprecated (keep)         | STILL-VALID         | Jdbc.java:2852 | @Deprecated/@SequentialOnly/@Stateful 2849-2851
+  *Builder.getObject(int/String) deprecated         | STILL-VALID         | Jdbc.java:2358,4183,5497 | @Deprecated 2357,4182,5496; typed overloads 2379,4204,5510 survive
+  NEW: createFor* prefix vs bare for* verb          | NEW (Low)           | Jdbc.java:6748,6780 | createForBeforeInvoke/createForAfterInvoke vs forType/forArray/forEachColumn
+  NEW: forEachColumn vs oneOff clash in consumers   | STILL-VALID (Low)   | Jdbc.java:4541/4587, 4762/4790 | descriptive forEachColumn beside opaque oneOff
+  ColumnGetter/RowExtractor forType unification     | RESOLVED            | Jdbc.java:5752,5160 | both "forType(...)"
+  ColumnOne.get vs ColumnGetter.forType divergence  | INTENTIONAL         | Jdbc.java:6091,5752 | get reads column1 (RowMapper) vs forType builds reusable getter

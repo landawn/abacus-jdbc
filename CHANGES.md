@@ -1275,7 +1275,7 @@
 ### 1.9.17
 
 * Remove `AsyncMapper`.
-* Add `BasicDao/Mapper.loadJoinEntities/loadJoinEntitiesIfNull`.
+* Add `BasicDao/Mapper.loadJoinEntities/loadJoinEntitiesIfAbsent`.
 * Improvements and bug fix.
 
 

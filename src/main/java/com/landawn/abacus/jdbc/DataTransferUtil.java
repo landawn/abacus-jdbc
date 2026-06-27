@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import com.landawn.abacus.annotation.Beta;
@@ -47,7 +48,6 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCsvWriter;
 import com.landawn.abacus.util.CsvUtil;
 import com.landawn.abacus.util.Dataset;
-import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Objectory;
@@ -295,7 +295,7 @@ public final class DataTransferUtil {
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis) throws SQLException {
-        return importData(dataset, selectColumnNames, Fn.alwaysTrue(), conn, insertSql, batchSize, batchIntervalInMillis);
+        return importData(dataset, selectColumnNames, null, conn, insertSql, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -307,7 +307,7 @@ public final class DataTransferUtil {
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30).addRow("Bob", 15);
      * List<String> columns = Arrays.asList("name", "age");
      * // Only import adults (age >= 18)
-     * Throwables.Predicate<Object[], RuntimeException> filter = row -> ((Integer) row[1]) >= 18;
+     * Predicate<Object[]> filter = row -> ((Integer) row[1]) >= 18;
      * String insertSql = "INSERT INTO adult_users (name, age) VALUES (?, ?)";
      * int rowsImported = DataTransferUtil.importData(dataset, columns, filter, conn, insertSql, 1000, 0);
      * }</pre>
@@ -319,7 +319,6 @@ public final class DataTransferUtil {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
@@ -331,11 +330,9 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> int importData(final Dataset dataset, final Collection<String> selectColumnNames,
-            final Throwables.Predicate<? super Object[], E> filter, final Connection conn, final String insertSql, final int batchSize,
-            final long batchIntervalInMillis) throws SQLException, E {
+    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Predicate<? super Object[]> filter,
+            final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException {
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importData(dataset, selectColumnNames, filter, stmt, batchSize, batchIntervalInMillis);
@@ -415,7 +412,7 @@ public final class DataTransferUtil {
     @SuppressWarnings("rawtypes")
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
             final Map<String, ? extends Type> columnTypeMap) throws SQLException {
-        return importData(dataset, Fn.alwaysTrue(), conn, insertSql, batchSize, batchIntervalInMillis, columnTypeMap);
+        return importData(dataset, null, conn, insertSql, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -432,7 +429,7 @@ public final class DataTransferUtil {
      * columnTypes.put("age", Type.of(Integer.class));
      * columnTypes.put("status", Type.of(String.class));
      * // Only import active users
-     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
+     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
      * String insertSql = "INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)";
      * int rowsImported = DataTransferUtil.importData(dataset, filter, conn, insertSql, 500, 50, columnTypes);
      * }</pre>
@@ -444,7 +441,6 @@ public final class DataTransferUtil {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param conn the Connection to the database
@@ -456,12 +452,10 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @throws E if the filter throws an exception
      */
     @SuppressWarnings("rawtypes")
-    public static <E extends Exception> int importData(final Dataset dataset, final Throwables.Predicate<? super Object[], E> filter, final Connection conn,
-            final String insertSql, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException, E {
+    public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
+            final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
         }
@@ -523,7 +517,7 @@ public final class DataTransferUtil {
      */
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, Fn.alwaysTrue(), conn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
+        return importData(dataset, null, conn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -536,7 +530,7 @@ public final class DataTransferUtil {
      *     .addRow("John", 25, "active")
      *     .addRow("Jane", 30, "inactive");
      * // Only import active users
-     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
+     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
      * String insertSql = "INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)";
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (stmt, row) -> {
      *     stmt.setString(1, (String) row[0]);
@@ -546,7 +540,6 @@ public final class DataTransferUtil {
      * int rowsImported = DataTransferUtil.importData(dataset, filter, conn, insertSql, 500, 0, setter);
      * }</pre>
      *
-     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param conn the Connection to the database
@@ -557,11 +550,10 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> int importData(final Dataset dataset, final Throwables.Predicate<? super Object[], E> filter, final Connection conn,
-            final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException, E {
+    public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
+            final int batchSize, final long batchIntervalInMillis,
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         }
@@ -648,7 +640,7 @@ public final class DataTransferUtil {
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis) throws SQLException {
-        return importData(dataset, selectColumnNames, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis);
+        return importData(dataset, selectColumnNames, null, stmt, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -662,7 +654,7 @@ public final class DataTransferUtil {
      *     .addRow("Jane", 30, "inactive");
      * List<String> columns = Arrays.asList("name", "age");
      * // Only import active users
-     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
+     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age) VALUES (?, ?)");
      * int rowsImported = DataTransferUtil.importData(dataset, columns, filter, stmt, 500, 0);
      * }</pre>
@@ -674,7 +666,6 @@ public final class DataTransferUtil {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
@@ -685,11 +676,9 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> int importData(final Dataset dataset, final Collection<String> selectColumnNames,
-            final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis)
-            throws SQLException, E {
+    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Predicate<? super Object[]> filter,
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -774,7 +763,7 @@ public final class DataTransferUtil {
     @SuppressWarnings("rawtypes")
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Map<String, ? extends Type> columnTypeMap) throws SQLException {
-        return importData(dataset, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+        return importData(dataset, null, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
     /**
@@ -791,7 +780,7 @@ public final class DataTransferUtil {
      * columnTypes.put("age", Type.of(Integer.class));
      * columnTypes.put("status", Type.of(String.class));
      * // Only import active users
-     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
+     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)");
      * int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 50, columnTypes);
      * }</pre>
@@ -803,7 +792,6 @@ public final class DataTransferUtil {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
@@ -814,12 +802,10 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @throws E if the filter throws an exception
      */
     @SuppressWarnings({ "rawtypes", "null" })
-    public static <E extends Exception> int importData(final Dataset dataset, final Throwables.Predicate<? super Object[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
-            throws IllegalArgumentException, SQLException, E {
+    public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
+            final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 //NOSONAR
                 batchSize, batchIntervalInMillis);
@@ -924,7 +910,7 @@ public final class DataTransferUtil {
      */
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importData(dataset, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -938,7 +924,7 @@ public final class DataTransferUtil {
      *     .addRow("Jane", 30, "inactive");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)");
      * // Only import active users
-     * Throwables.Predicate<Object[], RuntimeException> filter = row -> "active".equals(row[2]);
+     * Predicate<Object[]> filter = row -> "active".equals(row[2]);
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (query, row) -> {
      *     query.setString(1, (String) row[0]);
      *     query.setInt(2, (Integer) row[1]);
@@ -947,7 +933,6 @@ public final class DataTransferUtil {
      * int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 0, setter);
      * }</pre>
      *
-     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
@@ -957,11 +942,10 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> int importData(final Dataset dataset, final Throwables.Predicate<? super Object[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException, E {
+    public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter)
+            throws IllegalArgumentException, SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -1650,7 +1634,7 @@ public final class DataTransferUtil {
      */
     public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCsv(file, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importCsv(file, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1669,7 +1653,7 @@ public final class DataTransferUtil {
      *     "INSERT INTO active_users (id, name, email, status) VALUES (?, ?, ?, ?)");
      *
      * // Filter to import only users with "ACTIVE" status (assuming status is in column 3)
-     * Throwables.Predicate<String[], RuntimeException> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
+     * Predicate<String[]> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
      *
      * long rowsImported = DataTransferUtil.importCsv(csvFile, activeUsersFilter, stmt, 1000, 0,
      *     (query, row) -> {
@@ -1682,7 +1666,6 @@ public final class DataTransferUtil {
      * System.out.println("Imported " + rowsImported + " active users");
      * }</pre>
      *
-     * @param <E> exception type that filter may throw
      * @param file the CSV file containing the data to be imported
      * @param filter a predicate to filter rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
@@ -1693,11 +1676,10 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
-     * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> long importCsv(final File file, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt,
-            final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
+    public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
+            throws SQLException, IOException {
         try (Reader reader = IOUtil.newFileReader(file)) {
             return importCsv(reader, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         }
@@ -1825,7 +1807,7 @@ public final class DataTransferUtil {
      */
     public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCsv(reader, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importCsv(reader, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1851,7 +1833,7 @@ public final class DataTransferUtil {
      *
      * // Complex filter: valid email, age >= 18, allowed countries
      * Set<String> allowedCountries = Set.of("US", "CA", "UK", "AU");
-     * Throwables.Predicate<String[], RuntimeException> complexFilter = row -> {
+     * Predicate<String[]> complexFilter = row -> {
      *     // Validate email format (simple check)
      *     if (!row[1].contains("@")) return false;
      *
@@ -1877,7 +1859,6 @@ public final class DataTransferUtil {
      * System.out.println("Imported " + rowsImported + " valid users");
      * }</pre>
      *
-     * @param <E> exception type that filter may throw
      * @param reader the Reader to read the CSV data from
      * @param filter a predicate to filter rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
@@ -1888,12 +1869,10 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
-     * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> long importCsv(final Reader reader, final Throwables.Predicate<? super String[], E> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
-            throws IllegalArgumentException, SQLException, IOException, E {
+    public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
+            throws IllegalArgumentException, SQLException, IOException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -3474,7 +3453,7 @@ public final class DataTransferUtil {
      * {@link #columnTypeMap(Map)} and {@link #stmtSetter(Throwables.BiConsumer)} &mdash; are mutually
      * exclusive; configuring more than one causes the terminal {@code to(...)} call to throw
      * {@link IllegalArgumentException}. When none of them is configured, all columns of the dataset are
-     * imported in order. The {@link #filter(Throwables.Predicate)} is independent and may be combined with
+     * imported in order. The {@link #filter(Predicate)} is independent and may be combined with
      * any of them.</p>
      *
      * @see DataTransferUtil#importFrom(Dataset)
@@ -3482,7 +3461,7 @@ public final class DataTransferUtil {
     public static final class DatasetImportBuilder {
         private final Dataset dataset;
         private Collection<String> selectColumnNames;
-        private Throwables.Predicate<? super Object[], SQLException> filter;
+        private Predicate<? super Object[]> filter;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
         @SuppressWarnings("rawtypes")
@@ -3514,7 +3493,7 @@ public final class DataTransferUtil {
          * @param filter the row filter; {@code null} imports every row
          * @return this builder
          */
-        public DatasetImportBuilder filter(final Throwables.Predicate<? super Object[], SQLException> filter) {
+        public DatasetImportBuilder filter(final Predicate<? super Object[]> filter) {
             this.filter = filter;
 
             return this;

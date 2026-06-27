@@ -1,57 +1,61 @@
 API Design Review — DBLock.java
 MODEL=opus-4.8  DATE=2026-06-27
-RE-VERIFIED 2026-06-27 against current source (line numbers refreshed)
+RE-VERIFIED (round 2) 2026-06-27 against current committed source (every finding re-checked via Grep+Read; all
+line numbers re-confirmed; class still `public final class DBLock {` without AutoCloseable — M8/M9 REVERTED,
+WON'T-FIX, STILL-VALID in code)
 
 1. OVERALL ASSESSMENT
-DBLock is a compact, public final DB-table-backed distributed lock (class decl line 119). The public surface
-is small: four lock(...) overloads (338, 381, 428, 485), unlock(target, code)->boolean (616), close() (682),
-and the constants LOCKED (126), UNLOCKED (133), DEFAULT_LOCK_LIVE_TIME (138), DEFAULT_TIMEOUT (143). The
-lock-acquisition retry loop, expired-lock cleanup, background refresh scheduler, and code-matched unlock are
-well implemented and the lifecycle is sound. Findings are a parameter-ordering trap in the lock overload
-family, a dead public constant, a missing AutoCloseable declaration, and a return-type-convention nit.
+DBLock is a compact, public final DB-table-backed distributed lock (`public final class DBLock {`, line 119).
+The public surface is small: four lock(...) overloads (338, 381, 428, 485), unlock(target, code)->boolean
+(616), close() (682), and the constants LOCKED (126), UNLOCKED (133), DEFAULT_LOCK_LIVE_TIME (138),
+DEFAULT_TIMEOUT (143). The lock-acquisition retry loop, expired-lock cleanup, background refresh scheduler, and
+code-matched unlock are well implemented and the lifecycle is sound. Findings are a parameter-ordering trap in
+the lock overload family (WON'T-FIX), a dead public constant, a missing AutoCloseable declaration (WON'T-FIX),
+and a return-type-convention nit. NO CODE CHANGES since the prior re-verification.
 
 2. NAMING ISSUES
 - None. lock/unlock/close and the constant names are accurate.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- STILL-VALID — WON'T FIX (user decision 2026-06-27: neither drop the 2-arg overload nor add a doc warning) |
-  lock(String, long) vs lock(String, long, long) — inconsistent meaning of the trailing long |
-  DBLock.java:381 vs 428 | Medium | The 2-arg overload's single long maps to the SECOND parameter (timeout)
-  of the 3-arg overload, not the first (liveTime). Current evidence: 2-arg delegates `return lock(target,
-  DEFAULT_LOCK_LIVE_TIME, timeout);` (382) — the long is timeout; 3-arg `public String lock(final String
-  target, final long liveTime, final long timeout)` (428) delegates `return lock(target, liveTime, timeout,
-  0);` (429) — the FIRST long is liveTime. A caller extending lock(target, timeout) to add liveTime will
-  naturally write lock(target, timeout, liveTime) and get the two swapped silently (both are long, no compile
-  error). Recommend: keep the 3-arg/4-arg forms but reconsider the 2-arg overload — either drop
-  lock(String,long) so callers must spell out lock(target, liveTime, timeout), or document the hazard
-  prominently. (Javadoc still does not warn of the swap.)
+- STILL-VALID — WON'T FIX (user decision 2026-06-27 — M8, considered then REVERTED; neither drop the 2-arg
+  overload nor add a doc warning) | lock(String, long) vs lock(String, long, long) — inconsistent meaning of
+  the trailing long | DBLock.java:381 vs 428 | Medium | The 2-arg overload's single long maps to the SECOND
+  parameter (timeout) of the 3-arg overload, not the first (liveTime). Current evidence: 2-arg `public String
+  lock(final String target, final long timeout)` (381) delegates `return lock(target, DEFAULT_LOCK_LIVE_TIME,
+  timeout);` (382) — the long is timeout; 3-arg `public String lock(final String target, final long liveTime,
+  final long timeout)` (428) delegates `return lock(target, liveTime, timeout, 0);` (429) — the FIRST long is
+  liveTime. A caller extending lock(target, timeout) to add liveTime will naturally write lock(target, timeout,
+  liveTime) and get the two swapped silently (both long, no compile error). Recommend (not applied): drop
+  lock(String,long) OR document the hazard prominently. (Javadoc still does not warn of the swap.)
 - STILL-VALID | lock(...) returns String (null on failure) | DBLock.java:338, 381, 428, 485 | Low | All four
-  overloads return a bare String, null on acquire-failure. The library elsewhere favors Optional/Nullable for
-  "may be absent" returns, but a lock-acquire-returns-null idiom is also widespread (cf. tryLock). Recommend:
-  keep null (acquire-failure null is idiomatic) OR, for cross-library consistency, return Optional<String>.
+  overloads return a bare String, null on acquire-failure. Current evidence: the 4-arg core returns `null` both
+  on interrupt (543 `return null;`) and on timeout exhaustion (558 `return null;`); successful acquire returns
+  the generated code (519 `return code;`). The library elsewhere favors Optional/Nullable for "may be absent"
+  returns, but a lock-acquire-returns-null idiom is also widespread (cf. tryLock). Recommend: keep null
+  (acquire-failure null is idiomatic) OR, for cross-library consistency, return Optional<String>.
 
 4. MISPLACED METHODS
 - None.
 
 5. MISSING METHODS (with target class)
-- STILL-VALID — WON'T FIX (user decision 2026-06-27: AutoCloseable will not be added) | implements AutoCloseable
-  | DBLock.java:119 (class decl) + close() at 682 | Medium | DBLock has
-  a public idempotent close() and its own Javadoc usage examples wrap it in try/finally (e.g. 662-679), but
-  the class declaration is `public final class DBLock {` (119) — it does NOT implement AutoCloseable, so it
-  cannot be used in try-with-resources. close() at 682 already has the right signature (`public synchronized
-  void close()`, idempotent via the isClosed guard 683-686). Recommend: add `implements AutoCloseable` to the
-  class declaration. Low risk, pure addition.
+- STILL-VALID — WON'T FIX (user decision 2026-06-27 — M9, considered then REVERTED; AutoCloseable will not be
+  added) | implements AutoCloseable | DBLock.java:119 (class decl) + close() at 682 | Medium | DBLock has a
+  public idempotent close() and its own Javadoc usage examples wrap it in try/finally (e.g. 662-679), but the
+  class declaration is `public final class DBLock {` (119) — it does NOT implement AutoCloseable, so it cannot
+  be used in try-with-resources. close() at 682 already has the right signature (`public synchronized void
+  close()`, idempotent via the isClosed guard 683-686). Recommend (not applied): add `implements AutoCloseable`
+  to the class declaration. Low risk, pure addition.
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
 - STILL-VALID | UNLOCKED constant | DBLock.java:133 | Medium | Current: `public static final String UNLOCKED =
   "unlocked";` (133), with Javadoc (128-132) self-declaring it "a reserved/legacy constant that is not
-  currently written by the implementation: a lock is released by deleting its row, so no row ever carries
-  this value." It is dead public API — only LOCKED is ever written to the status column (in the lock INSERT,
-  DBLock.java:514 `JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, ...)`). Confirming
-  check (re-run): the only references to DBLock.UNLOCKED in the repo are in test code (DBLockTest.java:210,
-  211, 239, 245, 246) — no production/external consumers. Recommend: remove UNLOCKED (or, if kept for
+  currently written by the implementation: a lock is released by deleting its row, so no row ever carries this
+  value." It is dead public API — only LOCKED is ever written to the status column (in the lock INSERT,
+  DBLock.java:514 `... JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, ...)`). Confirming
+  check (re-run round 2): the ONLY references to DBLock.UNLOCKED in the repo are in test code (DBLockTest.java
+  :210, 211, 239, 245, 246) — no production/external consumers. Recommend: remove UNLOCKED (or, if kept for
   documentation, mark @Deprecated).
 
 NEW ISSUES (introduced/exposed by recent changes)
-- None. The Javadoc-only pass did not change the public surface; all four carried findings reproduce verbatim
-  in current source.
+- None. Source unchanged since the prior re-verification; the public surface is identical and all four carried
+  findings reproduce verbatim. No edits to this report beyond the round-2 header and STATUS reconfirmation.

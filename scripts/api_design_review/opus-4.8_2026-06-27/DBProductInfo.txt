@@ -1,6 +1,6 @@
 API Design Review — DBProductInfo.java (public record)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
-RE-VERIFIED 2026-06-27 against current source — CONFIRMED-CLEAN; unchanged.
+RE-VERIFIED (round 2) 2026-06-27 against current committed source — CONFIRMED-CLEAN; unchanged.
 
 1. OVERALL ASSESSMENT
 Healthy, no actionable findings. A 3-component record (productName, productVersion, version:DBVersion) with
@@ -8,3 +8,6 @@ the standard generated accessors. Component nullability is documented (each @par
 Nothing to rename, change, move, add, or deprecate. Current evidence:
   DBProductInfo.java:51 -> "public record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR"
   DBProductInfo.java:43-45 -> @param doc for productName / productVersion / version, each documenting null-ability.
+
+2-6. CONFIRMED-CLEAN | None.
+</content>

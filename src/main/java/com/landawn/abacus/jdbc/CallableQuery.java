@@ -739,6 +739,26 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
+     * Sets the specified named parameter to a national character string value from a {@link CharSequence}.
+     * The CharSequence is converted to a String (or SQL {@code NULL} when {@code null}). Mirrors
+     * {@link NamedQuery#setNString(String, CharSequence)}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * StringBuilder unicodeText = new StringBuilder("Unicode text: 世界");
+     * query.setNString("unicodeField", unicodeText);
+     * }</pre>
+     *
+     * @param parameterName the name of the parameter
+     * @param value the CharSequence value to set, or {@code null} to set SQL {@code NULL}
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
+     */
+    public CallableQuery setNString(final String parameterName, final CharSequence value) throws SQLException {
+        return setNString(parameterName, value == null ? (String) null : value.toString()); //NOSONAR
+    }
+
+    /**
      * Sets the specified named parameter to a java.sql.Date value.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1676,6 +1696,54 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         }
 
         return this;
+    }
+
+    /**
+     * Sets the parameters of this stored-procedure call from a single object, binding by name. This is the
+     * single-arg, by-name counterpart of {@link #setParameters(Object, Collection)} and the mirror of
+     * {@link NamedQuery#setParameters(Object)}.
+     *
+     * <ul>
+     *   <li><b>Bean/Entity</b>: every readable property is bound to the procedure parameter of the same name
+     *       (equivalent to {@code setParameters(parameters, Beans.getPropNameList(parameters.getClass()))}).</li>
+     *   <li><b>Map</b>: delegates to {@link #setParameters(Map)} (each entry bound by its key).</li>
+     * </ul>
+     *
+     * <p><b>Note:</b> as with {@link #setParameters(Map)}, names are forwarded directly to the driver, so a bean
+     * property (or map key) that is not a parameter of the stored procedure results in a driver
+     * {@link SQLException}. For positional binding use the inherited {@code setXxx(int, ...)} methods.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Employee employee = new Employee();
+     * employee.setId(1001);
+     * employee.setName("John Doe");
+     * query.setParameters(employee).execute();   // binds the procedure params named "id", "name", ... by property name
+     * }</pre>
+     *
+     * @param parameters a bean/entity whose properties supply the values, or a {@link Map} of name-&gt;value
+     * @return this CallableQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}, or is neither a bean nor a {@link Map}
+     * @throws SQLException if a database access error occurs (including a name that is not a procedure parameter)
+     * @see #setParameters(Object, Collection)
+     * @see #setParameters(Map)
+     * @see NamedQuery#setParameters(Object)
+     */
+    @SuppressWarnings("unchecked")
+    public CallableQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(parameters, cs.parameters);
+
+        final Class<?> cls = parameters.getClass();
+
+        if (Beans.isBeanClass(cls)) {
+            return setParameters(parameters, Beans.getPropNameList(cls));
+        } else if (parameters instanceof Map) {
+            return setParameters((Map<String, ?>) parameters);
+        } else {
+            close();
+            throw new IllegalArgumentException(
+                    "Unsupported parameter type for name-based binding: " + cls + ". Pass a bean or a Map (or use the positional setXxx(int, ...) methods).");
+        }
     }
 
     /**

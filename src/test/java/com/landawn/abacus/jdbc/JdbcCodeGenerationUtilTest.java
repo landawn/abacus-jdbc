@@ -759,7 +759,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("connection failed"));
 
-        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(dataSource, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(dataSource, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
     }
 
     // generateEntityClass(Connection, entityName, query, config) wraps SQLException from prepareStatement (L385-386)
@@ -1281,7 +1282,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                     .className("OrderHistory")
                     .packageName("com.test.entity")
                     .build();
-            final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+            final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2",
+                    config);
             assertNotNull(result);
             final File expectedFile = new File(tempDir.toFile(), "com/test/entity/OrderHistory.java");
             assertTrue(expectedFile.exists(), "Expected generated file at " + expectedFile.getAbsolutePath());
@@ -1513,7 +1515,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .additionalFieldsOrLines("private javax.sql.DataSource<String> ds;")
                 .build();
-        assertDoesNotThrow(() -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+        assertDoesNotThrow(
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
     }
 
     // Exercise catch blocks at lines 818–820 (SQLException → UncheckedSQLException)

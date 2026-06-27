@@ -1,19 +1,22 @@
 API Design Review — DBVersion.java (public enum)
 MODEL=opus-4.8  DATE=2026-06-27  (reviewed directly by orchestrator)
-RE-VERIFIED 2026-06-27 against current source — CONFIRMED-CLEAN; line numbers unchanged.
+RE-VERIFIED (round 2) 2026-06-27 against current committed source — MariaDB note ADDRESSED; CONFIRMED-CLEAN.
 
 1. OVERALL ASSESSMENT
 Healthy. A vendor/version enum with two family-predicate helpers, isMySQL() and isPostgreSQL(),
 implemented as name-prefix checks. Only MySQL and PostgreSQL have many version variants, so the asymmetry
 (no isOracle()/isSQLServer()/isDB2()/isH2()/isHSQLDB()/isMariaDB()) is reasonable — single-variant vendors
 are matched with ==. No actionable findings. Current evidence:
-  DBVersion.java:226 -> "public boolean isMySQL() {"  (body: Strings.startsWithIgnoreCase(name(), "MySQL"))
-  DBVersion.java:253 -> "public boolean isPostgreSQL() {" (body: ...startsWithIgnoreCase(name(),"PostgreSQL"))
-  DBVersion.java:136 -> "MariaDB,"  (a distinct constant; isMySQL() returns false for it)
+  DBVersion.java:234 -> "public boolean isMySQL() {"  (body: Strings.startsWithIgnoreCase(name(), "MySQL"))
+  DBVersion.java:261 -> "public boolean isPostgreSQL() {" (body: ...startsWithIgnoreCase(name(),"PostgreSQL"))
+  DBVersion.java:140 -> "MariaDB,"  (a distinct constant; isMySQL() returns false for it)
 
-2-6. One optional low-value note:
-- [STILL-VALID, no code change] isMariaDB() absent / MariaDB excluded from isMySQL() | DBVersion.java:136,
-  226 | Low | MariaDB is a distinct constant and isMySQL() returns false for it (the check is a "MySQL"
-  name prefix). Documented and defensible, but callers treating MariaDB as MySQL-compatible may be
-  surprised. Recommend: keep; optionally add a class-doc note clarifying MariaDB is intentionally separate.
-  No code change required.
+2-6. The one prior optional note is now addressed:
+- isMariaDB() absent / MariaDB excluded from isMySQL() | ALREADY-FIXED (addressed, Javadoc-only) |
+  DBVersion.java:35-37, 215-217 | Both the class-doc and isMySQL()'s own javadoc now spell out that the
+  exclusion is intentional. Class-doc DBVersion.java:35-37 -> "Note: {@link #MariaDB} is modeled as a
+  distinct database from MySQL; {@link #isMySQL()} returns {@code false} for it. This is intentional ...
+  match it explicitly with {@code == DBVersion.MariaDB} ...". Method-doc DBVersion.java:215-217 -> "Note:
+  {@link #MariaDB} is intentionally NOT matched by this method ...". Defensible and now documented; no code
+  change required.
+</content>

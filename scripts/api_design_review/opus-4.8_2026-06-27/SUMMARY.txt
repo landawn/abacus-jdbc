@@ -5,6 +5,39 @@ RE-VERIFIED 2026-06-27 against CURRENT source. Every per-class report in this fo
 finding-by-finding against the live code (line numbers re-mapped; statuses assigned), then every
 re-verification claim was independently re-confirmed against source by the orchestrator.
 
+================================================================================
+>>> ROUND 2 RECONCILIATION (2026-06-27, after fixes were implemented & COMMITTED; HEAD f9737001) <<<
+All per-class reports re-verified a SECOND time against the committed tree; orchestrator re-confirmed.
+NEWLY ALREADY-FIXED since round 1 (verified in committed source):
+  - M1  Jdbc.HandlerFactory.create -> createForBeforeInvoke/createForAfterInvoke (6748/6780; 2-arg create kept).
+  - M5? NO — getColumn2FieldNameMap rename NOT done (still STILL-OPEN, 2643).
+  - M6  JdbcUtil.prepareNamedQueryForLargeResult(Connection,ParsedSql) added (4372).
+  - H2  JdbcCodeGenerationUtil: generateEntityClassByQuery(ds/conn,entityName,query[,config]) SPLIT done
+        (330/357/381/409) — the user IMPLEMENTED what round 1 had recorded as WON'T-FIX. The §2 naming hazard
+        and §3 (EntityCodeConfig vs String) collision are RESOLVED. Also EntityCodeConfig.extendFieldNameTableClassName
+        removed (commented 2375); JsonXmlConfig now final (2403, ctor still hand-rolled).
+  - H3  CallableQuery: named setObject(SQLType) 1529, setObject(SQLType,int) 1553, setObject(Type<T>) 1578 added.
+  - M10 CallableQuery.setParameters(Object,Collection<String>) (1655) — widened from List (matches NamedQuery).
+  - M11 NamedQuery.setNull(String,int) 153 & setString(String,String) 1112 now throw IllegalArgumentException,SQLException.
+  - L5.2 Jdbc.OutParamResult getters return ImmutableMap.wrap/ImmutableList.wrap (6385/6402).
+  - L5.4 Jdbc.DaoCache.createByMap(int) added (6905).
+  - L7.1 JdbcUtil.skip(ResultSet,long) returns long (1740). L7.2 setSqlExtractor(null)->default (10104).
+        L7.3 getInsertPropNames(Object)/(Object,Set) REMOVED (Class-only now).
+  - L8  cs folded into ResultSet (only `ResultSet="ResultSet"` at 56). L9 SpringApplicationContext getBean(String,Class<T>)
+        + @Internal. L11 OP/DBVersion class-doc notes. OnDeleteAction intValue()/valueOf(int) (prior round).
+CORRECTIONS to the round-1 disposition:
+  - L5.1 (Jdbc.Columns.ColumnOne.set(Class<T>) -> Class<? extends T>) was implemented in-session but is NOT in the
+        committed tree — Jdbc.java:6179 still reads `set(final Class<T> type)`. RE-OPENED as STILL-VALID (Low).
+  - L5.3 (OutParam parameterIndex>0 guard) confirmed NO-LONGER-APPLIES: index<=0 is the live name-based sentinel.
+STILL WON'T-FIX (user decision): M4 (DataTransferUtil int-bounded Dataset), M8/M9 (DBLock trap/AutoCloseable),
+  M12 (Transaction.rollback @Deprecated). H2 is now DONE (no longer won't-fix).
+NEW issues found this round: see the per-class reports — (a) JdbcUtil skip() Javadoc example (1723) now shows a
+  lossy `int skipped = JdbcUtil.skip(...)` (long->int) that wouldn't compile; (b) AbstractQuery added
+  `// Rename to setParametersOnQuery?` TODOs (3152/3200) that contradict the class-doc claiming the double-t is
+  intentional; (c) JdbcCodeGenerationUtil vestigial `(EntityCodeConfig) null` casts at 233/286 (split made them
+  unnecessary).
+================================================================================
+
 Scope: 22 public top-level types. Package-private files (DaoImpl, JdbcSettings, ResultSetProxy, SqlExecutor,
 SqlLogConfig) excluded — no public API surface. NOTE: the class formerly named JdbcUtils was RENAMED to
 DataTransferUtil (its report file is JdbcUtils.txt, title updated inside).

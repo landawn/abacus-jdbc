@@ -47,7 +47,7 @@ import com.landawn.abacus.util.stream.Stream;
  * exception handling.</p>
  *
  * <p>Join relationships are declared on entity properties using the {@code @JoinedBy} annotation. All
- * {@code loadJoinEntities}/{@code loadJoinEntitiesIfNull}/{@code loadAllJoinEntities} operations populate the
+ * {@code loadJoinEntities}/{@code loadJoinEntitiesIfAbsent}/{@code loadAllJoinEntities} operations populate the
  * matching join properties <i>in place</i> on the supplied entity instance(s); they return {@code void} rather
  * than the loaded relationships. The {@code deleteJoinEntities}/{@code deleteAllJoinEntities} operations remove
  * the related rows from the database and return the number of deleted records, but do not alter the in-memory
@@ -57,7 +57,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <ul>
  *   <li>On-demand loading of related entities</li>
  *   <li>Batch loading for performance optimization</li>
- *   <li>Conditional loading ({@code loadJoinEntitiesIfNull})</li>
+ *   <li>Conditional loading ({@code loadJoinEntitiesIfAbsent})</li>
  *   <li>Parallel loading support for multiple join properties</li>
  *   <li>Delete operations for related (join) entities</li>
  * </ul>
@@ -1056,7 +1056,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getCachedUser();
      * // Only load orders if not already loaded
-     * userDao.loadJoinEntitiesIfNull(user, Order.class);
+     * userDao.loadJoinEntitiesIfAbsent(user, Order.class);
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
@@ -1065,8 +1065,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
-        loadJoinEntitiesIfNull(entity, joinEntityClass, null);
+    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, joinEntityClass, null);
     }
 
     /**
@@ -1076,7 +1076,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
      * // Load profile with specific fields if not already loaded
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     user,
      *     UserProfile.class,
      *     Arrays.asList("bio", "avatarUrl", "preferences")
@@ -1092,14 +1092,15 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+            throws UncheckedSQLException {
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropName, selectPropNames);
         }
     }
 
@@ -1110,7 +1111,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Only load orders for users that don't have them loaded
-     * userDao.loadJoinEntitiesIfNull(users, Order.class);
+     * userDao.loadJoinEntitiesIfAbsent(users, Order.class);
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
@@ -1119,8 +1120,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
-        loadJoinEntitiesIfNull(entities, joinEntityClass, null);
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entities, joinEntityClass, null);
     }
 
     /**
@@ -1130,7 +1131,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getPartiallyCachedUsers();
      * // Load minimal address info only for users without addresses
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     users,
      *     Address.class,
      *     Arrays.asList("city", "country")
@@ -1146,7 +1147,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
             throws UncheckedSQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -1158,10 +1159,10 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         if (joinEntityPropNames.size() == 1) {
-            loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames.get(0), selectPropNames);
         } else {
             for (final String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
+                loadJoinEntitiesIfAbsent(entities, joinEntityPropName, selectPropNames);
             }
         }
     }
@@ -1173,7 +1174,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getUser();
      * // Only load profile if user.getProfile() is null
-     * userDao.loadJoinEntitiesIfNull(user, "profile");
+     * userDao.loadJoinEntitiesIfAbsent(user, "profile");
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
@@ -1182,8 +1183,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
-        loadJoinEntitiesIfNull(entity, joinEntityPropName, null);
+    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, joinEntityPropName, null);
     }
 
     /**
@@ -1194,7 +1195,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getUser();
      * // Load addresses with specific fields if not already loaded
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     user,
      *     "addresses",
      *     Arrays.asList("street", "city", "postalCode")
@@ -1209,7 +1210,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
             throws UncheckedSQLException {
         final Class<?> cls = entity.getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
@@ -1230,7 +1231,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getMixedUsers();
      * // Only load orders for users that don't have them
-     * userDao.loadJoinEntitiesIfNull(users, "orders");
+     * userDao.loadJoinEntitiesIfAbsent(users, "orders");
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
@@ -1239,8 +1240,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
-        loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entities, joinEntityPropName, null);
     }
 
     /**
@@ -1252,7 +1253,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Load payment methods with minimal info for users without them
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     users,
      *     "paymentMethods",
      *     Arrays.asList("type", "lastFourDigits", "expiryDate")
@@ -1267,7 +1268,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
             throws UncheckedSQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -1294,7 +1295,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getPartialUser();
      * // Load multiple properties if not already loaded
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     user,
      *     Arrays.asList("orders", "profile", "preferences")
      * );
@@ -1305,13 +1306,13 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
         if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfNull(entity, joinEntityPropName);
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropName);
         }
     }
 
@@ -1323,7 +1324,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getCachedUser();
      * // Load missing properties in parallel
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     user,
      *     Arrays.asList("orders", "reviews", "wishlist"),
      *     true  // parallel loading
@@ -1338,11 +1339,11 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entity, joinEntityPropNames, executor());
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropNames, executor());
         } else {
-            loadJoinEntitiesIfNull(entity, joinEntityPropNames);
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropNames);
         }
     }
 
@@ -1355,7 +1356,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * ExecutorService lazyLoader = Executors.newCachedThreadPool();
      * User user = getUser();
      *
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     user,
      *     Arrays.asList("heavyData1", "heavyData2", "heavyData3"),
      *     lazyLoader
@@ -1369,7 +1370,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      */
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
         if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -1389,7 +1390,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getMixedCacheUsers();
      * // Load missing properties for all users
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     users,
      *     Arrays.asList("orders", "addresses")
      * );
@@ -1400,13 +1401,13 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfNull(entities, joinEntityPropName);
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropName);
         }
     }
 
@@ -1418,7 +1419,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getLargeUserList();
      * // Efficiently load missing data in parallel
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     users,
      *     Arrays.asList("orders", "subscriptions", "activities"),
      *     true
@@ -1433,12 +1434,12 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
             throws UncheckedSQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entities, joinEntityPropNames, executor());
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames, executor());
         } else {
-            loadJoinEntitiesIfNull(entities, joinEntityPropNames);
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames);
         }
     }
 
@@ -1451,7 +1452,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * ForkJoinPool fjPool = new ForkJoinPool(16);
      * List<User> users = getThousandsOfUsers();
      *
-     * userDao.loadJoinEntitiesIfNull(
+     * userDao.loadJoinEntitiesIfAbsent(
      *     users,
      *     Arrays.asList("transactions", "analytics", "recommendations"),
      *     fjPool
@@ -1465,14 +1466,14 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      */
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
             throws UncheckedSQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor))
                 .toList();
 
         DaoUtil.uncheckedComplete(futures);
@@ -1485,7 +1486,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getCachedUser();
      * // Load all missing relationships
-     * userDao.loadJoinEntitiesIfNull(user);
+     * userDao.loadJoinEntitiesIfAbsent(user);
      * }</pre>
      *
      * @param entity the entity to conditionally load all join entities for
@@ -1493,8 +1494,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntitiesIfNull(final T entity) throws UncheckedSQLException {
-        loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+    default void loadJoinEntitiesIfAbsent(final T entity) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
     /**
@@ -1505,7 +1506,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * User user = getPartialUser();
      * // Load all missing relationships in parallel
-     * userDao.loadJoinEntitiesIfNull(user, true);
+     * userDao.loadJoinEntitiesIfAbsent(user, true);
      * }</pre>
      *
      * @param entity the entity to conditionally load all join entities for
@@ -1515,11 +1516,11 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws UncheckedSQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entity, executor());
+            loadJoinEntitiesIfAbsent(entity, executor());
         } else {
-            loadJoinEntitiesIfNull(entity);
+            loadJoinEntitiesIfAbsent(entity);
         }
     }
 
@@ -1532,7 +1533,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
      * User user = getUser();
      *
-     * userDao.loadJoinEntitiesIfNull(user, scheduler);
+     * userDao.loadJoinEntitiesIfAbsent(user, scheduler);
      * }</pre>
      *
      * @param entity the entity to conditionally load all join entities for
@@ -1542,8 +1543,8 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws UncheckedSQLException {
-        loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+    default void loadJoinEntitiesIfAbsent(final T entity, final Executor executor) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
     /**
@@ -1553,7 +1554,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Load all missing relationships for all users
-     * userDao.loadJoinEntitiesIfNull(users);
+     * userDao.loadJoinEntitiesIfAbsent(users);
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load all join entities for
@@ -1561,12 +1562,12 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities) throws UncheckedSQLException {
         if (N.isEmpty(entities)) {
             return;
         }
 
-        loadJoinEntitiesIfNull(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+        loadJoinEntitiesIfAbsent(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
     /**
@@ -1577,7 +1578,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load all missing relationships in parallel
-     * userDao.loadJoinEntitiesIfNull(users, true);
+     * userDao.loadJoinEntitiesIfAbsent(users, true);
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load all join entities for
@@ -1587,11 +1588,11 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entities, executor());
+            loadJoinEntitiesIfAbsent(entities, executor());
         } else {
-            loadJoinEntitiesIfNull(entities);
+            loadJoinEntitiesIfAbsent(entities);
         }
     }
 
@@ -1604,7 +1605,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * ExecutorService batchLoader = Executors.newWorkStealingPool();
      * List<User> users = getLargeUserCollection();
      *
-     * userDao.loadJoinEntitiesIfNull(users, batchLoader);
+     * userDao.loadJoinEntitiesIfAbsent(users, batchLoader);
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load all join entities for
@@ -1614,12 +1615,12 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
         if (N.isEmpty(entities)) {
             return;
         }
 
-        loadJoinEntitiesIfNull(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+        loadJoinEntitiesIfAbsent(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
     /**

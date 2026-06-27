@@ -1,13 +1,14 @@
 API Design Review — Transaction.java (public interface)
 MODEL=opus-4.8  DATE=2026-06-27
-RE-VERIFIED 2026-06-27 against current source (line numbers refreshed)
+RE-VERIFIED (round 2) 2026-06-27 against current committed source (every finding re-checked via Grep+Read; all
+line numbers re-confirmed; interface is unchanged — rollback() still NOT @Deprecated, Action example unchanged)
 
 1. OVERALL ASSESSMENT
 Transaction is a small, clean contract: id() (46), isolationLevel() (72), status() (90), isActive() (110),
-commit() (138), rollback() (165), rollbackIfNotCommitted() (197), plus nested enums Status (211) and
-Action (275). The accessor names follow the library's fluent no-"get" convention and are consistent with the
+commit() (138), rollback() (165), rollbackIfNotCommitted() (197), plus nested enums Status (211) and Action
+(275). The accessor names follow the library's fluent no-"get" convention and are consistent with the
 SqlTransaction implementation. The only actionable issue is a cross-type deprecation/consistency gap around
-rollback().
+rollback() — which carries a WON'T-FIX user decision (M12). NO CODE CHANGES since the prior re-verification.
 
 2. NAMING ISSUES
 - None.
@@ -22,28 +23,30 @@ rollback().
 5. MISSING METHODS (with target class)
 - None required. (The concrete SqlTransaction adds connection()/runOutsideTransaction/callOutsideTransaction;
   these are deliberately NOT on the interface and callers reach them via the concrete return type of
-  JdbcUtil.beginTransaction — re-verified acceptable, no public API returns the bare Transaction type. See
-  SqlTransaction report.)
+  JdbcUtil.beginTransaction — re-verified acceptable (JdbcUtil.beginTransaction returns SqlTransaction at
+  JdbcUtil.java:10434), no public API returns the bare Transaction type. See SqlTransaction report.)
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
-- STILL-VALID — WON'T FIX (user decision 2026-06-27: interface rollback() will NOT be @Deprecated) | rollback()
-  | Transaction.java:165 | Medium | The implementation SqlTransaction @Deprecates
-  its rollback() in favor of rollbackIfNotCommitted() (SqlTransaction.java:472-474), and this interface's own
-  Javadoc notes the deprecation in prose (Transaction.java:158-159: "the {@link SqlTransaction}
-  implementation deprecates direct calls to this method in favor of {@link #rollbackIfNotCommitted()}") — yet
-  the interface method itself is STILL NOT marked @Deprecated. Current: `void rollback() throws
-  UncheckedSQLException;` (165) — no @Deprecated annotation. A caller holding a Transaction reference
-  therefore sees no compiler deprecation signal. Recommend: mark Transaction.rollback() @Deprecated
-  (replacement: rollbackIfNotCommitted()) for cross-type consistency. Confirming check: re-verified no
-  implementation/caller depends on a non-deprecated rollback() on the interface (only SqlTransaction
+- STILL-VALID — WON'T FIX (user decision 2026-06-27 — M12, considered then REVERTED; interface rollback() will
+  NOT be @Deprecated) | rollback() | Transaction.java:165 | Medium | The implementation SqlTransaction
+  @Deprecates its rollback() in favor of rollbackIfNotCommitted() (SqlTransaction.java:472-474), and this
+  interface's own Javadoc notes the deprecation in prose (Transaction.java:158-159: "Note: the {@link
+  SqlTransaction} implementation deprecates direct calls to this method in favor of {@link
+  #rollbackIfNotCommitted()}.") — yet the interface method itself is STILL NOT marked @Deprecated. Current:
+  `void rollback() throws UncheckedSQLException;` (165) — no @Deprecated annotation (the line directly above,
+  164, is the closing `*/` of the javadoc, confirming no annotation). A caller holding a Transaction reference
+  therefore sees no compiler deprecation signal. Recommend (not applied): mark Transaction.rollback()
+  @Deprecated (replacement: rollbackIfNotCommitted()) for cross-type consistency. Confirming check: re-verified
+  no implementation/caller depends on a non-deprecated rollback() on the interface (only SqlTransaction
   implements it; production code calls Connection.rollback(), not Transaction.rollback()).
-- STILL-VALID — WON'T FIX (user decision 2026-06-27: example left as-is, tied to the rollback() deprecation
-  above) | Action-enum Javadoc example calls transaction.rollback() | Transaction.java:270 | Low | The
-  nested Action-enum usage example STILL calls the (implementation-)deprecated method. Current line 270:
-  `*     transaction.rollback();` (inside the example at 265-272). Recommend: update the example to
-  rollbackIfNotCommitted() to stop demonstrating the deprecated path. (Same applies to the rollback() method's
-  own example at Transaction.java:153, which also shows `transaction.rollback();`.)
+- STILL-VALID — WON'T FIX (user decision 2026-06-27 — M12, REVERTED; example left as-is, tied to the rollback()
+  deprecation above) | Action-enum Javadoc example calls transaction.rollback() | Transaction.java:270 | Low |
+  The nested Action-enum usage example STILL calls the (implementation-)deprecated method. Current line 270:
+  `*     transaction.rollback();` (inside the example block at 265-272). Recommend (not applied): update the
+  example to rollbackIfNotCommitted() to stop demonstrating the deprecated path. (Same applies to the
+  rollback() method's own example at Transaction.java:153, which also shows `*     transaction.rollback();`.)
 
 NEW ISSUES (introduced/exposed by recent changes)
-- None new beyond the section-6 example note. The Javadoc-only pass did not alter the contract; rollback()
-  remains un-@Deprecated and the Action example unchanged.
+- None. Source unchanged since the prior re-verification; the contract is identical — rollback() (165) remains
+  un-@Deprecated and the Action example (270) unchanged. No edits to this report beyond the round-2 header and
+  STATUS reconfirmation.

@@ -588,7 +588,7 @@ public class UncheckedDaoTest {
 
         userFromDB = uncheckedUserDao.gett(100L);
         Beans.copy(userFromDB);
-        uncheckedUserDao.loadJoinEntitiesIfNull(userFromDB);
+        uncheckedUserDao.loadJoinEntitiesIfAbsent(userFromDB);
         System.out.println(userFromDB);
 
         userFromDB = uncheckedUserDao.gett(100L);
@@ -598,7 +598,7 @@ public class UncheckedDaoTest {
 
         userFromDB = uncheckedUserDao.gett(100L);
         Beans.copy(userFromDB);
-        uncheckedUserDao.loadJoinEntitiesIfNull(userFromDB, Address.class);
+        uncheckedUserDao.loadJoinEntitiesIfAbsent(userFromDB, Address.class);
         System.out.println(userFromDB);
 
         userFromDB = uncheckedUserDao.gett(100L);
@@ -640,7 +640,7 @@ public class UncheckedDaoTest {
         users2 = Stream.of(users).map(Beans::copy).toList();
         users3 = Stream.of(users).map(Beans::copy).toList();
 
-        uncheckedUserDao.loadJoinEntitiesIfNull(users2);
+        uncheckedUserDao.loadJoinEntitiesIfAbsent(users2);
         System.out.println(users2);
 
         users2 = Stream.of(users).map(Beans::copy).toList();
@@ -652,7 +652,7 @@ public class UncheckedDaoTest {
         users2 = Stream.of(users).map(Beans::copy).toList();
         users3 = Stream.of(users).map(Beans::copy).toList();
 
-        uncheckedUserDao.loadJoinEntitiesIfNull(users2, Address.class);
+        uncheckedUserDao.loadJoinEntitiesIfAbsent(users2, Address.class);
         System.out.println(users2);
 
         users2 = Stream.of(users).map(Beans::copy).toList();

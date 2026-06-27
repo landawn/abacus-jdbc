@@ -1094,7 +1094,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getCachedUser();
      * // Load orders only if not already loaded
-     * userDao.loadJoinEntitiesIfNull(user, Order.class);
+     * userDao.loadJoinEntitiesIfAbsent(user, Order.class);
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1102,8 +1102,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
-    default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws SQLException {
-        loadJoinEntitiesIfNull(entity, joinEntityClass, null);
+    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws SQLException {
+        loadJoinEntitiesIfAbsent(entity, joinEntityClass, null);
     }
 
     /**
@@ -1115,7 +1115,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getCachedUser();
      * // Load addresses with specific fields only if not already loaded
-     * userDao.loadJoinEntitiesIfNull(user, Address.class, Arrays.asList("street", "city"));
+     * userDao.loadJoinEntitiesIfAbsent(user, Address.class, Arrays.asList("street", "city"));
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1125,7 +1125,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
-    default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
         @SuppressWarnings("deprecation")
@@ -1134,7 +1134,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropName, selectPropNames);
         }
     }
 
@@ -1147,7 +1147,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load orders only for users who don't have them loaded yet
-     * userDao.loadJoinEntitiesIfNull(users, Order.class);
+     * userDao.loadJoinEntitiesIfAbsent(users, Order.class);
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1155,8 +1155,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
-        loadJoinEntitiesIfNull(entities, joinEntityClass, null);
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+        loadJoinEntitiesIfAbsent(entities, joinEntityClass, null);
     }
 
     /**
@@ -1169,7 +1169,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load payment methods with limited fields for users who don't have them loaded
-     * userDao.loadJoinEntitiesIfNull(users, PaymentMethod.class, Arrays.asList("type", "lastFourDigits"));
+     * userDao.loadJoinEntitiesIfAbsent(users, PaymentMethod.class, Arrays.asList("type", "lastFourDigits"));
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1179,7 +1179,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
             throws SQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -1193,10 +1193,10 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         if (joinEntityPropNames.size() == 1) {
-            loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames.get(0), selectPropNames);
         } else {
             for (final String joinEntityPropName : joinEntityPropNames) {
-                loadJoinEntitiesIfNull(entities, joinEntityPropName, selectPropNames);
+                loadJoinEntitiesIfAbsent(entities, joinEntityPropName, selectPropNames);
             }
         }
     }
@@ -1209,7 +1209,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getCachedUser();
      * // Load orders only if not already loaded
-     * userDao.loadJoinEntitiesIfNull(user, "orders");
+     * userDao.loadJoinEntitiesIfAbsent(user, "orders");
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1217,8 +1217,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
-    default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws SQLException {
-        loadJoinEntitiesIfNull(entity, joinEntityPropName, null);
+    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws SQLException {
+        loadJoinEntitiesIfAbsent(entity, joinEntityPropName, null);
     }
 
     /**
@@ -1229,7 +1229,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getCachedUser();
      * // Load addresses with specific fields only if not already loaded
-     * userDao.loadJoinEntitiesIfNull(user, "addresses", Arrays.asList("city", "country"));
+     * userDao.loadJoinEntitiesIfAbsent(user, "addresses", Arrays.asList("city", "country"));
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1239,7 +1239,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
-    default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
         final Class<?> cls = entity.getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
 
@@ -1260,7 +1260,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load reviews only for users who don't have them loaded yet
-     * userDao.loadJoinEntitiesIfNull(users, "reviews");
+     * userDao.loadJoinEntitiesIfAbsent(users, "reviews");
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1268,8 +1268,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
-        loadJoinEntitiesIfNull(entities, joinEntityPropName, null);
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
+        loadJoinEntitiesIfAbsent(entities, joinEntityPropName, null);
     }
 
     /**
@@ -1280,7 +1280,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load subscriptions with limited fields for users who don't have them loaded
-     * userDao.loadJoinEntitiesIfNull(users, "subscriptions", Arrays.asList("planType", "expiryDate"));
+     * userDao.loadJoinEntitiesIfAbsent(users, "subscriptions", Arrays.asList("planType", "expiryDate"));
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1290,7 +1290,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
             throws SQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -1318,20 +1318,20 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
      * // Load only the join entities that haven't been loaded yet
-     * userDao.loadJoinEntitiesIfNull(user, Arrays.asList("orders", "addresses", "reviews"));
+     * userDao.loadJoinEntitiesIfAbsent(user, Arrays.asList("orders", "addresses", "reviews"));
      * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
      */
-    default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfNull(entity, joinEntityPropName);
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropName);
         }
     }
 
@@ -1343,7 +1343,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
      * // Load missing join entities in parallel
-     * userDao.loadJoinEntitiesIfNull(user, Arrays.asList("orders", "addresses", "reviews"), true);
+     * userDao.loadJoinEntitiesIfAbsent(user, Arrays.asList("orders", "addresses", "reviews"), true);
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1353,11 +1353,11 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entity, joinEntityPropNames, executor());
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropNames, executor());
         } else {
-            loadJoinEntitiesIfNull(entity, joinEntityPropNames);
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropNames);
         }
     }
 
@@ -1369,7 +1369,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * ExecutorService lazyLoadExecutor = Executors.newFixedThreadPool(3);
      * User user = getPartiallyLoadedUser();
-     * userDao.loadJoinEntitiesIfNull(user, Arrays.asList("orders", "addresses"), lazyLoadExecutor);
+     * userDao.loadJoinEntitiesIfAbsent(user, Arrays.asList("orders", "addresses"), lazyLoadExecutor);
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1378,7 +1378,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -1399,20 +1399,20 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load only missing join entities for all users
-     * userDao.loadJoinEntitiesIfNull(users, Arrays.asList("orders", "addresses"));
+     * userDao.loadJoinEntitiesIfAbsent(users, Arrays.asList("orders", "addresses"));
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
      */
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfNull(entities, joinEntityPropName);
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropName);
         }
     }
 
@@ -1424,7 +1424,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load missing join entities in parallel for better performance
-     * userDao.loadJoinEntitiesIfNull(users, Arrays.asList("orders", "addresses", "reviews"), true);
+     * userDao.loadJoinEntitiesIfAbsent(users, Arrays.asList("orders", "addresses", "reviews"), true);
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1434,12 +1434,12 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
             throws SQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entities, joinEntityPropNames, executor());
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames, executor());
         } else {
-            loadJoinEntitiesIfNull(entities, joinEntityPropNames);
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames);
         }
     }
 
@@ -1451,7 +1451,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * ExecutorService batchLazyLoader = Executors.newWorkStealingPool();
      * List<User> users = getPartiallyLoadedUsers();
-     * userDao.loadJoinEntitiesIfNull(users, Arrays.asList("orders", "addresses"), batchLazyLoader);
+     * userDao.loadJoinEntitiesIfAbsent(users, Arrays.asList("orders", "addresses"), batchLazyLoader);
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1460,14 +1460,14 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
             throws SQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entities, joinEntityPropName), executor))
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor))
                 .toList();
 
         DaoUtil.complete(futures);
@@ -1481,15 +1481,15 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
      * // Load all missing join entities
-     * userDao.loadJoinEntitiesIfNull(user);
+     * userDao.loadJoinEntitiesIfAbsent(user);
      * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
-    default void loadJoinEntitiesIfNull(final T entity) throws SQLException {
-        loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+    default void loadJoinEntitiesIfAbsent(final T entity) throws SQLException {
+        loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
     /**
@@ -1500,7 +1500,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
      * // Load all missing join entities in parallel
-     * userDao.loadJoinEntitiesIfNull(user, true);
+     * userDao.loadJoinEntitiesIfAbsent(user, true);
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1509,11 +1509,11 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws SQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entity, executor());
+            loadJoinEntitiesIfAbsent(entity, executor());
         } else {
-            loadJoinEntitiesIfNull(entity);
+            loadJoinEntitiesIfAbsent(entity);
         }
     }
 
@@ -1525,7 +1525,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newCachedThreadPool();
      * User user = getPartiallyLoadedUser();
-     * userDao.loadJoinEntitiesIfNull(user, customExecutor);
+     * userDao.loadJoinEntitiesIfAbsent(user, customExecutor);
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1534,8 +1534,8 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException {
-        loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+    default void loadJoinEntitiesIfAbsent(final T entity, final Executor executor) throws SQLException {
+        loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
     /**
@@ -1546,19 +1546,19 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load all missing join entities for all users
-     * userDao.loadJoinEntitiesIfNull(users);
+     * userDao.loadJoinEntitiesIfAbsent(users);
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
-    default void loadJoinEntitiesIfNull(final Collection<T> entities) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities) throws SQLException {
         if (N.isEmpty(entities)) {
             return;
         }
 
-        loadJoinEntitiesIfNull(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+        loadJoinEntitiesIfAbsent(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
     /**
@@ -1569,7 +1569,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load all missing join entities in parallel for better performance
-     * userDao.loadJoinEntitiesIfNull(users, true);
+     * userDao.loadJoinEntitiesIfAbsent(users, true);
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1578,11 +1578,11 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel) throws SQLException {
         if (inParallel) {
-            loadJoinEntitiesIfNull(entities, executor());
+            loadJoinEntitiesIfAbsent(entities, executor());
         } else {
-            loadJoinEntitiesIfNull(entities);
+            loadJoinEntitiesIfAbsent(entities);
         }
     }
 
@@ -1594,7 +1594,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <pre>{@code
      * ExecutorService batchExecutor = Executors.newWorkStealingPool();
      * List<User> users = getPartiallyLoadedUsers();
-     * userDao.loadJoinEntitiesIfNull(users, batchExecutor);
+     * userDao.loadJoinEntitiesIfAbsent(users, batchExecutor);
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1603,12 +1603,12 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws SQLException {
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws SQLException {
         if (N.isEmpty(entities)) {
             return;
         }
 
-        loadJoinEntitiesIfNull(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+        loadJoinEntitiesIfAbsent(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
     /**

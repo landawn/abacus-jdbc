@@ -251,29 +251,29 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         assertEquals(2, usersExec.get(0).getOrders().size());
     }
 
-    // loadJoinEntitiesIfNull only loads when the property is currently null (single + collection + by class).
+    // loadJoinEntitiesIfAbsent only loads when the property is currently null (single + collection + by class).
     @Test
-    public void testLoadJoinEntitiesIfNull_Variants() {
+    public void testloadJoinEntitiesIfAbsent_Variants() {
         final JoinUser u = seedUser("IfNull", 7.0, 8.0, 9.0);
 
         final JoinUser fresh = userDao.gett(u.getId());
-        userDao.loadJoinEntitiesIfNull(fresh, JoinOrder.class);
+        userDao.loadJoinEntitiesIfAbsent(fresh, JoinOrder.class);
         assertEquals(3, fresh.getOrders().size());
 
         // already populated -> the IfNull guard skips the reload (still 3, no error).
-        userDao.loadJoinEntitiesIfNull(fresh, JoinOrder.class);
+        userDao.loadJoinEntitiesIfAbsent(fresh, JoinOrder.class);
         assertEquals(3, fresh.getOrders().size());
 
         final JoinUser byProps = userDao.gett(u.getId());
-        userDao.loadJoinEntitiesIfNull(byProps, JoinOrder.class, List.of("id", "userId", "amount"));
+        userDao.loadJoinEntitiesIfAbsent(byProps, JoinOrder.class, List.of("id", "userId", "amount"));
         assertEquals(3, byProps.getOrders().size());
 
         final List<JoinUser> users = new ArrayList<>(List.of(userDao.gett(u.getId())));
-        userDao.loadJoinEntitiesIfNull(users, JoinOrder.class);
+        userDao.loadJoinEntitiesIfAbsent(users, JoinOrder.class);
         assertEquals(3, users.get(0).getOrders().size());
 
         final List<JoinUser> usersByProps = new ArrayList<>(List.of(userDao.gett(u.getId())));
-        userDao.loadJoinEntitiesIfNull(usersByProps, JoinOrder.class, List.of("id", "amount"));
+        userDao.loadJoinEntitiesIfAbsent(usersByProps, JoinOrder.class, List.of("id", "amount"));
         assertEquals(3, usersByProps.get(0).getOrders().size());
     }
 

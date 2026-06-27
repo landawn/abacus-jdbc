@@ -57835,13 +57835,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -57868,19 +57868,19 @@
               "contract": [
                 "Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null} .",
                 "If multiple properties in the entity class are joined to the specified type, only those whose value is {@code null} are loaded.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfNull(user, Order.class); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, Order.class); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -57913,19 +57913,19 @@
               "contract": [
                 "Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null} , with specific property selection.",
                 "If multiple properties in the entity class are joined to the specified type, only those whose value is {@code null} are loaded.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfNull(user, Address.class, Arrays.asList(\"street\", \"city\")); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, Address.class, Arrays.asList(\"street\", \"city\")); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -57956,13 +57956,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -57999,13 +57999,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58031,19 +58031,19 @@
               "javadoc_summary": "Loads join entities for a single entity by property name only if the property is currently {@code null} .",
               "contract": [
                 "Loads join entities for a single entity by property name only if the property is currently {@code null} .",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfNull(user, \"orders\"); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load orders only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, \"orders\"); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58075,19 +58075,19 @@
               "javadoc_summary": "Loads join entities for a single entity by property name only if the property is currently {@code null} , with specific property selection.",
               "contract": [
                 "Loads join entities for a single entity by property name only if the property is currently {@code null} , with specific property selection.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfNull(user, \"addresses\", Arrays.asList(\"city\", \"country\")); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Load addresses with specific fields only if not already loaded userDao.loadJoinEntitiesIfAbsent(user, \"addresses\", Arrays.asList(\"city\", \"country\")); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58118,13 +58118,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58161,13 +58161,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58198,13 +58198,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58241,13 +58241,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Beta default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException",
+              "signature": "@Beta default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58284,13 +58284,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException",
+              "signature": "default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58321,13 +58321,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58364,13 +58364,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException",
+              "signature": "@Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58407,13 +58407,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") default void loadJoinEntitiesIfNull(final T entity) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") default void loadJoinEntitiesIfAbsent(final T entity) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58438,13 +58438,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58475,13 +58475,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfAbsent(final T entity, final Executor executor) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58512,13 +58512,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") default void loadJoinEntitiesIfNull(final Collection<T> entities) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") default void loadJoinEntitiesIfAbsent(final Collection<T> entities) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58543,13 +58543,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -58580,13 +58580,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws SQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws SQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -72847,13 +72847,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -72879,19 +72879,19 @@
               "javadoc_summary": "Loads join entities of the specified class only if they are currently {@code null} .",
               "contract": [
                 "Loads join entities of the specified class only if they are currently {@code null} .",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Only load orders if not already loaded userDao.loadJoinEntitiesIfNull(user, Order.class); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getCachedUser(); // Only load orders if not already loaded userDao.loadJoinEntitiesIfAbsent(user, Order.class); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -72923,19 +72923,19 @@
               "javadoc_summary": "Loads join entities of the specified class with selected properties only if they are currently {@code null} .",
               "contract": [
                 "Loads join entities of the specified class with selected properties only if they are currently {@code null} .",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartiallyLoadedUser(); // Load profile with specific fields if not already loaded userDao.loadJoinEntitiesIfNull( user, UserProfile.class, Arrays.asList(\"bio\", \"avatarUrl\", \"preferences\") ); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartiallyLoadedUser(); // Load profile with specific fields if not already loaded userDao.loadJoinEntitiesIfAbsent( user, UserProfile.class, Arrays.asList(\"bio\", \"avatarUrl\", \"preferences\") ); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -72964,13 +72964,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73005,13 +73005,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73037,19 +73037,19 @@
               "javadoc_summary": "Loads join entities for a specific property only if it is currently {@code null} .",
               "contract": [
                 "Loads join entities for a specific property only if it is currently {@code null} .",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Only load profile if user.getProfile() is null userDao.loadJoinEntitiesIfNull(user, \"profile\"); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Only load profile if user.getProfile() is null userDao.loadJoinEntitiesIfAbsent(user, \"profile\"); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73082,19 +73082,19 @@
               "contract": [
                 "Loads join entities for a specific property with selected fields only if the property is {@code null} .",
                 "If the property already holds a non- {@code null} value, it is left unchanged and no query is executed.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Load addresses with specific fields if not already loaded userDao.loadJoinEntitiesIfNull( user, \"addresses\", Arrays.asList(\"street\", \"city\", \"postalCode\") ); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getUser(); // Load addresses with specific fields if not already loaded userDao.loadJoinEntitiesIfAbsent( user, \"addresses\", Arrays.asList(\"street\", \"city\", \"postalCode\") ); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73123,13 +73123,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73164,13 +73164,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73196,19 +73196,19 @@
               "javadoc_summary": "Loads multiple join properties only if they are {@code null} for a single entity.",
               "contract": [
                 "Loads multiple join properties only if they are {@code null} for a single entity.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartialUser(); // Load multiple properties if not already loaded userDao.loadJoinEntitiesIfNull( user, Arrays.asList(\"orders\", \"profile\", \"preferences\") ); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = getPartialUser(); // Load multiple properties if not already loaded userDao.loadJoinEntitiesIfAbsent( user, Arrays.asList(\"orders\", \"profile\", \"preferences\") ); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73245,13 +73245,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException",
+              "signature": "@Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73288,13 +73288,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException",
+              "signature": "@Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73323,13 +73323,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73364,13 +73364,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException",
+              "signature": "@Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73405,13 +73405,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfNull(final T entity) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfAbsent(final T entity) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73436,13 +73436,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73473,13 +73473,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfAbsent(final T entity, final Executor executor) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73510,13 +73510,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfNull(final Collection<T> entities) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73541,13 +73541,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [
@@ -73578,13 +73578,13 @@
               "see_also": []
             },
             {
-              "name": "loadJoinEntitiesIfNull",
+              "name": "loadJoinEntitiesIfAbsent",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws UncheckedSQLException",
+              "signature": "@SuppressWarnings(\"deprecation\") @Beta @Override default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [

@@ -1,6 +1,6 @@
 API Design Review — NamedQuery.java
-MODEL=opus-4.8  DATE=2026-06-27  RE-VERIFIED 2026-06-27 against current source
-(every finding re-checked against CURRENT NamedQuery.java + CallableQuery.java + AbstractQuery.java; line numbers refreshed)
+MODEL=opus-4.8  DATE=2026-06-27  RE-VERIFIED (round 2) 2026-06-27 against current committed source
+(every finding re-checked against CURRENT NamedQuery.java + CallableQuery.java + AbstractQuery.java; line numbers refreshed; STATUS-prefixed)
 
 1. OVERALL ASSESSMENT
 NamedQuery extends AbstractQuery<PreparedStatement, NamedQuery> and inherits the entire positional
@@ -12,67 +12,66 @@ binding ladder is identical across all setters. Coverage is richer than Callable
 adds setNString(CharSequence) 1329, setRef 3278, setArray 3343, setObject(...SQLType) 3637/3711,
 setObject(...Type<T>) 3786). Unlike CallableQuery, NamedQuery resolves each name to its 1-based index(es)
 itself and throws IllegalArgumentException("Named parameter not found") on an unknown name — so its
-setters legitimately declare `throws IllegalArgumentException, SQLException`. Findings are limited to a
-small throws-clause inconsistency (two intra-class outliers), one documented strict-vs-lenient asymmetry,
-and a couple of low-impact parity gaps vs the positional family.
+setters legitimately declare `throws IllegalArgumentException, SQLException`. ROUND-2 KEY CHANGE: the prior
+throws-clause inconsistency (setNull(String,int) and setString(String,String) declaring SQLException only)
+is now ALREADY-FIXED — both declare the full `throws IllegalArgumentException, SQLException`. Remaining
+findings are one documented strict-vs-lenient asymmetry and a couple of low-impact parity gaps vs the
+positional family.
 
 2. NAMING ISSUES
 - STATUS: STILL-VALID (non-actionable). setBigIntegerAsString(String, BigInteger) | NamedQuery.java:1092
   | verbose but accurate; mirrors the positional/Callable families. Keep.
 
 3. RETURN-TYPE AND PARAMETER ISSUES
-- STATUS: STILL-VALID — Throws-clause inconsistency: setNull(String,int) | NamedQuery.java:153 and
-  setString(String,String) | NamedQuery.java:1112 | Medium | Both still declare only `throws SQLException`,
-  while every other setter in the SAME class declares `throws IllegalArgumentException, SQLException` AND
-  both outliers in fact throw IAE and already @throws-document it. Evidence (current source):
-    153 : `public NamedQuery setNull(final String parameterName, final int sqlType) throws SQLException {`
+- STATUS: ALREADY-FIXED — Throws-clause inconsistency on setNull(String,int) | NamedQuery.java:153 and
+  setString(String,String) | NamedQuery.java:1112 | (was Medium) | Both now declare the full
+  `throws IllegalArgumentException, SQLException`, matching every other setter in the class AND their own
+  @throws Javadoc. Evidence (current source):
+    153 : `public NamedQuery setNull(final String parameterName, final int sqlType) throws IllegalArgumentException, SQLException {`
           ...body 166/177: `throw new IllegalArgumentException("Named parameter not found: " + parameterName);`
           ...javadoc 149: `@throws IllegalArgumentException if the parameter name is not found in the SQL query`
-    1112: `public NamedQuery setString(final String parameterName, final String value) throws SQLException {`
+    1112: `public NamedQuery setString(final String parameterName, final String value) throws IllegalArgumentException, SQLException {`
           ...javadoc 1109: `@throws IllegalArgumentException if the parameter name is not found in the SQL query`
-   Family reference: setNull(String,int,String):218 and setString(String,CharSequence):1176 both declare
-   `throws IllegalArgumentException, SQLException`. Recommend: add IllegalArgumentException to the declared
-   throws of lines 153 and 1112 so signature matches the rest of the family and their own Javadoc.
-   CROSS-TYPE NOTE (REFINED this pass — the old "pick one direction" advice was misleading): do NOT
-   propagate to CallableQuery. CallableQuery's named setters delegate names straight to the driver
-   (no name->index lookup, no IAE), so their `throws SQLException`-only clauses are correct there. The fix
-   belongs ONLY in NamedQuery's two outliers.
+   Family reference: setNull(String,int,String):218 and setString(String,CharSequence):1176 also declare
+   `throws IllegalArgumentException, SQLException`. Resolved; signatures now match the family. CROSS-TYPE
+   NOTE (still applies): this fix correctly stayed in NamedQuery only — CallableQuery's named setters
+   delegate names straight to the driver (no name->index lookup, no IAE), so their `throws SQLException`-only
+   clauses are correct there and were NOT (and must NOT be) changed.
 - STATUS: STILL-VALID / PARTIALLY-ADDRESSED — setParameters(Map) lenient vs setParameters(Object bean) /
   setParameters(Object, Collection) strict | NamedQuery.java:3858 (Map, lenient) vs 3932 (bean, strict) /
   4025 (bean+names, strict) | Low | Behavior unchanged: the Map overload binds only names present in the
-  map and leaves missing named params unbound (body 3862-3866), while the bean overloads throw
-  IAE("No property found with name: ...") when a named param has no matching property (3945-3950 /
-  4045-4047). Same family, opposite absence handling. PARTIALLY-ADDRESSED: each Javadoc now documents its
-  OWN behavior (Map 3839-3841 "...left unbound"; bean 3926-3927 "@throws IAE ... lacks a property") and
-  CallableQuery's Map javadoc (CallableQuery.java:1525-1527) now explicitly contrasts the two, but
-  NamedQuery's own Javadocs do not cross-reference each other. Recommend: add a one-line cross-reference
-  in NamedQuery's Map/bean Javadocs (or accept as intentional product behavior).
+  map and leaves missing named params unbound (body 3862-3866: `if (parameters.containsKey(paramName))`),
+  while the bean overloads throw IAE("No property found with name: ...") when a named param has no matching
+  property (3945-3950 / 4045-4047). Same family, opposite absence handling. PARTIALLY-ADDRESSED: each
+  Javadoc documents its OWN behavior (Map 3837-3841 "...left unbound"; bean strict @throws IAE) and
+  CallableQuery's Map javadoc (CallableQuery.java:1598-1600) explicitly contrasts the two, but NamedQuery's
+  own Javadocs still do not cross-reference each other. Recommend: add a one-line cross-reference in
+  NamedQuery's Map/bean Javadocs (or accept as intentional product behavior).
 
 4. MISPLACED METHODS (with target class)
 - STATUS: STILL-VALID (none). Named setters belong here; positional setters correctly live in
-  AbstractQuery. setParameters(EntityId) (NamedQuery.java:3882) is a package-private internal helper — not
-  a public-API concern.
+  AbstractQuery. setParameters(EntityId) is a package-private internal helper — not a public-API concern.
 
 5. MISSING METHODS (with target class)
 - STATUS: STILL-VALID (intentional omission, parity choice) — Boxed-primitive "default-for-null" overloads
   absent from the named family | NamedQuery.java setBoolean/setByte/setShort/setInt/setLong/setFloat/
   setDouble | Low | The positional family in AbstractQuery provides setXxx(int, Boxed, primitiveDefault)
   (AbstractQuery.java:380 setBoolean, 449 setByte, 518 setShort, 589 setInt, 741 setLong, 885 setFloat,
-  983 setDouble); the named family still provides no (String, Boxed, primitiveDefault) overload (grep
-  confirms zero matches). CallableQuery's named family also omits these -> consistent, likely an
-  intentional "keep the named API leaner" choice. Recommend: add for parity OR accept deliberately.
+  983 setDouble — all re-confirmed this pass); the named family still provides no (String, Boxed,
+  primitiveDefault) overload (grep for `defaultValueForNull` in NamedQuery = 0 matches). CallableQuery's
+  named family also omits these -> consistent, likely an intentional "keep the named API leaner" choice.
+  Recommend: add for parity OR accept deliberately.
 - STATUS: STILL-VALID (intentional omission, parity choice) — Calendar-aware date/time overloads absent |
   NamedQuery.java setDate/setTime/setTimestamp | Low | AbstractQuery offers setDate(int, java.sql.Date,
-  Calendar) (1287), setTime(int, Time, Calendar) (1369), setTimestamp(int, Timestamp, Calendar) (1451);
-  the named family has no (String,...,Calendar) equivalent (the only "Calendar" tokens in NamedQuery are
-  Javadoc examples at 1518/1651, not signatures). CallableQuery also omits them -> consistent, likely
-  intentional. Recommend: add for parity or accept. (Healthy, not a gap: the named family deliberately
-  exposes only the long-length setAsciiStream/setBinaryStream/setCharacterStream overloads, matching
-  CallableQuery.)
+  Calendar) (1287), setTime(int, Time, Calendar) (1369), setTimestamp(int, Timestamp, Calendar) (1451 — all
+  re-confirmed); the named family has no (String,...,Calendar) equivalent. CallableQuery also omits them ->
+  consistent, likely intentional. Recommend: add for parity or accept. (Healthy, not a gap: the named family
+  deliberately exposes only the long-length setAsciiStream/setBinaryStream/setCharacterStream overloads,
+  matching CallableQuery.)
 
 6. DEPRECATION / REMOVAL CANDIDATES (with replacement APIs)
-- STATUS: STILL-VALID (already handled) — setInt(String, char) | NamedQuery.java:635 and
-  setInt(String, Character) | NamedQuery.java:660 | Both still carry @Deprecated (634, 659) with
+- STATUS: STILL-VALID (already handled) — setInt(String, char) | NamedQuery.java:635 (@Deprecated 634) and
+  setInt(String, Character) | NamedQuery.java:660 (@Deprecated 659) | Both carry @Deprecated with
   replacement setString(String, char/Character); mirror the positional/Callable families. No change.
 - STATUS: STILL-VALID (keep) — setLong(String, BigInteger) | NamedQuery.java:784 | Low | Still converts
   via `value.longValueExact()` (790) and can throw ArithmeticException for out-of-range values — surprising
@@ -82,9 +81,11 @@ and a couple of low-impact parity gaps vs the positional family.
   AbstractQuery/CallableQuery.)
 
 NEW ISSUES INTRODUCED/EXPOSED BY RECENT CHANGES
-- N1 | None material. The recent Javadoc pass did not introduce new API defects in NamedQuery. The
-  setParameters lenient/strict asymmetry is now better documented (see section 3, PARTIALLY-ADDRESSED).
-- N2 | Cross-ref correction for the orchestrator: the prior CallableQuery report listed
-  setObject(String,Object,SQLType[,int]) and setObject(String,T,Type<T>) (NamedQuery.java:3637/3711/3786)
-  as MISSING-from-CallableQuery gaps; those NamedQuery sources are confirmed present at the cited lines and
-  are the canonical mirror reference for that gap.
+- N1 | None material. The recent throws-clause fix (section 3, ALREADY-FIXED) introduced no new API defect;
+  it brought the two outliers into line with the rest of the family. The setParameters lenient/strict
+  asymmetry is now better documented (see section 3, PARTIALLY-ADDRESSED).
+- N2 | Cross-ref for the orchestrator: setObject(String,Object,SQLType[,int]) (NamedQuery.java:3637/3711)
+  and setObject(String,T,Type<T>) (NamedQuery.java:3786) are confirmed present at the cited lines. The prior
+  CallableQuery report listed these as MISSING-from-CallableQuery gaps; CallableQuery has since ADDED its
+  mirrors (CallableQuery.java:1529/1553/1578), so those cross-class gaps are now CLOSED (see CallableQuery
+  report section 5, ALREADY-FIXED).
