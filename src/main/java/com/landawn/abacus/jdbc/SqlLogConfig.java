@@ -96,7 +96,7 @@ final class SqlLogConfig {
      * // Log only queries taking 500ms or more
      * SqlLogConfig config = new SqlLogConfig(500L, 1000);
      *
-     * // Log queries exceeding 1 second with the default SQL length
+     * // Log queries taking 1 second or more with the default SQL length
      * SqlLogConfig config2 = new SqlLogConfig(1000L, 0);
      *
      * // Log all queries (set threshold to 0)

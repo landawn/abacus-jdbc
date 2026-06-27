@@ -41,7 +41,7 @@ import com.landawn.abacus.util.u.Optional;
  *     // Inherits both CRUD and join entity operations
  * }
  *
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  *
  * // Get user with all related entities
  * Optional<User> user = userDao.get(userId, true);

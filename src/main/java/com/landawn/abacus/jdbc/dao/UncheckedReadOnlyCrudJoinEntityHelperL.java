@@ -41,7 +41,7 @@ package com.landawn.abacus.jdbc.dao;
  *     // Inherits read-only operations with join loading and primitive long ID support
  * }
  *
- * ReadOnlyUserDao dao = JdbcUtil.createDao(ReadOnlyUserDao.class, readOnlyDataSource, Dsl.PSC);
+ * ReadOnlyUserDao dao = JdbcUtil.createDao(ReadOnlyUserDao.class, readOnlyDataSource);
  *
  * // Read operations with join loading using primitive long - no checked exceptions
  * Optional<User> user = dao.get(123L, Order.class);   // loads user with orders

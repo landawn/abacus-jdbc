@@ -45,7 +45,7 @@ import com.landawn.abacus.query.condition.Condition;
  *     // But cannot update or delete any logs
  * }
  *
- * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource, Dsl.PSC);
+ * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);
  *
  * // Insert and query operations work without checked exception handling:
  * dao.save(new EventLog("System startup"));

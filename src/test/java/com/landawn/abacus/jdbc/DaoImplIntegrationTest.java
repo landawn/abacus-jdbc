@@ -30,7 +30,6 @@ import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.Filters;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -199,8 +198,8 @@ public class DaoImplIntegrationTest extends TestBase {
                     + "VALUES (1, 'A', DATE '2020-01-15', TIME '10:30:00', TIMESTAMP '2020-01-15 10:30:00', X'0102')");
         }
 
-        dao = JdbcUtil.createDao(UserAccountDao.class, ds, PSC);
-        typeDao = JdbcUtil.createDao(TypeProbeDao.class, ds, PSC);
+        dao = JdbcUtil.createDao(UserAccountDao.class, ds);
+        typeDao = JdbcUtil.createDao(TypeProbeDao.class, ds);
     }
 
     @AfterAll
@@ -383,7 +382,7 @@ public class DaoImplIntegrationTest extends TestBase {
     // A malformed DAO interface is rejected at creation time.
     @Test
     public void testCreateDao_InvalidEntityId_Throws() {
-        assertThrows(Exception.class, () -> JdbcUtil.createDao(NoIdBadDao.class, ds, PSC).insert(new NoIdBad()));
+        assertThrows(Exception.class, () -> JdbcUtil.createDao(NoIdBadDao.class, ds).insert(new NoIdBad()));
     }
 
     // A custom @Query UPDATE method declared with a WRAPPER return type (Integer/Long/Boolean) must dispatch into
@@ -403,7 +402,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
     @Test
     public void testCustomQuery_WrapperReturnTypes_DispatchToUpdatePath() throws SQLException {
-        final WrapperReturnDao wrapDao = JdbcUtil.createDao(WrapperReturnDao.class, ds, PSC);
+        final WrapperReturnDao wrapDao = JdbcUtil.createDao(WrapperReturnDao.class, ds);
         final Long id = dao.insert(newUser("Wrap", "Return", 10));
 
         // Integer return — receives row-affected count converted via Numbers::toIntExact.
@@ -468,7 +467,7 @@ public class DaoImplIntegrationTest extends TestBase {
                     + "last_name VARCHAR(64), " + "age INT, " + "active BOOLEAN)");
         }
 
-        final TxLeakDao txDao = JdbcUtil.createDao(TxLeakDao.class, scratchDs, PSC);
+        final TxLeakDao txDao = JdbcUtil.createDao(TxLeakDao.class, scratchDs);
 
         // Snapshot the thread-local SQL-log + perf-log state before the failed call.
         final boolean priorSqlLogEnabled = JdbcUtil.isSqlLogEnabled();
@@ -606,7 +605,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
     @Test
     public void testCustomQueryMethods() throws SQLException {
-        final CustomQueryDao cqDao = JdbcUtil.createDao(CustomQueryDao.class, ds, PSC);
+        final CustomQueryDao cqDao = JdbcUtil.createDao(CustomQueryDao.class, ds);
         final Long id = dao.insert(newUser("Cust", "Query", 40));
         dao.insert(newUser("Cust2", "Query", 50));
 
@@ -660,7 +659,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
     @Test
     public void testBindNamedQuery() throws SQLException {
-        final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds, PSC);
+        final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds);
         dao.insert(newUser("Bind", "Me", 77));
 
         assertEquals("Bind", bindDao.firstNameByAge(77));

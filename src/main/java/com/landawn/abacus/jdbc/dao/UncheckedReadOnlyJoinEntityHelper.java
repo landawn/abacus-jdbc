@@ -44,7 +44,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *     // All delete operations will throw UnsupportedOperationException
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Read operations work fine - no checked exceptions
  * User user = userDao.gett(1L);

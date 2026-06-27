@@ -53,7 +53,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * }
  *
  * // Usage with primitive long
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * Optional<User> user = userDao.get(123L);   // Can use primitive long
  * userDao.deleteById(456L);   // More convenient than Long.valueOf(456)
  * }</pre>
@@ -424,7 +424,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return a {@code Nullable} containing the unique value if found, or {@code Nullable.empty()} if no record exists
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -449,7 +449,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return an {@code Optional} containing the unique non-null value if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -477,7 +477,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
      * @return an {@code Optional} containing the mapped unique non-null value if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

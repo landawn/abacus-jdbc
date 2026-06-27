@@ -15,7 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -23,21 +22,14 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
-import com.landawn.abacus.jdbc.NamedQuery;
-import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.query.AbstractQueryBuilder.SP;
-import com.landawn.abacus.query.Dsl;
-import com.landawn.abacus.query.SqlDialect;
-import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.ExceptionUtil;
@@ -46,8 +38,6 @@ import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
-import com.landawn.abacus.util.Tuple;
-import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.function.Function;
 
 /**
@@ -563,154 +553,6 @@ final class DaoUtil {
         }
 
         return result;
-    }
-
-    // getDaoPreparedQueryFunc(dao) is called on every prepareQuery(Collection,Condition) /
-    // prepareNamedQuery(Collection,Condition) path. The returned Tuple2 (and the 6 closures it
-    // wraps) are bound to the specific DAO instance (dataSource()/targetEntityClass()), so it is
-    // cached per DAO instance rather than per class. DAO proxies are pooled/long-lived (held in
-    // DaoImpl.daoPool); the proxy's hashCode/equals are identity-based, so this map is bounded by
-    // the number of distinct DAO instances.
-    @SuppressWarnings("rawtypes")
-    private static final Map<Dao, Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>>> daoPreparedQueryFuncPool = new ConcurrentHashMap<>();
-
-    /**
-     * Creates query preparation functions for a given DAO instance.
-     * <p>
-     * This method returns a tuple containing two functions: one for creating PreparedQuery instances
-     * and one for creating NamedQuery instances. The functions are determined from the {@link Dsl}
-     * configured on the DAO instance and are instance-bound to avoid cross-DAO state leakage.
-     * </p>
-     * <p>
-     * The returned functions can be used to build and prepare SQL queries based on select property
-     * names and conditions.
-     * </p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Get the query preparation functions for a DAO
-     * Dao<User, UserDao> userDao = ...;
-     * Tuple2<BiFunction, BiFunction> funcs = DaoUtil.getDaoPreparedQueryFunc(userDao);
-     *
-     * // Use the PreparedQuery function
-     * Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> preparedQueryFunc = funcs._1;
-     * Collection<String> selectProps = Arrays.asList("id", "name", "email");
-     * Condition condition = Filters.eq("status", "active");
-     * PreparedQuery query = preparedQueryFunc.apply(selectProps, condition);
-     *
-     * // Use the NamedQuery function
-     * Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException> namedQueryFunc = funcs._2;
-     * NamedQuery namedQuery = namedQueryFunc.apply(selectProps, condition);
-     * }</pre>
-     *
-     * @param dao the DAO instance for which to get query preparation functions
-     * @return a tuple containing two bi-functions: the first for creating {@link PreparedQuery} instances,
-     *         the second for creating {@link NamedQuery} instances
-     */
-    @SuppressWarnings("rawtypes")
-    static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(
-            final Dao dao) {
-        return daoPreparedQueryFuncPool.computeIfAbsent(dao, DaoUtil::computeDaoPreparedQueryFunc);
-    }
-
-    @SuppressWarnings("rawtypes")
-    private static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> computeDaoPreparedQueryFunc(
-            final Dao dao) {
-        final Dsl dsl = dao.dsl();
-        final Dsl namedDsl = namedDsl(dsl);
-
-        @SuppressWarnings("deprecation")
-        final Class<?> targetEntityClass = dao.targetEntityClass();
-
-        final Throwables.BiFunction<javax.sql.DataSource, SP, PreparedQuery, SQLException> prepareQueryFunc = (dataSource, sp) -> {
-            final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.query());
-
-            if (N.notEmpty(sp.parameters())) {
-                boolean noException = false;
-
-                try {
-                    query.setParameters(sp.parameters());
-
-                    noException = true;
-                } finally {
-                    if (!noException) {
-                        query.close();
-                    }
-                }
-            }
-
-            return query;
-        };
-
-        final Throwables.BiFunction<javax.sql.DataSource, SP, NamedQuery, SQLException> prepareNamedQueryFunc = (dataSource, sp) -> {
-            final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.query());
-
-            if (N.notEmpty(sp.parameters())) {
-                boolean noException = false;
-
-                try {
-                    query.setParameters(sp.parameters());
-
-                    noException = true;
-                } finally {
-                    if (!noException) {
-                        query.close();
-                    }
-                }
-            }
-
-            return query;
-        };
-
-        return Tuple.of((selectPropNames, cond) -> {
-            final SP sp = (selectPropNames == null ? dsl.selectFrom(targetEntityClass) : dsl.select(selectPropNames).from(targetEntityClass)).append(cond)
-                    .build();
-
-            return prepareQueryFunc.apply(dao.dataSource(), sp);
-        }, (selectPropNames, cond) -> {
-            final SP sp = (selectPropNames == null ? namedDsl.selectFrom(targetEntityClass) : namedDsl.select(selectPropNames).from(targetEntityClass))
-                    .append(cond)
-                    .build();
-
-            return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-        });
-    }
-
-    private static Dsl namedDsl(final Dsl dsl) {
-        if (dsl == Dsl.NSB || dsl == Dsl.NSC || dsl == Dsl.NAC || dsl == Dsl.NLC) {
-            return dsl;
-        } else if (dsl == Dsl.PSB) {
-            return Dsl.NSB;
-        } else if (dsl == Dsl.PSC) {
-            return Dsl.NSC;
-        } else if (dsl == Dsl.PAC) {
-            return Dsl.NAC;
-        } else if (dsl == Dsl.PLC) {
-            return Dsl.NLC;
-        }
-
-        return dslWithPolicy(dsl, "NAMED_SQL");
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static Dsl dslWithPolicy(final Dsl dsl, final String sqlPolicyName) {
-        final SqlDialect sqlDialect = dsl.sqlDialect();
-        final Object dialectBuilder = SqlDialect.builder()
-                .productInfo(sqlDialect.productInfo())
-                .namingPolicy(sqlDialect.namingPolicy())
-                .identifierQuote(sqlDialect.identifierQuote());
-
-        try {
-            final Class<? extends Enum> sqlPolicyClass = (Class<? extends Enum>) Class.forName("com.landawn.abacus.query.AbstractQueryBuilder$SQLPolicy");
-            final Method sqlPolicyMethod = dialectBuilder.getClass().getDeclaredMethod("sqlPolicy", sqlPolicyClass);
-            final Method buildMethod = dialectBuilder.getClass().getDeclaredMethod("build");
-            ClassUtil.setAccessibleQuietly(sqlPolicyMethod, true);
-            ClassUtil.setAccessibleQuietly(buildMethod, true);
-            sqlPolicyMethod.invoke(dialectBuilder, Enum.valueOf(sqlPolicyClass, sqlPolicyName));
-            return Dsl.forDialect((SqlDialect) buildMethod.invoke(dialectBuilder));
-        } catch (final ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to create Dsl with SQL policy: " + sqlPolicyName, e);
-        }
     }
 
     /**

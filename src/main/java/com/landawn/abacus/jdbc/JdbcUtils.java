@@ -810,11 +810,12 @@ public final class JdbcUtils {
             if (!columnNameList.containsAll(columnTypeMap.keySet())) {
                 final List<String> keys = new ArrayList<>(columnTypeMap.keySet());
                 keys.removeAll(columnNameList);
-                throw new IllegalArgumentException(keys + " are not included in titles: " + N.toString(columnNameList));
+                throw new IllegalArgumentException(keys + " are not columns of the dataset: " + N.toString(columnNameList));
             }
         }
 
         final Type<Object> objType = N.typeOf(Object.class);
+        final boolean hasColumnTypeMap = N.notEmpty(columnTypeMap);
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = new Throwables.BiConsumer<>() {
             private int columnCount = 0;
             private Type<Object>[] columnTypes = null;
@@ -830,7 +831,7 @@ public final class JdbcUtils {
                     for (int i = 0; i < columnCount; i++) {
                         final String columnName = columnNameList.get(i);
 
-                        if (columnTypeMap.containsKey(columnName)) {
+                        if (hasColumnTypeMap && columnTypeMap.containsKey(columnName)) {
                             columnTypes[i] = N.requireNonNull(columnTypeMap.get(columnName));
                         } else {
                             columnTypes[i] = objType;

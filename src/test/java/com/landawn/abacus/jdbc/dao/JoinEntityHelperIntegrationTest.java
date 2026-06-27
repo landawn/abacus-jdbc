@@ -28,7 +28,6 @@ import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.query.Filters;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -147,8 +146,8 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
             st.execute("CREATE TABLE IF NOT EXISTS join_order (id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT, amount DOUBLE)");
         }
 
-        userDao = JdbcUtil.createDao(JoinUserDao.class, ds, PSC);
-        orderDao = JdbcUtil.createDao(JoinOrderDao.class, ds, PSC);
+        userDao = JdbcUtil.createDao(JoinUserDao.class, ds);
+        orderDao = JdbcUtil.createDao(JoinOrderDao.class, ds);
     }
 
     @AfterAll

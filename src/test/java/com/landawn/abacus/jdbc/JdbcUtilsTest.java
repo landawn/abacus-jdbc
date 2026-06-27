@@ -233,6 +233,25 @@ public class JdbcUtilsTest extends TestBase {
     }
 
     @Test
+    public void testImportDataNullColumnTypeMapIsTreatedAsEmpty() throws SQLException {
+        // Regression: a null columnTypeMap must be tolerated (treated like an empty map, i.e. the default Object type
+        // is used for every column), consistent with the up-front validation that already skips a null/empty map.
+        // Previously the per-row setter dereferenced columnTypeMap unconditionally -> NPE on the first row of a
+        // non-empty dataset.
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
+
+        final int result = JdbcUtils.importData(mockDataset, mockConnection, insertSql, (Map<String, Type>) null);
+
+        assertEquals(1, result);
+        verify(mockConnection).prepareStatement(insertSql);
+    }
+
+    @Test
     public void testImportDataWithCustomStmtSetter() throws SQLException {
         // Setup
         Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, (String) row[0]);

@@ -37,12 +37,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.query.ParsedSql;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Throwables;
-import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.u.Optional;
+import com.landawn.abacus.util.stream.Stream;
 
 public class DaoTest extends TestBase {
 
@@ -686,48 +685,6 @@ public class DaoTest extends TestBase {
         assertSame(dbEntity, result);
         assertEquals("updated", dbEntity.getName());
         verify(dao).update(eq(dbEntity), anyCollection(), argThat(c -> c != condition));
-    }
-
-    @Test
-    public void testPrepareQuery_WithSelectPropsAndCondition_DelegatesToDaoUtil() throws SQLException {
-        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
-        final Condition cond = Mockito.mock(Condition.class);
-        final List<String> props = List.of("id", "name");
-        final PreparedQuery expected = Mockito.mock(PreparedQuery.class);
-
-        @SuppressWarnings("unchecked")
-        final Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> pqFunc = Mockito.mock(Throwables.BiFunction.class);
-        @SuppressWarnings("unchecked")
-        final Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException> nqFunc = Mockito.mock(Throwables.BiFunction.class);
-
-        when(pqFunc.apply(props, cond)).thenReturn(expected);
-
-        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getDaoPreparedQueryFunc(dao)).thenReturn(com.landawn.abacus.util.Tuple.of(pqFunc, nqFunc));
-
-            assertSame(expected, dao.prepareQuery(props, cond));
-        }
-    }
-
-    @Test
-    public void testPrepareNamedQuery_WithSelectPropsAndCondition_DelegatesToDaoUtil() throws SQLException {
-        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
-        final Condition cond = Mockito.mock(Condition.class);
-        final List<String> props = List.of("id", "name");
-        final NamedQuery expected = Mockito.mock(NamedQuery.class);
-
-        @SuppressWarnings("unchecked")
-        final Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> pqFunc = Mockito.mock(Throwables.BiFunction.class);
-        @SuppressWarnings("unchecked")
-        final Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException> nqFunc = Mockito.mock(Throwables.BiFunction.class);
-
-        when(nqFunc.apply(props, cond)).thenReturn(expected);
-
-        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getDaoPreparedQueryFunc(dao)).thenReturn(com.landawn.abacus.util.Tuple.of(pqFunc, nqFunc));
-
-            assertSame(expected, dao.prepareNamedQuery(props, cond));
-        }
     }
 
     @Test

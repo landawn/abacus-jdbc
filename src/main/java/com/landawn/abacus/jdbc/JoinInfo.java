@@ -739,9 +739,9 @@ public final class JoinInfo {
      * @return a tuple containing a function to build SQL and a parameter setter for prepared statements
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see Dsl.PSC
-     * @see SqlBuilder.PAC
-     * @see SqlBuilder.PLC
+     * @see Dsl#PSC
+     * @see Dsl#PAC
+     * @see Dsl#PLC
      */
     public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(final Dsl sbc) {
         final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(sbc);
@@ -802,9 +802,9 @@ public final class JoinInfo {
      * @return a tuple containing a function to build SQL and a parameter setter for batch operations
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see Dsl.PSC
-     * @see SqlBuilder.PAC
-     * @see SqlBuilder.PLC
+     * @see Dsl#PSC
+     * @see Dsl#PAC
+     * @see Dsl#PLC
      */
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR
             final Dsl sbc) {
@@ -868,9 +868,9 @@ public final class JoinInfo {
      *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3})
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see Dsl.PSC
-     * @see SqlBuilder.PAC
-     * @see SqlBuilder.PLC
+     * @see Dsl#PSC
+     * @see Dsl#PAC
+     * @see Dsl#PLC
      */
     public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Dsl sbc) {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
@@ -931,9 +931,9 @@ public final class JoinInfo {
      *         cascade-delete control is supported), and parameter setter ({@code _3}))
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
-     * @see Dsl.PSC
-     * @see SqlBuilder.PAC
-     * @see SqlBuilder.PLC
+     * @see Dsl#PSC
+     * @see Dsl#PAC
+     * @see Dsl#PLC
      */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR
             final Dsl sbc) {
@@ -1213,7 +1213,7 @@ public final class JoinInfo {
      *     builder = joinInfo.getSelectSqlPlan(PSC);
      * String sql = builder._1.apply(null);   // Use default columns
      * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
-     *                                   .setParameters(builder._2, employee)
+     *                                   .setParameters(employee, builder._2)
      *                                   .list(Project.class);
      *
      * // Or use batch loading for multiple employees

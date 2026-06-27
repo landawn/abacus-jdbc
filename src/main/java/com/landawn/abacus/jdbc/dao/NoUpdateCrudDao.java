@@ -57,7 +57,7 @@ import com.landawn.abacus.query.condition.Condition;
  *     // Custom read methods can be added
  * }
  *
- * TransactionDao transactionDao = JdbcUtil.createDao(TransactionDao.class, dataSource, Dsl.PSC);
+ * TransactionDao transactionDao = JdbcUtil.createDao(TransactionDao.class, dataSource);
  *
  * // Supported operations - all work fine:
  *

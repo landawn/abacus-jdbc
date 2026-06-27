@@ -61,7 +61,6 @@
 			<attribute name="test" value="true"/>
 			<attribute name="optional" value="true"/>
 		</attributes>
-	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/abacus-query"/>
+	</classpathentry>>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

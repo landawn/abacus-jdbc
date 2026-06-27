@@ -67,7 +67,7 @@ import com.landawn.abacus.query.ParsedSql;
  *     // Custom query methods can be added
  * }
  *
- * CustomerViewDao dao = JdbcUtil.createDao(CustomerViewDao.class, dataSource, Dsl.PSC);
+ * CustomerViewDao dao = JdbcUtil.createDao(CustomerViewDao.class, dataSource);
  *
  * // Supported operations - all work fine:
  *

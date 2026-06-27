@@ -41,7 +41,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *     // Can insert and query, but not update/delete
  * }
  *
- * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource, Dsl.PSC);
+ * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);
  *
  * // These operations work with primitive long:
  * Long id = dao.insert(new EventLog("User logged in"));

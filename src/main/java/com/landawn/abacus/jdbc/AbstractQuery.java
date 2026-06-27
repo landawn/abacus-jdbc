@@ -5685,12 +5685,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Extract column metadata from all result sets
-     * List<Map<String, Class<?>>> metadata = callableQuery.queryAllResultSets((rs, labels) -> {
-     *     Map<String, Class<?>> types = new HashMap<>();
+     * // Extract column metadata (JDBC class names) from all result sets
+     * List<Map<String, String>> metadata = callableQuery.queryAllResultSets((rs, labels) -> {
+     *     Map<String, String> types = new HashMap<>();
      *     for (String label : labels) {
-     *         types.put(label, Class.forName(rs.getMetaData().getColumnClassName(
-     *             rs.findColumn(label))));
+     *         types.put(label, rs.getMetaData().getColumnClassName(rs.findColumn(label)));
      *     }
      *     return types;
      * });
@@ -10114,7 +10113,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 close();
             } catch (final Exception e) {
-                JdbcUtil.logger.error(e, "Failed to close Query");
+                logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }
 
@@ -10139,7 +10138,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 close();
             } catch (final Exception e) {
-                JdbcUtil.logger.error(e, "Failed to close Query");
+                logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }
 

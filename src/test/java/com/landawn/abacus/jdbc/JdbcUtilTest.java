@@ -255,6 +255,75 @@ public class JdbcUtilTest extends TestBase {
         assertConnectionCreation(() -> JdbcUtil.createConnection(driverClass, url, user, password));
     }
 
+    /** A {@link java.sql.Driver} whose constructor always fails, used to exercise the registration-failure path. */
+    public static final class CtorThrowingDriver implements java.sql.Driver {
+        public CtorThrowingDriver() {
+            throw new RuntimeException("ABACUS_TEST_DRIVER_CTOR_BOOM");
+        }
+
+        @Override
+        public Connection connect(String url, java.util.Properties info) {
+            return null;
+        }
+
+        @Override
+        public boolean acceptsURL(String url) {
+            return false;
+        }
+
+        @Override
+        public java.sql.DriverPropertyInfo[] getPropertyInfo(String url, java.util.Properties info) {
+            return new java.sql.DriverPropertyInfo[0];
+        }
+
+        @Override
+        public int getMajorVersion() {
+            return 0;
+        }
+
+        @Override
+        public int getMinorVersion() {
+            return 0;
+        }
+
+        @Override
+        public boolean jdbcCompliant() {
+            return false;
+        }
+
+        @Override
+        public java.util.logging.Logger getParentLogger() {
+            return null;
+        }
+    }
+
+    private static boolean causeChainContains(final Throwable t, final String marker) {
+        Throwable cur = t;
+        while (cur != null) {
+            if (cur.getMessage() != null && cur.getMessage().contains(marker)) {
+                return true;
+            }
+            cur = cur.getCause();
+        }
+        return false;
+    }
+
+    @Test
+    public void testCreateConnectionFailedRegistrationDoesNotPoisonDriverCache() {
+        final String url = "jdbc:abacus-test-no-such-driver://localhost/db";
+
+        // First attempt: the driver fails to instantiate (its constructor throws).
+        final Exception first = assertThrows(Exception.class, () -> JdbcUtil.createConnection(CtorThrowingDriver.class, url, "u", "p"));
+        assertTrue(causeChainContains(first, "ABACUS_TEST_DRIVER_CTOR_BOOM"));
+
+        // Regression: a failed registration must NOT poison the driver-registration cache. The second attempt must
+        // re-try registration (and fail in the constructor again), not silently skip registration and surface an
+        // unrelated "No suitable driver" error.
+        final Exception second = assertThrows(Exception.class, () -> JdbcUtil.createConnection(CtorThrowingDriver.class, url, "u", "p"));
+        assertTrue(causeChainContains(second, "ABACUS_TEST_DRIVER_CTOR_BOOM"),
+                "Second attempt should re-try driver registration, not skip it due to a poisoned cache");
+    }
+
     @Test
     public void testGetConnection() throws SQLException {
         Connection conn = JdbcUtil.getConnection(mockDataSource);

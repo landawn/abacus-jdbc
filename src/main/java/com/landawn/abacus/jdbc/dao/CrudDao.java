@@ -71,7 +71,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }
  *
  * // Usage
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = new User("John", "Doe");
  * Long id = userDao.insert(user);
  * Optional<User> retrieved = userDao.get(id);

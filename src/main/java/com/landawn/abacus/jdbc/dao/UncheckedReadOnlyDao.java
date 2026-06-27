@@ -48,7 +48,7 @@ import com.landawn.abacus.annotation.Beta;
  *     // Only query methods are available
  * }
  *
- * ReportDao dao = JdbcUtil.createDao(ReportDao.class, readOnlyDataSource, Dsl.PSC);
+ * ReportDao dao = JdbcUtil.createDao(ReportDao.class, readOnlyDataSource);
  *
  * // These operations work - note no checked exception handling needed:
  * List<Report> reports = dao.list(Filters.between("date", startDate, endDate));

@@ -24,7 +24,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 /**
  * A read-only CRUD DAO interface that provides only query operations without any insert, update, or delete capabilities.
  * This interface is useful for creating DAOs that should only have read access to the database,
- * ensuring data safety by preventing any modifications at compile time.
+ * ensuring data safety by throwing {@link UnsupportedOperationException} on any modification attempt.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant. Query methods throw {@link UncheckedSQLException} instead of checked
@@ -40,7 +40,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *     // Only query methods available, no insert/update/delete
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, readOnlyDataSource, Dsl.PSC);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, readOnlyDataSource);
  *
  * // Query operations work without checked exception handling:
  * Optional<User> user = userDao.get(userId);

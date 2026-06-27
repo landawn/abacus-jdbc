@@ -47,7 +47,7 @@ import com.landawn.abacus.query.condition.Condition;
  *     // Only read and insert operations available
  * }
  *
- * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource, Dsl.PSC);
+ * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
  *
  * // Insert operations work without checked exception handling:
  * AuditLog log = new AuditLog("User login", userId);

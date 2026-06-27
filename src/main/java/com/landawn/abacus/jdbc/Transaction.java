@@ -167,7 +167,7 @@ public interface Transaction {
     /**
      * Rolls back the transaction if it has not been committed successfully.
      * This method is safe to call multiple times and will only perform a rollback
-     * if the transaction is still active or in a failed commit state.
+     * if the transaction is still active, marked for rollback, or in a failed-commit state.
      *
      * <p>This method is particularly useful in finally blocks or cleanup code
      * where you want to ensure a transaction is not left in an active state.</p>

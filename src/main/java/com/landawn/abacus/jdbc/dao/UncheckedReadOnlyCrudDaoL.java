@@ -42,7 +42,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *     // Additional query methods can be added here
  * }
  *
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  *
  * // Read operations work normally with primitive long
  * Optional<User> user = userDao.get(123L);

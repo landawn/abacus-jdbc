@@ -32,7 +32,7 @@ package com.landawn.abacus.jdbc.dao;
  *     // Cannot delete join entities
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Get user by primitive long ID with join entities
  * Optional<User> user = userDao.get(123L, Order.class);

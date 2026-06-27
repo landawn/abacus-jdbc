@@ -389,78 +389,78 @@ public class DaoUtilTest extends TestBase {
     interface PsbDao extends Dao<DemoBean, PsbDao> {
     }
 
-    @Test
-    public void testGetDaoPreparedQueryFunc_Psc() {
-        final PscDao dao = Mockito.mock(PscDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PSC);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        assertNotNull(pair._1);
-        assertNotNull(pair._2);
-    }
-
-    @Test
-    public void testGetDaoPreparedQueryFunc_Pac() {
-        final PacDao dao = Mockito.mock(PacDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PAC);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        assertNotNull(pair._1);
-        assertNotNull(pair._2);
-    }
-
-    @Test
-    public void testGetDaoPreparedQueryFunc_Plc() {
-        final PlcDao dao = Mockito.mock(PlcDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PLC);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        assertNotNull(pair._1);
-        assertNotNull(pair._2);
-    }
-
-    @Test
-    public void testGetDaoPreparedQueryFunc_Psb() {
-        final PsbDao dao = Mockito.mock(PsbDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PSB);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        assertNotNull(pair._1);
-        assertNotNull(pair._2);
-    }
-
-    // PSC builder lambdas — apply() actually executes prepareQueryFunc / prepareNamedQueryFunc
-    // (lines 632-650, 652-670, 673-683).
-    @Test
-    public void testGetDaoPreparedQueryFunc_PscApply_BuildsRealSql() throws SQLException {
-        final PscDao dao = Mockito.mock(PscDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PSC);
-        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
-        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
-        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
-        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
-
-        Mockito.when(dao.dataSource()).thenReturn(ds);
-        Mockito.when(ds.getConnection()).thenReturn(conn);
-        Mockito.when(conn.getMetaData()).thenReturn(md);
-        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
-        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
-
-        final com.landawn.abacus.jdbc.PreparedQuery pq = pair._1.apply(null, cond);
-        assertNotNull(pq);
-
-        final com.landawn.abacus.jdbc.NamedQuery nq = pair._2.apply(null, cond);
-        assertNotNull(nq);
-    }
+    //    @Test
+    //    public void testGetDaoPreparedQueryFunc_Psc() {
+    //        final PscDao dao = Mockito.mock(PscDao.class);
+    //        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+    //        Mockito.when(dao.dsl()).thenReturn(PSC);
+    //
+    //        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+    //        assertNotNull(pair._1);
+    //        assertNotNull(pair._2);
+    //    }
+    //
+    //    @Test
+    //    public void testGetDaoPreparedQueryFunc_Pac() {
+    //        final PacDao dao = Mockito.mock(PacDao.class);
+    //        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+    //        Mockito.when(dao.dsl()).thenReturn(PAC);
+    //
+    //        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+    //        assertNotNull(pair._1);
+    //        assertNotNull(pair._2);
+    //    }
+    //
+    //    @Test
+    //    public void testGetDaoPreparedQueryFunc_Plc() {
+    //        final PlcDao dao = Mockito.mock(PlcDao.class);
+    //        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+    //        Mockito.when(dao.dsl()).thenReturn(PLC);
+    //
+    //        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+    //        assertNotNull(pair._1);
+    //        assertNotNull(pair._2);
+    //    }
+    //
+    //    @Test
+    //    public void testGetDaoPreparedQueryFunc_Psb() {
+    //        final PsbDao dao = Mockito.mock(PsbDao.class);
+    //        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+    //        Mockito.when(dao.dsl()).thenReturn(PSB);
+    //
+    //        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+    //        assertNotNull(pair._1);
+    //        assertNotNull(pair._2);
+    //    }
+    //
+    //    // PSC builder lambdas — apply() actually executes prepareQueryFunc / prepareNamedQueryFunc
+    //    // (lines 632-650, 652-670, 673-683).
+    //    @Test
+    //    public void testGetDaoPreparedQueryFunc_PscApply_BuildsRealSql() throws SQLException {
+    //        final PscDao dao = Mockito.mock(PscDao.class);
+    //        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+    //        Mockito.when(dao.dsl()).thenReturn(PSC);
+    //        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
+    //        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
+    //        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
+    //        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
+    //
+    //        Mockito.when(dao.dataSource()).thenReturn(ds);
+    //        Mockito.when(ds.getConnection()).thenReturn(conn);
+    //        Mockito.when(conn.getMetaData()).thenReturn(md);
+    //        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
+    //        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
+    //        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+    //
+    //        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+    //        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
+    //
+    //        final com.landawn.abacus.jdbc.PreparedQuery pq = pair._1.apply(null, cond);
+    //        assertNotNull(pq);
+    //
+    //        final com.landawn.abacus.jdbc.NamedQuery nq = pair._2.apply(null, cond);
+    //        assertNotNull(nq);
+    //    }
 
     @Test
     public void testGetRefreshSelectPropNamesNullInput() {
@@ -612,129 +612,7 @@ public class DaoUtilTest extends TestBase {
         assertEquals(0, result.size());
     }
 
-    // getDaoPreparedQueryFunc PSC with non-null selectPropNames — exercises the non-null branch (lines 681, 686)
-    @Test
-    public void testGetDaoPreparedQueryFunc_PscApplyWithSelectProps() throws SQLException {
-        final PscDao dao = Mockito.mock(PscDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PSC);
-        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
-        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
-        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
-        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
-
-        Mockito.when(dao.dataSource()).thenReturn(ds);
-        Mockito.when(ds.getConnection()).thenReturn(conn);
-        Mockito.when(conn.getMetaData()).thenReturn(md);
-        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
-        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
-        final Collection<String> selectProps = Arrays.asList("id", "name");
-
-        final var pq = pair._1.apply(selectProps, cond);
-        assertNotNull(pq);
-
-        final var nq = pair._2.apply(selectProps, cond);
-        assertNotNull(nq);
-    }
-
-    // getDaoPreparedQueryFunc PAC apply (lines 693-701)
-    @Test
-    public void testGetDaoPreparedQueryFunc_PacApply() throws SQLException {
-        final PacDao dao = Mockito.mock(PacDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PAC);
-        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
-        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
-        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
-        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
-
-        Mockito.when(dao.dataSource()).thenReturn(ds);
-        Mockito.when(ds.getConnection()).thenReturn(conn);
-        Mockito.when(conn.getMetaData()).thenReturn(md);
-        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
-        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
-
-        final var pq = pair._1.apply(null, cond);
-        assertNotNull(pq);
-
-        final var nq = pair._2.apply(null, cond);
-        assertNotNull(nq);
-    }
-
-    // getDaoPreparedQueryFunc PLC apply (lines 705-713)
-    @Test
-    public void testGetDaoPreparedQueryFunc_PlcApply() throws SQLException {
-        final PlcDao dao = Mockito.mock(PlcDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PLC);
-        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
-        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
-        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
-        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
-
-        Mockito.when(dao.dataSource()).thenReturn(ds);
-        Mockito.when(ds.getConnection()).thenReturn(conn);
-        Mockito.when(conn.getMetaData()).thenReturn(md);
-        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
-        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
-
-        final var pq = pair._1.apply(null, cond);
-        assertNotNull(pq);
-
-        final var nq = pair._2.apply(null, cond);
-        assertNotNull(nq);
-    }
-
-    // getDaoPreparedQueryFunc PSB apply (lines 717-725)
-    @Test
-    public void testGetDaoPreparedQueryFunc_PsbApply() throws SQLException {
-        final PsbDao dao = Mockito.mock(PsbDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PSB);
-        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
-        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
-        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
-        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
-
-        Mockito.when(dao.dataSource()).thenReturn(ds);
-        Mockito.when(ds.getConnection()).thenReturn(conn);
-        Mockito.when(conn.getMetaData()).thenReturn(md);
-        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
-        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
-
-        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
-        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
-
-        final var pq = pair._1.apply(null, cond);
-        assertNotNull(pq);
-
-        final var nq = pair._2.apply(null, cond);
-        assertNotNull(nq);
-    }
-
     interface CustomDao extends Dao<DemoBean, CustomDao> {
-    }
-
-    @Test
-    public void testGetDaoPreparedQueryFunc_CustomSqlBuilder() {
-        final CustomDao dao = Mockito.mock(CustomDao.class);
-        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
-        Mockito.when(dao.dsl()).thenReturn(PSB);
-
-        assertNotNull(DaoUtil.getDaoPreparedQueryFunc(dao));
     }
 
     // Shell-comment (#) in skipLeadingWhitespaceAndComments exercises the continue at line 1019.

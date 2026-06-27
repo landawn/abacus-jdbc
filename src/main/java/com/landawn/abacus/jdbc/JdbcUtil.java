@@ -119,6 +119,10 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
+import lombok.Builder;
+import lombok.Value;
+import lombok.experimental.Accessors;
+
 /**
  * Utility class providing high-level JDBC operations with automatic resource management,
  * transaction support, and connection pooling integration.
@@ -258,8 +262,9 @@ public final class JdbcUtil {
      * {@code oracle.jdbc.internal.OraclePreparedStatement#getOriginalSql()}. For all other statements it
      * falls back to {@link Object#toString() Statement.toString()}, which most JDBC drivers implement to return the SQL.</p>
      *
-     * <p>If a {@link SQLException} is thrown while unwrapping or while calling {@code getOriginalSql()},
-     * the function silently falls back to {@code toString()} rather than propagating the exception.</p>
+     * <p>If a {@link SQLException} is thrown while calling {@code getOriginalSql()} on an Oracle statement,
+     * the function silently falls back to {@code toString()}. A {@link SQLException} thrown while unwrapping a
+     * pooled statement is propagated to the caller.</p>
      */
     public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
         Statement stmtToUse = stmt;
@@ -848,8 +853,15 @@ public final class JdbcUtil {
 
         try {
             if (registeredDriverClasses.add(driverClass)) {
-                DriverManager.registerDriver(N.newInstance(driverClass));
-                logger.debug("Registered JDBC driver(class={})", ClassUtil.getCanonicalClassName(driverClass));
+                try {
+                    DriverManager.registerDriver(N.newInstance(driverClass));
+                    logger.debug("Registered JDBC driver(class={})", ClassUtil.getCanonicalClassName(driverClass));
+                } catch (final Throwable e) { //NOSONAR
+                    // Don't poison the cache: if registration fails, drop the entry so a later call can retry it
+                    // (otherwise the class is permanently treated as registered and every later call skips it).
+                    registeredDriverClasses.remove(driverClass);
+                    throw e;
+                }
             }
 
             return DriverManager.getConnection(url, user, password);
@@ -11673,7 +11685,7 @@ public final class JdbcUtil {
      * }
      *
      * // Create and use the DAO
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
      *
      * // Use inherited CRUD operations
      * User newUser = new User("john@example.com", "John Doe");
@@ -11727,7 +11739,7 @@ public final class JdbcUtil {
      *     CompletableFuture<Optional<Order>> findByIdAsync(Long id);
      * }
      *
-     * OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource, Dsl.PSC);
+     * OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource);
      *
      * // Use aggregate queries
      * long pendingCount = orderDao.countByStatus("PENDING");
@@ -11813,558 +11825,52 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @see Dao
      * @see CrudDao
-     * @see #createDao(Class, javax.sql.DataSource, SqlMapper)
-     * @see #createDao(Class, javax.sql.DataSource, Executor)
+     * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
-        return createDao(daoInterface, ds, Dsl.PSC);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder) {
-        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, null, null, JdbcUtil.asyncExecutor.getExecutor());
+        return DaoImpl.createDao(daoInterface, null, ds, Dsl.PSC, null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
-     * Creates a DAO instance with a custom SQL mapper for query externalization.
-     * The SQL mapper allows SQL queries to be defined in external files or resources.
+     * Creates a DAO instance using the customization options specified in {@code daoCreationOptions}.
      *
-     * <p><b>Usage Examples:</b></p>
+     * <p>This is the configurable counterpart to {@link #createDao(Class, javax.sql.DataSource)}: it accepts
+     * a {@link DaoCreationOptions} bundle carrying the optional target table name, SQL builder dialect,
+     * {@link SqlMapper}, {@link Jdbc.DaoCache} and {@link Executor}. Any option left unset (or a {@code null}
+     * {@code daoCreationOptions}) falls back to the same defaults as the two-argument overload: {@link Dsl#PSC}
+     * for the SQL builder and the shared async executor.</p>
+     *
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.load("sql/user-queries.xml");
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper);
+     * UserDao dao = JdbcUtil.createDao(UserDao.class, dataSource,
+     *         JdbcUtil.DaoCreationOptions.builder()
+     *                 .targetTableName("app_users")
+     *                 .dsl(Dsl.PSC)
+     *                 .build());
      * }</pre>
      *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Do not call
-     * {@code createDao} per request.</p>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     * @param <TD> the type parameter of the DAO interface, must extend {@link Dao}
+     * @param daoInterface the DAO interface class to implement, must not be {@code null}
+     * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
+     * @param daoCreationOptions the creation options; when {@code null}, all defaults are applied (equivalent
+     *                           to {@link #createDao(Class, javax.sql.DataSource)})
+     * @return a dynamically generated DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, or daoCreationOptions.dsl().sqlDialect().sqlPolicy() is not null and is not SqlPolicy.PARAMETERIZED_SQL
+     * @throws UnsupportedOperationException if a non-{@code null} {@code cache} option is supplied for a DAO
+     *         interface that supports update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao}
+     *         types may be cached)
+     * @see #createDao(Class, javax.sql.DataSource)
+     * @see DaoCreationOptions
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper) {
-        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper);
-    }
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions) {
+        final DaoCreationOptions options = daoCreationOptions == null ? DaoCreationOptions.builder().build() : daoCreationOptions;
+        final Dsl dsl = options.dsl() == null ? Dsl.PSC : options.dsl();
+        final Executor executor = options.executor() == null ? JdbcUtil.asyncExecutor.getExecutor() : options.executor();
 
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper) {
-        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, null, JdbcUtil.asyncExecutor.getExecutor());
-    }
-
-    /**
-     * Creates a DAO instance with a custom SQL mapper and DAO cache.
-     * The cache can improve performance by caching query results.
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
-     * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully
-     * and prefer the thread-local alternative below.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.load("sql/user-queries.xml");
-     * // or build one in code: new SqlMapper().add("findByName", "SELECT ... WHERE name = ?", null)
-     *
-     * // A non-null DaoCache is only allowed for NoUpdateDao / NoUpdateCrudDao interfaces
-     * // (e.g. UserReadDao extends NoUpdateCrudDao<User, Long, ...>):
-     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, Dsl.PSC, sqlMapper, cache);
-     *
-     * // For a regular (mutating) Dao/CrudDao, pass null — a non-null cache would throw
-     * // UnsupportedOperationException for a non-NoUpdate interface:
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper, null);
-     * }</pre>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @param daoCache the cache for DAO operations (should not be shared between DAOs)
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
-     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
-     * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper)} or
-     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
-     */
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
-            final Jdbc.DaoCache daoCache) {
-        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper, daoCache);
-    }
-
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper,
-            final Jdbc.DaoCache daoCache) {
-        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
-    }
-
-    /**
-     * Creates a DAO instance with a custom executor for asynchronous operations.
-     * This allows control over the thread pool used for async DAO methods.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * ExecutorService executor = Executors.newFixedThreadPool(10);
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, executor);
-     * CompletableFuture<List<User>> future = userDao.findAllAsync();
-     * }</pre>
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the supplied
-     * {@code executor} across DAOs rather than allocating one per DAO, and prefer the default
-     * async executor unless you need isolation guarantees.</p>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param ds the DataSource to use for database operations
-     * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     */
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Executor executor) {
-        return createDao(daoInterface, ds, Dsl.PSC, executor);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final Executor executor) {
-        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, null, null, executor);
-    }
-
-    /**
-     * Creates a DAO instance with a custom SQL mapper and executor.
-     * Combines external SQL management with custom thread pool control.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.load("sql/queries.xml");
-     * ExecutorService executor = Executors.newCachedThreadPool();
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper, executor);
-     * }</pre>
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
-     * across DAOs.</p>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     */
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
-            final Executor executor) {
-        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper, executor);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper,
-            final Executor executor) {
-        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, null, executor);
-    }
-
-    /**
-     * Creates a DAO instance with all customization options.
-     * Provides full control over SQL mapping, caching, and async execution.
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
-     * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully or
-     * prefer {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.load("sql/queries.xml");
-     * ExecutorService executor = Executors.newFixedThreadPool(8);
-     *
-     * // Cache requires a NoUpdate DAO; size it with create(capacity, evictDelayMillis).
-     * Jdbc.DaoCache cache = Jdbc.DaoCache.create(1000, 3000);
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, dataSource, Dsl.PSC, sqlMapper, cache, executor);
-     *
-     * // For a mutating Dao/CrudDao, pass null cache (a non-null cache throws
-     * // UnsupportedOperationException for non-NoUpdate interfaces):
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC, sqlMapper, null, executor);
-     * }</pre>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @param daoCache the cache for DAO operations (should not be shared between DAOs)
-     * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
-     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
-     * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper, Executor)} or
-     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
-     */
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
-            final Jdbc.DaoCache daoCache, final Executor executor) {
-        return createDao(daoInterface, ds, Dsl.PSC, sqlMapper, daoCache, executor);
-    }
-
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Dsl sqlBuilder, final SqlMapper sqlMapper,
-            final Jdbc.DaoCache daoCache, final Executor executor) {
-        return DaoImpl.createDao(daoInterface, null, ds, sqlBuilder, sqlMapper, daoCache, executor);
-    }
-
-    /**
-     * Creates a DAO instance for a specific table name.
-     * This is useful when the table name differs from the entity class name.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Entity class is "User" but table is "app_users"
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "app_users", dataSource, Dsl.PSC);
-     * }</pre>
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Prefer one DAO per
-     * logical table name.</p>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param targetTableName the specific table name to use
-     * @param ds the DataSource to use for database operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     */
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds) {
-        return createDao(daoInterface, targetTableName, ds, Dsl.PSC);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final Dsl sqlBuilder) {
-        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, null, null, JdbcUtil.asyncExecutor.getExecutor());
-    }
-
-    /**
-     * Creates a DAO instance for a specific table with a custom SQL mapper.
-     * Combines custom table naming with external SQL management.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.load("sql/legacy-queries.xml");
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, Dsl.PSC, sqlMapper);
-     * }</pre>
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Prefer one DAO per
-     * logical table name.</p>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param targetTableName the specific table name to use
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     */
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SqlMapper sqlMapper) {
-        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
-            final SqlMapper sqlMapper) {
-        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, null, JdbcUtil.asyncExecutor.getExecutor());
-    }
-
-    /**
-     * Creates a DAO instance for a specific table with SQL mapper and cache.
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code daoCache}
-     * retains query results for the DAO's lifetime; size it carefully.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Map the DAO's entity onto a non-default table, with a result cache.
-     * SqlMapper sqlMapper = SqlMapper.load("sql/legacy-queries.xml");
-     *
-     * // Cache is only honored for NoUpdateDao / NoUpdateCrudDao interfaces:
-     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "legacy_users", dataSource, Dsl.PSC, sqlMapper, cache);
-     *
-     * // Regular CrudDao on an overridden table — pass null cache:
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, Dsl.PSC, sqlMapper, null);
-     * }</pre>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param targetTableName the specific table name to use
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @param daoCache the cache for DAO operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
-     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
-     * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper)} or
-     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
-     */
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SqlMapper sqlMapper, final Jdbc.DaoCache daoCache) {
-        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper, daoCache);
-    }
-
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
-            final SqlMapper sqlMapper, final Jdbc.DaoCache daoCache) {
-        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
-    }
-
-    /**
-     * Creates a DAO instance for a specific table with a custom executor.
-     * Allows custom table naming with control over async operations.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * ForkJoinPool customPool = new ForkJoinPool(20);
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, Dsl.PSC, customPool);
-     * }</pre>
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
-     * across DAOs.</p>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param targetTableName the specific table name to use
-     * @param ds the DataSource to use for database operations
-     * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     */
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final Executor executor) {
-        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, executor);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
-            final Executor executor) {
-        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, null, null, executor);
-    }
-
-    /**
-     * Creates a DAO instance for a specific table with SQL mapper and executor.
-     * Combines all customization options except caching.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlMapper sqlMapper = SqlMapper.load("sql/custom-queries.xml");
-     * ExecutorService executor = Executors.newWorkStealingPool();
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, Dsl.PSC, sqlMapper, executor);
-     * }</pre>
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
-     * across DAOs.</p>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param targetTableName the specific table name to use
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     */
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SqlMapper sqlMapper, final Executor executor) {
-        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper, executor);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
-            final SqlMapper sqlMapper, final Executor executor) {
-        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, null, executor);
-    }
-
-    /**
-     * Creates a DAO instance with all customization options including table name.
-     * Provides maximum flexibility for DAO configuration.
-     *
-     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
-     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
-     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
-     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
-     * {@code @Service} consumer injects the DAO via constructor.</p>
-     *
-     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code cache}
-     * parameter retains query results for the DAO's lifetime; size it carefully or prefer
-     * {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Full control: table override + external SQL + cache + async executor.
-     * SqlMapper sqlMapper = SqlMapper.load("sql/queries.xml");
-     * ExecutorService executor = Executors.newFixedThreadPool(8);
-     *
-     * // Cache is only honored for NoUpdateDao / NoUpdateCrudDao interfaces:
-     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
-     * UserReadDao readDao = JdbcUtil.createDao(UserReadDao.class, "users_2024", dataSource, Dsl.PSC, sqlMapper, cache, executor);
-     *
-     * // Regular mutating CrudDao — pass null cache (a non-null cache throws
-     * // UnsupportedOperationException for non-NoUpdate interfaces):
-     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, Dsl.PSC, sqlMapper, null, executor);
-     * }</pre>
-     *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param targetTableName the specific table name to use
-     * @param ds the DataSource to use for database operations
-     * @param sqlMapper the SQL mapper for externalizing queries
-     * @param cache the cache for DAO operations (should not be shared between DAOs)
-     * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface. Cache and reuse this
-     *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     * @throws UnsupportedOperationException if a non-{@code null} cache is supplied for a DAO interface that supports
-     *         update/delete operations (only {@code NoUpdateDao}/{@code NoUpdateCrudDao} types may be cached)
-     * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Executor)} or
-     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
-     */
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
-        return createDao(daoInterface, targetTableName, ds, Dsl.PSC, sqlMapper, cache, executor);
-    }
-
-    @Deprecated
-    @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl sqlBuilder,
-            final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
-        return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlBuilder, sqlMapper, cache, executor);
-    }
-
-    @SuppressWarnings("unused")
-    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
-        String paramKey = null;
-
-        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
-
-        if (kryoParser != null) {
-            try {
-                paramKey = kryoParser.serialize(cacheKeyArgs);
-            } catch (final Exception e) {
-                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
-            }
-        } else {
-            final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
-                if (it == null) {
-                    return null;
-                }
-
-                final Type<?> type = N.typeOf(it.getClass());
-
-                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
-                    return it;
-                } else {
-                    return it.toString();
-                }
-            }).toList();
-
-            try {
-                paramKey = N.toJson(newArgs);
-            } catch (final Exception e) {
-                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
-            }
-        }
-
-        if (paramKey == null) {
-            return null;
-        }
-
-        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
+        return DaoImpl.createDao(daoInterface, options.targetTableName(), ds, dsl, options.sqlMapper(), options.cache(), executor);
     }
 
     /**
@@ -12446,6 +11952,102 @@ public final class JdbcUtil {
      */
     public static void closeDaoCacheOnCurrentThread() {
         localThreadCache_TL.remove();
+    }
+
+    @SuppressWarnings("unused")
+    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
+        String paramKey = null;
+
+        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
+
+        if (kryoParser != null) {
+            try {
+                paramKey = kryoParser.serialize(cacheKeyArgs);
+            } catch (final Exception e) {
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
+            }
+        } else {
+            final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
+                if (it == null) {
+                    return null;
+                }
+
+                final Type<?> type = N.typeOf(it.getClass());
+
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
+                    return it;
+                } else {
+                    return it.toString();
+                }
+            }).toList();
+
+            try {
+                paramKey = N.toJson(newArgs);
+            } catch (final Exception e) {
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
+            }
+        }
+
+        if (paramKey == null) {
+            return null;
+        }
+
+        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
+    }
+
+    /**
+     * Immutable bundle of optional settings for {@link JdbcUtil#createDao(Class, javax.sql.DataSource, DaoCreationOptions)}.
+     *
+     * <p>Every option is optional; an unset option uses the same default as
+     * {@link JdbcUtil#createDao(Class, javax.sql.DataSource)}. Instances are created via the generated
+     * builder and are immutable.</p>
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * DaoCreationOptions options = DaoCreationOptions.builder()
+     *         .targetTableName("app_users")
+     *         .dsl(Dsl.PSC)
+     *         .sqlMapper(sqlMapper)
+     *         .build();
+     * }</pre>
+     *
+     * @see JdbcUtil#createDao(Class, javax.sql.DataSource, DaoCreationOptions)
+     */
+    @Builder
+    @Value
+    @Accessors(fluent = true)
+    public static class DaoCreationOptions {
+        /**
+         * The database table name the DAO operates on. When {@code null} (the default), the table name is
+         * derived from the entity class associated with the DAO interface.
+         */
+        private String targetTableName;
+
+        /**
+         * The SQL builder dialect used to generate CRUD SQL. When {@code null} (the default), {@link Dsl#PSC}
+         * is used.
+         */
+        private Dsl dsl;
+
+        /**
+         * An optional {@link SqlMapper} providing externalized, pre-defined SQL statements keyed by ID.
+         * May be {@code null}.
+         */
+        private SqlMapper sqlMapper;
+
+        /**
+         * An optional {@link Jdbc.DaoCache} for caching results of methods annotated with {@code @CacheResult}.
+         * May be {@code null}. Supplying a non-{@code null} cache is only permitted for
+         * {@code NoUpdateDao}/{@code NoUpdateCrudDao} interfaces; otherwise DAO creation fails with
+         * {@link UnsupportedOperationException}.
+         */
+        private Jdbc.DaoCache cache;
+
+        /**
+         * An optional {@link Executor} for the DAO's asynchronous operations. When {@code null} (the default),
+         * the shared async executor is used.
+         */
+        private Executor executor;
     }
 
     // ==============================================Jdbc Context=======================================================>>

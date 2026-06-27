@@ -43,7 +43,7 @@ import com.landawn.abacus.util.u.Optional;
  *     // Inherits both CRUD operations and join entity helpers with primitive long ID convenience
  * }
  *
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  *
  * // Fetch user with primitive long ID and load associated orders
  * Optional<User> user = userDao.get(123L, Order.class);

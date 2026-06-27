@@ -71,7 +71,7 @@ import com.landawn.abacus.util.Throwables;
  *     // Custom read methods
  * }
  *
- * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource, Dsl.PSC);
+ * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
  *
  * // Supported operations - all work fine:
  *

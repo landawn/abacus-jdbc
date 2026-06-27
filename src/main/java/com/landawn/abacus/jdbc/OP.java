@@ -179,7 +179,7 @@ public enum OP {
      *
      * <p>This operation is primarily used with {@code @Query} annotation for stored procedures
      * that return multiple result sets. Each result set is processed and returned
-     * in a collection via {@code listAll/listAllAndGetOutParameters}.</p>
+     * in a collection via {@code listAllResultSets/listAllResultSetsAndGetOutParameters}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -197,7 +197,7 @@ public enum OP {
      * <p>Similar to {@link #listAll} but returns {@code Dataset} objects which provide more
      * flexibility for data processing and transformation compared to typed {@code List}s.
      * This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSet}s
-     * returned from the executed procedure via {@code queryAll/queryAllAndGetOutParameters}.</p>
+     * returned from the executed procedure via {@code queryAllResultSets/queryAllResultSetsAndGetOutParameters}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -215,12 +215,12 @@ public enum OP {
      * <p>This operation is ideal for stored procedures that return large result sets
      * where you want to process data in a streaming fashion rather than loading
      * everything into memory at once. It is primarily used with {@code @Query} annotation
-     * to retrieve all the {@code ResultSet}s returned from the executed procedure via {@code streamAll}.</p>
+     * to retrieve all the {@code ResultSet}s returned from the executed procedure via {@code streamAllResultSets}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
-     * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
+     * Stream<Dataset> streamLargeDatasets();
      * }</pre>
      *
      */
@@ -231,14 +231,14 @@ public enum OP {
      * Used when the primary goal is to get output parameters rather than result sets.
      *
      * <p>This operation is specifically designed for stored procedures with OUT or INOUT
-     * parameters. The return type should match the structure of the output parameters.</p>
+     * parameters. The return type must be {@code Jdbc.OutParamResult}, from which the OUT parameter values are read.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters, isProcedure = true)
      * @OutParameter(position = 2, sqlType = Types.INTEGER)
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)
-     * Tuple2<Integer, Double> calculateStats(@Bind("input") int input);
+     * Jdbc.OutParamResult calculateStats(@Bind("input") int input);
      * }</pre>
      *
      * <p>This operation is primarily used with {@code @Query} annotation to execute the target procedure

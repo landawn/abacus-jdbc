@@ -185,9 +185,10 @@ public @interface DaoConfig {
      * referenced by the SQL (useful for joins with extra columns, calculated columns, or
      * aggregations that have no corresponding entity property).</p>
      *
-     * <p>This setting only affects the framework-generated {@code Dataset} methods; SQL declared
-     * by {@link Query @Query} is untouched, and a method-level
-     * {@link FetchColumnByEntityClass @FetchColumnByEntityClass} always wins over this default.</p>
+     * <p>This setting applies to every built-in <em>and</em> {@link Query @Query}-based method that returns a
+     * {@code Dataset} and does not carry a method-level {@link FetchColumnByEntityClass @FetchColumnByEntityClass}
+     * (which always wins over this default). The SQL text declared by {@code @Query} is never rewritten; only the
+     * set of columns retained in the resulting {@code Dataset} is affected.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

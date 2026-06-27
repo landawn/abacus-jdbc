@@ -48,7 +48,7 @@ import java.util.concurrent.Executor;
  *     // All delete operations throw UnsupportedOperationException
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Supported operations - all work fine:
  *

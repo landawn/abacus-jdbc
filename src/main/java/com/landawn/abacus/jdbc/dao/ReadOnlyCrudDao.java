@@ -57,7 +57,7 @@ import com.landawn.abacus.annotation.Beta;
  *     // Custom query methods can be added
  * }
  *
- * ReportDao reportDao = JdbcUtil.createDao(ReportDao.class, dataSource, Dsl.PSC);
+ * ReportDao reportDao = JdbcUtil.createDao(ReportDao.class, dataSource);
  *
  * // Supported operations - all work fine:
  *

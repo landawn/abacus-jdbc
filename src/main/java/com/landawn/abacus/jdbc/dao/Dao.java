@@ -44,7 +44,6 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
@@ -111,7 +110,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }
  *
  * // Usage
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = userDao.getFirstAndLastNameBy(123L);
  * }</pre>
  *
@@ -131,7 +130,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <TD> the self-type parameter for fluent API support; must be the concrete sub-DAO interface
  *
  * @see JdbcUtil#createDao(Class, DataSource)
- * @see JdbcUtil#createDao(Class, DataSource, SqlMapper)
+ * @see JdbcUtil#createDao(Class, DataSource, JdbcUtil.DaoCreationOptions)
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
@@ -166,13 +165,15 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     @NonDBOperation
     SqlMapper sqlMapper();
 
-    /**
-     * Retrieves the SQL builder DSL configured for this DAO.
-     *
-     * @return the SQL builder DSL used to generate framework SQL for this DAO
-     */
-    @NonDBOperation
-    Dsl dsl();
+    //    /**
+    //     * Retrieves the SQL builder DSL configured for this DAO.
+    //     *
+    //     * @return the SQL builder DSL used to generate framework SQL for this DAO
+    //     * @deprecated for internal framework use only; not intended to be called by application code.
+    //     */
+    //    @Deprecated
+    //    @NonDBOperation
+    //    Dsl dsl();
 
     /**
      * Retrieves the class object representing the entity type managed by this DAO.
@@ -359,9 +360,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
-        return DaoUtil.getDaoPreparedQueryFunc(this)._1.apply(selectPropNames, cond);
-    }
+    PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
      * Creates a PreparedQuery optimized for queries that return large result sets.
@@ -593,9 +592,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
-        return DaoUtil.getDaoPreparedQueryFunc(this)._2.apply(selectPropNames, cond);
-    }
+    NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
      * Creates a NamedQuery optimized for large result sets.

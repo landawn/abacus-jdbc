@@ -99,6 +99,7 @@ import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.SqlDialect;
+import com.landawn.abacus.query.SqlDialect.SqlPolicy;
 import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
@@ -155,7 +156,7 @@ import com.landawn.abacus.util.stream.Stream;
  * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
  *
  * <p>This is a non-instantiable utility class. Its primary responsibility is the
- * {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Jdbc.DaoCache, Executor) createDao} factory
+ * {@link #createDao(Class, String, javax.sql.DataSource, Dsl, SqlMapper, Jdbc.DaoCache, Executor) createDao} factory
  * method, which builds an {@link InvocationHandler} for a JDK dynamic proxy that implements a user-defined DAO
  * interface. The handler intercepts each method call and dispatches it to a pre-built invoker derived from the
  * method's annotation metadata. Supported annotations include {@code @Query} (covering SELECT/INSERT/UPDATE/DELETE
@@ -343,58 +344,8 @@ final class DaoImpl {
 
     private static final Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = NamedQuery::setParameters; // NOSONAR
 
-    private static Dsl parameterizedDsl(final Dsl dsl) {
-        if (dsl == Dsl.PSB || dsl == Dsl.PSC || dsl == Dsl.PAC || dsl == Dsl.PLC) {
-            return dsl;
-        } else if (dsl == Dsl.NSB) {
-            return Dsl.PSB;
-        } else if (dsl == Dsl.NSC) {
-            return Dsl.PSC;
-        } else if (dsl == Dsl.NAC) {
-            return Dsl.PAC;
-        } else if (dsl == Dsl.NLC) {
-            return Dsl.PLC;
-        }
-
-        return dslWithPolicy(dsl, "PARAMETERIZED_SQL");
-    }
-
-    private static Dsl namedDsl(final Dsl dsl) {
-        if (dsl == Dsl.NSB || dsl == Dsl.NSC || dsl == Dsl.NAC || dsl == Dsl.NLC) {
-            return dsl;
-        } else if (dsl == Dsl.PSB) {
-            return Dsl.NSB;
-        } else if (dsl == Dsl.PSC) {
-            return Dsl.NSC;
-        } else if (dsl == Dsl.PAC) {
-            return Dsl.NAC;
-        } else if (dsl == Dsl.PLC) {
-            return Dsl.NLC;
-        }
-
-        return dslWithPolicy(dsl, "NAMED_SQL");
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static Dsl dslWithPolicy(final Dsl dsl, final String sqlPolicyName) {
-        final SqlDialect sqlDialect = dsl.sqlDialect();
-        final Object dialectBuilder = SqlDialect.builder()
-                .productInfo(sqlDialect.productInfo())
-                .namingPolicy(sqlDialect.namingPolicy())
-                .identifierQuote(sqlDialect.identifierQuote());
-
-        try {
-            final Class<? extends Enum> sqlPolicyClass = (Class<? extends Enum>) Class.forName("com.landawn.abacus.query.AbstractQueryBuilder$SQLPolicy");
-            final Method sqlPolicyMethod = dialectBuilder.getClass().getDeclaredMethod("sqlPolicy", sqlPolicyClass);
-            final Method buildMethod = dialectBuilder.getClass().getDeclaredMethod("build");
-            ClassUtil.setAccessibleQuietly(sqlPolicyMethod, true);
-            ClassUtil.setAccessibleQuietly(buildMethod, true);
-            sqlPolicyMethod.invoke(dialectBuilder, Enum.valueOf(sqlPolicyClass, sqlPolicyName));
-            return Dsl.forDialect((SqlDialect) buildMethod.invoke(dialectBuilder));
-        } catch (final ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to create Dsl with SQL policy: " + sqlPolicyName, e);
-        }
-    }
+    private static final Set<String> singleQueryPrefix = N.toSet("get", "findFirst", "findOne", "findOnlyOne", "selectFirst", "selectOne", "selectOnlyOne",
+            "exist", "notExist", "has", "is");
 
     /**
      * Creates a {@link MethodHandle} for invoking a default interface method via {@code unreflectSpecial}.
@@ -445,8 +396,35 @@ final class DaoImpl {
         }
     }
 
-    private static final Set<String> singleQueryPrefix = N.toSet("get", "findFirst", "findOne", "findOnlyOne", "selectFirst", "selectOne", "selectOnlyOne",
-            "exist", "notExist", "has", "is");
+    private static Dsl parameterizedDsl(final Dsl dsl) {
+        if (dsl.sqlDialect().sqlPolicy() == SqlPolicy.PARAMETERIZED_SQL) {
+            return dsl;
+        }
+
+        return dslWithPolicy(dsl, SqlPolicy.PARAMETERIZED_SQL);
+    }
+
+    private static Dsl namedDsl(final Dsl dsl) {
+        if (dsl.sqlDialect().sqlPolicy() == SqlPolicy.NAMED_SQL) {
+            return dsl;
+        }
+
+        return dslWithPolicy(dsl, SqlPolicy.NAMED_SQL);
+    }
+
+    @SuppressWarnings({ "unchecked" })
+    private static Dsl dslWithPolicy(final Dsl dsl, final SqlPolicy sqlPolicy) {
+        final SqlDialect sqlDialect = dsl.sqlDialect();
+
+        final SqlDialect newSqlDialect = SqlDialect.builder()
+                .productInfo(sqlDialect.productInfo())
+                .namingPolicy(sqlDialect.namingPolicy())
+                .identifierQuote(sqlDialect.identifierQuote())
+                .sqlPolicy(sqlPolicy)
+                .build();
+
+        return Dsl.forDialect(newSqlDialect);
+    }
 
     /**
      * Determines whether the specified method should be dispatched as a list-style (multi-row) query, based on its
@@ -1883,7 +1861,7 @@ final class DaoImpl {
      * @param executor an optional {@link Executor} for asynchronous operations; if {@code null}, the default async executor is used
      * @return a proxy instance implementing the specified DAO interface
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}
-     *         is {@code null}, if {@code sqlBuilder} is {@code null}, if duplicate SQL keys are defined, or if the
+     *         is {@code null}, if {@code dsl} is {@code null}, if duplicate SQL keys are defined, or if the
      *         DAO interface has invalid annotation configurations or generic type arguments
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
      *         incompatible return type for the declared {@link OP}, or a feature not yet enabled (e.g., cache on a
@@ -1898,6 +1876,9 @@ final class DaoImpl {
         N.checkArgNotNull(dsl, "dsl");
 
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
+
+        N.checkArgument(dsl.sqlDialect().sqlPolicy() == null || dsl.sqlDialect().sqlPolicy() == SqlPolicy.PARAMETERIZED_SQL,
+                "'dsl.sqlDialec.sqlPolicy' must null or SqlPolicy.PARAMETERIZED_SQL. It can't be {}", dsl.sqlDialect().sqlPolicy());
 
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
         final String daoClassName = ClassUtil.getCanonicalClassName(daoInterface);
@@ -2082,8 +2063,8 @@ final class DaoImpl {
 
         final SqlDialect sqlDialect = dsl.sqlDialect();
         final NamingPolicy namingPolicy = sqlDialect.namingPolicy() == null ? NamingPolicy.SNAKE_CASE : sqlDialect.namingPolicy();
-        final Dsl parameterizedDsl = parameterizedDsl(dsl);
-        final Dsl namedDsl = namedDsl(dsl);
+        final Dsl parameterizedDsl = DaoImpl.parameterizedDsl(dsl);
+        final Dsl namedDsl = DaoImpl.namedDsl(dsl);
 
         final Class<Object> entityClass = N.isEmpty(typeArguments) ? null : (Class) typeArguments[0];
         final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
@@ -2431,6 +2412,30 @@ final class DaoImpl {
                 call = (proxy, args) -> dsl;
             } else if (methodName.equals("sqlMapper") && SqlMapper.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> newSqlMapper;
+            } else if (methodName.equals("prepareQuery") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
+                    && Condition.class.isAssignableFrom(paramTypes[1])) {
+                call = (proxy, args) -> {
+                    final Collection<String> selectPropNames = (Collection<String>) args[0];
+                    final Condition cond = (Condition) args[1];
+                    final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                    final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
+
+                    return proxy.prepareQuery(sp.query())
+                            .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
+                            .settParameters(sp.parameters(), collParamsSetter);
+                };
+            } else if (methodName.equals("prepareNamedQuery") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
+                    && Condition.class.isAssignableFrom(paramTypes[1])) {
+                call = (proxy, args) -> {
+                    final Collection<String> selectPropNames = (Collection<String>) args[0];
+                    final Condition cond = (Condition) args[1];
+                    final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                    final SP sp = namedSelectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
+
+                    return proxy.prepareNamedQuery(sp.query())
+                            .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
+                            .settParameters(sp.parameters(), collParamsSetter);
+                };
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = Stream.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));

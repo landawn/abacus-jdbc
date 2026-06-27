@@ -69,7 +69,7 @@ import com.landawn.abacus.util.stream.Stream;
  *     // Custom query methods can be added here
  * }
  *
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = new User("John", "Doe");
  * Long id = userDao.insert(user);
  *

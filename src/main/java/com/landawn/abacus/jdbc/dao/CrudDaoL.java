@@ -51,7 +51,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * }
  *
  * // Usage with primitive long
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * Optional<User> user = userDao.get(123L);   // Can use primitive long
  * userDao.deleteById(456L);                  // More convenient than Long.valueOf(456)
  * }</pre>
@@ -433,7 +433,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return a {@link Nullable} containing the unique value if found, or {@code Nullable.empty()} if no record exists
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
@@ -459,7 +459,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return an {@link Optional} containing the unique non-null value if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)

@@ -37,7 +37,7 @@ package com.landawn.abacus.jdbc.dao;
  *     // Inherits read-only CRUD and join entity operations with unchecked exceptions
  * }
  *
- * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource, Dsl.PSC);
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Fetch a user with their orders - no checked exceptions
  * Optional<User> userWithOrders = userDao.get(123L, Order.class);

@@ -48,7 +48,7 @@ import com.landawn.abacus.util.u.Optional;
  * }
  *
  * // Usage
- * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, Dsl.PSC);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  *
  * // Get user with orders loaded
  * Optional<User> user = userDao.get(123L, Order.class);

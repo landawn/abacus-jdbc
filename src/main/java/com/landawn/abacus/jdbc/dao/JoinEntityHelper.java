@@ -796,6 +796,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -822,6 +823,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
@@ -876,6 +878,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -902,6 +905,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
@@ -1816,8 +1820,9 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
-     *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
+     *             transaction; prefer {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      */
     @Deprecated
     @Beta
@@ -1845,6 +1850,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      */
@@ -1921,8 +1927,9 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
-     *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
+     *             transaction; prefer {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      */
     @Deprecated
     @Beta
@@ -1950,6 +1957,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      */
