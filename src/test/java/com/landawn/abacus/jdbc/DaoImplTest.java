@@ -452,7 +452,7 @@ public class DaoImplTest extends TestBase {
         assertEquals(parsed, qi.parsedSql);
     }
 
-    // QueryInfo: fragmentContainsNamedParameters=true with named SQL → isNamedQuery=true (L6548 branch)
+    // QueryInfo: fragmentsContainNamedParameters=true with named SQL -> isNamedQuery=true
     @Test
     void testQueryInfo_FragmentContainsNamedParameters_NamedSql() {
         DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = :id", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false,
@@ -460,7 +460,7 @@ public class DaoImplTest extends TestBase {
         assertTrue(qi.isNamedQuery);
     }
 
-    // QueryInfo: fragmentContainsNamedParameters=true with positional SQL → throws (L6551)
+    // QueryInfo: fragmentsContainNamedParameters=true with positional SQL -> throws
     @Test
     void testQueryInfo_FragmentContainsNamedParameters_PositionalSql_Throws() {
         assertThrows(IllegalArgumentException.class,
@@ -511,11 +511,11 @@ public class DaoImplTest extends TestBase {
         assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, OP.DEFAULT, "GenericListDao.listWildcard"));
     }
 
-    @CacheResult
+    @CacheResult(enabled = true)
     @RefreshCache
     interface CacheDisabledOverrideDao extends com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao<TestEntity, CacheDisabledOverrideDao> {
         // No @NonDBOperation: must reach the proxy's cache wrapper so the resolution logic actually runs.
-        @CacheResult(disabled = true)
+        @CacheResult(enabled = false)
         default String findCached() {
             return "fresh-result";
         }
@@ -524,16 +524,16 @@ public class DaoImplTest extends TestBase {
             return "fresh-result";
         }
 
-        @RefreshCache(disabled = true)
+        @RefreshCache(enabled = false)
         default String updateData() {
             return "refresh-result";
         }
     }
 
     /**
-     * Regression: when the DAO class has @CacheResult and a method has @CacheResult(disabled=true),
+     * Regression: when the DAO class has @CacheResult(enabled=true) and a method has @CacheResult(enabled=false),
      * the method-level explicit disable must override the class-level annotation. Previously the
-     * disabled annotation was silently filtered out, causing the class-level annotation to take
+     * opt-out annotation was silently filtered out, causing the class-level annotation to take
      * effect anyway.
      */
     @Test
@@ -569,18 +569,18 @@ public class DaoImplTest extends TestBase {
 
         CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, recordingCache, null);
 
-        // Method explicitly disabled — must NOT consult the cache or write to it.
+        // Method explicitly disabled - must NOT consult the cache or write to it.
         assertEquals("fresh-result", dao.findCached());
         assertEquals(0, getCount.get(), "Disabled method must not query the cache");
         assertEquals(0, putCount.get(), "Disabled method must not write to the cache");
 
-        // Method without explicit disable — class-level @CacheResult applies (filter matches "find" prefix).
+        // Method without explicit disable - class-level @CacheResult(enabled=true) applies (filter matches "find" prefix).
         dao.findCachedDefault();
-        assertTrue(getCount.get() > 0 || putCount.get() > 0, "Non-disabled method should interact with cache");
+        assertTrue(getCount.get() > 0 || putCount.get() > 0, "Enabled method should interact with cache");
     }
 
     /**
-     * Regression: same override semantics for @RefreshCache. Method-level disable must take precedence
+     * Regression: same override semantics for @RefreshCache. Method-level enabled=false must take precedence
      * over a class-level @RefreshCache annotation.
      */
     @Test
@@ -613,7 +613,7 @@ public class DaoImplTest extends TestBase {
 
         CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, recordingCache, null);
         assertEquals("refresh-result", dao.updateData());
-        assertEquals(0, updateCount.get(), "Disabled @RefreshCache method must not invalidate the cache");
+        assertEquals(0, updateCount.get(), "@RefreshCache(enabled=false) method must not invalidate the cache");
     }
 
     // isFindFirst: OP.findFirst returns true regardless of method name (line 521)

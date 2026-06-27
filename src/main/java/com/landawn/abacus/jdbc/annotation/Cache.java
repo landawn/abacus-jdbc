@@ -46,9 +46,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Applying any of them to a DAO that supports
  * update/delete operations fails with {@code UnsupportedOperationException} at initialization time.</p>
  *
- * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} (or eligible
- * methods when {@code @CacheResult} is applied at the type level) will have their results cached
- * according to the specified configuration. The cache key is automatically derived from the
+ * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} and
+ * {@code enabled = true} (or eligible methods when {@code @CacheResult(enabled = true)} is applied
+ * at the type level) will have their results cached according to the specified configuration. The cache key is automatically derived from the
  * fully-qualified method name and the serialized parameters.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -56,7 +56,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @Cache(capacity = 1000, evictDelay = 60000) // Run eviction sweep every 60 seconds
  * public interface CountryDao extends NoUpdateCrudDao<Country, String, CountryDao> {
  *     // Results will be cached when annotated with @CacheResult
- *     @CacheResult
+ *     @CacheResult(enabled = true)
  *     @Query("SELECT * FROM countries WHERE continent = :continent")
  *     List<Country> findByContinent(@Bind("continent") String continent);
  * }

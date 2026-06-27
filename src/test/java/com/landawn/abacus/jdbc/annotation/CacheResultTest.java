@@ -35,8 +35,8 @@ public class CacheResultTest extends TestBase {
     }
 
     @Test
-    public void testDefaultDisabled() throws Exception {
-        assertEquals(false, CacheResult.class.getMethod("disabled").getDefaultValue());
+    public void testDefaultEnabled() throws Exception {
+        assertEquals(false, CacheResult.class.getMethod("enabled").getDefaultValue());
     }
 
     @Test

@@ -35,7 +35,7 @@ import java.lang.annotation.Target;
  * <p>The DAO proxy ({@code DaoImpl}) resolves these substitutions when building the SQL for a
  * call. If the replacement text itself contains named parameter placeholders (e.g.,
  * {@code "discount >= :minDiscount"}), set
- * {@link Query#fragmentContainsNamedParameters() @Query(fragmentContainsNamedParameters = true)}
+ * {@link Query#fragmentsContainNamedParameters() @Query(fragmentsContainNamedParameters = true)}
  * so the proxy re-scans the assembled SQL for them.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -55,7 +55,7 @@ import java.lang.annotation.Target;
  * <p><b>Dynamic WHERE clause that itself binds named parameters:</b></p>
  * <pre>{@code
  * @Query(value = "SELECT * FROM promotions WHERE {whereClause}",
- *        fragmentContainsNamedParameters = true)
+ *        fragmentsContainNamedParameters = true)
  * List<Promotion> findActive(
  *     @SqlFragment("whereClause") String whereClause,
  *     @Bind("minDiscount")        int    minDiscount);
@@ -66,7 +66,7 @@ import java.lang.annotation.Target;
  *
  * @see SqlFragmentList
  * @see Bind
- * @see Query#fragmentContainsNamedParameters()
+ * @see Query#fragmentsContainNamedParameters()
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })

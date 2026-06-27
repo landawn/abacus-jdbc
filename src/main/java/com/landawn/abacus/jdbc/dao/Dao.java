@@ -2262,6 +2262,9 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs
      */
+    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
+    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
+    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
@@ -2276,6 +2279,9 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs
      */
+    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
+    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
+    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {

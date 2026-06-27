@@ -101,7 +101,7 @@ public @interface Query {
      * <p>The SQL can include:</p>
      * <ul>
      *   <li>Named parameters using {@code :paramName} syntax for value binding</li>
-     *   <li>Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList}); set {@link #fragmentContainsNamedParameters()} to {@code true} if the replaced fragments contain named parameters</li>
+     *   <li>Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList}); set {@link #fragmentsContainNamedParameters()} to {@code true} if the replaced fragments contain named parameters</li>
      *   <li>Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.</li>
      *   <li>Database-specific SQL extensions and functions</li>
      * </ul>
@@ -531,7 +531,7 @@ public @interface Query {
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding records with dynamic conditions containing named parameters
-     * @Query(value = "SELECT * FROM promotions WHERE {whereClause}", fragmentContainsNamedParameters = true)
+     * @Query(value = "SELECT * FROM promotions WHERE {whereClause}", fragmentsContainNamedParameters = true)
      * List<Promotion> findActivePromotions(@SqlFragment("whereClause") String whereClause, @Bind("minDiscount") int minDiscount);
      * findActivePromotions("discount >= :minDiscount AND status = 'ACTIVE'", 10);
      * }</pre>
@@ -542,7 +542,7 @@ public @interface Query {
      * @see SqlFragmentList
      */
     @Beta
-    boolean fragmentContainsNamedParameters() default false;
+    boolean fragmentsContainNamedParameters() default false;
 
     /**
      * Enables automatic system-time parameter injection for the query.

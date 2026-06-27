@@ -305,7 +305,7 @@ final class DaoImpl {
                             && Strings.containsIgnoreCase(sql, " INSERT ") && Strings.containsIgnoreCase(sql, " INTO "));
 
             return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.autoSetSysTimeParam(), isSelect,
-                    isInsert, isProcedure, tmp.fragmentContainsNamedParameters());
+                    isInsert, isProcedure, tmp.fragmentsContainNamedParameters());
         });
     }
 
@@ -6054,18 +6054,18 @@ final class DaoImpl {
                         ImmutableList.wrap(N.toList(method.getParameterTypes())), method.getReturnType());
 
                 final CacheResult methodCacheResultAnno = Stream.of(method.getAnnotations()).select(CacheResult.class).last().orElseNull();
-                final CacheResult cacheResultAnno = methodCacheResultAnno != null ? (methodCacheResultAnno.disabled() ? null : methodCacheResultAnno)
+                final CacheResult cacheResultAnno = methodCacheResultAnno != null ? (methodCacheResultAnno.enabled() ? methodCacheResultAnno : null)
                         : ((daoClassCacheResultAnno != null //
-                                && !daoClassCacheResultAnno.disabled() //
+                                && daoClassCacheResultAnno.enabled() //
                                 && !Strings.containsAnyIgnoreCase(method.getName(), "page", "paginate") //
                                 && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodNameStartsWith)) //
                                         ? daoClassCacheResultAnno
                                         : null);
 
                 final RefreshCache methodRefreshCacheAnno = Stream.of(method.getAnnotations()).select(RefreshCache.class).last().orElseNull();
-                final RefreshCache refreshResultAnno = methodRefreshCacheAnno != null ? (methodRefreshCacheAnno.disabled() ? null : methodRefreshCacheAnno)
+                final RefreshCache refreshResultAnno = methodRefreshCacheAnno != null ? (methodRefreshCacheAnno.enabled() ? methodRefreshCacheAnno : null)
                         : ((daoClassRefreshCacheAnno != null //
-                                && !daoClassRefreshCacheAnno.disabled() //
+                                && daoClassRefreshCacheAnno.enabled() //
                                 && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) //
                                         ? daoClassRefreshCacheAnno
                                         : null);
@@ -6075,8 +6075,8 @@ final class DaoImpl {
 
                 final boolean isQueryMethod = JdbcUtil.IS_QUERY_METHOD.test(method);
                 final boolean isUpdateMethod = JdbcUtil.IS_UPDATE_METHOD.test(method);
-                final boolean isAnnotatedCacheResult = cacheResultAnno != null && !cacheResultAnno.disabled();
-                final boolean isAnnotatedRefreshResult = (refreshResultAnno != null && !refreshResultAnno.disabled());
+                final boolean isAnnotatedCacheResult = cacheResultAnno != null && cacheResultAnno.enabled();
+                final boolean isAnnotatedRefreshResult = refreshResultAnno != null && refreshResultAnno.enabled();
                 final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isAnnotatedRefreshResult ? daoCache : null;
 
                 if (isAnnotatedCacheResult || isAnnotatedRefreshResult || (isQueryMethod || isUpdateMethod)) {
@@ -6524,7 +6524,7 @@ final class DaoImpl {
          *
          * <p>A single trailing semicolon in the SQL string is automatically stripped. If {@code parsedSql} is {@code null},
          * the SQL string is parsed automatically. The {@code isNamedQuery} flag is derived from the presence of
-         * named parameters in the parsed SQL or from the {@code fragmentContainsNamedParameters} hint.</p>
+         * named parameters in the parsed SQL or from the {@code fragmentsContainNamedParameters} hint.</p>
          *
          * @param sql the raw SQL string (must not be blank); a single trailing semicolon is removed
          * @param parsedSql the pre-parsed SQL, or {@code null} to parse from {@code sql}
@@ -6538,13 +6538,13 @@ final class DaoImpl {
          * @param isSelect {@code true} if this is a SELECT statement
          * @param isInsert {@code true} if this is an INSERT statement
          * @param isProcedure {@code true} if this SQL represents a stored procedure call
-         * @param fragmentContainsNamedParameters {@code true} if any {@code @SqlFragment} parameters use named parameters
-         * @throws IllegalArgumentException if {@code sql} is blank, or if {@code fragmentContainsNamedParameters} is
+         * @param fragmentsContainNamedParameters {@code true} if any {@code @SqlFragment} parameters use named parameters
+         * @throws IllegalArgumentException if {@code sql} is blank, or if {@code fragmentsContainNamedParameters} is
          *         {@code true} but the SQL uses positional (?) parameters without named parameters
          */
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
                 final OP op, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect, final boolean isInsert,
-                final boolean isProcedure, final boolean fragmentContainsNamedParameters) {
+                final boolean isProcedure, final boolean fragmentsContainNamedParameters) {
             this.sql = N.checkArgNotBlank(sql != null && sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
             this.parsedSql = parsedSql == null ? ParsedSql.parse(this.sql) : parsedSql;
             this.queryTimeout = queryTimeout;
@@ -6557,10 +6557,10 @@ final class DaoImpl {
             this.isSelect = isSelect;
             this.isInsert = isInsert;
             this.isProcedure = isProcedure;
-            isNamedQuery = N.notEmpty(this.parsedSql.namedParameters()) || fragmentContainsNamedParameters;
+            isNamedQuery = N.notEmpty(this.parsedSql.namedParameters()) || fragmentsContainNamedParameters;
 
-            if (fragmentContainsNamedParameters && (this.parsedSql.parameterCount() > 0 && N.isEmpty(this.parsedSql.namedParameters()))) {
-                throw new IllegalArgumentException("'fragmentContainsNamedParameters' is set to true for Non-named sql: " + sql);
+            if (fragmentsContainNamedParameters && (this.parsedSql.parameterCount() > 0 && N.isEmpty(this.parsedSql.namedParameters()))) {
+                throw new IllegalArgumentException("'fragmentsContainNamedParameters' is set to true for Non-named sql: " + sql);
             }
         }
     }

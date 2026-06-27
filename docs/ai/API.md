@@ -11117,14 +11117,14 @@ Enables method-level result caching for DAO query methods.
 - (none)
 
 #### Public Instance Methods
-##### disabled(...) -> boolean
-- **Signature:** `boolean disabled() default false`
-- **Summary:** Disables caching when set to {@code true} .
+##### enabled(...) -> boolean
+- **Signature:** `boolean enabled() default false`
+- **Summary:** Enables caching when set to {@code true} .
 - **Contract:**
-  - Disables caching when set to {@code true} .
+  - The default is {@code false}; set this element explicitly when the annotation should activate cache result handling.
 - **Parameters:**
   - (none)
-- **Returns:** {@code true} to disable caching, {@code false} (default) to enable
+- **Returns:** {@code true} to enable caching, {@code false} (default) to leave it disabled
 ##### liveTime(...) -> long
 - **Signature:** `long liveTime() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME`
 - **Summary:** Specifies the maximum time (in milliseconds) a cached entry can live.
@@ -11138,7 +11138,7 @@ Enables method-level result caching for DAO query methods.
   - If an entry is not accessed within this time, it expires and is removed.
   - This is useful for frequently accessed data that should expire if unused.
   - <p> The entry expires when either {@code liveTime} or {@code maxIdleTime} is exceeded, whichever comes first.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Expire if not accessed for 10 minutes @CacheResult(liveTime = 3600000, maxIdleTime = 600000) @Query("SELECT * FROM user_sessions WHERE token = :token") UserSession getSession(@Bind("token") String token); } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Expire if not accessed for 10 minutes @CacheResult(enabled = true, liveTime = 3600000, maxIdleTime = 600000) @Query("SELECT * FROM user_sessions WHERE token = :token") UserSession getSession(@Bind("token") String token); } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the maximum idle time in milliseconds; defaults to {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes)
@@ -11146,7 +11146,7 @@ Enables method-level result caching for DAO query methods.
 - **Signature:** `int minSize() default 0`
 - **Summary:** Specifies the minimum size requirement for caching results.
 - **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Only cache if result has at least 10 items @CacheResult(minSize = 10) @Query("SELECT * FROM products WHERE category = :category") List<Product> findByCategory(@Bind("category") String category); } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Only cache if result has at least 10 items @CacheResult(enabled = true, minSize = 10) @Query("SELECT * FROM products WHERE category = :category") List<Product> findByCategory(@Bind("category") String category); } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the minimum result size to cache; the default {@code 0} means no minimum
@@ -11154,7 +11154,7 @@ Enables method-level result caching for DAO query methods.
 - **Signature:** `int maxSize() default Integer.MAX_VALUE`
 - **Summary:** Specifies the maximum size limit for caching results.
 - **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Don't cache if result has more than 1000 items @CacheResult(maxSize = 1000) @Query("SELECT * FROM orders WHERE date >= :startDate") List<Order> findOrdersSince(@Bind("startDate") Date date); } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Don't cache if result has more than 1000 items @CacheResult(enabled = true, maxSize = 1000) @Query("SELECT * FROM orders WHERE date >= :startDate") List<Order> findOrdersSince(@Bind("startDate") Date date); } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the maximum result size to cache; the default {@link Integer#MAX_VALUE} means no maximum
@@ -11584,7 +11584,7 @@ Declares how a DAO method should execute SQL.
 - **Summary:** Specifies the inline SQL statement(s) to execute.
 - **Contract:**
   - When the annotated method is a {@code default} method whose last parameter is a {@code String\[\]} , all entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if applicable, and passed to that {@code String\[\]} parameter at runtime.
-  - </p> <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList} ); set {@link #fragmentContainsNamedParameters()} to {@code true} if the replaced fragments contain named parameters </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.
+  - </p> <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList} ); set {@link #fragmentsContainNamedParameters()} to {@code true} if the replaced fragments contain named parameters </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.
   - </li> <li> Database-specific SQL extensions and functions </li> </ul> <p> Named parameter examples: </p> <pre> {@code // Simple parameter binding @Query("SELECT * FROM users WHERE age > :minAge") List<User> findByAge(@Bind("minAge") int minAge); // Multiple parameters @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge") List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max); // Nested property access @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status") List<Order> findOrders(@Bind("user") User user, @Bind("status") String status); // IN clause with collection (uses {ids} template variable expanded via @BindList) @Query("SELECT * FROM users WHERE id IN ({ids})") List<User> findByIds(@BindList("ids") List<Long> ids); } </pre> <p> Complex SQL examples: </p> <pre> {@code // JOIN with aggregation @Query("SELECT u.*, COUNT(o.id) as order_count " + "FROM users u LEFT JOIN orders o ON u.id = o.user_id " + "WHERE u.created_date > :startDate " + "GROUP BY u.id HAVING COUNT(o.id) > :minOrders") List<UserStats> findUserStats(@Bind("startDate") Date startDate, @Bind("minOrders") int minOrders); // Common Table Expression (CTE) @Query("WITH recent_orders AS ( " + " SELECT user_id, COUNT(*) as order_count " + " FROM orders WHERE order_date > :since " + " GROUP BY user_id " + ") " + "SELECT u.*, ro.order_count " + "FROM users u JOIN recent_orders ro ON u.id = ro.user_id") List<UserOrderSummary> findActiveUserSummary(@Bind("since") Date since); // Window function @Query("SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank " + "FROM employees WHERE department = :dept") List<Employee> rankEmployeesByDepartment(@Bind("dept") String department); } </pre> <p> Note: Exactly one of {@code value} or {@link #id()} must be non-empty; specifying both or neither causes initialization to fail with an {@code IllegalArgumentException} .
 - **Parameters:**
   - (none)
@@ -11639,8 +11639,8 @@ Declares how a DAO method should execute SQL.
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} if collection/array parameters should be treated as single values; {@code false} (default) for standard expansion behavior
-##### fragmentContainsNamedParameters(...) -> boolean
-- **Signature:** `@Beta boolean fragmentContainsNamedParameters() default false`
+##### fragmentsContainNamedParameters(...) -> boolean
+- **Signature:** `@Beta boolean fragmentsContainNamedParameters() default false`
 - **Summary:** Indicates whether the SQL statement contains template variables defined by the {@link SqlFragment} or {@link SqlFragmentList} annotations that will be replaced with query fragments containing named parameters.
 - **Contract:**
   - Set this to {@code true} when a replaced fragment itself contains named parameters, so the framework parses the merged SQL and binds them as well.
@@ -11700,12 +11700,12 @@ Triggers invalidation of the DAO's result cache after the annotated method compl
 - (none)
 
 #### Public Instance Methods
-##### disabled(...) -> boolean
-- **Signature:** `boolean disabled() default false`
-- **Summary:** Specifies whether cache refresh is disabled for the annotated element.
+##### enabled(...) -> boolean
+- **Signature:** `boolean enabled() default true`
+- **Summary:** Specifies whether cache refresh is enabled for the annotated element.
 - **Parameters:**
   - (none)
-- **Returns:** {@code true} to disable cache refresh, {@code false} to enable it (default).
+- **Returns:** {@code true} (default) to enable cache refresh, {@code false} to disable it.
 ##### filter(...) -> String\[\]
 - **Signature:** `String[] filter() default { "update", "delete", "deleteById", "insert", "save", "add", "remove", "upsert", "batchUpdate", "batchDelete", "batchDeleteByIds", "batchInsert", "batchSave", "batchAdd", "batchRemove", "batchUpsert", "execute" }`
 - **Summary:** Specifies the type-level method-name filter.
@@ -19596,4 +19596,3 @@ A read-only interface for managing join entity relationships in database operati
 - **Returns:** never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
-

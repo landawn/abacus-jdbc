@@ -42,7 +42,7 @@ import java.lang.annotation.Target;
  *
  * <p>If the joined fragment itself contains named parameter placeholders (for example, joining
  * elements such as {@code "discount >= :minDiscount"}), set
- * {@link Query#fragmentContainsNamedParameters() @Query(fragmentContainsNamedParameters = true)}
+ * {@link Query#fragmentsContainNamedParameters() @Query(fragmentsContainNamedParameters = true)}
  * so the proxy re-scans the assembled SQL for them.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -71,7 +71,7 @@ import java.lang.annotation.Target;
  *
  * @see SqlFragment
  * @see BindList
- * @see Query#fragmentContainsNamedParameters()
+ * @see Query#fragmentsContainNamedParameters()
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })

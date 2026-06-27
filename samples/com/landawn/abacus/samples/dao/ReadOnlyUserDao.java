@@ -19,7 +19,7 @@ import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.dao.ReadOnlyCrudDao;
 import com.landawn.abacus.samples.entity.User;
 
-@CacheResult(transfer = "none")
+@CacheResult(enabled = true, transfer = "none")
 @Cache(capacity = 1000, evictDelay = 6000)
 @RefreshCache
 public interface ReadOnlyUserDao extends ReadOnlyCrudDao<User, Long, ReadOnlyUserDao> {

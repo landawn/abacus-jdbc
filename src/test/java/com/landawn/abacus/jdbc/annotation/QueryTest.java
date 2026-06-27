@@ -82,8 +82,8 @@ public class QueryTest extends TestBase {
     }
 
     @Test
-    public void testDefaultValueFragmentContainsNamedParameters() throws Exception {
-        Method m = Query.class.getDeclaredMethod("fragmentContainsNamedParameters");
+    public void testDefaultValueFragmentsContainNamedParameters() throws Exception {
+        Method m = Query.class.getDeclaredMethod("fragmentsContainNamedParameters");
         Object defaultValue = m.getDefaultValue();
         assertEquals(false, defaultValue);
     }

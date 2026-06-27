@@ -37,10 +37,10 @@ public class RefreshCacheTest extends TestBase {
     }
 
     @Test
-    public void testDefaultValueDisabled() throws Exception {
-        Method m = RefreshCache.class.getDeclaredMethod("disabled");
+    public void testDefaultValueEnabled() throws Exception {
+        Method m = RefreshCache.class.getDeclaredMethod("enabled");
         Object defaultValue = m.getDefaultValue();
-        assertEquals(false, defaultValue);
+        assertEquals(true, defaultValue);
     }
 
     @Test

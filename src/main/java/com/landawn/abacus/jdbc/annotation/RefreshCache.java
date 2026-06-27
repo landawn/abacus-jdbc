@@ -30,7 +30,7 @@ import com.landawn.abacus.annotation.Beta;
  * <p>The DAO proxy ({@code DaoImpl}) collects {@code @RefreshCache} annotations at build time. At
  * runtime, after a matching method finishes (success or failure), the proxy clears the entries
  * in the DAO's {@link Cache cache pool}. A method-level {@code @RefreshCache} can override the
- * type-level one — most importantly, {@code @RefreshCache(disabled = true)} <em>opts a single
+ * type-level one — most importantly, {@code @RefreshCache(enabled = false)} <em>opts a single
  * method back out</em> of the cache-invalidation set declared at the type level.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the
@@ -46,7 +46,7 @@ import com.landawn.abacus.annotation.Beta;
  * @RefreshCache                                   // type-level: defaults cover insert/update/delete/...
  * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
  *
- *     @CacheResult(liveTime = 600_000)
+ *     @CacheResult(enabled = true, liveTime = 600_000)
  *     @Query("SELECT * FROM product WHERE id = :id")
  *     Product findById(@Bind("id") Long id);
  *
@@ -55,7 +55,7 @@ import com.landawn.abacus.annotation.Beta;
  *     // ← falls under the type-level filter; cache is invalidated after each call.
  *
  *     // High-frequency update that is intentionally exempt from cache invalidation.
- *     @RefreshCache(disabled = true)
+ *     @RefreshCache(enabled = false)
  *     @Query("UPDATE product SET view_count = view_count + 1 WHERE id = :id")
  *     int incrementViews(@Bind("id") Long id);
  * }
@@ -70,9 +70,9 @@ import com.landawn.abacus.annotation.Beta;
 public @interface RefreshCache {
 
     /**
-     * Specifies whether cache refresh is disabled for the annotated element.
+     * Specifies whether cache refresh is enabled for the annotated element.
      *
-     * <p>At the method level, {@code disabled = true} opts that single method back out of the
+     * <p>At the method level, {@code enabled = false} opts that single method back out of the
      * cache-invalidation set declared by a type-level {@code @RefreshCache} (and its {@link #filter()}).</p>
      *
      * <p>This is useful for:</p>
@@ -87,7 +87,7 @@ public @interface RefreshCache {
      * @RefreshCache
      * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
      *     @Query("UPDATE users SET last_seen = NOW() WHERE id = :id")
-     *     @RefreshCache(disabled = true) // Don't refresh cache for this frequent update
+     *     @RefreshCache(enabled = false) // Don't refresh cache for this frequent update
      *     void updateLastSeen(long userId);
      *
      *     @Query("UPDATE users SET email = :email WHERE id = :id")
@@ -95,9 +95,9 @@ public @interface RefreshCache {
      * }
      * }</pre>
      *
-     * @return {@code true} to disable cache refresh, {@code false} to enable it (default).
+     * @return {@code true} (default) to enable cache refresh, {@code false} to disable it.
      */
-    boolean disabled() default false;
+    boolean enabled() default true;
 
     /**
      * Specifies the type-level method-name filter.

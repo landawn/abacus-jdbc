@@ -1640,6 +1640,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws UncheckedSQLException if a database access error occurs
      */
+    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
+    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
+    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     @Override
@@ -1668,6 +1671,9 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws UncheckedSQLException if a database access error occurs
      */
+    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
+    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
+    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     @Override

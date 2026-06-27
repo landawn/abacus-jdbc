@@ -44863,19 +44863,19 @@
           "constructors": [],
           "methods": [
             {
-              "name": "disabled",
+              "name": "enabled",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "boolean disabled() default false",
+              "signature": "boolean enabled() default false",
               "return_type": "boolean",
               "type_params": [],
               "params": [],
               "throws": [],
-              "javadoc_summary": "Disables caching when set to {@code true} .",
+              "javadoc_summary": "Enables caching when set to {@code true} .",
               "contract": [
-                "Disables caching when set to {@code true} ."
+                "The default is {@code false}; set this element explicitly when the annotation should activate cache result handling."
               ],
               "examples": [],
               "see_also": []
@@ -44912,7 +44912,7 @@
                 "If an entry is not accessed within this time, it expires and is removed.",
                 "This is useful for frequently accessed data that should expire if unused.",
                 "<p> The entry expires when either {@code liveTime} or {@code maxIdleTime} is exceeded, whichever comes first.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Expire if not accessed for 10 minutes @CacheResult(liveTime = 3600000, maxIdleTime = 600000) @Query(\"SELECT * FROM user_sessions WHERE token = :token\") UserSession getSession(@Bind(\"token\") String token); } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Expire if not accessed for 10 minutes @CacheResult(enabled = true, liveTime = 3600000, maxIdleTime = 600000) @Query(\"SELECT * FROM user_sessions WHERE token = :token\") UserSession getSession(@Bind(\"token\") String token); } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -44930,7 +44930,7 @@
               "throws": [],
               "javadoc_summary": "Specifies the minimum size requirement for caching results.",
               "contract": [
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Only cache if result has at least 10 items @CacheResult(minSize = 10) @Query(\"SELECT * FROM products WHERE category = :category\") List<Product> findByCategory(@Bind(\"category\") String category); } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Only cache if result has at least 10 items @CacheResult(enabled = true, minSize = 10) @Query(\"SELECT * FROM products WHERE category = :category\") List<Product> findByCategory(@Bind(\"category\") String category); } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -44948,7 +44948,7 @@
               "throws": [],
               "javadoc_summary": "Specifies the maximum size limit for caching results.",
               "contract": [
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Don't cache if result has more than 1000 items @CacheResult(maxSize = 1000) @Query(\"SELECT * FROM orders WHERE date >= :startDate\") List<Order> findOrdersSince(@Bind(\"startDate\") Date date); } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Don't cache if result has more than 1000 items @CacheResult(enabled = true, maxSize = 1000) @Query(\"SELECT * FROM orders WHERE date >= :startDate\") List<Order> findOrdersSince(@Bind(\"startDate\") Date date); } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -45706,7 +45706,7 @@
               "javadoc_summary": "Specifies the inline SQL statement(s) to execute.",
               "contract": [
                 "When the annotated method is a {@code default} method whose last parameter is a {@code String[]} , all entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if applicable, and passed to that {@code String[]} parameter at runtime.",
-                "</p> <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList} ); set {@link #fragmentContainsNamedParameters()} to {@code true} if the replaced fragments contain named parameters </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.",
+                "</p> <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList} ); set {@link #fragmentsContainNamedParameters()} to {@code true} if the replaced fragments contain named parameters </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.",
                 "</li> <li> Database-specific SQL extensions and functions </li> </ul> <p> Named parameter examples: </p> <pre> {@code // Simple parameter binding @Query(\"SELECT * FROM users WHERE age > :minAge\") List<User> findByAge(@Bind(\"minAge\") int minAge); // Multiple parameters @Query(\"SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge\") List<User> findByAgeRange(@Bind(\"minAge\") int min, @Bind(\"maxAge\") int max); // Nested property access @Query(\"SELECT * FROM orders WHERE user_id = :user.id AND status = :status\") List<Order> findOrders(@Bind(\"user\") User user, @Bind(\"status\") String status); // IN clause with collection (uses {ids} template variable expanded via @BindList) @Query(\"SELECT * FROM users WHERE id IN ({ids})\") List<User> findByIds(@BindList(\"ids\") List<Long> ids); } </pre> <p> Complex SQL examples: </p> <pre> {@code // JOIN with aggregation @Query(\"SELECT u.*, COUNT(o.id) as order_count \" + \"FROM users u LEFT JOIN orders o ON u.id = o.user_id \" + \"WHERE u.created_date > :startDate \" + \"GROUP BY u.id HAVING COUNT(o.id) > :minOrders\") List<UserStats> findUserStats(@Bind(\"startDate\") Date startDate, @Bind(\"minOrders\") int minOrders); // Common Table Expression (CTE) @Query(\"WITH recent_orders AS ( \" + \" SELECT user_id, COUNT(*) as order_count \" + \" FROM orders WHERE order_date > :since \" + \" GROUP BY user_id \" + \") \" + \"SELECT u.*, ro.order_count \" + \"FROM users u JOIN recent_orders ro ON u.id = ro.user_id\") List<UserOrderSummary> findActiveUserSummary(@Bind(\"since\") Date since); // Window function @Query(\"SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank \" + \"FROM employees WHERE department = :dept\") List<Employee> rankEmployeesByDepartment(@Bind(\"dept\") String department); } </pre> <p> Note: Exactly one of {@code value} or {@link #id()} must be non-empty; specifying both or neither causes initialization to fail with an {@code IllegalArgumentException} ."
               ],
               "examples": [],
@@ -45818,12 +45818,12 @@
               "see_also": []
             },
             {
-              "name": "fragmentContainsNamedParameters",
+              "name": "fragmentsContainNamedParameters",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "@Beta boolean fragmentContainsNamedParameters() default false",
+              "signature": "@Beta boolean fragmentsContainNamedParameters() default false",
               "return_type": "boolean",
               "type_params": [],
               "params": [],
@@ -45935,17 +45935,17 @@
           "constructors": [],
           "methods": [
             {
-              "name": "disabled",
+              "name": "enabled",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "boolean disabled() default false",
+              "signature": "boolean enabled() default true",
               "return_type": "boolean",
               "type_params": [],
               "params": [],
               "throws": [],
-              "javadoc_summary": "Specifies whether cache refresh is disabled for the annotated element.",
+              "javadoc_summary": "Specifies whether cache refresh is enabled for the annotated element.",
               "contract": [],
               "examples": [],
               "see_also": []

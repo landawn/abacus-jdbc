@@ -8934,6 +8934,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see RowConsumer#oneOff(Consumer)
      * @see #foreach(Class, Consumer)
      */
+    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
+    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
+    // left unchanged per request.
     @Beta
     public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         checkArgNotNull(rowConsumer, cs.rowConsumer);
@@ -8985,6 +8988,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see RowConsumer#oneOff(Class, Consumer)
      * @see #foreach(Consumer)
      */
+    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
+    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
+    // left unchanged per request.
     @Beta
     public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         checkArgNotNull(entityClass, cs.entityClass);

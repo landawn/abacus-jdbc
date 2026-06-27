@@ -52,23 +52,23 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <pre>{@code
  * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
  *     // Cache individual user lookups for 30 minutes
- *     @CacheResult(liveTime = 1800000, maxIdleTime = 600000)
+ *     @CacheResult(enabled = true, liveTime = 1800000, maxIdleTime = 600000)
  *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(@Bind("id") Long id);
  *
  *     // Cache list results with size restrictions
- *     @CacheResult(liveTime = 300000, minSize = 1, maxSize = 100)
+ *     @CacheResult(enabled = true, liveTime = 300000, minSize = 1, maxSize = 100)
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);
  *
  *     // Use Kryo serialization for complex objects
- *     @CacheResult(liveTime = 3600000, transfer = "kryo")
+ *     @CacheResult(enabled = true, liveTime = 3600000, transfer = "kryo")
  *     @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
  *     UserProfile getProfile(@Bind("userId") Long userId);
  * }
  *
  * // Apply caching to all matching methods at type level
- * @CacheResult(liveTime = 600000, filter = {"find.*", "get.*"})
+ * @CacheResult(enabled = true, liveTime = 600000, filter = {"find.*", "get.*"})
  * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
  *     // All find* and get* methods will be cached
  * }
@@ -92,20 +92,22 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 public @interface CacheResult {
 
     /**
-     * Disables caching when set to {@code true}.
-     * This allows temporarily disabling cache without removing the annotation,
-     * useful for debugging or testing.
+     * Enables caching when set to {@code true}.
+     *
+     * <p>The default is {@code false}; set this element explicitly when the annotation should
+     * activate cache result handling. At the method level, {@code enabled = false} can also opt
+     * a method back out of a type-level {@code @CacheResult(enabled = true)} declaration.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @CacheResult(disabled = true)  // Temporarily disable for debugging
+     * @CacheResult(enabled = false)  // Temporarily disable for debugging
      * @Query("SELECT * FROM users WHERE id = :id")
      * User findById(@Bind("id") Long id);
      * }</pre>
      *
-     * @return {@code true} to disable caching, {@code false} (default) to enable
+     * @return {@code true} to enable caching, {@code false} (default) to leave it disabled
      */
-    boolean disabled() default false;
+    boolean enabled() default false;
 
     /**
      * Specifies the maximum time (in milliseconds) a cached entry can live.
@@ -125,7 +127,7 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Cache for 15 minutes
-     * @CacheResult(liveTime = 900000)
+     * @CacheResult(enabled = true, liveTime = 900000)
      * @Query("SELECT * FROM configurations WHERE key = :key")
      * Config getConfig(@Bind("key") String key);
      * }</pre>
@@ -148,7 +150,7 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Expire if not accessed for 10 minutes
-     * @CacheResult(liveTime = 3600000, maxIdleTime = 600000)
+     * @CacheResult(enabled = true, liveTime = 3600000, maxIdleTime = 600000)
      * @Query("SELECT * FROM user_sessions WHERE token = :token")
      * UserSession getSession(@Bind("token") String token);
      * }</pre>
@@ -170,7 +172,7 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only cache if result has at least 10 items
-     * @CacheResult(minSize = 10)
+     * @CacheResult(enabled = true, minSize = 10)
      * @Query("SELECT * FROM products WHERE category = :category")
      * List<Product> findByCategory(@Bind("category") String category);
      * }</pre>
@@ -191,7 +193,7 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Don't cache if result has more than 1000 items
-     * @CacheResult(maxSize = 1000)
+     * @CacheResult(enabled = true, maxSize = 1000)
      * @Query("SELECT * FROM orders WHERE date >= :startDate")
      * List<Order> findOrdersSince(@Bind("startDate") Date date);
      * }</pre>
@@ -217,12 +219,12 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Use Kryo for deep copying complex objects
-     * @CacheResult(transfer = "kryo")
+     * @CacheResult(enabled = true, transfer = "kryo")
      * @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
      * UserProfile getComplexProfile(@Bind("userId") Long userId);
      *
      * // Use JSON for debugging/logging friendly format
-     * @CacheResult(transfer = "json")
+     * @CacheResult(enabled = true, transfer = "json")
      * @Query("SELECT * FROM audit_logs WHERE id = :id")
      * AuditLog getAuditLog(@Bind("id") Long id);
      * }</pre>
@@ -244,7 +246,8 @@ public @interface CacheResult {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @CacheResult(liveTime = 600000,
+     * @CacheResult(enabled = true,
+     *              liveTime = 600000,
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})
      * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
      *     // These methods will be cached

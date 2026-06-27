@@ -1976,17 +1976,17 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceDataSource the DataSource to obtain database connections from
-     * @param querySql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException {
+    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final File output) throws SQLException, IOException {
         final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
         try {
-            return exportCsv(conn, querySql, output);
+            return exportCsv(conn, selectSql, output);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -2017,14 +2017,14 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param querySql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final Connection conn, final String querySql, final File output) throws SQLException, IOException {
-        return exportCsv(conn, querySql, null, output);
+    public static long exportCsv(final Connection conn, final String selectSql, final File output) throws SQLException, IOException {
+        return exportCsv(conn, selectSql, null, output);
     }
 
     /**
@@ -2053,7 +2053,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param querySql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data
      * @param selectColumnNames collection of column names to include in export (null for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
@@ -2061,9 +2061,9 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final Connection conn, final String querySql, final Collection<String> selectColumnNames, final File output)
+    public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> selectColumnNames, final File output)
             throws SQLException, IOException {
-        final ParsedSql sql = ParsedSql.parse(querySql);
+        final ParsedSql sql = ParsedSql.parse(selectSql);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 
@@ -2247,17 +2247,17 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceDataSource the DataSource to obtain database connections from
-     * @param querySql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data
      * @param output the Writer to write the CSV data to (will not be closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing
      */
-    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException {
+    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final Writer output) throws SQLException, IOException {
         final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
         try {
-            return exportCsv(conn, querySql, output);
+            return exportCsv(conn, selectSql, output);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -2290,14 +2290,14 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param querySql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data
      * @param output the Writer to write the CSV data to (will not be closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing
      */
-    public static long exportCsv(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException {
-        final ParsedSql sql = ParsedSql.parse(querySql);
+    public static long exportCsv(final Connection conn, final String selectSql, final Writer output) throws SQLException, IOException {
+        final ParsedSql sql = ParsedSql.parse(selectSql);
 
         final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
