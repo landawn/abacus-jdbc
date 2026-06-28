@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -904,6 +905,40 @@ public class DaoImplTest extends TestBase {
         com.landawn.abacus.query.condition.Expression limitExpr = com.landawn.abacus.query.Filters.expr("id > 0 LIMIT 10");
         Object out2 = handleLimit.invoke(null, limitExpr, 5, DBVersion.MySQL_5_5);
         assertSame(limitExpr, out2, "Expression already containing LIMIT must not be re-wrapped");
+    }
+
+    // Bug fix: handleLimit grouped SQL Server with Oracle/DB2 and emitted a bare "FETCH FIRST n ROWS ONLY" for a
+    // count-only limit. SQL Server rejects FETCH unless it is preceded by "OFFSET ... ROWS", so that is invalid SQL
+    // there; the count-only case must be "OFFSET 0 ROWS FETCH NEXT n ROWS ONLY". The clause building (previously
+    // triple-duplicated across handleLimit's branches) now funnels through the private toFetchOffsetLimitClause helper.
+    @Test
+    public void testToFetchOffsetLimitClause() throws Exception {
+        Method m = DaoImpl.class.getDeclaredMethod("toFetchOffsetLimitClause", int.class, int.class, DBVersion.class);
+        m.setAccessible(true);
+
+        // count-only: Oracle/DB2 keep the bare FETCH FIRST; SQL Server must prefix "OFFSET 0 ROWS".
+        assertEquals("FETCH FIRST 5 ROWS ONLY", m.invoke(null, 5, 0, DBVersion.Oracle));
+        assertEquals("FETCH FIRST 5 ROWS ONLY", m.invoke(null, 5, 0, DBVersion.DB2));
+        assertEquals("OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 0, DBVersion.SQLServer));
+
+        // offset + count: same valid form for all three FETCH dialects.
+        assertEquals("OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 10, DBVersion.Oracle));
+        assertEquals("OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 10, DBVersion.SQLServer));
+        assertEquals("OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 10, DBVersion.DB2));
+
+        // offset-only.
+        assertEquals("OFFSET 10 ROWS", m.invoke(null, 0, 10, DBVersion.Oracle));
+        assertEquals("OFFSET 10 ROWS", m.invoke(null, 0, 10, DBVersion.SQLServer));
+
+        // nothing to limit on a FETCH dialect -> null (the original/empty limit is kept).
+        assertNull(m.invoke(null, 0, 0, DBVersion.Oracle));
+        assertNull(m.invoke(null, -1, -1, DBVersion.SQLServer));
+
+        // non-FETCH databases always use the standard LIMIT clause -> null regardless of count/offset.
+        assertNull(m.invoke(null, 5, 0, DBVersion.MySQL_8));
+        assertNull(m.invoke(null, 5, 10, DBVersion.H2));
+        assertNull(m.invoke(null, 5, 0, DBVersion.PostgreSQL_12));
+        assertNull(m.invoke(null, 0, 10, DBVersion.MariaDB));
     }
 
     // Regression: getApplicableDaoForJoinEntity used to return a cache hit blindly. Because the cache key

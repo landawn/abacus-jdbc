@@ -1304,6 +1304,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -1335,6 +1336,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1367,6 +1369,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
@@ -1399,6 +1402,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -1430,6 +1434,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1463,6 +1468,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
      * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Beta
     @Override

@@ -3904,7 +3904,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Jdbc.BiParametersSetter<? super This, ? super T> parametersSetter)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, cs.batchParameters);
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
@@ -3933,7 +3933,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <T> This addBatchParameters(final Iterator<? extends T> batchParameters, final Jdbc.BiParametersSetter<? super This, ? super T> parametersSetter)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, cs.batchParameters);
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 

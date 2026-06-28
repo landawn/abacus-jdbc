@@ -93,7 +93,8 @@ public @interface Query {
      * Specifies the inline SQL statement(s) to execute.
      * This can contain any valid SQL, including SELECT, INSERT, UPDATE, DELETE, or stored procedure calls.
      *
-     * <p>For ordinary abstract DAO methods only the first entry is used (additional entries are ignored).
+     * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
+     * (across {@code value} and {@link #id()}) fails DAO initialization with {@link UnsupportedOperationException}.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime.</p>
@@ -163,7 +164,8 @@ public @interface Query {
      * This allows SQL to be defined separately from Java code, enabling better organization and reusability.
      * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
      *
-     * <p>For ordinary abstract DAO methods only the first entry is used (additional entries are ignored).
+     * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
+     * (across {@link #value()} and {@code id}) fails DAO initialization with {@link UnsupportedOperationException}.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime.</p>

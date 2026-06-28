@@ -1604,63 +1604,39 @@ final class DaoImpl {
     }
 
     private static Condition handleLimit(final Condition cond, final int count, final DBVersion dbVersion) {
-        //    if (count < 0) {
-        //        return cond;
-        //    }
+        // A negative {@code count} is intentionally NOT short-circuited: an existing Limit (standalone or inside a
+        // Criteria) must still be rewritten into the vendor-specific OFFSET/FETCH syntax regardless of {@code count}.
 
         if (cond instanceof final Limit limit) {
-            switch (dbVersion) { //NOSONAR
-                case Oracle, SQLServer, DB2:
-                    if (limit.getCount() > 0 && limit.getOffset() > 0) {
-                        return Filters.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
-                    } else if (limit.getCount() > 0) {
-                        return Filters.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
-                    } else if (limit.getOffset() > 0) {
-                        return Filters.limit("OFFSET " + limit.getOffset() + " ROWS");
-                    } else {
-                        return limit;
-                    }
+            final String limitClause = toFetchOffsetLimitClause(limit.getCount(), limit.getOffset(), dbVersion);
 
-                default:
-                    return limit;
-            }
+            return limitClause == null ? limit : Filters.limit(limitClause);
         } else if (cond instanceof final Criteria criteria) {
-            Criteria.Builder criteriaBuilder = criteria.toBuilder();
+            final Criteria.Builder criteriaBuilder = criteria.toBuilder();
             final Limit limit = criteria.getLimit();
 
             if (limit != null) {
-                switch (dbVersion) { //NOSONAR
-                    case Oracle, SQLServer, DB2:
+                final String limitClause = toFetchOffsetLimitClause(limit.getCount(), limit.getOffset(), dbVersion);
 
-                        if (limit.getCount() > 0 && limit.getOffset() > 0) {
-                            criteriaBuilder.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
-                        } else if (limit.getCount() > 0) {
-                            criteriaBuilder.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
-                        } else if (limit.getOffset() > 0) {
-                            criteriaBuilder.limit("OFFSET " + limit.getOffset() + " ROWS");
-                        }
-
-                        break;
-
-                    default:
+                if (limitClause != null) {
+                    criteriaBuilder.limit(limitClause);
                 }
             } else if (count > 0) {
-                switch (dbVersion) { //NOSONAR
-                    case Oracle, SQLServer, DB2:
-                        criteriaBuilder.limit("FETCH FIRST " + count + " ROWS ONLY");
-                        break;
+                final String limitClause = toFetchOffsetLimitClause(count, 0, dbVersion);
 
-                    default:
-                        criteriaBuilder.limit(count);
+                if (limitClause != null) {
+                    criteriaBuilder.limit(limitClause);
+                } else {
+                    criteriaBuilder.limit(count);
                 }
             }
 
             return criteriaBuilder.build();
         } else if (cond instanceof final Expression expr //
                 && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ", " FETCH FIRST ")) {
-            // ignore.
+            // The raw SQL already carries its own row-limiting clause; leave it untouched.
         } else if (count > 0) {
-            Criteria.Builder criteriaBuilder = Criteria.builder();
+            final Criteria.Builder criteriaBuilder = Criteria.builder();
 
             if (cond != null) {
                 switch (cond.operator()) {
@@ -1701,19 +1677,53 @@ final class DaoImpl {
                 }
             }
 
-            switch (dbVersion) { //NOSONAR
-                case Oracle, SQLServer, DB2:
-                    criteriaBuilder.limit("FETCH FIRST " + count + " ROWS ONLY");
-                    break;
+            final String limitClause = toFetchOffsetLimitClause(count, 0, dbVersion);
 
-                default:
-                    criteriaBuilder.limit(count);
+            if (limitClause != null) {
+                criteriaBuilder.limit(limitClause);
+            } else {
+                criteriaBuilder.limit(count);
             }
 
             return criteriaBuilder.build();
         }
 
         return cond;
+    }
+
+    /**
+     * Builds the vendor-specific row-limiting clause for the databases that use the ANSI {@code OFFSET ... FETCH}
+     * syntax instead of {@code LIMIT} (Oracle, DB2 and SQL Server), or returns {@code null} for every other database
+     * (which should use the standard {@code LIMIT}/{@code LIMIT ... OFFSET} clause). {@code null} is also returned when
+     * neither a positive {@code count} nor a positive {@code offset} is supplied (i.e. there is nothing to limit).
+     *
+     * <p>SQL Server is special-cased: it rejects a bare {@code FETCH FIRST n ROWS ONLY} because {@code FETCH} must be
+     * preceded by {@code OFFSET ... ROWS}, so a count-only limit is emitted as {@code OFFSET 0 ROWS FETCH NEXT n ROWS ONLY}.
+     * (On SQL Server the {@code OFFSET/FETCH} clause is in turn only valid in the presence of an {@code ORDER BY}.)</p>
+     *
+     * @param count the maximum number of rows to return, or a non-positive value for "no count limit"
+     * @param offset the number of leading rows to skip, or a non-positive value for "no offset"
+     * @param dbVersion the target database
+     * @return the raw {@code OFFSET/FETCH} clause, or {@code null} if the standard {@code LIMIT} clause should be used
+     */
+    private static String toFetchOffsetLimitClause(final int count, final int offset, final DBVersion dbVersion) {
+        switch (dbVersion) { //NOSONAR
+            case Oracle, SQLServer, DB2:
+                break;
+
+            default:
+                return null;
+        }
+
+        if (count > 0 && offset > 0) {
+            return "OFFSET " + offset + " ROWS FETCH NEXT " + count + " ROWS ONLY";
+        } else if (count > 0) {
+            return dbVersion == DBVersion.SQLServer ? "OFFSET 0 ROWS FETCH NEXT " + count + " ROWS ONLY" : "FETCH FIRST " + count + " ROWS ONLY";
+        } else if (offset > 0) {
+            return "OFFSET " + offset + " ROWS";
+        } else {
+            return null;
+        }
     }
 
     @SuppressWarnings("rawtypes")
@@ -1878,7 +1888,7 @@ final class DaoImpl {
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
 
         N.checkArgument(dsl.sqlDialect().sqlPolicy() == null || dsl.sqlDialect().sqlPolicy() == SqlPolicy.PARAMETERIZED_SQL,
-                "'dsl.sqlDialec.sqlPolicy' must null or SqlPolicy.PARAMETERIZED_SQL. It can't be {}", dsl.sqlDialect().sqlPolicy());
+                "'dsl.sqlDialect.sqlPolicy' must be null or SqlPolicy.PARAMETERIZED_SQL. It can't be {}", dsl.sqlDialect().sqlPolicy());
 
         final Logger daoLogger = LoggerFactory.getLogger(daoInterface);
         final String daoClassName = ClassUtil.getCanonicalClassName(daoInterface);

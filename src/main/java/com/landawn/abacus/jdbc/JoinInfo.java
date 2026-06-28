@@ -257,9 +257,9 @@ public final class JoinInfo {
         // Many to many joined by third table
         if (isManyToManyJoin) {
             if (joinColumnPairs.length != 2) {
-                throw new IllegalArgumentException(
-                        "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass
-                                + ". The format for many-many join should be: employeeId = EmployeeProject.employeeId, EmployeeProject.projectId=projectId");
+                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass)
+                        + ". The format for many-many join should be: employeeId = EmployeeProject.employeeId, EmployeeProject.projectId=projectId");
             }
 
             srcPropInfos = new PropInfo[1];
@@ -290,15 +290,15 @@ public final class JoinInfo {
 
             if (dotIndexInLeft1 < 0) {
                 throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in class: " + entityClass + ". Expected dot notation format in: '" + left[1] + "'");
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". Expected dot notation format in: '" + left[1] + "'");
             }
 
             final String middleEntity = left[1].substring(0, dotIndexInLeft1);
 
             if (!right[0].startsWith(middleEntity + ".")) {
-                throw new IllegalArgumentException(
-                        "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass
-                                + ". The format for many-many join should be: employeeId = EmployeeProject.employeeId, EmployeeProject.projectId=projectId");
+                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass)
+                        + ". The format for many-many join should be: employeeId = EmployeeProject.employeeId, EmployeeProject.projectId=projectId");
             }
 
             final String entityPackageName = ClassUtil.getPackageName(entityClass);
@@ -326,18 +326,20 @@ public final class JoinInfo {
 
             if (leftMiddlePropInfo == null) {
                 throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in class: " + entityClass + ". No property found with name: '" + left[1] + "' in middle entity class: " + middleEntityClass);
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No property found with name: '" + left[1]
+                        + "' in middle entity class: " + ClassUtil.getCanonicalClassName(middleEntityClass));
             }
 
             if (rightMiddlePropInfo == null) {
                 throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in class: " + entityClass + ". No property found with name: '" + right[0] + "' in middle entity class: " + middleEntityClass);
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No property found with name: '" + right[0]
+                        + "' in middle entity class: " + ClassUtil.getCanonicalClassName(middleEntityClass));
             }
 
             if (!ClassUtil.wrap(srcPropInfos[0].clazz).equals(ClassUtil.wrap(leftMiddlePropInfo.clazz))
                     || !ClassUtil.wrap(referencedPropInfos[0].clazz).equals(ClassUtil.wrap(rightMiddlePropInfo.clazz))) {
                 throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in the class: " + entityClass + ". The types of source property and referenced do not match: "
+                        + "' in the class: " + ClassUtil.getCanonicalClassName(entityClass) + ". The types of source property and referenced do not match: "
                         + Stream.of(srcPropInfos[0].clazz, leftMiddlePropInfo.clazz, referencedPropInfos[0].clazz, rightMiddlePropInfo.clazz)
                                 .map(ClassUtil::getSimpleClassName)
                                 .toList());
@@ -545,7 +547,7 @@ public final class JoinInfo {
 
                 if (!ClassUtil.wrap(srcPropInfos[i].clazz).equals(ClassUtil.wrap(referencedPropInfos[i].clazz))) {
                     throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                            + "' in the class: " + entityClass + ". The types of source property and referenced do not match: "
+                            + "' in the class: " + ClassUtil.getCanonicalClassName(entityClass) + ". The types of source property and referenced do not match: "
                             + Stream.of(srcPropInfos[i].clazz, referencedPropInfos[i].clazz).map(ClassUtil::getSimpleClassName).toList());
                 }
 
@@ -1142,7 +1144,8 @@ public final class JoinInfo {
 
         if (!allowJoiningByNullOrDefaultValue && JdbcUtil.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
-                    + ". Annotated the Dao class of " + entityClass + " with @DaoConfig{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
+                    + ". Annotated the Dao class of " + ClassUtil.getCanonicalClassName(entityClass)
+                    + " with @DaoConfig{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
         }
 
         return value;

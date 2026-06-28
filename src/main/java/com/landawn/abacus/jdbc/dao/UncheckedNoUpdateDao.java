@@ -25,7 +25,7 @@ import com.landawn.abacus.query.condition.Condition;
 /**
  * Interface for an unchecked Data Access Object (DAO) that disables update and delete operations while
  * allowing read and insert operations. It supports create (insert/save) and read (select/query) operations,
- * while all update and delete methods throw {@link UnsupportedOperationException}.
+ * while all update, delete, upsert, and stored-procedure (callable) methods throw {@link UnsupportedOperationException}.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant. All read and insert methods throw

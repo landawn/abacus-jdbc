@@ -424,6 +424,7 @@ public final class JdbcUtil {
      *
      * @param ds The DataSource from which to obtain a database connection.
      * @return A {@link DBProductInfo} object containing the database product name, version, and type.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}.
      * @throws UncheckedSQLException if a database access error occurs while trying to connect to the database.
      * @see #getDBProductInfo(Connection)
      * @see DBProductInfo
@@ -771,6 +772,7 @@ public final class JdbcUtil {
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
      * @throws IllegalArgumentException if {@code url} is empty or the driver class cannot be determined from the URL.
+     * @throws RuntimeException if the JDBC driver class identified from the URL cannot be loaded (e.g. it is not on the classpath).
      * @throws UncheckedSQLException if a database access error occurs while creating the connection.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#getConnection(String, String, String)
@@ -7079,6 +7081,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}");
+     * stmt.execute(); // the statement must be executed before its result sets can be streamed
      * JdbcUtil.streamAllResultSets(stmt)
      *     .onClose(Fn.closeQuietly(stmt))
      *     .forEach(dataset -> {

@@ -1324,6 +1324,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
@@ -1350,6 +1351,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1376,6 +1378,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
@@ -1405,6 +1408,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
@@ -1431,6 +1435,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1458,6 +1463,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)

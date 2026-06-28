@@ -3571,6 +3571,8 @@ public final class DataTransferUtil {
          * @return the number of rows successfully imported
          * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
          *         or {@code batchIntervalInMillis < 0}
+         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
+         *         configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
          * @throws UncheckedIOException if an I/O error occurs reading the file/reader
          */
@@ -3592,6 +3594,8 @@ public final class DataTransferUtil {
          * @return the number of rows successfully imported
          * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
          *         or {@code batchIntervalInMillis < 0}
+         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
+         *         configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
          * @throws UncheckedIOException if an I/O error occurs reading the file/reader
          */
@@ -3609,10 +3613,30 @@ public final class DataTransferUtil {
          * @return the number of rows successfully imported
          * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
          *         or {@code batchIntervalInMillis < 0}
+         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
+         *         configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
          * @throws UncheckedIOException if an I/O error occurs reading the file/reader
          */
         public long to(final PreparedStatement stmt) throws SQLException {
+            int configuredSources = 0;
+
+            if (iter != null) {
+                configuredSources++;
+            }
+
+            if (reader != null) {
+                configuredSources++;
+            }
+
+            if (file != null) {
+                configuredSources++;
+            }
+
+            if (configuredSources != 1) {
+                throw new IllegalStateException("Exactly one of 'iter', 'reader' or 'file' must be configured for a single import");
+            }
+
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> setter = resolveSetter();
 
             if (iter != null) {
@@ -3771,6 +3795,8 @@ public final class DataTransferUtil {
          * @param output the file to write to
          * @return the number of rows exported
          * @throws IllegalArgumentException if a configured column name is not present in the query result
+         * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection,
+         *         PreparedStatement or ResultSet) configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
          * @throws UncheckedIOException if an I/O error occurs while writing
          */
@@ -3786,6 +3812,8 @@ public final class DataTransferUtil {
          * @param output the writer to write to
          * @return the number of rows exported
          * @throws IllegalArgumentException if a configured column name is not present in the query result
+         * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection,
+         *         PreparedStatement or ResultSet) configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
          * @throws UncheckedIOException if an I/O error occurs while writing
          */
@@ -3796,6 +3824,28 @@ public final class DataTransferUtil {
         }
 
         private long export(final ResultSetExporter exporter) throws SQLException {
+            int configuredSources = 0;
+
+            if (dataSource != null) {
+                configuredSources++;
+            }
+
+            if (conn != null) {
+                configuredSources++;
+            }
+
+            if (stmt != null) {
+                configuredSources++;
+            }
+
+            if (rs != null) {
+                configuredSources++;
+            }
+
+            if (configuredSources != 1) {
+                throw new IllegalStateException("Exactly one of 'dataSource', 'conn', 'stmt' or 'rs' must be configured for a single export");
+            }
+
             if (rs != null) {
                 return exporter.export(rs);
             } else if (stmt != null) {

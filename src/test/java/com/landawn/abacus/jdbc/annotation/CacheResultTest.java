@@ -66,7 +66,7 @@ public class CacheResultTest extends TestBase {
 
     @Test
     public void testDefaultFilter() throws Exception {
-        String[] expected = { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exists", "notExist", "count" };
+        String[] expected = { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exists", "notExists", "count" };
         assertArrayEquals(expected, (String[]) CacheResult.class.getMethod("filter").getDefaultValue());
     }
 
