@@ -22,6 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -1492,6 +1493,62 @@ public class AbstractQueryTest extends TestBase {
 
         verify(preparedStatement, times(1)).clearParameters();
         verify(preparedStatement, times(2)).addBatch();
+    }
+
+    @Test
+    public void testQueryThenApplyRejectsNullFunctionBeforeQueryExecution() throws SQLException {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.queryThenApply((Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
+
+        assertTrue(iae.getMessage().contains("func"));
+        verify(preparedStatement, never()).executeQuery();
+    }
+
+    @Test
+    public void testQueryThenApplyClassRejectsNullFunctionBeforeQueryExecution() throws SQLException {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.queryThenApply(String.class, (Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
+
+        assertTrue(iae.getMessage().contains("func"));
+        verify(preparedStatement, never()).executeQuery();
+    }
+
+    @Test
+    public void testQueryThenAcceptRejectsNullConsumerBeforeQueryExecution() throws SQLException {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.queryThenAccept((Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
+
+        assertTrue(iae.getMessage().contains("action"));
+        verify(preparedStatement, never()).executeQuery();
+    }
+
+    @Test
+    public void testQueryThenAcceptClassRejectsNullConsumerBeforeQueryExecution() throws SQLException {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.queryThenAccept(String.class, (Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
+
+        assertTrue(iae.getMessage().contains("action"));
+        verify(preparedStatement, never()).executeQuery();
+    }
+
+    @Test
+    public void testStreamAllResultSets_CloseClosesBufferedResultSet() throws SQLException {
+        final ResultSet first = Mockito.mock(ResultSet.class);
+        final ResultSet second = Mockito.mock(ResultSet.class);
+
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(first, second);
+        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, false);
+
+        try (Stream<String> stream = query.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
+            final java.util.Iterator<String> iter = stream.iterator();
+            assertTrue(iter.hasNext());
+            assertEquals("value", iter.next());
+            assertTrue(iter.hasNext());
+        }
+
+        verify(first).close();
+        verify(second).close();
     }
 
     // TODO: L142 (static initializer) - uncovered branch requires method with parameterTypes[0] != int, edge case not testable

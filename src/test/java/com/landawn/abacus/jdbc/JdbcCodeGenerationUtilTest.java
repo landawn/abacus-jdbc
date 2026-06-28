@@ -925,6 +925,25 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("@JsonXmlConfig"));
     }
 
+    @Test
+    public void testGenerateEntityClass_EscapesJsonXmlConfigStringLiterals() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig jsonXmlConfig = new JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig();
+        jsonXmlConfig.setIgnoredFields("raw\"field, path\\field, line\nfield");
+        jsonXmlConfig.setDateFormat("yyyy\"MM");
+        jsonXmlConfig.setTimeZone("UTC\\GMT");
+        jsonXmlConfig.setNumberFormat("#\n##");
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().jsonXmlConfig(jsonXmlConfig).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("ignoredFields = { \"raw\\\"field\", \"path\\\\field\", \"line\\nfield\" }"), result);
+        assertTrue(result.contains("dateFormat = \"yyyy\\\"MM\""), result);
+        assertTrue(result.contains("timeZone = \"UTC\\\\GMT\""), result);
+        assertTrue(result.contains("numberFormat = \"#\\n##\""), result);
+        assertFalse(result.contains("dateFormat = \"yyyy\"MM\""), result);
+    }
+
     // Tests for SQL generation methods that wrap SQLException into UncheckedSQLException
     // (DataSource overloads — covers catch blocks at lines 958-959, 1026-1027, 1087-1088,
     // 1155-1156, 1218-1219, 1287-1288, 1348-1349, 1424-1425, 1496-1497, 1524-1525,

@@ -177,7 +177,9 @@ public enum IsolationLevel {
 
     /**
      * Returns the raw JDBC integer constant value associated with this {@code IsolationLevel}.
-     * This value can be directly used with {@link Connection#setTransactionIsolation(int)}.
+     * For every level except {@link #DEFAULT}, this value can be directly used with
+     * {@link Connection#setTransactionIsolation(int)}. {@code DEFAULT} returns {@code -1}
+     * and is a framework sentinel meaning "leave the connection's current/default isolation unchanged".
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -190,7 +192,7 @@ public enum IsolationLevel {
      * }
      * }</pre>
      *
-     * @return the JDBC integer constant value (e.g., {@link Connection#TRANSACTION_READ_COMMITTED}).
+     * @return the JDBC integer constant value, or {@code -1} for {@link #DEFAULT}.
      */
     public int intValue() {
         return intValue;

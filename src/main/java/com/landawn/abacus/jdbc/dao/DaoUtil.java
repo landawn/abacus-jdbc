@@ -432,8 +432,18 @@ final class DaoUtil {
      * @throws UncheckedSQLException if any future fails with a SQL-related exception
      */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
+        Exception firstException = null;
+
         for (final ContinuableFuture<Void> f : futures) {
-            f.getAsResult().ifFailure(throwUncheckedSQLException);
+            final Result<Void, Exception> ret = f.getAsResult();
+
+            if (firstException == null && ret.isFailure()) {
+                firstException = ret.getException();
+            }
+        }
+
+        if (firstException != null) {
+            throwUncheckedSQLException.accept(firstException);
         }
     }
 
@@ -463,22 +473,30 @@ final class DaoUtil {
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}
      * @return the sum of all integer results from the futures
      * @throws UncheckedSQLException if any future fails with a SQL-related exception
+     * @throws ArithmeticException if the sum overflows an {@code int}
      */
     static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures) throws UncheckedSQLException {
-        int result = 0;
+        long result = 0;
         Result<Integer, Exception> ret = null;
+        Exception firstException = null;
 
         for (final ContinuableFuture<Integer> f : futures) {
             ret = f.getAsResult();
 
             if (ret.isFailure()) {
-                throwUncheckedSQLException.accept(ret.getException());
+                if (firstException == null) {
+                    firstException = ret.getException();
+                }
+            } else {
+                result += ret.orElseIfFailure(0);
             }
-
-            result += ret.orElseIfFailure(0);
         }
 
-        return result;
+        if (firstException != null) {
+            throwUncheckedSQLException.accept(firstException);
+        }
+
+        return Math.toIntExact(result);
     }
 
     /**
@@ -506,8 +524,18 @@ final class DaoUtil {
      * @throws SQLException if any future fails with a SQL-related exception
      */
     static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
+        Exception firstException = null;
+
         for (final ContinuableFuture<Void> f : futures) {
-            f.getAsResult().ifFailure(throwSQLExceptionAction);
+            final Result<Void, Exception> ret = f.getAsResult();
+
+            if (firstException == null && ret.isFailure()) {
+                firstException = ret.getException();
+            }
+        }
+
+        if (firstException != null) {
+            throwSQLExceptionAction.accept(firstException);
         }
     }
 
@@ -537,22 +565,30 @@ final class DaoUtil {
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}
      * @return the sum of all integer results from the futures
      * @throws SQLException if any future fails with a SQL-related exception
+     * @throws ArithmeticException if the sum overflows an {@code int}
      */
     static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
-        int result = 0;
+        long result = 0;
         Result<Integer, Exception> ret = null;
+        Exception firstException = null;
 
         for (final ContinuableFuture<Integer> f : futures) {
             ret = f.getAsResult();
 
             if (ret.isFailure()) {
-                throwSQLExceptionAction.accept(ret.getException());
+                if (firstException == null) {
+                    firstException = ret.getException();
+                }
+            } else {
+                result += ret.orElseIfFailure(0);
             }
-
-            result += ret.orElseIfFailure(0);
         }
 
-        return result;
+        if (firstException != null) {
+            throwSQLExceptionAction.accept(firstException);
+        }
+
+        return Math.toIntExact(result);
     }
 
     /**

@@ -877,12 +877,15 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
+     * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Runnable} throws an exception
      * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
      *         been opened on this thread for the same id and was not closed. If {@code cmd} itself
      *         throws, this condition is instead attached as a suppressed exception.
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
+        N.checkArgNotNull(cmd, cs.cmd);
+
         synchronized (_outsideTxLock) { //NOSONAR
             final boolean wasRegistered = threadTransactionMap.remove(_id, this);
 
@@ -943,12 +946,15 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Callable} to be executed outside of this transaction, must not be {@code null}
      * @return the result returned by the {@code Callable}
+     * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Callable} throws an exception
      * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
      *         been opened on this thread for the same id and was not closed. If {@code cmd} itself
      *         throws, this condition is instead attached as a suppressed exception.
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd) throws E {
+        N.checkArgNotNull(cmd, cs.cmd);
+
         synchronized (_outsideTxLock) { //NOSONAR
             final boolean wasRegistered = threadTransactionMap.remove(_id, this);
 

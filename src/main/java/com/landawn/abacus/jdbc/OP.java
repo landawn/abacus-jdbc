@@ -55,12 +55,15 @@ public enum OP {
 
     /**
      * Retrieves exactly one record from the query results.
-     * Returns an empty {@code Optional} if no record is found, and throws
-     * {@code DuplicateResultException} if more than one record is found.
+     * No row is treated as an empty result, and {@code DuplicateResultException} is thrown
+     * if more than one record is found.
      *
      * <p>Use this operation when you expect at most one result and want to fail fast
      * if a uniqueness constraint is violated. This is useful for queries by unique identifiers
      * or unique columns where duplicates would indicate a data integrity issue.</p>
+     *
+     * <p>For DAO methods, the final return value is adapted to the declared method return type
+     * (for example {@code Optional}, a bare value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -74,11 +77,14 @@ public enum OP {
 
     /**
      * Retrieves the first record from the query results.
-     * Returns an {@code Optional} that is empty if no records are found.
+     * No row is treated as an empty result.
      *
      * <p>This operation is useful when you want at most one result but don't require
      * exactly one. The query should typically include an {@code ORDER BY} clause to
      * ensure deterministic results.</p>
+     *
+     * <p>For DAO methods, the final return value is adapted to the declared method return type
+     * (for example {@code Optional}, a bare value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -91,11 +97,14 @@ public enum OP {
     findFirst,
 
     /**
-     * Retrieves all matching records as a {@code List}.
-     * Returns an empty {@code List} if no records are found.
+     * Retrieves all matching records.
+     * No rows are treated as an empty result.
      *
      * <p>This is the most common operation for queries that return multiple records.
      * All results are loaded into memory at once, so use with caution for large result sets.</p>
+     *
+     * <p>For DAO methods, the final return value is adapted to the declared collection-like
+     * method return type.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -145,12 +154,14 @@ public enum OP {
 
     /**
      * Retrieves the first single column value from the query result without checking for uniqueness.
-     * Returns a {@code Nullable} that is empty if no result is found.
      * Typically used for aggregate queries that return one value (e.g., {@code COUNT}, {@code SUM}, {@code MAX}, {@code MIN}).
      *
      * <p>Unlike {@link #queryForUnique}, this operation does not throw an exception if the
      * query returns more than one row -- it simply returns the value from the first row.
      * The query is expected to return a single column.</p>
+     *
+     * <p>For DAO methods, the final return value is adapted to the declared method return type
+     * (for example {@code Nullable}, {@code Optional}, a bare scalar value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -167,12 +178,15 @@ public enum OP {
 
     /**
      * Retrieves a unique single column value from the query result, ensuring at most one row exists.
-     * Returns a {@code Nullable} that is empty if no result is found, and throws
-     * {@code DuplicateResultException} if more than one row is found.
+     * No row is treated as an empty result, and {@code DuplicateResultException} is thrown
+     * if more than one row is found.
      *
      * <p>Unlike {@link #queryForSingle}, this operation enforces uniqueness by verifying
      * that the query produces at most one row. Use this when the query targets a unique
      * column or constraint and duplicates would indicate a data integrity issue.</p>
+     *
+     * <p>For DAO methods, the final return value is adapted to the declared method return type
+     * (for example {@code Nullable}, {@code Optional}, a bare scalar value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -259,7 +273,7 @@ public enum OP {
 
     /**
      * Executes an {@code UPDATE}, {@code INSERT}, or {@code DELETE} statement and returns the number of affected rows.
-     * Returns an {@code int} representing the row count.
+     * The selected operation produces an {@code int} row count.
      *
      * <p>This is the standard operation for DML (Data Manipulation Language) statements
      * that modify data in the database. The return value indicates how many rows were affected.</p>
@@ -279,7 +293,7 @@ public enum OP {
 
     /**
      * Executes an {@code UPDATE}, {@code INSERT}, or {@code DELETE} statement that may affect a large number of rows.
-     * Returns a {@code long} representing the row count for compatibility with large datasets.
+     * The selected operation produces a {@code long} row count for compatibility with large datasets.
      *
      * <p>Use this operation when the number of affected rows might exceed the range of {@code int}.
      * This is particularly relevant for bulk operations on large tables.</p>

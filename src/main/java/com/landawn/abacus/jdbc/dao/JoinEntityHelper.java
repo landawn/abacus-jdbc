@@ -438,9 +438,10 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all users and load their orders, processing in batches
-     * userDao.stream(null, Order.class, Filters.alwaysTrue())
-     *     .filter(user -> user.getOrders().size() > 5)
-     *     .forEach(user -> processUserWithManyOrders(user));
+     * try (Stream<User> users = userDao.stream(null, Order.class, Filters.alwaysTrue())) {
+     *     users.filter(user -> user.getOrders().size() > 5)
+     *          .forEach(user -> processUserWithManyOrders(user));
+     * }
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -476,9 +477,9 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream users with multiple join entities loaded
-     * userDao.stream(null, Arrays.asList(Order.class, Address.class, PaymentMethod.class), Filters.eq("country", "US"))
-     *     .map(user -> analyzeUserProfile(user))
-     *     .collect(Collectors.toList());
+     * try (Stream<User> users = userDao.stream(null, Arrays.asList(Order.class, Address.class, PaymentMethod.class), Filters.eq("country", "US"))) {
+     *     users.forEach(user -> analyzeUserProfile(user));
+     * }
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -520,9 +521,10 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all entities with complete data
-     * userDao.stream(null, true, Filters.alwaysTrue())
-     *     .limit(100)
-     *     .forEach(user -> exportUserData(user));
+     * try (Stream<User> users = userDao.stream(null, true, Filters.alwaysTrue())) {
+     *     users.limit(100)
+     *          .forEach(user -> exportUserData(user));
+     * }
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -1652,7 +1654,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entity, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entity, joinEntityPropName));
                 }
 
                 tran.commit();
@@ -1705,7 +1707,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entities, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entities, joinEntityPropName));
                 }
 
                 tran.commit();
@@ -1830,7 +1832,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entity, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entity, joinEntityPropName));
                 }
 
                 tran.commit();
@@ -1938,7 +1940,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entities, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entities, joinEntityPropName));
                 }
 
                 tran.commit();

@@ -618,7 +618,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
-     * Returns an empty {@code Optional} if no record is found or if the value is {@code null}.
+     * Returns an empty {@code Optional} only if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -630,7 +630,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the non-null value if found, otherwise empty
+     * @return an {@code Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -650,7 +650,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
-     * @return an {@link Optional} containing the mapped non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the mapped non-null value if a record matches the {@code id}, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -684,7 +684,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
     /**
      * Queries for a unique non-null result of the specified type.
      * Throws {@link DuplicateResultException} if more than one record is found.
-     * Returns an empty {@code Optional} if no record is found or the value is {@code null}.
+     * Returns an empty {@code Optional} only if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -697,7 +697,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the unique non-null value if found, otherwise empty
+     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -720,7 +720,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
-     * @return an {@link Optional} containing the mapped unique non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the mapped unique non-null value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)

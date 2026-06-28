@@ -2410,6 +2410,13 @@ public final class Jdbc {
                     rsColumnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
                 }
 
+                final List<Integer> missingColumnIndexes = columnGetterMap.keySet().stream().filter(it -> it > columnCount).sorted().toList();
+
+                if (N.notEmpty(missingColumnIndexes)) {
+                    throw new IllegalArgumentException(
+                            "ColumnGetters for column indexes " + missingColumnIndexes + " are not found in ResultSet column count: " + columnCount);
+                }
+
                 return rsColumnGetters;
             }
 
@@ -4282,10 +4289,13 @@ public final class Jdbc {
              * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are silently skipped;
              * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (for bean target classes)
              * @return a new stateful {@code BiRowMapper<T>}
+             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
              */
             @SequentialOnly
             @Stateful
             public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreUnmatchedColumns) {
+                N.checkArgNotNull(targetClass, cs.targetClass);
+
                 if (Object[].class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
                         private ColumnGetter<?>[] rsColumnGetters = null;
@@ -5583,6 +5593,13 @@ public final class Jdbc {
 
                         for (int i = 0; i < columnCount; i++) {
                             columnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
+                        }
+
+                        final List<Integer> missingColumnIndexes = columnGetterMap.keySet().stream().filter(it -> it > columnCount).sorted().toList();
+
+                        if (N.notEmpty(missingColumnIndexes)) {
+                            throw new IllegalArgumentException(
+                                    "ColumnGetters for column indexes " + missingColumnIndexes + " are not found in ResultSet column count: " + columnCount);
                         }
 
                         return columnGetters;

@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -38,11 +40,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import com.landawn.abacus.TestBase;
 
@@ -52,7 +56,7 @@ import sun.misc.Unsafe;
 public class DBLockTest extends TestBase {
 
     private static final String REMOVE_SQL = "DELETE FROM test_lock WHERE target = ?";
-    private static final String LOCK_SQL = "INSERT INTO test_lock(target, code) VALUES (?, ?)";
+    private static final String LOCK_SQL = "INSERT INTO test_lock(host_name, target, code, status, expiry_time, update_time, create_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
     private static final String UNLOCK_SQL = "DELETE FROM test_lock WHERE target = ? AND code = ?";
 
     private static final class LockFixture {
@@ -122,6 +126,31 @@ public class DBLockTest extends TestBase {
 
         assertNull(code);
         assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    @Test
+    public void testLock_DoesNotSleepPastTimeoutBudget() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 0);
+
+        final long start = System.nanoTime();
+        final String code = fixture.lock.lock("resource-timeout-budget", 200L, 20L, 250L);
+        final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+
+        assertNull(code);
+        assertTrue(elapsedMillis < 150L, "lock() slept past timeout budget; elapsedMillis=" + elapsedMillis);
+        assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    @Test
+    public void testLock_LiveTimeOverflowSaturatesExpiryTimestamp() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+
+        final String code = fixture.lock.lock("resource-expiry-overflow", Long.MAX_VALUE, 50L, 0L);
+
+        assertNotNull(code);
+        final ArgumentCaptor<java.sql.Timestamp> expiryCaptor = ArgumentCaptor.forClass(java.sql.Timestamp.class);
+        verify(fixture.preparedStatement, atLeastOnce()).setTimestamp(eq(5), expiryCaptor.capture());
+        assertEquals(Long.MAX_VALUE, expiryCaptor.getValue().getTime());
     }
 
     @Test

@@ -254,7 +254,7 @@ public final class DBLock {
                             }
 
                             final Timestamp now = Dates.currentTimestamp();
-                            final Timestamp expiry = Dates.createTimestamp(now.getTime() + info.liveTime);
+                            final Timestamp expiry = expiryTimestamp(now, info.liveTime);
 
                             final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code);
 
@@ -511,7 +511,7 @@ public final class DBLock {
             now = Dates.currentTimestamp();
 
             try {
-                if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, Dates.createTimestamp(now.getTime() + liveTime), now, now) > 0) {
+                if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0) {
                     targetCodePool.put(target, new LockInfo(code, liveTime));
 
                     logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
@@ -527,9 +527,17 @@ public final class DBLock {
 
             boolean interruptedDuringSleep = false;
 
+            now = Dates.currentTimestamp();
+            final long remainingTime = endTime - now.getTime();
+
+            if (remainingTime <= 0) {
+                attempts++;
+                break;
+            }
+
             try {
                 // Minimum 1ms delay to prevent a tight spin loop when retryInterval is 0.
-                N.sleep(retryInterval > 0 ? retryInterval : 1);
+                N.sleep(Math.min(retryInterval > 0 ? retryInterval : 1, remainingTime));
             } catch (final UncheckedInterruptedException e) {
                 // N.sleep restores the interrupt flag and rethrows on interruption; route it through the
                 // same clean-cancellation path below instead of letting it escape lock() as a RuntimeException.
@@ -556,6 +564,12 @@ public final class DBLock {
         }
 
         return null;
+    }
+
+    private static Timestamp expiryTimestamp(final Timestamp now, final long liveTime) {
+        final long nowTime = now.getTime();
+
+        return Dates.createTimestamp(liveTime > Long.MAX_VALUE - nowTime ? Long.MAX_VALUE : nowTime + liveTime);
     }
 
     private void removeExpiredLock(final String target) {

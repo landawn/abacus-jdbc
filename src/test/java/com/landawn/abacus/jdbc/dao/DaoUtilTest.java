@@ -27,6 +27,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.function.Function;
 
@@ -240,6 +241,30 @@ public class DaoUtilTest extends TestBase {
         assertEquals(8, sum);
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUncheckedComplete_DrainsAllFuturesBeforeThrowing() {
+        final ContinuableFuture<Void> failed = Mockito.mock(ContinuableFuture.class);
+        final ContinuableFuture<Void> second = Mockito.mock(ContinuableFuture.class);
+        final Result<Void, Exception> failedResult = ContinuableFuture.<Void> run(() -> {
+            throw new SQLException("first");
+        }).getAsResult();
+        final Result<Void, Exception> secondResult = ContinuableFuture.completed((Void) null).getAsResult();
+        Mockito.when(failed.getAsResult()).thenReturn(failedResult);
+        Mockito.when(second.getAsResult()).thenReturn(secondResult);
+
+        assertThrows(UncheckedSQLException.class, () -> DaoUtil.uncheckedComplete(Arrays.asList(failed, second)));
+
+        verify(second).getAsResult();
+    }
+
+    @Test
+    public void testUncheckedCompleteSum_ThrowsOnOverflow() {
+        final List<ContinuableFuture<Integer>> futures = Arrays.asList(ContinuableFuture.completed(Integer.MAX_VALUE), ContinuableFuture.completed(1));
+
+        assertThrows(ArithmeticException.class, () -> DaoUtil.uncheckedCompleteSum(futures));
+    }
+
     @Test
     public void testComplete_Success() throws SQLException {
         List<ContinuableFuture<Void>> futures = List.of(ContinuableFuture.completed(null));
@@ -251,6 +276,30 @@ public class DaoUtilTest extends TestBase {
         List<ContinuableFuture<Integer>> futures = Arrays.asList(ContinuableFuture.completed(2), ContinuableFuture.completed(4));
         int sum = DaoUtil.completeSum(futures);
         assertEquals(6, sum);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testComplete_DrainsAllFuturesBeforeThrowing() {
+        final ContinuableFuture<Void> failed = Mockito.mock(ContinuableFuture.class);
+        final ContinuableFuture<Void> second = Mockito.mock(ContinuableFuture.class);
+        final Result<Void, Exception> failedResult = ContinuableFuture.<Void> run(() -> {
+            throw new SQLException("first");
+        }).getAsResult();
+        final Result<Void, Exception> secondResult = ContinuableFuture.completed((Void) null).getAsResult();
+        Mockito.when(failed.getAsResult()).thenReturn(failedResult);
+        Mockito.when(second.getAsResult()).thenReturn(secondResult);
+
+        assertThrows(SQLException.class, () -> DaoUtil.complete(Arrays.asList(failed, second)));
+
+        verify(second).getAsResult();
+    }
+
+    @Test
+    public void testCompleteSum_ThrowsOnOverflow() {
+        final List<ContinuableFuture<Integer>> futures = Arrays.asList(ContinuableFuture.completed(Integer.MAX_VALUE), ContinuableFuture.completed(1));
+
+        assertThrows(ArithmeticException.class, () -> DaoUtil.completeSum(futures));
     }
 
     @Test

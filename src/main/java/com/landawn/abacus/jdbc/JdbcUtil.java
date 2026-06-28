@@ -461,11 +461,14 @@ public final class JdbcUtil {
      *
      * @param conn The database {@link Connection} to use for retrieving metadata. It must be an active connection.
      * @return A {@link DBProductInfo} object containing the database product name, version, and a standardized {@link DBVersion} enum.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}.
      * @throws UncheckedSQLException if a database access error occurs while retrieving metadata.
      * @see #getDBProductInfo(javax.sql.DataSource)
      * @see DatabaseMetaData
      */
-    public static DBProductInfo getDBProductInfo(final Connection conn) throws UncheckedSQLException {
+    public static DBProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotNull(conn, cs.conn);
+
         try {
             final DatabaseMetaData metaData = conn.getMetaData();
 
@@ -931,7 +934,7 @@ public final class JdbcUtil {
      * DataSource dataSource = ...;  // Your configured DataSource
      * Connection connection = null;
      * try {
-     *     connection = JdbcUtil.getConnection(ds);
+     *     connection = JdbcUtil.getConnection(dataSource);
      *     // Perform database operations
      *     try (Statement stmt = connection.createStatement()) {
      *         // ...
@@ -986,7 +989,7 @@ public final class JdbcUtil {
      * DataSource dataSource = ...;
      * Connection connection = null;
      * try {
-     *     connection = JdbcUtil.getConnection(ds);
+     *     connection = JdbcUtil.getConnection(dataSource);
      *     // ... perform database work
      * } finally {
      *     // This ensures the connection is always released, even if an error occurs.
@@ -1194,11 +1197,11 @@ public final class JdbcUtil {
      * DataSource dataSource = ...;
      * Connection conn = null;
      * try {
-     *     conn = JdbcUtil.getConnection(ds);
+     *     conn = JdbcUtil.getConnection(dataSource);
      *     // ... perform database operations
      * } finally {
      *     // Correctly releases the connection back to the pool or closes it.
-     *     JdbcUtil.releaseConnection(conn, ds);
+     *     JdbcUtil.releaseConnection(conn, dataSource);
      * }
      * }</pre>
      *
@@ -2783,17 +2786,18 @@ public final class JdbcUtil {
      * }
      *
      * // Stream processing for large result sets
-     * Stream<Transaction> stream = JdbcUtil.prepareQuery(dataSource,
+     * try (Stream<Transaction> stream = JdbcUtil.prepareQuery(dataSource,
      *         "SELECT * FROM transactions WHERE amount > ?")
      *     .setDouble(1, 1000.0)
-     *     .stream(Transaction.class);
+     *     .stream(Transaction.class)) {
      *
-     * double totalAmount = stream
-     *     .filter(t -> t.getStatus().equals("COMPLETED"))
-     *     .mapToDouble(Transaction::getAmount)
-     *     .sum();
+     *     double totalAmount = stream
+     *         .filter(t -> t.getStatus().equals("COMPLETED"))
+     *         .mapToDouble(Transaction::getAmount)
+     *         .sum();
      *
-     * System.out.println("Total: " + totalAmount);
+     *     System.out.println("Total: " + totalAmount);
+     * }
      *
      * // Working with Dataset (column-oriented data structure)
      * Dataset dataset = JdbcUtil.prepareQuery(dataSource,
@@ -3215,15 +3219,17 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Create a query with a specific fetch size and timeout
-     *     JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
+     *     try (Stream<Record> stream = JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
      *             (c, s) -> {
      *                 PreparedStatement stmt = c.prepareStatement(s);
      *                 stmt.setFetchSize(100);
      *                 stmt.setQueryTimeout(30);   // 30 seconds
      *                 return stmt;
      *             })
-     *         .stream(Record.class)
-     *         .forEach(System.out::println);
+     *         .stream(Record.class)) {
+     *
+     *         stream.forEach(System.out::println);
+     *     }
      * } catch (SQLException e) {
      *     // Handle exception
      * }
@@ -3260,11 +3266,14 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Efficiently stream over a large table without loading everything into memory.
-     * long count = JdbcUtil.prepareQueryForLargeResult(dataSource, "SELECT * FROM event_logs")
-     *     .stream(LogEntry.class)
-     *     .filter(entry -> entry.getLevel().equals("ERROR"))
-     *     .count();
-     * System.out.println("Found " + count + " error entries.");
+     * try (Stream<LogEntry> stream = JdbcUtil.prepareQueryForLargeResult(dataSource, "SELECT * FROM event_logs")
+     *     .stream(LogEntry.class)) {
+     *
+     *     long count = stream
+     *         .filter(entry -> entry.getLevel().equals("ERROR"))
+     *         .count();
+     *     System.out.println("Found " + count + " error entries.");
+     * }
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -3288,11 +3297,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
+     * try (Connection conn = dataSource.getConnection();
+     *         Stream<Audit> stream = JdbcUtil.prepareQueryForLargeResult(conn, "SELECT * FROM audit_trail")
+     *             .stream(Audit.class)) {
      *     // Stream results without high memory usage
-     *     JdbcUtil.prepareQueryForLargeResult(conn, "SELECT * FROM audit_trail")
-     *         .stream(Audit.class)
-     *         .forEach(audit -> {
+     *     stream.forEach(audit -> {
      *             // process audit record
      *         });
      * } catch (SQLException e) {
@@ -4269,12 +4278,14 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Efficiently stream over a large, filtered result set without loading everything into memory.
-     * long count = JdbcUtil.prepareNamedQueryForLargeResult(dataSource,
+     * try (Stream<LogEntry> stream = JdbcUtil.prepareNamedQueryForLargeResult(dataSource,
      *             "SELECT * FROM event_logs WHERE level = :level")
      *     .setString("level", "ERROR")
-     *     .stream(LogEntry.class)
-     *     .count();
-     * System.out.println("Found " + count + " error entries.");
+     *     .stream(LogEntry.class)) {
+     *
+     *     long count = stream.count();
+     *     System.out.println("Found " + count + " error entries.");
+     * }
      * }</pre>
      *
      * @param ds The DataSource to use for the query
@@ -4304,11 +4315,13 @@ public final class JdbcUtil {
      * <pre>{@code
      * // Reuse a pre-parsed named SQL while streaming a large result set.
      * ParsedSql psql = ParsedSql.parse("SELECT * FROM event_logs WHERE level = :level");
-     * long count = JdbcUtil.prepareNamedQueryForLargeResult(dataSource, psql)
+     * try (Stream<LogEntry> stream = JdbcUtil.prepareNamedQueryForLargeResult(dataSource, psql)
      *     .setString("level", "ERROR")
-     *     .stream(LogEntry.class)
-     *     .count();
-     * System.out.println("Found " + count + " error entries.");
+     *     .stream(LogEntry.class)) {
+     *
+     *     long count = stream.count();
+     *     System.out.println("Found " + count + " error entries.");
+     * }
      * }</pre>
      *
      * @param ds The DataSource to use for the query
@@ -4331,13 +4344,13 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
-     *     // Stream a large, filtered result set on a caller-managed connection.
-     *     long count = JdbcUtil.prepareNamedQueryForLargeResult(conn,
+     * try (Connection conn = dataSource.getConnection();
+     *         Stream<LogEntry> stream = JdbcUtil.prepareNamedQueryForLargeResult(conn,
      *                 "SELECT * FROM event_logs WHERE level = :level")
-     *         .setString("level", "ERROR")
-     *         .stream(LogEntry.class)
-     *         .count();
+     *             .setString("level", "ERROR")
+     *             .stream(LogEntry.class)) {
+     *     // Stream a large, filtered result set on a caller-managed connection.
+     *     long count = stream.count();
      *     System.out.println("Found " + count + " error entries.");
      * } catch (SQLException e) {
      *     // Handle exception
@@ -5356,12 +5369,12 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
-                    res += sumUpdatedRows(executeBatch(stmt));
+                    res = addUpdatedRowsExact(res, sumUpdatedRows(executeBatch(stmt)));
                 }
             }
 
             if (idx % batchSize != 0) {
-                res += sumUpdatedRows(executeBatch(stmt));
+                res = addUpdatedRowsExact(res, sumUpdatedRows(executeBatch(stmt)));
             }
 
             noException = true;
@@ -5587,12 +5600,12 @@ public final class JdbcUtil {
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
-                    res += sumUpdatedRows(executeLargeBatch(stmt));
+                    res = addUpdatedRowsExact(res, sumUpdatedRows(executeLargeBatch(stmt)));
                 }
             }
 
             if (idx % batchSize != 0) {
-                res += sumUpdatedRows(executeLargeBatch(stmt));
+                res = addUpdatedRowsExact(res, sumUpdatedRows(executeLargeBatch(stmt)));
             }
 
             noException = true;
@@ -5951,11 +5964,22 @@ public final class JdbcUtil {
 
         for (final int updateCount : updateCounts) {
             if (updateCount > 0) {
-                result += updateCount;
+                result = addUpdatedRowsExact(result, updateCount);
             }
         }
 
         return result;
+    }
+
+    private static int addUpdatedRowsExact(final int current, final int increment) {
+        try {
+            return Math.addExact(current, increment);
+        } catch (final ArithmeticException e) {
+            final ArithmeticException overflow = new ArithmeticException(
+                    "Batch update count exceeds Integer.MAX_VALUE; use executeLargeBatchUpdate for large batch results");
+            overflow.initCause(e);
+            throw overflow;
+        }
     }
 
     private static long sumUpdatedRows(final long[] updateCounts) {
@@ -5963,11 +5987,21 @@ public final class JdbcUtil {
 
         for (final long updateCount : updateCounts) {
             if (updateCount > 0) {
-                result += updateCount;
+                result = addUpdatedRowsExact(result, updateCount);
             }
         }
 
         return result;
+    }
+
+    private static long addUpdatedRowsExact(final long current, final long increment) {
+        try {
+            return Math.addExact(current, increment);
+        } catch (final ArithmeticException e) {
+            final ArithmeticException overflow = new ArithmeticException("Batch update count exceeds Long.MAX_VALUE");
+            overflow.initCause(e);
+            throw overflow;
+        }
     }
 
     static boolean execute(final PreparedStatement stmt) throws SQLException {
@@ -11994,8 +12028,9 @@ public final class JdbcUtil {
      *       dialects are rejected.</li>
      *   <li>{@code sqlMapper} — externalized, pre-defined SQL keyed by ID for {@code @Query(id = ...)} methods;
      *       defaults to none.</li>
-     *   <li>{@code cache} — a {@link Jdbc.DaoCache} for {@code @CacheResult} methods; defaults to none. Only
-     *       permitted for DAO interfaces that extend {@code NoUpdateDao} (see below).</li>
+     *   <li>{@code cache} — a {@link Jdbc.DaoCache} for {@code @CacheResult} methods. When unset,
+     *       cache annotations use their configured implementation or the default DAO cache. Only permitted
+     *       for DAO interfaces that extend {@code NoUpdateDao} (see below).</li>
      *   <li>{@code executor} — the {@link Executor} backing the DAO's asynchronous methods; defaults to the
      *       shared async executor.</li>
      * </ul>

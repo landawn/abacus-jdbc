@@ -28,11 +28,10 @@ import com.landawn.abacus.query.condition.Condition;
  * while all update, delete, upsert, and stored-procedure (callable) methods throw {@link UnsupportedOperationException}.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
- * <p>This is an "unchecked" DAO variant. All read and insert methods throw
+ * <p>This is an "unchecked" DAO variant. Read and insert methods redeclared by this interface throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of checked {@link java.sql.SQLException},
- * providing a more convenient API for developers who prefer unchecked exceptions. This eliminates the need
- * for try-catch blocks or throws declarations, making the code cleaner and more suitable for use in
- * functional programming contexts.</p>
+ * providing a more convenient API for developers who prefer unchecked exceptions. Inherited methods that are
+ * not redeclared here keep their checked-exception contract.</p>
  *
  * <p>This is useful for DAOs where update and delete operations should be prevented,
  * such as append-only data stores, immutable records, or when you want to ensure data is never modified

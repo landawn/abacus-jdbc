@@ -153,6 +153,11 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testGetDBProductInfo_NullConnectionThrowsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getDBProductInfo((Connection) null));
+    }
+
+    @Test
     public void testGetDBProductInfo_PostgreSQL96_Connection() throws SQLException {
         when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("9.6.24");
@@ -894,6 +899,16 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testExecuteBatchUpdate_ThrowsOnIntCountOverflow() throws SQLException {
+        String sql = "INSERT INTO users (name) VALUES (?)";
+        List<Object[]> params = Arrays.asList(new Object[] { "John" }, new Object[] { "Jane" });
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { Integer.MAX_VALUE }, new int[] { 1 });
+
+        ArithmeticException thrown = assertThrows(ArithmeticException.class, () -> JdbcUtil.executeBatchUpdate(mockConnection, sql, params, 1));
+        assertTrue(thrown.getMessage().contains("executeLargeBatchUpdate"));
+    }
+
+    @Test
     public void testExecuteLargeBatchUpdate() throws SQLException {
         String sql = "INSERT INTO users (name) VALUES (?)";
         List<Object[]> params = Arrays.asList(new Object[] { "John" }, new Object[] { "Jane" });
@@ -911,6 +926,16 @@ public class JdbcUtilTest extends TestBase {
 
         long total = JdbcUtil.executeLargeBatchUpdate(mockDataSource, sql, params);
         assertEquals(3L, total);
+    }
+
+    @Test
+    public void testExecuteLargeBatchUpdate_ThrowsOnLongCountOverflow() throws SQLException {
+        String sql = "INSERT INTO users (name) VALUES (?)";
+        List<Object[]> params = Arrays.asList(new Object[] { "John" }, new Object[] { "Jane" });
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { Long.MAX_VALUE }, new long[] { 1L });
+
+        ArithmeticException thrown = assertThrows(ArithmeticException.class, () -> JdbcUtil.executeLargeBatchUpdate(mockConnection, sql, params, 1));
+        assertTrue(thrown.getMessage().contains("exceeds Long.MAX_VALUE"));
     }
 
     @Test

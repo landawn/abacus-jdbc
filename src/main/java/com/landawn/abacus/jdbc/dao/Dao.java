@@ -1850,6 +1850,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a lazy Stream with custom row mapping.
      * Combines lazy evaluation with custom result transformation.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Condition)}.
      *
      * @param <R> the result type
      * @param cond the search condition
@@ -1862,6 +1863,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a lazy Stream with bi-function row mapping.
      * The mapper receives both ResultSet and column labels.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Condition)}.
      *
      * @param <R> the result type
      * @param cond the search condition
@@ -1874,6 +1876,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a filtered lazy Stream with row mapping.
      * Only rows passing the filter are included in the stream.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Condition)}.
      *
      * @param <R> the result type
      * @param cond the search condition
@@ -1887,6 +1890,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a filtered lazy Stream with bi-function filter and mapper.
      * Maximum flexibility for stream processing with filtering.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Condition)}.
      *
      * @param <R> the result type
      * @param cond the search condition
@@ -1914,6 +1918,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a lazy Stream of selected properties with row mapping.
      * Combines property selection with custom mapping in a lazy stream.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
@@ -1927,6 +1932,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a lazy Stream with bi-function mapping for selected properties.
      * The mapper receives column labels for the selected properties.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
@@ -1940,6 +1946,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a filtered lazy Stream of selected properties with mapping.
      * Combines property selection, filtering, and mapping in a lazy stream.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
@@ -1954,6 +1961,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a filtered lazy Stream with maximum flexibility.
      * Combines all features: property selection, bi-function filtering and mapping.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
@@ -1969,6 +1977,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a lazy Stream of values from a single property.
      * The property type is automatically detected for mapping.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1996,6 +2005,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a lazy Stream of single property values with custom mapping.
      * Allows transformation of single column values in a stream.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * @param <R> the result type
      * @param singleSelectPropName the single property to select
@@ -2011,6 +2021,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
     /**
      * Returns a filtered lazy Stream of single property values.
      * Only values passing the filter are included in the stream.
+     * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * @param <R> the result type
      * @param singleSelectPropName the single property to select
@@ -2048,6 +2059,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages
+     * @throws IllegalArgumentException if {@code cond} or {@code paramSetter} is {@code null}, or {@code pageSize} is not positive
      */
     @Beta
     @LazyEvaluation
@@ -2064,6 +2076,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page's ResultSet
      * @return stream of processed page results
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
      */
     @Beta
     @LazyEvaluation
@@ -2081,6 +2094,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page
      * @return stream of processed page results
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
      */
     @Beta
     @LazyEvaluation
@@ -2097,6 +2111,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages with selected properties
+     * @throws IllegalArgumentException if {@code cond} or {@code paramSetter} is {@code null}, or {@code pageSize} is not positive
      */
     @Beta
     @LazyEvaluation
@@ -2115,6 +2130,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page
      * @return stream of processed page results
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
      */
     @Beta
     @LazyEvaluation
@@ -2133,6 +2149,7 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page
      * @return stream of processed page results
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
      */
     @Beta
     @LazyEvaluation
@@ -2262,9 +2279,6 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs
      */
-    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
-    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
-    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
@@ -2279,9 +2293,6 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs
      */
-    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
-    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
-    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {

@@ -224,12 +224,28 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testRunOutsideTransactionRejectsNullCommand() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        assertThrows(IllegalArgumentException.class, () -> transaction.runOutsideTransaction(null));
+        assertSame(transaction, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+    }
+
+    @Test
     public void testCallOutsideTransaction() throws Exception {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         final String result = transaction.callOutsideTransaction(() -> "test result");
 
         assertEquals("test result", result);
+    }
+
+    @Test
+    public void testCallOutsideTransactionRejectsNullCommand() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        assertThrows(IllegalArgumentException.class, () -> transaction.callOutsideTransaction(null));
+        assertSame(transaction, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
     }
 
     @Test

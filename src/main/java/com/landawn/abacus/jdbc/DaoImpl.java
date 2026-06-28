@@ -2430,9 +2430,7 @@ final class DaoImpl {
                     final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                     final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
-                    return proxy.prepareQuery(sp.query())
-                            .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
-                            .settParameters(sp.parameters(), collParamsSetter);
+                    return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter);
                 };
             } else if (methodName.equals("prepareNamedQuery") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                     && Condition.class.isAssignableFrom(paramTypes[1])) {
@@ -2442,9 +2440,7 @@ final class DaoImpl {
                     final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                     final SP sp = namedSelectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
-                    return proxy.prepareNamedQuery(sp.query())
-                            .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
-                            .settParameters(sp.parameters(), collParamsSetter);
+                    return proxy.prepareNamedQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter);
                 };
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);

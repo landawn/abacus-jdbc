@@ -661,20 +661,20 @@ public final class JdbcCodeGenerationUtil {
                     tmp.add("ignoredFields = " + Splitter.with(",")
                             .trimResults()
                             .splitToStream(eccJsonXmlConfig.getIgnoredFields())
-                            .map(it -> '\"' + it + '\"')
+                            .map(it -> '\"' + EscapeUtil.escapeJava(it) + '\"')
                             .join(", ", "{ ", " }"));
                 }
 
                 if (Strings.isNotEmpty(eccJsonXmlConfig.getDateFormat())) {
-                    tmp.add("dateFormat = \"" + eccJsonXmlConfig.getDateFormat() + "\"");
+                    tmp.add("dateFormat = \"" + EscapeUtil.escapeJava(eccJsonXmlConfig.getDateFormat()) + "\"");
                 }
 
                 if (Strings.isNotEmpty(eccJsonXmlConfig.getTimeZone())) {
-                    tmp.add("timeZone = \"" + eccJsonXmlConfig.getTimeZone() + "\"");
+                    tmp.add("timeZone = \"" + EscapeUtil.escapeJava(eccJsonXmlConfig.getTimeZone()) + "\"");
                 }
 
                 if (Strings.isNotEmpty(eccJsonXmlConfig.getNumberFormat())) {
-                    tmp.add("numberFormat = \"" + eccJsonXmlConfig.getNumberFormat() + "\"");
+                    tmp.add("numberFormat = \"" + EscapeUtil.escapeJava(eccJsonXmlConfig.getNumberFormat()) + "\"");
                 }
 
                 if (eccJsonXmlConfig.getEnumerated() != null) {

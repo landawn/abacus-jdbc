@@ -241,7 +241,7 @@ public final class DataTransferUtil {
 
     /**
      * Imports selected columns from a Dataset to a database table using the provided Connection and insert SQL statement.
-     * Only the specified columns will be imported, and their order in the SQL must match the Dataset column order.
+     * Only the specified columns will be imported, and their order in the SQL must match {@code selectColumnNames}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -253,15 +253,14 @@ public final class DataTransferUtil {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders; column order must match the selected columns
+     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
@@ -285,15 +284,14 @@ public final class DataTransferUtil {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders; column order must match the selected columns
+     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
@@ -322,8 +320,7 @@ public final class DataTransferUtil {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
@@ -331,7 +328,7 @@ public final class DataTransferUtil {
      * @param selectColumnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders; column order must match the selected columns
+     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
@@ -601,8 +598,7 @@ public final class DataTransferUtil {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
@@ -2127,7 +2123,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param rs the ResultSet containing the data to be exported (will not be closed by this method)
-     * @param selectColumnNames the collection of column names to be selected for export; if {@code null}, all columns are exported
+     * @param selectColumnNames the collection of column names to be selected for export; if {@code null} or empty, all columns are exported
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
@@ -2150,7 +2146,7 @@ public final class DataTransferUtil {
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
             final String[] columnNames = new String[columnCount];
-            final Set<String> columnNameSet = selectColumnNames == null ? null : N.newHashSet(selectColumnNames);
+            final Set<String> columnNameSet = N.isEmpty(selectColumnNames) ? null : N.newHashSet(selectColumnNames);
             String label = null;
 
             for (int i = 0; i < columnCount; i++) {
@@ -2841,7 +2837,7 @@ public final class DataTransferUtil {
 
         if (parts.length == 1) {
             return CharStream.of(parts[0]).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? parts[0]
-                    : Strings.wrap(parts[0], quote);
+                    : quoteIdentifier(parts[0], quote);
         }
 
         final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
@@ -2851,7 +2847,7 @@ public final class DataTransferUtil {
                 sb.append('.');
             }
 
-            sb.append(Strings.wrap(parts[i], quote));
+            sb.append(quoteIdentifier(parts[i], quote));
         }
 
         return sb.toString();
@@ -2861,7 +2857,11 @@ public final class DataTransferUtil {
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
         return CharStream.of(columnName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnName
-                : Strings.wrap(columnName, quote);
+                : quoteIdentifier(columnName, quote);
+    }
+
+    private static String quoteIdentifier(final String identifier, final String quote) {
+        return quote + identifier.replace(quote, quote + quote) + quote;
     }
 
     private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {

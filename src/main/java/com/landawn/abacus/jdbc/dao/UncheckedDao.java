@@ -55,9 +55,9 @@ import com.landawn.abacus.util.u.OptionalShort;
  * Its methods throw {@link UncheckedSQLException} instead of {@link java.sql.SQLException}, providing a more
  * convenient API for developers who prefer unchecked exceptions.
  *
- * <p>This interface provides condition-based save, query, update, and delete operations without the need to
- * handle checked exceptions. All operations that would normally throw {@code SQLException} in the parent
- * {@link Dao} interface will throw {@link UncheckedSQLException} instead.</p>
+ * <p>This interface redeclares condition-based save, query, update, and delete operations so callers do not
+ * need to handle checked exceptions for those methods. Inherited methods that are not redeclared here keep
+ * the checked-exception contract from {@link Dao}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -1640,9 +1640,6 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws UncheckedSQLException if a database access error occurs
      */
-    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
-    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
-    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     @Override
@@ -1671,9 +1668,6 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws UncheckedSQLException if a database access error occurs
      */
-    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
-    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
-    // left unchanged per request.
     @SuppressWarnings("deprecation")
     @Beta
     @Override

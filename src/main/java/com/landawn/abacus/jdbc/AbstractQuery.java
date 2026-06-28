@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -855,10 +856,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public This setFloat(final int parameterIndex, final Float value) throws SQLException {
         if (value == null) {
-            // Per JDBC spec (Appendix B.4), Java float maps to SQL REAL (4-byte). Types.FLOAT is
-            // an alias for Types.DOUBLE (8-byte); using it here causes strict drivers to reject
-            // the SQL-type/value mismatch or coerce to double precision. Sibling setDouble
-            // correctly uses Types.DOUBLE; this method now uses Types.REAL for parity.
+            // Per JDBC spec (Appendix B.4), Java float maps to SQL REAL (4-byte). SQL FLOAT is
+            // commonly mapped to Java double precision; using Types.FLOAT here causes strict drivers
+            // to reject the SQL-type/value mismatch or coerce to double precision. Sibling setDouble
+            // correctly uses Types.DOUBLE; this method uses Types.REAL for parity.
             stmt.setNull(parameterIndex, java.sql.Types.REAL);
         } else {
             stmt.setFloat(parameterIndex, value);
@@ -3655,8 +3656,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Adds multiple sets of parameters for batch execution.
-     * Each element in the collection represents one batch row: a {@code Collection} or {@code Object[]}
-     * of parameter values, or a single value (bound as the only parameter).
+     * Each element in the collection represents one batch row. All rows must have the same shape:
+     * {@code Collection}, {@code Object[]}, or a single value bound as the only parameter.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3668,7 +3669,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.addBatchParameters(batchData).batchInsert();
      * }</pre>
      *
-     * @param batchParameters Collection where each element is one batch row (a {@code Collection} or {@code Object[]} of values, or a single value bound as the only parameter)
+     * @param batchParameters Collection where each element is one batch row. All rows must have the same shape:
+     *                        {@code Collection}, {@code Object[]}, or a single value bound as the only parameter
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
      * @throws SQLException if a database access error occurs
@@ -3715,8 +3717,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Adds multiple sets of parameters for batch execution using an iterator.
-     * Each element is one batch row: a {@code Collection} or {@code Object[]} of parameter values,
-     * or a single value (bound as the only parameter).
+     * Each element is one batch row. All rows must have the same shape: {@code Collection},
+     * {@code Object[]}, or a single value bound as the only parameter.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3724,7 +3726,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.addBatchParameters(dataIterator).batchUpdate();
      * }</pre>
      *
-     * @param batchParameters Iterator over batch rows (each a {@code Collection} or {@code Object[]} of values, or a single value bound as the only parameter)
+     * @param batchParameters Iterator over batch rows. All rows must have the same shape: {@code Collection},
+     *                        {@code Object[]}, or a single value bound as the only parameter
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
      * @throws SQLException if a database access error occurs
@@ -4180,6 +4183,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param direction one of {@link FetchDirection#FORWARD}, {@link FetchDirection#REVERSE},
      *                  or {@link FetchDirection#UNKNOWN}
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code direction} is {@code null}
      * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see FetchDirection
@@ -4499,10 +4503,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      *
      * <p><b>Empty vs. present semantics:</b> {@code OptionalChar.empty()} is returned <i>only</i> when the
-     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * query produces no rows. If a row exists but the column is SQL {@code NULL} or an empty string, the returned
      * {@code OptionalChar} is <i>present</i> and holds the JDBC primitive default {@code (char) 0} — the
      * NUL character, equivalent to the default {@code char} value. Use {@link #queryForSingleValue(Class)}
-     * with {@code Character.class} if you need to distinguish SQL {@code NULL} from a real {@code (char) 0}.</p>
+     * with {@code Character.class} if you need to distinguish SQL {@code NULL} or empty string from a real {@code (char) 0}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4512,7 +4516,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return a <i>present</i> {@code OptionalChar} holding the column value (or the default {@code char}
-     *         for SQL {@code NULL}) when at least one row is returned; {@code OptionalChar.empty()} when
+     *         for SQL {@code NULL} or empty string) when at least one row is returned; {@code OptionalChar.empty()} when
      *         the query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -5385,8 +5389,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Note:</b> The underlying statement will be closed after execution unless
      * {@link #closeAfterExecution(boolean)} has been set to {@code false}.</p>
      *
-     * @param entityClassForExtractor the class used to provide metadata for mapping columns in the result set
+     * @param entityClassForExtractor the class used to provide metadata for mapping columns in the result set; must not be {@code null}
      * @return A {@code Dataset} containing the results with entity-aware column mapping
+     * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.ResultExtractor#toDataset(Class)
@@ -5765,11 +5770,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the function
      * @param func the function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
+     * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      */
     @Beta
-    public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super Dataset, ? extends R, E> func) throws SQLException, E {
+    public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super Dataset, ? extends R, E> func)
+            throws IllegalArgumentException, SQLException, E {
+        checkArgNotNull(func, cs.func);
+
         return func.apply(query());
     }
 
@@ -5792,13 +5801,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param entityClassForExtractor the class used to provide metadata for column mapping
      * @param func the function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
+     * @throws IllegalArgumentException if {@code func} is {@code null}, or if {@code entityClassForExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     @Beta
     public <R, E extends Exception> R queryThenApply(final Class<?> entityClassForExtractor, final Throwables.Function<? super Dataset, ? extends R, E> func)
-            throws SQLException, E {
+            throws IllegalArgumentException, SQLException, E {
+        checkArgNotNull(func, cs.func);
+
         return func.apply(query(entityClassForExtractor));
     }
 
@@ -5818,11 +5830,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <E> the type of exception that may be thrown by the consumer
      * @param action the consumer action to apply to the {@code Dataset} resulting from the query
+     * @throws IllegalArgumentException if {@code action} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer action throws an exception
      */
     @Beta
-    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> action) throws SQLException, E {
+    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> action) throws IllegalArgumentException, SQLException, E {
+        checkArgNotNull(action, cs.action);
+
         action.accept(query());
     }
 
@@ -5845,13 +5860,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param entityClassForExtractor the class used to provide metadata for column mapping
      * @param action the consumer action to apply to the {@code Dataset} resulting from the query
+     * @throws IllegalArgumentException if {@code action} is {@code null}, or if {@code entityClassForExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer action throws an exception
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     @Beta
     public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super Dataset, E> action)
-            throws SQLException, E {
+            throws IllegalArgumentException, SQLException, E {
+        checkArgNotNull(action, cs.action);
+
         action.accept(query(entityClassForExtractor));
     }
 
@@ -7787,11 +7805,23 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final Supplier<Boolean> supplier = createExecuteSupplier();
+        final AtomicReference<ObjIteratorEx<ResultSet>> iterRef = new AtomicReference<>();
 
-        return Stream.just(supplier)
-                .flatMap(isResultSetSupplier -> Stream.of(JdbcUtil.iterateAllResultSets(stmt, isResultSetSupplier.get())))
-                .mapE(rs -> JdbcUtil.<R> extractAndCloseResultSet(rs, resultExtractor))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).flatMap(isResultSetSupplier -> {
+            final ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(stmt, isResultSetSupplier.get());
+            iterRef.set(iter);
+            return Stream.of(iter);
+        }).mapE(rs -> JdbcUtil.<R> extractAndCloseResultSet(rs, resultExtractor)).onClose(() -> {
+            try {
+                final ObjIteratorEx<ResultSet> iter = iterRef.get();
+
+                if (iter != null) {
+                    iter.closeResource();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
+        });
     }
 
     /**
@@ -7840,11 +7870,23 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final Supplier<Boolean> supplier = createExecuteSupplier();
+        final AtomicReference<ObjIteratorEx<ResultSet>> iterRef = new AtomicReference<>();
 
-        return Stream.just(supplier)
-                .flatMap(isResultSetSupplier -> Stream.of(JdbcUtil.iterateAllResultSets(stmt, isResultSetSupplier.get())))
-                .mapE(rs -> JdbcUtil.<R> extractAndCloseResultSet(rs, resultExtractor))
-                .onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier).flatMap(isResultSetSupplier -> {
+            final ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(stmt, isResultSetSupplier.get());
+            iterRef.set(iter);
+            return Stream.of(iter);
+        }).mapE(rs -> JdbcUtil.<R> extractAndCloseResultSet(rs, resultExtractor)).onClose(() -> {
+            try {
+                final ObjIteratorEx<ResultSet> iter = iterRef.get();
+
+                if (iter != null) {
+                    iter.closeResource();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
+        });
     }
 
     private Supplier<ResultSet> createQuerySupplier() {
@@ -8799,9 +8841,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see RowConsumer#oneOff(Consumer)
      * @see #foreach(Class, Consumer)
      */
-    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
-    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
-    // left unchanged per request.
     @Beta
     public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         checkArgNotNull(rowConsumer, cs.rowConsumer);
@@ -8853,9 +8892,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see RowConsumer#oneOff(Class, Consumer)
      * @see #foreach(Consumer)
      */
-    // NAMING-REVIEW SUGGESTION (2026-06-27): `foreach` differs from the sibling `forEach(...)` only by
-    // capitalization — an autocomplete/visual footgun. Suggested rename: `forEachRow`. Suggestion only;
-    // left unchanged per request.
     @Beta
     public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
         checkArgNotNull(entityClass, cs.entityClass);

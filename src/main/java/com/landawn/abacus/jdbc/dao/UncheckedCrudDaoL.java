@@ -398,7 +398,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
-     * Returns an empty {@code Optional} if no record is found or if the value is {@code null}.
+     * Returns an empty {@code Optional} only if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -409,7 +409,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the non-null value if found, otherwise empty
+     * @return an {@code Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -437,7 +437,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the mapped non-null value if found, otherwise empty
+     * @return an {@code Optional} containing the mapped non-null value if a record matches the {@code id}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -478,7 +478,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
-     * Returns an empty {@code Optional} if no record is found or the value is {@code null}.
+     * Returns an empty {@code Optional} only if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -489,7 +489,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the unique non-null value if found, otherwise empty
+     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -518,7 +518,7 @@ public interface UncheckedCrudDaoL<T, TD extends UncheckedCrudDaoL<T, TD>> exten
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the mapped unique non-null value if found, otherwise empty
+     * @return an {@code Optional} containing the mapped unique non-null value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */

@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +29,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
+import java.sql.SQLType;
 import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
@@ -870,6 +872,28 @@ public class CallableQueryTest extends TestBase {
         verify(callableStatement).registerOutParameter(1, JDBCType.INTEGER);
     }
 
+    @Test
+    public void testRegisterOutParameter_SQLTypeRejectsNullVendorTypeNumber() {
+        SQLType sqlType = new SQLType() {
+            @Override
+            public String getName() {
+                return "NULL_VENDOR";
+            }
+
+            @Override
+            public String getVendor() {
+                return "test";
+            }
+
+            @Override
+            public Integer getVendorTypeNumber() {
+                return null;
+            }
+        };
+
+        assertThrows(IllegalArgumentException.class, () -> callableQuery.registerOutParameter(1, sqlType));
+    }
+
     // --- registerOutParameter(int, SQLType, int) – by index with SQLType and scale (L1829) ---
 
     @Test
@@ -991,16 +1015,25 @@ public class CallableQueryTest extends TestBase {
         assertNotNull(result);
     }
 
-    // --- executeQuery() returns null when no result sets (L2096-2111) ---
+    // --- executeQuery() returns an empty ResultSet when no result sets (L2096-2111) ---
 
     @Test
-    public void testExecuteQuery_ReturnsNullWhenNoResultSet() throws SQLException {
+    public void testExecuteQuery_ReturnsEmptyResultSetWhenNoResultSet() throws SQLException {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         // isFetchDirectionSet=false so setFetchDirection is called first
         ResultSet rs = callableQuery.executeQuery();
-        org.junit.jupiter.api.Assertions.assertNull(rs);
+        assertNotNull(rs);
+        assertFalse(rs.next());
         verify(callableStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+    }
+
+    @Test
+    public void testQueryForInt_ReturnsEmptyWhenProcedureHasNoResultSet() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        assertFalse(callableQuery.queryForInt().isPresent());
     }
 
     // --- executeQuery() returns the first ResultSet (L2104) ---
@@ -1466,7 +1499,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         ResultSet rs = callableQuery.executeQuery();
-        org.junit.jupiter.api.Assertions.assertNull(rs);
+        assertNotNull(rs);
+        assertFalse(rs.next());
         // setFetchDirection should NOT be called by executeQuery since it was already set
         verify(callableStatement, Mockito.never()).setFetchDirection(ResultSet.FETCH_FORWARD);
     }

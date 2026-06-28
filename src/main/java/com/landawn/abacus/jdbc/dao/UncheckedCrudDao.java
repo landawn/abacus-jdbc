@@ -620,7 +620,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
-     * Unlike {@link #queryForSingleValue(String, Object, Class)}, this method returns empty Optional for {@code null} values.
+     * Unlike {@link #queryForSingleValue(String, Object, Class)}, this method rejects {@code null} values by the non-null result contract.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -632,7 +632,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return an {@code Optional} containing the non-null value, or empty if no record matches the {@code id} or the value is SQL {@code null}
+     * @return an {@code Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -656,7 +656,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the non-null mapped value, or empty if no record matches the {@code id} or the value is SQL {@code null}
+     * @return an {@code Optional} containing the non-null mapped value if a record matches the {@code id}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Object, Class)
      */
@@ -705,7 +705,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return an {@code Optional} containing the unique non-null value, or empty if no record matches the {@code id} or the value is SQL {@code null}
+     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -731,7 +731,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the unique non-null mapped value, or empty if no record matches the {@code id} or the value is SQL {@code null}
+     * @return an {@code Optional} containing the unique non-null mapped value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Object, Class)

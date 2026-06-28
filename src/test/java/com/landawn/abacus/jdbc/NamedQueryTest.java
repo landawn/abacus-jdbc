@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -1235,9 +1236,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testParameterNotFound() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
             namedQuery.setString("nonExistentParam", "value");
         });
+
+        assertTrue(ex.getMessage().contains("nonExistentParam"));
+        assertTrue(ex.getMessage().contains("[param1, param2]"));
+        assertTrue(ex.getMessage().contains("SELECT * FROM table WHERE col1 = :param1 AND col2 = :param2"));
     }
 
     // Tests for the index-by-map code path (parameterCount >= MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP = 5)

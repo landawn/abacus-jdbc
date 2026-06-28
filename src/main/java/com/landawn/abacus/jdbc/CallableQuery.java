@@ -18,12 +18,14 @@ package com.landawn.abacus.jdbc;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLType;
 import java.sql.Statement;
@@ -1968,20 +1970,22 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
-     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}.
+     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
+     *        and must return a non-null vendor type number.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), or {@code sqlType} is {@code null}
+     * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
+     *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType)
      * @see java.sql.JDBCType
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType) throws IllegalArgumentException, SQLException {
         N.checkArgPositive(parameterIndex, cs.parameterIndex);
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, -1));
+        addOutParameters(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, null, -1));
 
         return this;
     }
@@ -1998,10 +2002,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
-     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}.
+     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
+     *        and must return a non-null vendor type number.
      * @param scale the number of digits to the right of the decimal point
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), or {@code sqlType} is {@code null}
+     * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
+     *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
@@ -2009,11 +2015,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final int scale) throws IllegalArgumentException, SQLException {
         N.checkArgPositive(parameterIndex, cs.parameterIndex);
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), null, scale));
+        addOutParameters(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, null, scale));
 
         return this;
     }
@@ -2030,10 +2036,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
-     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}.
+     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
+     *        and must return a non-null vendor type number.
      * @param typeName the fully-qualified SQL type name
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), or {@code sqlType} is {@code null}
+     * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
+     *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
@@ -2042,11 +2050,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final String typeName)
             throws IllegalArgumentException, SQLException {
         N.checkArgPositive(parameterIndex, cs.parameterIndex);
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType.getVendorTypeNumber(), typeName, -1));
+        addOutParameters(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, typeName, -1));
 
         return this;
     }
@@ -2064,19 +2072,20 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
-     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}.
+     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
+     *        and must return a non-null vendor type number.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code sqlType} is {@code null}
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null} or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if a database access error occurs or if the driver rejects parameterName
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType)
      * @see java.sql.JDBCType
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterName, sqlType);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, -1));
+        addOutParameters(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, null, -1));
 
         return this;
     }
@@ -2094,21 +2103,22 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
-     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}.
+     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
+     *        and must return a non-null vendor type number.
      * @param scale the number of digits to the right of the decimal point
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code sqlType} is {@code null}
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null} or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if a database access error occurs or if the driver rejects parameterName
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final int scale)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterName, sqlType, scale);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), null, scale));
+        addOutParameters(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, null, scale));
 
         return this;
     }
@@ -2127,21 +2137,22 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
-     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}.
+     * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
+     *        and must return a non-null vendor type number.
      * @param typeName the fully-qualified SQL type name
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code sqlType} is {@code null}
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null} or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if a database access error occurs or if the driver rejects parameterName
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final String typeName)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType.getVendorTypeNumber(), typeName, -1));
+        addOutParameters(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, typeName, -1));
 
         return this;
     }
@@ -2284,18 +2295,24 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>Stored procedures may return any mix of result sets and update counts; this method walks the
      * results in order (via {@link CallableStatement#getMoreResults()} and {@link CallableStatement#getUpdateCount()})
-     * and returns the first {@code ResultSet} encountered. It returns {@code null} if no result set
+     * and returns the first {@code ResultSet} encountered. It returns an empty {@code ResultSet} if no result set
      * is ever produced.
      *
      * <p>If {@link #setFetchDirection(FetchDirection)} was not previously called on this query, the fetch direction
      * is set to {@link ResultSet#FETCH_FORWARD} before execution.
      *
-     * @return the first {@link ResultSet} produced by the procedure, or {@code null} if the procedure
+     * @return the first {@link ResultSet} produced by the procedure, or an empty {@code ResultSet} if the procedure
      *         did not return one
      * @throws SQLException if a database access error occurs
      */
     @Override
     protected ResultSet executeQuery() throws SQLException {
+        final ResultSet rs = executeQueryOrNull();
+
+        return rs == null ? emptyResultSet() : rs;
+    }
+
+    private ResultSet executeQueryOrNull() throws SQLException {
         if (!isFetchDirectionSet) {
             // Mirror AbstractQuery.executeQuery(): capture the driver-default direction before
             // mutating so closeStatement() can restore it. Without this, a pooled CallableStatement
@@ -2321,6 +2338,99 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         }
 
         return null;
+    }
+
+    private static ResultSet emptyResultSet() {
+        final ResultSetMetaData metadata = (ResultSetMetaData) Proxy.newProxyInstance(CallableQuery.class.getClassLoader(),
+                new Class<?>[] { ResultSetMetaData.class }, (proxy, method, args) -> {
+                    final String methodName = method.getName();
+
+                    if (methodName.equals("getColumnCount")) {
+                        return 0;
+                    } else if (methodName.equals("unwrap")) {
+                        final Class<?> cls = (Class<?>) args[0];
+
+                        if (cls.isInstance(proxy)) {
+                            return proxy;
+                        }
+
+                        throw new SQLException("Not a wrapper for " + cls);
+                    } else if (methodName.equals("isWrapperFor")) {
+                        return ((Class<?>) args[0]).isInstance(proxy);
+                    }
+
+                    return defaultResultSetReturnValue(methodName, method.getReturnType(), "Empty ResultSet metadata has no columns");
+                });
+        final boolean[] closed = { false };
+
+        return (ResultSet) Proxy.newProxyInstance(CallableQuery.class.getClassLoader(), new Class<?>[] { ResultSet.class }, (proxy, method, args) -> {
+            final String methodName = method.getName();
+
+            if (methodName.equals("next")) {
+                return false;
+            } else if (methodName.equals("close")) {
+                closed[0] = true;
+                return null;
+            } else if (methodName.equals("isClosed")) {
+                return closed[0];
+            } else if (methodName.equals("getMetaData")) {
+                return metadata;
+            } else if (methodName.equals("wasNull")) {
+                return false;
+            } else if (methodName.equals("unwrap")) {
+                final Class<?> cls = (Class<?>) args[0];
+
+                if (cls.isInstance(proxy)) {
+                    return proxy;
+                }
+
+                throw new SQLException("Not a wrapper for " + cls);
+            } else if (methodName.equals("isWrapperFor")) {
+                return ((Class<?>) args[0]).isInstance(proxy);
+            }
+
+            return defaultResultSetReturnValue(methodName, method.getReturnType(), "The stored procedure did not return a ResultSet");
+        });
+    }
+
+    private static Object defaultResultSetReturnValue(final String methodName, final Class<?> returnType, final String message) throws SQLException {
+        if (methodName.equals("toString")) {
+            return message;
+        } else if (methodName.equals("hashCode")) {
+            return System.identityHashCode(message);
+        } else if (methodName.equals("equals")) {
+            return false;
+        } else if (Void.TYPE.equals(returnType)) {
+            return null;
+        } else if (Boolean.TYPE.equals(returnType)) {
+            return false;
+        } else if (Byte.TYPE.equals(returnType)) {
+            return (byte) 0;
+        } else if (Short.TYPE.equals(returnType)) {
+            return (short) 0;
+        } else if (Integer.TYPE.equals(returnType)) {
+            return 0;
+        } else if (Long.TYPE.equals(returnType)) {
+            return 0L;
+        } else if (Float.TYPE.equals(returnType)) {
+            return 0F;
+        } else if (Double.TYPE.equals(returnType)) {
+            return 0D;
+        } else if (Character.TYPE.equals(returnType)) {
+            return (char) 0;
+        }
+
+        throw new SQLException(message);
+    }
+
+    private static int getVendorTypeNumber(final SQLType sqlType) {
+        N.checkArgNotNull(sqlType, cs.sqlType);
+
+        final Integer vendorTypeNumber = sqlType.getVendorTypeNumber();
+
+        N.checkArgument(vendorTypeNumber != null, "The vendor type number of sqlType must not be null");
+
+        return vendorTypeNumber;
     }
 
     /**
@@ -2692,7 +2802,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             R result = null;
-            final ResultSet rs = executeQuery();
+            final ResultSet rs = executeQueryOrNull();
 
             if (rs != null) {
                 result = JdbcUtil.extractAndCloseResultSet(rs, resultExtractor);
@@ -2746,7 +2856,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             R result = null;
-            final ResultSet rs = executeQuery();
+            final ResultSet rs = executeQueryOrNull();
 
             if (rs != null) {
                 result = JdbcUtil.extractAndCloseResultSet(rs, resultExtractor);
@@ -3223,7 +3333,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             final List<T> result = new ArrayList<>();
 
-            try (ResultSet rs = executeQuery()) {
+            try (ResultSet rs = executeQueryOrNull()) {
                 if (rs != null) {
                     while (rs.next()) {
                         result.add(rowMapper.apply(rs));
@@ -3289,7 +3399,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             final List<T> result = new ArrayList<>();
 
-            try (ResultSet rs = executeQuery()) {
+            try (ResultSet rs = executeQueryOrNull()) {
                 if (rs != null) {
                     while (rs.next()) {
                         if (rowFilter.test(rs)) {
@@ -3357,7 +3467,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             final List<T> result = new ArrayList<>();
 
-            try (ResultSet rs = executeQuery()) {
+            try (ResultSet rs = executeQueryOrNull()) {
                 if (rs != null) {
                     final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
@@ -3438,7 +3548,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             final List<T> result = new ArrayList<>();
 
-            try (ResultSet rs = executeQuery()) {
+            try (ResultSet rs = executeQueryOrNull()) {
                 if (rs != null) {
                     final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 

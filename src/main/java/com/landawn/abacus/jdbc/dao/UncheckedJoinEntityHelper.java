@@ -1664,7 +1664,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entity, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entity, joinEntityPropName));
                 }
                 tran.commit();
             } finally {
@@ -1714,7 +1714,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entities, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entities, joinEntityPropName));
                 }
                 tran.commit();
             } finally {
@@ -1861,7 +1861,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entity, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entity, joinEntityPropName));
                 }
                 tran.commit();
             } finally {
@@ -1982,7 +1982,7 @@ public interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> ex
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
-                    result += deleteJoinEntities(entities, joinEntityPropName);
+                    result = Math.addExact(result, deleteJoinEntities(entities, joinEntityPropName));
                 }
                 tran.commit();
             } finally {

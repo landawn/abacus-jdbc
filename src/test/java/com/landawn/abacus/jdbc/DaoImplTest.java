@@ -25,6 +25,7 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
@@ -862,6 +863,48 @@ public class DaoImplTest extends TestBase {
         DataSource ds = mockDataSourceForDaoCreation();
 
         assertThrows(UnsupportedOperationException.class, () -> DaoImpl.createDao(AmbiguousOutParameterDao.class, null, ds, PSC, null, null, null));
+    }
+
+    @Test
+    public void testPrepareQueryWithConditionDoesNotConfigureLargeResultStatement() throws SQLException {
+        DataSource ds = mockDataSourceForDaoCreation();
+        IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds, PSC, null, null, null);
+        PreparedQuery query = mock(PreparedQuery.class);
+
+        org.mockito.Mockito
+                .when(query.configureStatement(org.mockito.ArgumentMatchers.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any()))
+                .thenReturn(query);
+        org.mockito.Mockito.when(query.settParameters(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(query);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = org.mockito.Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareQuery(org.mockito.ArgumentMatchers.same(ds), org.mockito.ArgumentMatchers.anyString())).thenReturn(query);
+
+            assertSame(query, dao.prepareQuery(List.of("id"), com.landawn.abacus.query.Filters.eq("id", 1L)));
+        }
+
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never())
+                .configureStatement(org.mockito.ArgumentMatchers.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any());
+    }
+
+    @Test
+    public void testPrepareNamedQueryWithConditionDoesNotConfigureLargeResultStatement() throws SQLException {
+        DataSource ds = mockDataSourceForDaoCreation();
+        IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds, PSC, null, null, null);
+        NamedQuery query = mock(NamedQuery.class);
+
+        org.mockito.Mockito
+                .when(query.configureStatement(org.mockito.ArgumentMatchers.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any()))
+                .thenReturn(query);
+        org.mockito.Mockito.when(query.settParameters(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(query);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = org.mockito.Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareNamedQuery(org.mockito.ArgumentMatchers.same(ds), org.mockito.ArgumentMatchers.anyString())).thenReturn(query);
+
+            assertSame(query, dao.prepareNamedQuery(List.of("id"), com.landawn.abacus.query.Filters.eq("id", 1L)));
+        }
+
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never())
+                .configureStatement(org.mockito.ArgumentMatchers.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any());
     }
 
     @Test

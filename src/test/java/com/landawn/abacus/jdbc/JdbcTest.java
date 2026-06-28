@@ -3372,6 +3372,32 @@ public class JdbcTest extends TestBase {
         assertTrue(ex.getMessage().contains("col2"), "Expected message to mention col2: " + ex.getMessage());
     }
 
+    @Test
+    public void testRowMapperBuilder_ConfiguredIndexBeyondColumnCountThrowsIAE() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+
+        Jdbc.RowMapper<Object[]> mapper = Jdbc.RowMapper.builder().getInt(3).toArray();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet));
+        assertTrue(ex.getMessage().contains("3"), "Expected message to mention missing configured index 3: " + ex.getMessage());
+    }
+
+    @Test
+    public void testRowExtractorBuilder_ConfiguredIndexBeyondColumnCountThrowsIAE() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.builder().getInt(3).build();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, new Object[3]));
+        assertTrue(ex.getMessage().contains("3"), "Expected message to mention missing configured index 3: " + ex.getMessage());
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_ToNullTargetClassThrowsIAE() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> Jdbc.BiRowMapper.builder().to(null));
+        assertTrue(ex.getMessage().contains("targetClass"));
+    }
+
     // Bug fix: ColumnGetter.forType(Type) should throw IllegalArgumentException for null type,
     // not a cryptic NullPointerException from the pool's computeIfAbsent.
     @Tag("2025")

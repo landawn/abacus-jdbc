@@ -385,7 +385,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link Optional} if no record is found or if the value is {@code null}.
+     * Returns an empty {@link Optional} only if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -397,7 +397,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@link Optional} containing the non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
@@ -421,7 +421,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
-     * @return an {@link Optional} containing the mapped non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the mapped non-null value if a record matches the {@code id}, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -462,7 +462,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
-     * Returns an empty {@link Optional} if no record is found or the value is {@code null}.
+     * Returns an empty {@link Optional} only if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -474,7 +474,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@link Optional} containing the unique non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -499,7 +499,7 @@ public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
-     * @return an {@link Optional} containing the mapped unique non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the mapped unique non-null value if a record matches the {@code id}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */

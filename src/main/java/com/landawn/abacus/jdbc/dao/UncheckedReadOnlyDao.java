@@ -26,10 +26,10 @@ import com.landawn.abacus.annotation.Beta;
  * It is ideal for scenarios where data should only be read, never modified.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
- * <p>This is an "unchecked" DAO variant, meaning query methods throw {@link com.landawn.abacus.exception.UncheckedSQLException}
- * instead of checked {@link java.sql.SQLException}. This eliminates the need for explicit try-catch blocks or
- * throws declarations, making the API more convenient for use in functional programming contexts and lambda expressions.
- * Write operations (save/batchSave) are disabled and throw {@link UnsupportedOperationException}.</p>
+ * <p>This is an "unchecked" DAO variant, meaning query methods redeclared by this interface throw
+ * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of checked {@link java.sql.SQLException}.
+ * Inherited methods that are not redeclared here keep their checked-exception contract. Write operations
+ * (save/batchSave) are disabled and throw {@link UnsupportedOperationException}.</p>
  *
  * <p>This interface extends both {@link UncheckedNoUpdateDao} and {@link ReadOnlyDao}, further
  * restricting save and batch-save operations to ensure complete read-only access to the database.</p>

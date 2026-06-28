@@ -505,6 +505,27 @@ public class DataTransferUtilTest extends TestBase {
         assertTrue(csvContent.contains("null"));
     }
 
+    @Test
+    public void testExportCSVWithEmptySelectedColumnsExportsAllColumns() throws SQLException, IOException {
+        Writer writer = new StringWriter();
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("col2");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn("val1");
+        when(mockResultSet.getObject(2)).thenReturn("val2");
+
+        long result = DataTransferUtil.exportCsv(mockResultSet, List.of(), writer);
+
+        assertEquals(1, result);
+        String csvContent = writer.toString();
+        assertTrue(csvContent.contains("col1"));
+        assertTrue(csvContent.contains("col2"));
+        assertTrue(csvContent.contains("val1"));
+        assertTrue(csvContent.contains("val2"));
+    }
+
     // Tests for copy methods
 
     @Test
@@ -685,6 +706,28 @@ public class DataTransferUtilTest extends TestBase {
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales.source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
         verify(targetConnection).prepareStatement("INSERT INTO \"archive.target-table\"(\"created-date\") VALUES (?)");
+    }
+
+    @Test
+    public void testCopyWithSelectedColumnsEscapesEmbeddedQuoteInQuotedIdentifiers() throws SQLException {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
+        final Collection<String> selectColumns = List.of("created\"date");
+
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "\"archive\"\"target\"", selectColumns);
+
+        assertEquals(1, result);
+        verify(mockConnection).prepareStatement("SELECT `created\"date` FROM source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO \"archive\"\"target\"(\"created\"\"date\") VALUES (?)");
     }
 
     @Test
