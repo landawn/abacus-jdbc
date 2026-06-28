@@ -50,6 +50,7 @@ import com.landawn.abacus.util.BufferedCsvWriter;
 import com.landawn.abacus.util.CsvUtil;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.IOUtil;
+import com.landawn.abacus.util.LineIterator;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.SK;
@@ -75,7 +76,7 @@ import com.landawn.abacus.util.stream.CharStream;
  *   <tr>
  *     <td>Data Import</td>
  *     <td>{@code importData()}</td>
- *     <td>Dataset, File, Reader, Iterator to database via DataSource, Connection, or PreparedStatement</td>
+ *     <td>Dataset or Iterator to database via DataSource, Connection, or PreparedStatement</td>
  *   </tr>
  *   <tr>
  *     <td>CSV Import</td>
@@ -996,264 +997,6 @@ public final class DataTransferUtil {
     }
 
     /**
-     * Imports data from a file to a database table using the provided DataSource and a line parser function.
-     * Each line from the file is processed by the function to create parameter arrays for insertion.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * File csvFile = new File("users.csv");
-     * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * Function<String, Object[]> parser = line -> {
-     *     String[] parts = line.split(",");
-     *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
-     * };
-     * long rowsImported = DataTransferUtil.importData(csvFile, dataSource, insertSql, parser);
-     * }</pre>
-     *
-     * @param file the file containing the data to be imported
-     * @param targetDataSource the DataSource to obtain database connections
-     * @param insertSql the SQL insert statement with placeholders
-     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
-     * @return the number of rows successfully imported
-     * @throws SQLException if a database access error occurs
-     * @throws UncheckedIOException if an I/O error occurs
-     */
-    public static long importData(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Function<? super String, Object[]> rowMapper) throws SQLException {
-        final Connection conn = JdbcUtil.getConnection(targetDataSource);
-
-        try {
-            return importData(file, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, rowMapper);
-        } finally {
-            JdbcUtil.releaseConnection(conn, targetDataSource);
-        }
-    }
-
-    /**
-     * Imports data from a file to a database table using the provided Connection with batch processing and a line parser function.
-     * This method provides control over batch size and interval for optimal performance when importing large files.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * File csvFile = new File("large_users.csv");
-     * String insertSql = "INSERT INTO users (name, age, email) VALUES (?, ?, ?)";
-     * Function<String, Object[]> parser = line -> {
-     *     String[] parts = line.split(",");
-     *     if (parts.length < 3) return null;  // Skip invalid lines
-     *     return new Object[] { parts[0], Integer.parseInt(parts[1]), parts[2] };
-     * };
-     * long rowsImported = DataTransferUtil.importData(csvFile, connection, insertSql, 1000, 100, parser);
-     * }</pre>
-     *
-     * @param file the file containing the data to be imported
-     * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders
-     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
-     * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
-     * @throws SQLException if a database access error occurs
-     * @throws UncheckedIOException if an I/O error occurs
-     */
-    public static long importData(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Function<? super String, Object[]> rowMapper) throws SQLException {
-        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(file, stmt, batchSize, batchIntervalInMillis, rowMapper);
-        }
-    }
-
-    /**
-     * Imports data from a file to a database table using the provided PreparedStatement with batch processing and a line parser function.
-     * This method provides direct control over the PreparedStatement and batch processing parameters.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * File dataFile = new File("products.txt");
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO products (name, price) VALUES (?, ?)");
-     * Function<String, Object[]> parser = line -> {
-     *     String[] parts = line.split("\\|");
-     *     return new Object[] { parts[0], Double.parseDouble(parts[1]) };
-     * };
-     * long rowsImported = DataTransferUtil.importData(dataFile, stmt, 500, 50, parser);
-     * }</pre>
-     *
-     * @param file the file containing the data to be imported
-     * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
-     * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
-     * @throws SQLException if a database access error occurs
-     * @throws UncheckedIOException if an I/O error occurs
-     */
-    public static long importData(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Function<? super String, Object[]> rowMapper) throws SQLException {
-        try (Reader reader = IOUtil.newFileReader(file)) {
-            return importData(reader, stmt, batchSize, batchIntervalInMillis, rowMapper);
-        } catch (final IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /**
-     * Imports data from a Reader to a database table using the provided DataSource and a line parser function.
-     * Each line from the Reader is processed by the function to create parameter arrays for insertion.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * Reader reader = new StringReader("John,25\nJane,30\nBob,35");
-     * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * Function<String, Object[]> parser = line -> {
-     *     String[] parts = line.split(",");
-     *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
-     * };
-     * long rowsImported = DataTransferUtil.importData(reader, dataSource, insertSql, parser);
-     * }</pre>
-     *
-     * @param reader the Reader containing the data to be imported
-     * @param targetDataSource the DataSource to obtain database connections
-     * @param insertSql the SQL insert statement with placeholders
-     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
-     * @return the number of rows successfully imported
-     * @throws SQLException if a database access error occurs
-     * @throws UncheckedIOException if an I/O error occurs
-     */
-    public static long importData(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Function<? super String, Object[]> rowMapper) throws SQLException {
-        final Connection conn = JdbcUtil.getConnection(targetDataSource);
-
-        try {
-            return importData(reader, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, rowMapper);
-        } finally {
-            JdbcUtil.releaseConnection(conn, targetDataSource);
-        }
-    }
-
-    /**
-     * Imports data from a Reader to a database table using the provided Connection with batch processing and a line parser function.
-     * This method provides control over batch size and interval for optimal performance when importing large data streams.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * Reader reader = new FileReader("large_data.txt");
-     * String insertSql = "INSERT INTO transactions (account, amount, date) VALUES (?, ?, ?)";
-     * Function<String, Object[]> parser = line -> {
-     *     String[] parts = line.split("\t");
-     *     return new Object[] {
-     *         parts[0],
-     *         new BigDecimal(parts[1]),
-     *         java.sql.Date.valueOf(parts[2])
-     *     };
-     * };
-     * long rowsImported = DataTransferUtil.importData(reader, connection, insertSql, 2000, 200, parser);
-     * }</pre>
-     *
-     * @param reader the Reader containing the data to be imported
-     * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders
-     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
-     * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
-     * @throws SQLException if a database access error occurs
-     * @throws UncheckedIOException if an I/O error occurs
-     */
-    public static long importData(final Reader reader, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Function<? super String, Object[]> rowMapper) throws SQLException {
-        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(reader, stmt, batchSize, batchIntervalInMillis, rowMapper);
-        }
-    }
-
-    /**
-     * Imports data from a Reader to a database table using the provided PreparedStatement with batch processing and a line parser function.
-     * This method provides direct control over the PreparedStatement and batch processing parameters for streaming data import.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * Reader reader = new InputStreamReader(inputStream);
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO logs (level, message, timestamp) VALUES (?, ?, ?)");
-     * Function<String, Object[]> parser = line -> {
-     *     // Parse log format: [LEVEL] timestamp - message
-     *     Pattern pattern = Pattern.compile("\\[(\\w+)\\] (\\d+) - (.+)");
-     *     Matcher matcher = pattern.matcher(line);
-     *     if (!matcher.matches()) return null;
-     *     return new Object[] {
-     *         matcher.group(1),
-     *         matcher.group(3),
-     *         new Timestamp(Long.parseLong(matcher.group(2)))
-     *     };
-     * };
-     * long rowsImported = DataTransferUtil.importData(reader, stmt, 1000, 0, parser);
-     * }</pre>
-     *
-     * @param reader the Reader containing the data to be imported
-     * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
-     * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
-     * @throws SQLException if a database access error occurs
-     * @throws UncheckedIOException if an I/O error occurs
-     */
-    public static long importData(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Function<? super String, Object[]> rowMapper) throws IllegalArgumentException, SQLException {
-        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
-                batchSize, batchIntervalInMillis);
-
-        long result = 0;
-        final boolean isBufferedReader = IOUtil.isBufferedReader(reader);
-        final BufferedReader br = isBufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
-
-        logger.debug("Importing reader data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
-
-        try {
-            String line = null;
-            Object[] row = null;
-
-            while ((line = br.readLine()) != null) {
-                row = rowMapper.apply(line);
-
-                if (row == null) {
-                    continue;
-                }
-
-                for (int i = 0, len = row.length; i < len; i++) {
-                    stmt.setObject(i + 1, row[i]);
-                }
-
-                stmt.addBatch();
-
-                if ((++result % batchSize) == 0) {
-                    JdbcUtil.executeBatch(stmt);
-
-                    if (batchIntervalInMillis > 0) {
-                        N.sleepUninterruptibly(batchIntervalInMillis);
-                    }
-                }
-            }
-
-            if ((result % batchSize) > 0) {
-                JdbcUtil.executeBatch(stmt);
-            }
-
-            logger.info("Imported reader data rows(imported={})", result);
-        } catch (final IOException e) {
-            throw new UncheckedIOException(e);
-        } finally {
-            if (!isBufferedReader) {
-                Objectory.recycle(br);
-            }
-        }
-
-        return result;
-    }
-
-    /**
      * Imports data from an Iterator to the database using the specified DataSource and SQL insert statement.
      * This method uses default batch processing settings for optimal performance.
      *
@@ -1284,6 +1027,8 @@ public final class DataTransferUtil {
      * @param stmtSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
      * @return the total number of rows successfully inserted
      * @throws SQLException if a database access error occurs
+     * @see LineIterator#of(File)
+     * @see LineIterator#of(Reader)
      */
     public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
@@ -1337,6 +1082,8 @@ public final class DataTransferUtil {
      * @return the total number of rows successfully inserted
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @see LineIterator#of(File)
+     * @see LineIterator#of(Reader)
      */
     public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
@@ -1409,6 +1156,8 @@ public final class DataTransferUtil {
      * @return the total number of rows successfully inserted
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @see LineIterator#of(File)
+     * @see LineIterator#of(Reader)
      */
     public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {

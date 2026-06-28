@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.sql.DataSource;
@@ -307,83 +306,6 @@ public class DataTransferUtilTest extends TestBase {
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
 
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, List.of("missing"), mockPreparedStatement));
-    }
-
-    // Tests for importData methods with File
-
-    @Test
-    public void testImportDataFromFileWithDataSource() throws SQLException, IOException, Exception {
-        // Setup
-        File tempFile = File.createTempFile("test", ".txt");
-        tempFile.deleteOnExit();
-
-        Function<String, Object[]> func = line -> line.split(",");
-        String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
-
-        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-
-        // Execute
-        long result = DataTransferUtil.importData(tempFile, mockDataSource, insertSql, func);
-
-        // Verify
-        assertEquals(0, result); // Empty file
-        verify(mockDataSource).getConnection();
-    }
-
-    @Test
-    public void testImportDataFromFileWithConnection() throws SQLException, IOException, Exception {
-        // Setup
-        File tempFile = File.createTempFile("test", ".txt");
-        tempFile.deleteOnExit();
-        java.nio.file.Files.write(tempFile.toPath(), Arrays.asList("val1,val2", "val3,val4"));
-
-        Function<String, Object[]> func = line -> line.split(",");
-        String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
-
-        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-
-        // Execute
-        long result = DataTransferUtil.importData(tempFile, mockConnection, insertSql, 1, 0, func);
-
-        // Verify
-        assertEquals(2, result);
-        verify(mockPreparedStatement, times(2)).addBatch();
-    }
-
-    // Tests for importData methods with Reader
-
-    @Test
-    public void testImportDataFromReaderWithDataSource() throws SQLException, IOException, Exception {
-        // Setup
-        Reader reader = new StringReader("line1\nline2");
-        Function<String, Object[]> func = line -> new Object[] { line };
-        String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
-
-        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-
-        // Execute
-        long result = DataTransferUtil.importData(reader, mockDataSource, insertSql, func);
-
-        // Verify
-        assertEquals(2, result);
-        verify(mockDataSource).getConnection();
-    }
-
-    @Test
-    public void testImportDataFromReaderWithConnection() throws SQLException, IOException, Exception {
-        // Setup
-        Reader reader = new StringReader("value1\nvalue2\nvalue3");
-        Function<String, Object[]> func = line -> new Object[] { line };
-        String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
-
-        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-
-        // Execute
-        long result = DataTransferUtil.importData(reader, mockConnection, insertSql, 2, 0, func);
-
-        // Verify
-        assertEquals(3, result);
-        verify(mockPreparedStatement, times(2)).executeBatch(); // 3 rows with batch size 2
     }
 
     // Tests for importData methods with Iterator
@@ -1464,20 +1386,6 @@ public class DataTransferUtilTest extends TestBase {
 
         assertEquals(2, result);
         verify(mockPreparedStatement, times(2)).setString(anyInt(), anyString());
-    }
-
-    // importData(Reader, ...): a func returning null skips that line (DataTransferUtil L1227); batchSize=1 with
-    // a positive batch interval triggers the post-batch sleep branch (L1240).
-    @Test
-    public void testImportDataFromReader_NullRowSkipped_AndBatchInterval() throws Exception {
-        final Reader reader = new StringReader("a\nSKIP\nb\n");
-        final Function<String, Object[]> func = line -> "SKIP".equals(line) ? null : new Object[] { line };
-        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-
-        final long result = DataTransferUtil.importData(reader, mockPreparedStatement, 1, 1L, func);
-
-        assertEquals(2, result); // "a" and "b" imported; "SKIP" produced a null row and was skipped
-        verify(mockPreparedStatement, times(2)).addBatch();
     }
 
     // importCsv with an empty reader returns 0 without touching the statement (DataTransferUtil L1892-1893).
