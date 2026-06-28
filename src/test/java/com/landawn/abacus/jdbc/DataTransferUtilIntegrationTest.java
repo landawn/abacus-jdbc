@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -447,6 +448,189 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     @Test
     public void testRowImportBuilder_NoStrategy_Throws() {
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importFrom(List.of("a", "b").iterator()).to(ds, CSV_INSERT_SQL));
+    }
+
+    // ===== CsvExportBuilder: exportCsv(DataSource / Connection / PreparedStatement / ResultSet) =====
+
+    // exportCsv(DataSource, sql).to(Writer) — all columns.
+    @Test
+    public void testExportCsv_DataSource_ToWriter() throws SQLException {
+        final java.io.StringWriter w = new java.io.StringWriter();
+
+        final long n = DataTransferUtil.exportCsv(ds, "SELECT id, name, amount FROM copy_src ORDER BY id").to(w);
+
+        assertEquals(3, n);
+        final String csv = w.toString();
+        assertTrue(csv.contains("Alice"));
+        assertTrue(csv.contains("Bob"));
+        assertTrue(csv.contains("Cara"));
+    }
+
+    // exportCsv(Connection, sql).selectColumns(..).to(Writer) — column selection drops the 'amount' column.
+    @Test
+    public void testExportCsv_Connection_SelectColumns_ToWriter() throws SQLException {
+        final java.io.StringWriter w = new java.io.StringWriter();
+
+        try (Connection conn = ds.getConnection()) {
+            final long n = DataTransferUtil.exportCsv(conn, "SELECT id AS \"id\", name AS \"name\", amount AS \"amount\" FROM copy_src ORDER BY id")
+                    .selectColumns(List.of("id", "name"))
+                    .to(w);
+
+            assertEquals(3, n);
+        }
+
+        final String csv = w.toString();
+        assertTrue(csv.contains("id")); // id/name columns present in the header
+        assertTrue(csv.contains("name"));
+        assertTrue(csv.contains("Alice"));
+        assertFalse(csv.contains("amount")); // 'amount' label excluded from the header
+        assertFalse(csv.contains("10.5")); // 'amount' values excluded
+        assertFalse(csv.contains("30.25"));
+    }
+
+    // exportCsv(PreparedStatement).to(File) then importCsvFrom(File) round-trips back into csv_tgt.
+    @Test
+    public void testExportCsv_PreparedStatement_ToFile_RoundTrip() throws Exception {
+        final File out = File.createTempFile("csv_export_", ".csv");
+        out.deleteOnExit();
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement st = conn.prepareStatement("SELECT id, name, amount FROM copy_src ORDER BY id")) {
+            final long exported = DataTransferUtil.exportCsv(st).to(out);
+            assertEquals(3, exported);
+        }
+
+        assertTrue(out.length() > 0L);
+
+        final long imported = DataTransferUtil.importCsvFrom(out).stmtSetter((q, row) -> {
+            q.setLong(1, Long.parseLong(row[0]));
+            q.setString(2, row[1]);
+            q.setDouble(3, Double.parseDouble(row[2]));
+        }).to(ds, CSV_INSERT_SQL);
+
+        assertEquals(3, imported);
+        assertEquals(3, count("csv_tgt"));
+        assertEquals("Alice", nameOf(1));
+    }
+
+    // exportCsv(ResultSet).to(Writer) — a caller-supplied ResultSet is exported and left open.
+    @Test
+    public void testExportCsv_ResultSet_ToWriter() throws SQLException {
+        final java.io.StringWriter w = new java.io.StringWriter();
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement st = conn.prepareStatement("SELECT id, name FROM copy_src ORDER BY id");
+             ResultSet rs = st.executeQuery()) {
+            final long n = DataTransferUtil.exportCsv(rs).to(w);
+            assertEquals(3, n);
+        }
+
+        assertTrue(w.toString().contains("Cara"));
+    }
+
+    // selectColumns naming a column absent from the result -> IllegalArgumentException.
+    @Test
+    public void testExportCsv_SelectColumns_UnknownColumn_Throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.exportCsv(ds, "SELECT id, name FROM copy_src").selectColumns(List.of("does_not_exist")).to(new java.io.StringWriter()));
+    }
+
+    // ===== Builder option setters not exercised elsewhere (batchIntervalInMillis / fetchSize / stmtSetter /
+    // selectColumns / to(PreparedStatement)). Each test asserts real row counts and a sampled value. =====
+
+    // DatasetImportBuilder.batchIntervalInMillis(..) — the inter-batch pause setter (with batchSize=1 so a batch
+    // boundary is crossed for every row).
+    @Test
+    public void testImportFrom_Dataset_BatchIntervalInMillis() throws SQLException {
+        try (Connection conn = ds.getConnection()) {
+            final int imported = DataTransferUtil.importFrom(threeRowDataset()).batchSize(1).batchIntervalInMillis(1).to(conn, CSV_INSERT_SQL);
+
+            assertEquals(3, imported);
+        }
+
+        assertEquals(3, count("csv_tgt"));
+        assertEquals("Alice", nameOf(1));
+    }
+
+    // RowImportBuilder.batchSize(..).batchIntervalInMillis(..).stmtSetter(..).to(PreparedStatement) — covers the
+    // batchSize/batchIntervalInMillis setters and the to(PreparedStatement) terminal that no other test reaches.
+    @Test
+    public void testImportFrom_Iterator_BatchSize_Interval_ToStatement() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(CSV_INSERT_SQL)) {
+            final long n = DataTransferUtil.importFrom(threeRecs().iterator()).batchSize(1).batchIntervalInMillis(1).stmtSetter((q, r) -> {
+                q.setLong(1, r.id);
+                q.setString(2, r.name);
+                q.setDouble(3, r.amount);
+            }).to(stmt);
+
+            assertEquals(3, n);
+        }
+
+        assertEquals(3, count("csv_tgt"));
+        assertEquals("Cara", nameOf(3));
+    }
+
+    // CopyFromDataSource.batchIntervalInMillis(..).stmtSetter(..) — the pause setter plus the custom-binding setter
+    // (the existing CopyFromDataSource test uses neither).
+    @Test
+    public void testCopyFrom_DataSource_BatchInterval_StmtSetter() throws SQLException {
+        final long copied = DataTransferUtil.copyFrom(ds, COPY_SELECT_SQL).batchSize(1).batchIntervalInMillis(1).stmtSetter((pq, rs) -> {
+            pq.setLong(1, rs.getLong(1));
+            pq.setString(2, rs.getString(2).toUpperCase());
+            pq.setDouble(3, rs.getDouble(3));
+        }).to(ds, COPY_INSERT_SQL);
+
+        assertEquals(3, copied);
+        assertEquals(3, count("copy_tgt"));
+        assertEquals("ALICE", copyTgtName(1));
+    }
+
+    // CopyFromConnection.fetchSize(..).batchIntervalInMillis(..) — the fetchSize and pause setters, exercised with
+    // the default (no stmtSetter) column-by-column copy.
+    @Test
+    public void testCopyFrom_Connection_FetchSize_BatchInterval() throws SQLException {
+        try (Connection src = ds.getConnection();
+             Connection tgt = ds.getConnection()) {
+            final long copied = DataTransferUtil.copyFrom(src, COPY_SELECT_SQL).fetchSize(10).batchSize(2).batchIntervalInMillis(1).to(tgt, COPY_INSERT_SQL);
+
+            assertEquals(3, copied);
+        }
+
+        assertEquals(3, count("copy_tgt"));
+        assertEquals("Alice", copyTgtName(1));
+    }
+
+    // CopyFromStatement.batchIntervalInMillis(..).stmtSetter(..) — the pause setter plus the custom-binding setter
+    // (the existing CopyFromStatement test uses neither).
+    @Test
+    public void testCopyFrom_Statement_BatchInterval_StmtSetter() throws SQLException {
+        try (Connection src = ds.getConnection();
+             Connection tgt = ds.getConnection();
+             PreparedStatement sel = src.prepareStatement(COPY_SELECT_SQL);
+             PreparedStatement ins = tgt.prepareStatement(COPY_INSERT_SQL)) {
+            final long copied = DataTransferUtil.copyFrom(sel).batchSize(1).batchIntervalInMillis(1).stmtSetter((pq, rs) -> {
+                pq.setLong(1, rs.getLong(1));
+                pq.setString(2, rs.getString(2).toUpperCase());
+                pq.setDouble(3, rs.getDouble(3));
+            }).to(ins);
+
+            assertEquals(3, copied);
+        }
+
+        assertEquals(3, count("copy_tgt"));
+        assertEquals("BOB", copyTgtName(2));
+    }
+
+    // CopyTableFromDataSource.selectColumns(..).batchSize(..) — the column-restriction and batchSize setters on the
+    // DataSource table-copy builder (the existing DataSource table-copy test uses neither). 'amount' is dropped.
+    @Test
+    public void testCopyTable_DataSource_SelectColumns_BatchSize() throws SQLException {
+        final long copied = DataTransferUtil.copyTable(ds, "copy_src").selectColumns(List.of("id", "name")).batchSize(2).to(ds, "copy_tgt");
+
+        assertEquals(3, copied);
+        assertEquals(3, count("copy_tgt"));
+        assertEquals("Alice", copyTgtName(1));
     }
 
 }

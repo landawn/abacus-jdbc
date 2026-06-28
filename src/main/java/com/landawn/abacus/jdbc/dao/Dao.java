@@ -702,10 +702,10 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * dao.save(user);
      * }</pre>
      *
-     * @param entityToSave the entity to insert
+     * @param entity the entity to insert
      * @throws SQLException if a database access error occurs
      */
-    void save(final T entityToSave) throws SQLException;
+    void save(final T entity) throws SQLException;
 
     /**
      * Saves (inserts) the specified entity with only the specified properties.
@@ -718,11 +718,11 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * dao.save(user, Arrays.asList("email"));
      * }</pre>
      *
-     * @param entityToSave the entity to insert
+     * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT
      * @throws SQLException if a database access error occurs
      */
-    void save(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException;
+    void save(final T entity, final Collection<String> propNamesToSave) throws SQLException;
 
     /**
      * Saves (inserts) the entity using a custom named INSERT SQL statement.
@@ -735,10 +735,10 @@ public interface Dao<T, TD extends Dao<T, TD>> {
      * }</pre>
      *
      * @param namedInsertSql the named INSERT SQL statement
-     * @param entityToSave the entity providing the parameter values
+     * @param entity the entity providing the parameter values
      * @throws SQLException if a database access error occurs
      */
-    void save(final String namedInsertSql, final T entityToSave) throws SQLException;
+    void save(final String namedInsertSql, final T entity) throws SQLException;
 
     /**
      * Batch saves (inserts) multiple entities using the default batch size.

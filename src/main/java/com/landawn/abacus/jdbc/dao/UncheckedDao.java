@@ -88,11 +88,11 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * userDao.save(user);
      * }</pre>
      *
-     * @param entityToSave the entity to insert
+     * @param entity the entity to insert
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    void save(final T entityToSave) throws UncheckedSQLException;
+    void save(final T entity) throws UncheckedSQLException;
 
     /**
      * Saves the specified entity with only the specified properties.
@@ -104,12 +104,12 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * userDao.save(user, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entityToSave the entity to insert
+     * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    void save(final T entityToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException;
+    void save(final T entity, final Collection<String> propNamesToSave) throws UncheckedSQLException;
 
     /**
      * Saves the entity using a named insert SQL statement. The SQL statement should contain
@@ -123,11 +123,11 @@ public interface UncheckedDao<T, TD extends UncheckedDao<T, TD>> extends Dao<T, 
      * }</pre>
      *
      * @param namedInsertSql the named insert SQL statement
-     * @param entityToSave the entity to save
+     * @param entity the entity to save
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    void save(final String namedInsertSql, final T entityToSave) throws UncheckedSQLException;
+    void save(final String namedInsertSql, final T entity) throws UncheckedSQLException;
 
     /**
      * Batch saves the specified entities to the database using the default batch size.

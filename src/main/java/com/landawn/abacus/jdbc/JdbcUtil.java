@@ -5625,7 +5625,7 @@ public final class JdbcUtil {
      * to {@link #executeUpdate(javax.sql.DataSource, String, Object...) executeUpdate} (which returns an
      * affected-row count) and {@link #executeQuery(javax.sql.DataSource, String, Object...) executeQuery}
      * (which returns a {@link Dataset} of rows), this method's {@code boolean} carries the exact semantics
-     * of {@link java.sql.Statement#execute()}: it reports the <i>shape of the statement's first result</i>,
+     * of {@link java.sql.PreparedStatement#execute()}: it reports the <i>shape of the statement's first result</i>,
      * not whether the statement "worked". A statement that completes without throwing has already
      * succeeded — failure is reported by a thrown {@link SQLException}, <b>never</b> by a {@code false}
      * return value.</p>
@@ -5691,12 +5691,11 @@ public final class JdbcUtil {
      * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
      *                   the SQL; may be empty
      * @return {@code true} if the statement's first result is a {@link ResultSet}; {@code false} if it is an
-     *         update count or there is no result. This mirrors {@link java.sql.Statement#execute()} and is
+     *         update count or there is no result. This mirrors {@link java.sql.PreparedStatement#execute()} and is
      *         <b>not</b> a success indicator &mdash; a failed statement throws {@link SQLException} instead
      * @throws IllegalArgumentException if {@code ds} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs while executing the statement
      * @see PreparedStatement#execute()
-     * @see java.sql.Statement#execute()
      * @see #executeQuery(javax.sql.DataSource, String, Object...)
      * @see #executeUpdate(javax.sql.DataSource, String, Object...)
      */
@@ -5727,7 +5726,7 @@ public final class JdbcUtil {
      * to {@link #executeUpdate(Connection, String, Object...) executeUpdate} (which returns an affected-row
      * count) and {@link #executeQuery(Connection, String, Object...) executeQuery} (which returns a
      * {@link Dataset} of rows), this method's {@code boolean} carries the exact semantics of
-     * {@link java.sql.Statement#execute()}: it reports the <i>shape of the statement's first result</i>, not
+     * {@link java.sql.PreparedStatement#execute()}: it reports the <i>shape of the statement's first result</i>, not
      * whether the statement "worked". A statement that completes without throwing has already succeeded —
      * failure is reported by a thrown {@link SQLException}, <b>never</b> by a {@code false} return value.</p>
      *
@@ -5792,12 +5791,11 @@ public final class JdbcUtil {
      * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
      *                   the SQL; may be empty
      * @return {@code true} if the statement's first result is a {@link ResultSet}; {@code false} if it is an
-     *         update count or there is no result. This mirrors {@link java.sql.Statement#execute()} and is
+     *         update count or there is no result. This mirrors {@link java.sql.PreparedStatement#execute()} and is
      *         <b>not</b> a success indicator &mdash; a failed statement throws {@link SQLException} instead
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs while executing the statement
      * @see PreparedStatement#execute()
-     * @see java.sql.Statement#execute()
      * @see #executeQuery(Connection, String, Object...)
      * @see #executeUpdate(Connection, String, Object...)
      */

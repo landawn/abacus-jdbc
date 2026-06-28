@@ -116,14 +116,14 @@ public interface NoUpdateCrudDao<T, ID, TD extends NoUpdateCrudDao<T, ID, TD>> e
      * Updating is not permitted in a {@code NoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
      * Updating an existing entity by ID would mutate a stored record, violating the read/insert-only contract.
      *
-     * @param entityToUpdate the entity with updated values
+     * @param entity the entity with updated values
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
      * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
-    default int update(final T entityToUpdate) throws UnsupportedOperationException {
+    default int update(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 
@@ -131,7 +131,7 @@ public interface NoUpdateCrudDao<T, ID, TD extends NoUpdateCrudDao<T, ID, TD>> e
      * Updating is not permitted in a {@code NoUpdateCrudDao}; this method always throws {@link UnsupportedOperationException}.
      * Selective property updates by ID would mutate a stored record, violating the read/insert-only contract.
      *
-     * @param entityToUpdate the entity containing the values to update
+     * @param entity the entity containing the values to update
      * @param propNamesToUpdate the property names to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
@@ -139,7 +139,7 @@ public interface NoUpdateCrudDao<T, ID, TD extends NoUpdateCrudDao<T, ID, TD>> e
      */
     @Deprecated
     @Override
-    default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException {
+    default int update(final T entity, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
     }
 

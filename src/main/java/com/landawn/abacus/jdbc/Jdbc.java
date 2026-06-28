@@ -2361,7 +2361,7 @@ public final class Jdbc {
 
             /**
              * Configures the mapper to retrieve an object of a specific type from the specified column index.
-             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#get(Class)}.
+             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#forType(Class)}.
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -4186,7 +4186,7 @@ public final class Jdbc {
 
             /**
              * Configures the mapper to retrieve an object of a specific type from the specified column.
-             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#get(Class)}.
+             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#forType(Class)}.
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -5500,7 +5500,7 @@ public final class Jdbc {
 
             /**
              * Configures the extractor to get an {@code Object} of a specific type from the specified column.
-             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#get(Class)}.
+             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#forType(Class)}.
              *
              * @param columnIndex the 1-based index of the column.
              * @param type the class type to which the column value should be converted.

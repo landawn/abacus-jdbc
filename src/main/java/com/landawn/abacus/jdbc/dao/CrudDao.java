@@ -172,12 +172,12 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * System.out.println("Created user with ID: " + userId);
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be {@code null})
+     * @param entity the entity to insert (must not be {@code null})
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
-    ID insert(final T entityToInsert) throws SQLException;
+    ID insert(final T entity) throws SQLException;
 
     /**
      * Inserts the specified entity with only the specified properties.
@@ -191,13 +191,13 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * Long userId = userDao.insert(user, Arrays.asList("email", "createdDate"));
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be {@code null})
+     * @param entity the entity to insert (must not be {@code null})
      * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If {@code null} or empty, all properties will be inserted
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
      */
-    ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws SQLException;
+    ID insert(final T entity, final Collection<String> propNamesToInsert) throws SQLException;
 
     /**
      * Inserts an entity using a custom named SQL insert statement.
@@ -211,11 +211,11 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * }</pre>
      *
      * @param namedInsertSql the named parameter SQL insert statement
-     * @param entityToInsert the entity whose properties will be bound to the named parameters
+     * @param entity the entity whose properties will be bound to the named parameters
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
      */
-    ID insert(final String namedInsertSql, final T entityToInsert) throws SQLException;
+    ID insert(final String namedInsertSql, final T entity) throws SQLException;
 
     /**
      * Performs batch insert of multiple entities using the default batch size
@@ -970,11 +970,11 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * int updatedRows = userDao.update(user);
      * }</pre>
      *
-     * @param entityToUpdate the entity with updated values (must have its ID populated)
+     * @param entity the entity with updated values (must have its ID populated)
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
      * @throws SQLException if a database access error occurs
      */
-    int update(final T entityToUpdate) throws SQLException;
+    int update(final T entity) throws SQLException;
 
     /**
      * Updates only specified properties of an existing entity.
@@ -990,12 +990,12 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * int rows = userDao.update(user, Arrays.asList("email", "lastModified"));
      * }</pre>
      *
-     * @param entityToUpdate the entity containing the values to update
+     * @param entity the entity containing the values to update
      * @param propNamesToUpdate the property names to update. If {@code null} or empty, all properties will be updated
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
      */
-    int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws SQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate) throws SQLException;
 
     /**
      * Updates a single property of an entity identified by ID.

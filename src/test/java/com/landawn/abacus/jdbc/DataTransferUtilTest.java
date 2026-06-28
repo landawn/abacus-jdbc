@@ -1413,4 +1413,23 @@ public class DataTransferUtilTest extends TestBase {
         assertEquals(2, result);
         verify(mockPreparedStatement, times(2)).addBatch();
     }
+
+    // CopyFromStatement.batchSize(0) routes a non-positive batch size into copy(...)'s argument validation
+    // (DataTransferUtil L3075). The check fires before any query runs, so mock statements suffice.
+    @Test
+    public void testCopyFromStatement_NonPositiveBatchSize_Throws() {
+        final PreparedStatement targetStmt = mock(PreparedStatement.class);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchSize(0).stmtSetter((pq, rs) -> pq.setObject(1, rs.getObject(1))).to(targetStmt));
+    }
+
+    // CopyFromStatement.batchIntervalInMillis(-1) routes a negative interval into copy(...)'s argument validation
+    // (DataTransferUtil L3075).
+    @Test
+    public void testCopyFromStatement_NegativeBatchInterval_Throws() {
+        final PreparedStatement targetStmt = mock(PreparedStatement.class);
+
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchIntervalInMillis(-1).to(targetStmt));
+    }
 }

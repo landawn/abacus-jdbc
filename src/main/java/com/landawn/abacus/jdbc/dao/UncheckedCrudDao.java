@@ -137,13 +137,13 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * System.out.println("Created user with ID: " + id);
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be {@code null})
+     * @param entity the entity to insert (must not be {@code null})
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @Override
-    ID insert(final T entityToInsert) throws UncheckedSQLException;
+    ID insert(final T entity) throws UncheckedSQLException;
 
     /**
      * Inserts the specified entity with only the specified properties.
@@ -159,15 +159,15 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * Long id = userDao.insert(user, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be {@code null})
+     * @param entity the entity to insert (must not be {@code null})
      * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If {@code null} or empty, all insertable properties will be included
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @Override
-    ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
+    ID insert(final T entity, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
 
     /**
      * Inserts an entity using a custom named SQL insert statement.
@@ -182,12 +182,12 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * }</pre>
      *
      * @param namedInsertSql the named parameter SQL insert statement
-     * @param entityToInsert the entity whose properties will be bound to the named parameters
+     * @param entity the entity whose properties will be bound to the named parameters
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    ID insert(final String namedInsertSql, final T entityToInsert) throws UncheckedSQLException;
+    ID insert(final String namedInsertSql, final T entity) throws UncheckedSQLException;
 
     /**
      * Performs batch insert of multiple entities using the default batch size.
@@ -984,12 +984,12 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * int updatedRows = userDao.update(user);
      * }</pre>
      *
-     * @param entityToUpdate the entity containing the values to update
+     * @param entity the entity containing the values to update
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    int update(final T entityToUpdate) throws UncheckedSQLException;
+    int update(final T entity) throws UncheckedSQLException;
 
     /**
      * Updates only the specified properties of the entity in the database.
@@ -1007,13 +1007,13 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
      * int updated = userDao.update(user, Arrays.asList("email", "phone"));
      * }</pre>
      *
-     * @param entityToUpdate the entity containing the values to update
+     * @param entity the entity containing the values to update
      * @param propNamesToUpdate the properties to update
      * @return the number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
 
     /**
      * Updates a single property value for the entity with the specified ID.

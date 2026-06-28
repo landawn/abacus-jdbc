@@ -79,27 +79,27 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
     /**
      * Saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToSave the entity that would be saved
+     * @param entity the entity that would be saved
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
      * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave) throws UnsupportedOperationException {
+    default void save(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
      * Saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToSave the entity that would be saved
+     * @param entity the entity that would be saved
      * @param propNamesToSave the collection of property names that would be saved
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
      * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
+    default void save(final T entity, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
@@ -107,13 +107,13 @@ public interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>>
      * Saving is not permitted in an {@code UncheckedReadOnlyDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named SQL insert statement that would be executed
-     * @param entityToSave the entity that would be saved
+     * @param entity the entity that would be saved
      * @throws UnsupportedOperationException always, since saves are not permitted in read-only mode
      * @deprecated Unsupported in {@code UncheckedReadOnlyDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
-    default void save(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException {
+    default void save(final String namedInsertSql, final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 

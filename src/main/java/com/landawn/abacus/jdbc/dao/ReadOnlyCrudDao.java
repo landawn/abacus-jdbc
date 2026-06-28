@@ -110,21 +110,21 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
     /**
      * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToInsert the entity to insert
+     * @param entity the entity to insert
      * @return never returns normally
      * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
-    default ID insert(final T entityToInsert) throws UnsupportedOperationException {
+    default ID insert(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
     /**
      * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToInsert the entity to insert
+     * @param entity the entity to insert
      * @param propNamesToInsert the property names to include in the {@code INSERT} statement
      * @return never returns normally
      * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
@@ -132,7 +132,7 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
      */
     @Deprecated
     @Override
-    default ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UnsupportedOperationException {
+    default ID insert(final T entity, final Collection<String> propNamesToInsert) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 
@@ -140,14 +140,14 @@ public interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> e
      * Inserting is not permitted in a {@code ReadOnlyCrudDao}; this method always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named parameter SQL insert statement
-     * @param entityToInsert the entity whose properties are bound to the named parameters
+     * @param entity the entity whose properties are bound to the named parameters
      * @return never returns normally
      * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
      * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
-    default ID insert(final String namedInsertSql, final T entityToInsert) throws UnsupportedOperationException {
+    default ID insert(final String namedInsertSql, final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("This operation is not supported in a read-only DAO");
     }
 

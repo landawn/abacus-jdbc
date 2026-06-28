@@ -100,8 +100,8 @@ import com.landawn.abacus.util.stream.CharStream;
  *   </tr>
  *   <tr>
  *     <td>Fluent Builders</td>
- *     <td>{@code importFrom()}, {@code copyFrom()}, {@code copyTable()}</td>
- *     <td>Chainable, named-option alternatives to the positional {@code importData}/{@code copy} overloads</td>
+ *     <td>{@code importFrom()}, {@code importCsvFrom()}, {@code exportCsv()}, {@code copyFrom()}, {@code copyTable()}</td>
+ *     <td>Chainable, named-option alternatives to the positional {@code importData}/{@code importCsv}/{@code exportCsv}/{@code copy} overloads</td>
  *   </tr>
  * </table>
  *
@@ -110,11 +110,17 @@ import com.landawn.abacus.util.stream.CharStream;
  * returns a builder whose chained methods set optional parameters and whose terminal method actually
  * runs the operation:</p>
  * <ul>
- *   <li>{@link #importFrom(Dataset)} &rarr; {@link DatasetImportBuilder} (terminal: {@code to(...)})</li>
+ *   <li>{@link #importFrom(Dataset)} &rarr; {@link DatasetImportBuilder} (terminal: {@code to(...)} returns {@code int})</li>
+ *   <li>{@link #importFrom(Iterator)} &rarr; {@link RowImportBuilder} (terminal: {@code to(...)} returns {@code long})</li>
+ *   <li>{@link #importCsvFrom(File)} / {@link #importCsvFrom(Reader)} &rarr; {@link RowImportBuilder}
+ *       (terminal: {@code to(...)} returns {@code long})</li>
+ *   <li>{@link #exportCsv(javax.sql.DataSource, String)} / {@link #exportCsv(Connection, String)} /
+ *       {@link #exportCsv(PreparedStatement)} / {@link #exportCsv(ResultSet)} &rarr; {@link CsvExportBuilder}
+ *       (terminal: {@code to(File)} / {@code to(Writer)} returns {@code long})</li>
  *   <li>{@link #copyFrom(javax.sql.DataSource, String)} / {@link #copyFrom(Connection, String)} /
- *       {@link #copyFrom(PreparedStatement)} &rarr; {@code CopyFrom*} builders (terminal: {@code to(...)})</li>
+ *       {@link #copyFrom(PreparedStatement)} &rarr; {@code CopyFrom*} builders (terminal: {@code to(...)} returns {@code long})</li>
  *   <li>{@link #copyTable(javax.sql.DataSource, String)} / {@link #copyTable(Connection, String)}
- *       &rarr; {@code CopyTable*} builders (terminal: {@code to(...)})</li>
+ *       &rarr; {@code CopyTable*} builders (terminal: {@code to(...)} returns {@code long})</li>
  * </ul>
  *
  * <p><b>Resource ownership:</b> Methods that accept a {@link Connection}, {@link PreparedStatement} or
@@ -3218,6 +3224,195 @@ public final class DataTransferUtil {
     }
 
     /**
+     * A fluent builder that configures and runs the import of a {@link Dataset} into a database table.
+     *
+     * <p>Obtain an instance via {@link DataTransferUtil#importFrom(Dataset)}, chain any of the optional configuration
+     * methods, then call one of the terminal {@code to(...)} methods to run the import. Each configuration
+     * method returns {@code this}, so calls can be chained.</p>
+     *
+     * <p>The three value-mapping strategies &mdash; {@link #selectColumns(Collection)},
+     * {@link #columnTypeMap(Map)} and {@link #stmtSetter(Throwables.BiConsumer)} &mdash; are mutually
+     * exclusive; configuring more than one causes the terminal {@code to(...)} call to throw
+     * {@link IllegalArgumentException}. When none of them is configured, all columns of the dataset are
+     * imported in order. The {@link #filter(Predicate)} is independent and may be combined with
+     * any of them.</p>
+     *
+     * @see DataTransferUtil#importFrom(Dataset)
+     */
+    public static final class DatasetImportBuilder {
+        private final Dataset dataset;
+        private Collection<String> selectColumnNames;
+        private Predicate<? super Object[]> filter;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        private long batchIntervalInMillis = 0;
+        @SuppressWarnings("rawtypes")
+        private Map<String, ? extends Type> columnTypeMap;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter;
+
+        DatasetImportBuilder(final Dataset dataset) {
+            this.dataset = dataset;
+        }
+
+        /**
+         * Restricts the import to the specified columns, in the given order. The order must match the
+         * parameter placeholders of the insert SQL. Mutually exclusive with {@link #columnTypeMap(Map)}
+         * and {@link #stmtSetter(Throwables.BiConsumer)}.
+         *
+         * @param selectColumnNames the column names to import; {@code null} or empty imports all columns
+         * @return this builder
+         */
+        public DatasetImportBuilder selectColumns(final Collection<String> selectColumnNames) {
+            this.selectColumnNames = selectColumnNames;
+
+            return this;
+        }
+
+        /**
+         * Imports only the rows for which the given predicate returns {@code true}. The predicate receives
+         * the row as an {@code Object[]} of all dataset column values, in dataset column order.
+         *
+         * @param filter the row filter; {@code null} imports every row
+         * @return this builder
+         */
+        public DatasetImportBuilder filter(final Predicate<? super Object[]> filter) {
+            this.filter = filter;
+
+            return this;
+        }
+
+        /**
+         * Sets the number of rows inserted per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
+         * @return this builder
+         */
+        public DatasetImportBuilder batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the pause between consecutive batch executions.
+         *
+         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @return this builder
+         */
+        public DatasetImportBuilder batchIntervalInMillis(final long batchIntervalInMillis) {
+            this.batchIntervalInMillis = batchIntervalInMillis;
+
+            return this;
+        }
+
+        /**
+         * Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
+         * Mutually exclusive with {@link #selectColumns(Collection)} and {@link #stmtSetter(Throwables.BiConsumer)}.
+         *
+         * @param columnTypeMap a map of column name to {@link Type}; keys must be columns of the dataset
+         * @return this builder
+         */
+        @SuppressWarnings("rawtypes")
+        public DatasetImportBuilder columnTypeMap(final Map<String, ? extends Type> columnTypeMap) {
+            this.columnTypeMap = columnTypeMap;
+
+            return this;
+        }
+
+        /**
+         * Supplies a custom setter that maps each row to the statement parameters, giving full control over
+         * how values are bound. Mutually exclusive with {@link #selectColumns(Collection)} and
+         * {@link #columnTypeMap(Map)}.
+         *
+         * @param stmtSetter a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
+         * @return this builder
+         */
+        public DatasetImportBuilder stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) {
+            this.stmtSetter = stmtSetter;
+
+            return this;
+        }
+
+        /**
+         * Runs the import against a connection obtained from the given DataSource. The connection is released
+         * back to the DataSource when the import completes.
+         *
+         * @param targetDataSource the DataSource to obtain a database connection from
+         * @param insertSql the SQL insert statement with placeholders
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
+         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         is not a column of the dataset
+         * @throws SQLException if a database access error occurs
+         */
+        public int to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+            final Connection conn = JdbcUtil.getConnection(targetDataSource);
+
+            try {
+                return to(conn, insertSql);
+            } finally {
+                JdbcUtil.releaseConnection(conn, targetDataSource);
+            }
+        }
+
+        /**
+         * Runs the import against the given Connection.
+         *
+         * @param conn the Connection to the database
+         * @param insertSql the SQL insert statement with placeholders
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
+         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         is not a column of the dataset
+         * @throws SQLException if a database access error occurs
+         */
+        public int to(final Connection conn, final String insertSql) throws SQLException {
+            try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
+                return to(stmt);
+            }
+        }
+
+        /**
+         * Runs the import against the given PreparedStatement. The statement is not closed by this method.
+         *
+         * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
+         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         is not a column of the dataset
+         * @throws SQLException if a database access error occurs
+         */
+        public int to(final PreparedStatement stmt) throws SQLException {
+            int configuredStrategies = 0;
+
+            if (N.notEmpty(selectColumnNames)) {
+                configuredStrategies++;
+            }
+
+            if (N.notEmpty(columnTypeMap)) {
+                configuredStrategies++;
+            }
+
+            if (stmtSetter != null) {
+                configuredStrategies++;
+            }
+
+            if (configuredStrategies > 1) {
+                throw new IllegalArgumentException("Only one of 'selectColumns', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
+            }
+
+            if (stmtSetter != null) {
+                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            } else if (N.notEmpty(columnTypeMap)) {
+                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+            } else {
+                final Collection<String> columnNames = N.isEmpty(selectColumnNames) ? dataset.columnNames() : selectColumnNames;
+
+                return importData(dataset, columnNames, filter, stmt, batchSize, batchIntervalInMillis);
+            }
+        }
+    }
+
+    /**
      * Creates a fluent builder for importing the elements of an {@link Iterator} into a database table, one row per element.
      *
      * <p>Configure how an element becomes a database row with {@link RowImportBuilder#stmtSetter(Throwables.BiConsumer)},
@@ -3451,191 +3646,199 @@ public final class DataTransferUtil {
     }
 
     /**
-     * A fluent builder that configures and runs the import of a {@link Dataset} into a database table.
+     * Creates a fluent builder for exporting the rows of a SELECT query (run against the given
+     * {@link javax.sql.DataSource}) to CSV. A connection is obtained when a terminal {@code to(...)} runs and released
+     * before it returns.
      *
-     * <p>Obtain an instance via {@link DataTransferUtil#importFrom(Dataset)}, chain any of the optional configuration
-     * methods, then call one of the terminal {@code to(...)} methods to run the import. Each configuration
-     * method returns {@code this}, so calls can be chained.</p>
+     * <p>It is an ergonomic alternative to the positional {@code exportCsv(DataSource, String, ...)} overloads and, via
+     * {@link CsvExportBuilder#selectColumns(Collection)}, supports column selection for BOTH
+     * {@link CsvExportBuilder#to(File) File} and {@link CsvExportBuilder#to(Writer) Writer} targets.</p>
      *
-     * <p>The three value-mapping strategies &mdash; {@link #selectColumns(Collection)},
-     * {@link #columnTypeMap(Map)} and {@link #stmtSetter(Throwables.BiConsumer)} &mdash; are mutually
-     * exclusive; configuring more than one causes the terminal {@code to(...)} call to throw
-     * {@link IllegalArgumentException}. When none of them is configured, all columns of the dataset are
-     * imported in order. The {@link #filter(Predicate)} is independent and may be combined with
-     * any of them.</p>
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * long n = DataTransferUtil.exportCsv(dataSource, "SELECT id, name, email FROM users")
+     *         .selectColumns(List.of("id", "name"))
+     *         .to(new File("users.csv"));
+     * }</pre>
      *
-     * @see DataTransferUtil#importFrom(Dataset)
+     * @param sourceDataSource the DataSource to obtain a connection from (must not be {@code null})
+     * @param selectSql the SQL query to execute (must not be {@code null})
+     * @return a {@link CsvExportBuilder}
+     * @see #exportCsv(Connection, String)
      */
-    public static final class DatasetImportBuilder {
-        private final Dataset dataset;
-        private Collection<String> selectColumnNames;
-        private Predicate<? super Object[]> filter;
-        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
-        private long batchIntervalInMillis = 0;
-        @SuppressWarnings("rawtypes")
-        private Map<String, ? extends Type> columnTypeMap;
-        private Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter;
+    @Beta
+    public static CsvExportBuilder exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql) {
+        N.checkArgNotNull(sourceDataSource, "sourceDataSource");
+        N.checkArgNotNull(selectSql, "selectSql");
 
-        DatasetImportBuilder(final Dataset dataset) {
-            this.dataset = dataset;
+        return new CsvExportBuilder(sourceDataSource, null, null, null, selectSql);
+    }
+
+    /**
+     * Creates a fluent builder for exporting the rows of a SELECT query (run against the given {@link Connection}) to
+     * CSV. The connection is NOT closed by the builder.
+     *
+     * @param conn the Connection to run the query against (must not be {@code null}; not closed by the builder)
+     * @param selectSql the SQL query to execute (must not be {@code null})
+     * @return a {@link CsvExportBuilder}
+     * @see #exportCsv(javax.sql.DataSource, String)
+     */
+    @Beta
+    public static CsvExportBuilder exportCsv(final Connection conn, final String selectSql) {
+        N.checkArgNotNull(conn, "conn");
+        N.checkArgNotNull(selectSql, "selectSql");
+
+        return new CsvExportBuilder(null, conn, null, null, selectSql);
+    }
+
+    /**
+     * Creates a fluent builder for exporting the result of executing the given {@link PreparedStatement} to CSV. The
+     * statement is executed when a terminal {@code to(...)} runs; the statement is NOT closed by the builder (the
+     * {@code ResultSet} it produces is).
+     *
+     * @param stmt the PreparedStatement to execute (must not be {@code null}; not closed by the builder)
+     * @return a {@link CsvExportBuilder}
+     */
+    @Beta
+    public static CsvExportBuilder exportCsv(final PreparedStatement stmt) {
+        N.checkArgNotNull(stmt, "stmt");
+
+        return new CsvExportBuilder(null, null, stmt, null, null);
+    }
+
+    /**
+     * Creates a fluent builder for exporting the rows of the given {@link ResultSet} to CSV, starting from its current
+     * position. The {@code ResultSet} is NOT closed by the builder.
+     *
+     * @param rs the ResultSet to export (must not be {@code null}; not closed by the builder)
+     * @return a {@link CsvExportBuilder}
+     */
+    @Beta
+    public static CsvExportBuilder exportCsv(final ResultSet rs) {
+        N.checkArgNotNull(rs, "rs");
+
+        return new CsvExportBuilder(null, null, null, rs, null);
+    }
+
+    /**
+     * A fluent builder that exports the rows of a query/result to CSV. Obtain an instance via one of the
+     * {@code exportCsv(...)} factory methods ({@link DataTransferUtil#exportCsv(javax.sql.DataSource, String)},
+     * {@link DataTransferUtil#exportCsv(Connection, String)}, {@link DataTransferUtil#exportCsv(PreparedStatement)} or
+     * {@link DataTransferUtil#exportCsv(ResultSet)}), optionally restrict the columns with
+     * {@link #selectColumns(Collection)}, then write to a {@link File} or a {@link Writer} with a terminal
+     * {@code to(...)} call.
+     *
+     * <p>The exported CSV always starts with a header row of column labels. A caller-supplied
+     * {@code Connection}/{@code PreparedStatement}/{@code ResultSet} is never closed; a {@code DataSource} connection is
+     * obtained and released by the terminal. A {@code File} target is created if it does not exist; a {@code Writer}
+     * target is flushed but not closed.</p>
+     *
+     * @see DataTransferUtil#exportCsv(javax.sql.DataSource, String)
+     */
+    public static final class CsvExportBuilder {
+        private final javax.sql.DataSource dataSource;
+        private final Connection conn;
+        private final PreparedStatement stmt;
+        private final ResultSet rs;
+        private final String selectSql;
+        private Collection<String> selectColumnNames;
+
+        CsvExportBuilder(final javax.sql.DataSource dataSource, final Connection conn, final PreparedStatement stmt, final ResultSet rs,
+                final String selectSql) {
+            this.dataSource = dataSource;
+            this.conn = conn;
+            this.stmt = stmt;
+            this.rs = rs;
+            this.selectSql = selectSql;
         }
 
         /**
-         * Restricts the import to the specified columns, in the given order. The order must match the
-         * parameter placeholders of the insert SQL. Mutually exclusive with {@link #columnTypeMap(Map)}
-         * and {@link #stmtSetter(Throwables.BiConsumer)}.
+         * Restricts the export to the named columns (matched against the query's result-set column labels), in the
+         * order they appear in the result. {@code null} or empty exports all columns.
          *
-         * @param selectColumnNames the column names to import; {@code null} or empty imports all columns
+         * @param selectColumnNames the column names to export; {@code null} for all columns
          * @return this builder
          */
-        public DatasetImportBuilder selectColumns(final Collection<String> selectColumnNames) {
+        public CsvExportBuilder selectColumns(final Collection<String> selectColumnNames) {
             this.selectColumnNames = selectColumnNames;
 
             return this;
         }
 
         /**
-         * Imports only the rows for which the given predicate returns {@code true}. The predicate receives
-         * the row as an {@code Object[]} of all dataset column values, in dataset column order.
+         * Runs the export and writes the CSV to the given {@link File} (created if it does not exist).
          *
-         * @param filter the row filter; {@code null} imports every row
-         * @return this builder
-         */
-        public DatasetImportBuilder filter(final Predicate<? super Object[]> filter) {
-            this.filter = filter;
-
-            return this;
-        }
-
-        /**
-         * Sets the number of rows inserted per batch.
-         *
-         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
-         * @return this builder
-         */
-        public DatasetImportBuilder batchSize(final int batchSize) {
-            this.batchSize = batchSize;
-
-            return this;
-        }
-
-        /**
-         * Sets the pause between consecutive batch executions.
-         *
-         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
-         * @return this builder
-         */
-        public DatasetImportBuilder batchIntervalInMillis(final long batchIntervalInMillis) {
-            this.batchIntervalInMillis = batchIntervalInMillis;
-
-            return this;
-        }
-
-        /**
-         * Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
-         * Mutually exclusive with {@link #selectColumns(Collection)} and {@link #stmtSetter(Throwables.BiConsumer)}.
-         *
-         * @param columnTypeMap a map of column name to {@link Type}; keys must be columns of the dataset
-         * @return this builder
-         */
-        @SuppressWarnings("rawtypes")
-        public DatasetImportBuilder columnTypeMap(final Map<String, ? extends Type> columnTypeMap) {
-            this.columnTypeMap = columnTypeMap;
-
-            return this;
-        }
-
-        /**
-         * Supplies a custom setter that maps each row to the statement parameters, giving full control over
-         * how values are bound. Mutually exclusive with {@link #selectColumns(Collection)} and
-         * {@link #columnTypeMap(Map)}.
-         *
-         * @param stmtSetter a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
-         * @return this builder
-         */
-        public DatasetImportBuilder stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) {
-            this.stmtSetter = stmtSetter;
-
-            return this;
-        }
-
-        /**
-         * Runs the import against a connection obtained from the given DataSource. The connection is released
-         * back to the DataSource when the import completes.
-         *
-         * @param targetDataSource the DataSource to obtain a database connection from
-         * @param insertSql the SQL insert statement with placeholders
-         * @return the number of rows successfully imported
-         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
-         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
-         *         is not a column of the dataset
+         * @param output the file to write to
+         * @return the number of rows exported
+         * @throws IllegalArgumentException if a configured column name is not present in the query result
          * @throws SQLException if a database access error occurs
+         * @throws UncheckedIOException if an I/O error occurs while writing
          */
-        public int to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
-            final Connection conn = JdbcUtil.getConnection(targetDataSource);
+        public long to(final File output) throws SQLException {
+            N.checkArgNotNull(output, "output");
+
+            return export(r -> exportCsv(r, selectColumnNames, output));
+        }
+
+        /**
+         * Runs the export and writes the CSV to the given {@link Writer} (flushed, but not closed).
+         *
+         * @param output the writer to write to
+         * @return the number of rows exported
+         * @throws IllegalArgumentException if a configured column name is not present in the query result
+         * @throws SQLException if a database access error occurs
+         * @throws UncheckedIOException if an I/O error occurs while writing
+         */
+        public long to(final Writer output) throws SQLException {
+            N.checkArgNotNull(output, "output");
+
+            return export(r -> exportCsv(r, selectColumnNames, output));
+        }
+
+        private long export(final ResultSetExporter exporter) throws SQLException {
+            if (rs != null) {
+                return exporter.export(rs);
+            } else if (stmt != null) {
+                ResultSet r = null;
+
+                try {
+                    r = JdbcUtil.executeQuery(stmt);
+
+                    return exporter.export(r);
+                } finally {
+                    JdbcUtil.closeQuietly(r);
+                }
+            } else if (conn != null) {
+                return exportFromConnection(conn, exporter);
+            } else {
+                final Connection c = JdbcUtil.getConnection(dataSource);
+
+                try {
+                    return exportFromConnection(c, exporter);
+                } finally {
+                    JdbcUtil.releaseConnection(c, dataSource);
+                }
+            }
+        }
+
+        private long exportFromConnection(final Connection c, final ResultSetExporter exporter) throws SQLException {
+            final ParsedSql sql = ParsedSql.parse(selectSql);
+            final PreparedStatement st = JdbcUtil.prepareStatement(c, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
             try {
-                return to(conn, insertSql);
+                setFetchForLargeResult(c, st);
+
+                try (ResultSet r = JdbcUtil.executeQuery(st)) {
+                    return exporter.export(r);
+                }
             } finally {
-                JdbcUtil.releaseConnection(conn, targetDataSource);
+                JdbcUtil.closeQuietly(st);
             }
         }
 
-        /**
-         * Runs the import against the given Connection.
-         *
-         * @param conn the Connection to the database
-         * @param insertSql the SQL insert statement with placeholders
-         * @return the number of rows successfully imported
-         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
-         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
-         *         is not a column of the dataset
-         * @throws SQLException if a database access error occurs
-         */
-        public int to(final Connection conn, final String insertSql) throws SQLException {
-            try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-                return to(stmt);
-            }
-        }
-
-        /**
-         * Runs the import against the given PreparedStatement. The statement is not closed by this method.
-         *
-         * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
-         * @return the number of rows successfully imported
-         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
-         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
-         *         is not a column of the dataset
-         * @throws SQLException if a database access error occurs
-         */
-        public int to(final PreparedStatement stmt) throws SQLException {
-            int configuredStrategies = 0;
-
-            if (N.notEmpty(selectColumnNames)) {
-                configuredStrategies++;
-            }
-
-            if (N.notEmpty(columnTypeMap)) {
-                configuredStrategies++;
-            }
-
-            if (stmtSetter != null) {
-                configuredStrategies++;
-            }
-
-            if (configuredStrategies > 1) {
-                throw new IllegalArgumentException("Only one of 'selectColumns', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
-            }
-
-            if (stmtSetter != null) {
-                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
-            } else if (N.notEmpty(columnTypeMap)) {
-                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-            } else {
-                final Collection<String> columnNames = N.isEmpty(selectColumnNames) ? dataset.columnNames() : selectColumnNames;
-
-                return importData(dataset, columnNames, filter, stmt, batchSize, batchIntervalInMillis);
-            }
+        @FunctionalInterface
+        private interface ResultSetExporter {
+            long export(ResultSet rs) throws SQLException;
         }
     }
 
