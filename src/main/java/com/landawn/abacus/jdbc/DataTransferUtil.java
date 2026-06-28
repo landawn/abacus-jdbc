@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -1002,29 +1003,27 @@ public final class DataTransferUtil {
      * <pre>{@code
      * File csvFile = new File("users.csv");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * Throwables.Function<String, Object[], Exception> parser = line -> {
+     * Function<String, Object[]> parser = line -> {
      *     String[] parts = line.split(",");
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
      * };
      * long rowsImported = DataTransferUtil.importData(csvFile, dataSource, insertSql, parser);
      * }</pre>
      *
-     * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections
      * @param insertSql the SQL insert statement with placeholders
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
-     * @throws E if the function throws an exception
+     * @throws UncheckedIOException if an I/O error occurs
      */
-    public static <E extends Exception> long importData(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
+    public static long importData(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
+            final Function<? super String, Object[]> rowMapper) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try {
-            return importData(file, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
+            return importData(file, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, rowMapper);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1038,7 +1037,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * File csvFile = new File("large_users.csv");
      * String insertSql = "INSERT INTO users (name, age, email) VALUES (?, ?, ?)";
-     * Throwables.Function<String, Object[], Exception> parser = line -> {
+     * Function<String, Object[]> parser = line -> {
      *     String[] parts = line.split(",");
      *     if (parts.length < 3) return null;  // Skip invalid lines
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]), parts[2] };
@@ -1046,23 +1045,21 @@ public final class DataTransferUtil {
      * long rowsImported = DataTransferUtil.importData(csvFile, connection, insertSql, 1000, 100, parser);
      * }</pre>
      *
-     * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
-     * @throws E if the function throws an exception
+     * @throws UncheckedIOException if an I/O error occurs
      */
-    public static <E extends Exception> long importData(final File file, final Connection conn, final String insertSql, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
+    public static long importData(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
+            final Function<? super String, Object[]> rowMapper) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(file, stmt, batchSize, batchIntervalInMillis, func);
+            return importData(file, stmt, batchSize, batchIntervalInMillis, rowMapper);
         }
     }
 
@@ -1074,29 +1071,29 @@ public final class DataTransferUtil {
      * <pre>{@code
      * File dataFile = new File("products.txt");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO products (name, price) VALUES (?, ?)");
-     * Throwables.Function<String, Object[], Exception> parser = line -> {
+     * Function<String, Object[]> parser = line -> {
      *     String[] parts = line.split("\\|");
      *     return new Object[] { parts[0], Double.parseDouble(parts[1]) };
      * };
      * long rowsImported = DataTransferUtil.importData(dataFile, stmt, 500, 50, parser);
      * }</pre>
      *
-     * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
-     * @throws E if the function throws an exception
+     * @throws UncheckedIOException if an I/O error occurs
      */
-    public static <E extends Exception> long importData(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
+    public static long importData(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+            final Function<? super String, Object[]> rowMapper) throws SQLException {
         try (Reader reader = IOUtil.newFileReader(file)) {
-            return importData(reader, stmt, batchSize, batchIntervalInMillis, func);
+            return importData(reader, stmt, batchSize, batchIntervalInMillis, rowMapper);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -1108,29 +1105,27 @@ public final class DataTransferUtil {
      * <pre>{@code
      * Reader reader = new StringReader("John,25\nJane,30\nBob,35");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * Throwables.Function<String, Object[], Exception> parser = line -> {
+     * Function<String, Object[]> parser = line -> {
      *     String[] parts = line.split(",");
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]) };
      * };
      * long rowsImported = DataTransferUtil.importData(reader, dataSource, insertSql, parser);
      * }</pre>
      *
-     * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections
      * @param insertSql the SQL insert statement with placeholders
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
-     * @throws E if the function throws an exception
+     * @throws UncheckedIOException if an I/O error occurs
      */
-    public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
+    public static long importData(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
+            final Function<? super String, Object[]> rowMapper) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try {
-            return importData(reader, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
+            return importData(reader, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, rowMapper);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1144,7 +1139,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * Reader reader = new FileReader("large_data.txt");
      * String insertSql = "INSERT INTO transactions (account, amount, date) VALUES (?, ?, ?)";
-     * Throwables.Function<String, Object[], Exception> parser = line -> {
+     * Function<String, Object[]> parser = line -> {
      *     String[] parts = line.split("\t");
      *     return new Object[] {
      *         parts[0],
@@ -1155,23 +1150,21 @@ public final class DataTransferUtil {
      * long rowsImported = DataTransferUtil.importData(reader, connection, insertSql, 2000, 200, parser);
      * }</pre>
      *
-     * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
-     * @throws E if the function throws an exception
+     * @throws UncheckedIOException if an I/O error occurs
      */
-    public static <E extends Exception> long importData(final Reader reader, final Connection conn, final String insertSql, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
+    public static long importData(final Reader reader, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
+            final Function<? super String, Object[]> rowMapper) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(reader, stmt, batchSize, batchIntervalInMillis, func);
+            return importData(reader, stmt, batchSize, batchIntervalInMillis, rowMapper);
         }
     }
 
@@ -1183,7 +1176,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * Reader reader = new InputStreamReader(inputStream);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO logs (level, message, timestamp) VALUES (?, ?, ?)");
-     * Throwables.Function<String, Object[], Exception> parser = line -> {
+     * Function<String, Object[]> parser = line -> {
      *     // Parse log format: [LEVEL] timestamp - message
      *     Pattern pattern = Pattern.compile("\\[(\\w+)\\] (\\d+) - (.+)");
      *     Matcher matcher = pattern.matcher(line);
@@ -1197,21 +1190,18 @@ public final class DataTransferUtil {
      * long rowsImported = DataTransferUtil.importData(reader, stmt, 1000, 0, parser);
      * }</pre>
      *
-     * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param rowMapper a function mapping each input line to an {@code Object[]} row of column values; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
-     * @throws E if the function throws an exception
+     * @throws UncheckedIOException if an I/O error occurs
      */
-    public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
-            throws IllegalArgumentException, SQLException, IOException, E {
+    public static long importData(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+            final Function<? super String, Object[]> rowMapper) throws IllegalArgumentException, SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -1226,7 +1216,7 @@ public final class DataTransferUtil {
             Object[] row = null;
 
             while ((line = br.readLine()) != null) {
-                row = func.apply(line);
+                row = rowMapper.apply(line);
 
                 if (row == null) {
                     continue;
@@ -1252,6 +1242,8 @@ public final class DataTransferUtil {
             }
 
             logger.info("Imported reader data rows(imported={})", result);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
         } finally {
             if (!isBufferedReader) {
                 Objectory.recycle(br);
@@ -1486,10 +1478,10 @@ public final class DataTransferUtil {
      * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading the file
+     * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
     public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
@@ -1541,10 +1533,10 @@ public final class DataTransferUtil {
      * @return the total number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading the file
+     * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
     public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importCsv(file, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         }
@@ -1582,10 +1574,10 @@ public final class DataTransferUtil {
      * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading the file
+     * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
     public static long importCsv(final File file, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
         return importCsv(file, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -1630,10 +1622,10 @@ public final class DataTransferUtil {
      * @return the total number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading the file
+     * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
     public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
         return importCsv(file, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
@@ -1675,13 +1667,15 @@ public final class DataTransferUtil {
      * @return the total number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading the file
+     * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
     public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
-            throws SQLException, IOException {
+            throws SQLException {
         try (Reader reader = IOUtil.newFileReader(file)) {
             return importCsv(reader, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -1716,10 +1710,10 @@ public final class DataTransferUtil {
      * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading from the reader
+     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
     public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
@@ -1760,10 +1754,10 @@ public final class DataTransferUtil {
      * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading from the reader
+     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
     public static long importCsv(final Reader reader, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
         return importCsv(reader, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
@@ -1803,10 +1797,10 @@ public final class DataTransferUtil {
      * @return the total number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading from the reader
+     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
     public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
         return importCsv(reader, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
@@ -1868,11 +1862,11 @@ public final class DataTransferUtil {
      * @return the total number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while reading from the reader
+     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
     public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
-            throws IllegalArgumentException, SQLException, IOException {
+            throws IllegalArgumentException, SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -1927,6 +1921,8 @@ public final class DataTransferUtil {
             }
 
             logger.info("Imported CSV data rows(imported={}, columns={})", result, columnCount);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
         } finally {
             if (!isBufferedReader) {
                 Objectory.recycle(br);
@@ -1959,9 +1955,9 @@ public final class DataTransferUtil {
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing to the file
+     * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final File output) throws SQLException, IOException {
+    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final File output) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
         try {
@@ -2000,9 +1996,9 @@ public final class DataTransferUtil {
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing to the file
+     * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final Connection conn, final String selectSql, final File output) throws SQLException, IOException {
+    public static long exportCsv(final Connection conn, final String selectSql, final File output) throws SQLException {
         return exportCsv(conn, selectSql, null, output);
     }
 
@@ -2038,10 +2034,10 @@ public final class DataTransferUtil {
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing to the file
+     * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
     public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> selectColumnNames, final File output)
-            throws SQLException, IOException {
+            throws SQLException {
         final ParsedSql sql = ParsedSql.parse(selectSql);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
@@ -2078,9 +2074,9 @@ public final class DataTransferUtil {
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing to the file
+     * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final PreparedStatement stmt, final File output) throws SQLException, IOException {
+    public static long exportCsv(final PreparedStatement stmt, final File output) throws SQLException {
         return exportCsv(stmt, null, output);
     }
 
@@ -2112,9 +2108,9 @@ public final class DataTransferUtil {
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing to the file
+     * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException {
+    public static long exportCsv(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException {
         ResultSet rs = null;
 
         try {
@@ -2153,9 +2149,9 @@ public final class DataTransferUtil {
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing to the file
+     * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final ResultSet rs, final File output) throws SQLException, IOException {
+    public static long exportCsv(final ResultSet rs, final File output) throws SQLException {
         return exportCsv(rs, null, output);
     }
 
@@ -2189,15 +2185,19 @@ public final class DataTransferUtil {
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing to the file
+     * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException {
-        if (!output.exists() && !output.createNewFile()) {
-            throw new IOException("Failed to create file: " + output);
-        }
+    public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException {
+        try {
+            if (!output.exists() && !output.createNewFile()) {
+                throw new IOException("Failed to create file: " + output);
+            }
 
-        try (Writer writer = IOUtil.newFileWriter(output)) {
-            return exportCsv(rs, selectColumnNames, writer);
+            try (Writer writer = IOUtil.newFileWriter(output)) {
+                return exportCsv(rs, selectColumnNames, writer);
+            }
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -2230,9 +2230,9 @@ public final class DataTransferUtil {
      * @param output the Writer to write the CSV data to (will not be closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing
+     * @throws UncheckedIOException if an I/O error occurs while writing
      */
-    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final Writer output) throws SQLException, IOException {
+    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final Writer output) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
         try {
@@ -2273,9 +2273,9 @@ public final class DataTransferUtil {
      * @param output the Writer to write the CSV data to (will not be closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing
+     * @throws UncheckedIOException if an I/O error occurs while writing
      */
-    public static long exportCsv(final Connection conn, final String selectSql, final Writer output) throws SQLException, IOException {
+    public static long exportCsv(final Connection conn, final String selectSql, final Writer output) throws SQLException {
         final ParsedSql sql = ParsedSql.parse(selectSql);
 
         final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -2316,9 +2316,9 @@ public final class DataTransferUtil {
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing
+     * @throws UncheckedIOException if an I/O error occurs while writing
      */
-    public static long exportCsv(final ResultSet rs, final Writer output) throws SQLException, IOException {
+    public static long exportCsv(final ResultSet rs, final Writer output) throws SQLException {
         return exportCsv(rs, null, output);
     }
 
@@ -2353,10 +2353,10 @@ public final class DataTransferUtil {
      * @return the number of rows exported
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs while writing
+     * @throws UncheckedIOException if an I/O error occurs while writing
      */
     public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output)
-            throws IllegalArgumentException, SQLException, IOException {
+            throws IllegalArgumentException, SQLException {
 
         final Type<Object> strType = N.typeOf(String.class);
         final boolean isBufferedWriter = output instanceof BufferedCsvWriter;
@@ -2442,6 +2442,8 @@ public final class DataTransferUtil {
             bw.flush();
 
             logger.info("Exported CSV rows(exported={}, columns={})", result, columnNameSet == null ? columnCount : selectColumnNames.size());
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
         } finally {
             if (!isBufferedWriter) {
                 Objectory.recycle(bw);

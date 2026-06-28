@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.sql.DataSource;
@@ -316,7 +317,7 @@ public class DataTransferUtilTest extends TestBase {
         File tempFile = File.createTempFile("test", ".txt");
         tempFile.deleteOnExit();
 
-        Throwables.Function<String, Object[], Exception> func = line -> line.split(",");
+        Function<String, Object[]> func = line -> line.split(",");
         String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
 
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
@@ -336,7 +337,7 @@ public class DataTransferUtilTest extends TestBase {
         tempFile.deleteOnExit();
         java.nio.file.Files.write(tempFile.toPath(), Arrays.asList("val1,val2", "val3,val4"));
 
-        Throwables.Function<String, Object[], Exception> func = line -> line.split(",");
+        Function<String, Object[]> func = line -> line.split(",");
         String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
 
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
@@ -355,7 +356,7 @@ public class DataTransferUtilTest extends TestBase {
     public void testImportDataFromReaderWithDataSource() throws SQLException, IOException, Exception {
         // Setup
         Reader reader = new StringReader("line1\nline2");
-        Throwables.Function<String, Object[], Exception> func = line -> new Object[] { line };
+        Function<String, Object[]> func = line -> new Object[] { line };
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
@@ -372,7 +373,7 @@ public class DataTransferUtilTest extends TestBase {
     public void testImportDataFromReaderWithConnection() throws SQLException, IOException, Exception {
         // Setup
         Reader reader = new StringReader("value1\nvalue2\nvalue3");
-        Throwables.Function<String, Object[], Exception> func = line -> new Object[] { line };
+        Function<String, Object[]> func = line -> new Object[] { line };
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
@@ -1470,7 +1471,7 @@ public class DataTransferUtilTest extends TestBase {
     @Test
     public void testImportDataFromReader_NullRowSkipped_AndBatchInterval() throws Exception {
         final Reader reader = new StringReader("a\nSKIP\nb\n");
-        final Throwables.Function<String, Object[], Exception> func = line -> "SKIP".equals(line) ? null : new Object[] { line };
+        final Function<String, Object[]> func = line -> "SKIP".equals(line) ? null : new Object[] { line };
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         final long result = DataTransferUtil.importData(reader, mockPreparedStatement, 1, 1L, func);
