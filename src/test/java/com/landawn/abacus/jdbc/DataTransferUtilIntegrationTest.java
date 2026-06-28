@@ -349,4 +349,104 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals(3, count("copy_tgt"));
         assertEquals("Alice", copyTgtName(1));
     }
+
+    // ===== RowImportBuilder: importFrom / importCsvFrom (File / Reader / Iterator) =====
+
+    private static final class Rec {
+        final long id;
+        final String name;
+        final double amount;
+
+        Rec(final long id, final String name, final double amount) {
+            this.id = id;
+            this.name = name;
+            this.amount = amount;
+        }
+    }
+
+    private List<Rec> threeRecs() {
+        return List.of(new Rec(1, "Alice", 10.5), new Rec(2, "Bob", 20.0), new Rec(3, "Cara", 30.25));
+    }
+
+    // importFrom(Iterator).stmtSetter(..).to(DataSource, insertSql)
+    @Test
+    public void testImportFrom_Iterator_StmtSetter() throws SQLException {
+        final long n = DataTransferUtil.importFrom(threeRecs().iterator()).stmtSetter((q, r) -> {
+            q.setLong(1, r.id);
+            q.setString(2, r.name);
+            q.setDouble(3, r.amount);
+        }).to(ds, CSV_INSERT_SQL);
+
+        assertEquals(3, n);
+        assertEquals(3, count("csv_tgt"));
+        assertEquals("Alice", nameOf(1));
+    }
+
+    // importFrom(Iterator).filter(..).stmtSetter(..).to(Connection, insertSql)
+    @Test
+    public void testImportFrom_Iterator_StmtSetter_Filter() throws SQLException {
+        try (Connection conn = ds.getConnection()) {
+            final long n = DataTransferUtil.importFrom(threeRecs().iterator())
+                    .filter(r -> r.id != 2) // skip Bob
+                    .stmtSetter((q, r) -> {
+                        q.setLong(1, r.id);
+                        q.setString(2, r.name);
+                        q.setDouble(3, r.amount);
+                    })
+                    .to(conn, CSV_INSERT_SQL);
+
+            assertEquals(2, n);
+        }
+
+        assertEquals(2, count("csv_tgt"));
+        assertEquals("Alice", nameOf(1));
+        assertEquals("Cara", nameOf(3));
+    }
+
+    // importCsvFrom(Reader).stmtSetter(..).to(Connection, insertSql) — header line is skipped.
+    @Test
+    public void testImportCsvFrom_Reader_HeaderSkipped() throws SQLException {
+        final java.io.Reader reader = new java.io.StringReader("id,name,amount\n1,Alice,10.5\n2,Bob,20.0\n3,Cara,30.25");
+
+        try (Connection conn = ds.getConnection()) {
+            final long n = DataTransferUtil.importCsvFrom(reader).stmtSetter((q, row) -> {
+                q.setLong(1, Long.parseLong(row[0]));
+                q.setString(2, row[1]);
+                q.setDouble(3, Double.parseDouble(row[2]));
+            }).to(conn, CSV_INSERT_SQL);
+
+            assertEquals(3, n); // header skipped; 3 data rows
+        }
+
+        assertEquals(3, count("csv_tgt"));
+        assertEquals("Alice", nameOf(1));
+    }
+
+    // importCsvFrom(File).filter(..).stmtSetter(..).to(DataSource, insertSql)
+    @Test
+    public void testImportCsvFrom_File_Filter() throws Exception {
+        final File csv = File.createTempFile("rib_csv_", ".csv");
+        csv.deleteOnExit();
+        java.nio.file.Files.write(csv.toPath(), List.of("id,name,amount", "1,Alice,10.5", "2,Bob,20.0", "3,Cara,30.25"));
+
+        final long n = DataTransferUtil.importCsvFrom(csv)
+                .filter(row -> Double.parseDouble(row[2]) >= 20.0) // skip Alice
+                .stmtSetter((q, row) -> {
+                    q.setLong(1, Long.parseLong(row[0]));
+                    q.setString(2, row[1]);
+                    q.setDouble(3, Double.parseDouble(row[2]));
+                })
+                .to(ds, CSV_INSERT_SQL);
+
+        assertEquals(2, n);
+        assertEquals(2, count("csv_tgt"));
+        assertEquals("Bob", nameOf(2));
+    }
+
+    // No value-binding strategy configured -> IllegalArgumentException at the terminal.
+    @Test
+    public void testRowImportBuilder_NoStrategy_Throws() {
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importFrom(List.of("a", "b").iterator()).to(ds, CSV_INSERT_SQL));
+    }
+
 }

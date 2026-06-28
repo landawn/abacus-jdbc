@@ -1161,6 +1161,26 @@ public final class DataTransferUtil {
      */
     public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
+        return importData(iter, (Predicate<? super T>) null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+    }
+
+    /**
+     * Internal core shared by the public {@code importData(Iterator, ...)} overloads and {@link RowImportBuilder}:
+     * iterates {@code iter}, applies the optional {@code filter}, binds each surviving element via {@code stmtSetter}
+     * and batches the inserts.
+     *
+     * @param <T> the iterator element type
+     * @param iter the elements to import
+     * @param filter an optional per-element filter; {@code null} imports every element
+     * @param stmt the PreparedStatement (not closed here)
+     * @param batchSize the batch size (must be {@code > 0})
+     * @param batchIntervalInMillis the inter-batch pause (must be {@code >= 0})
+     * @param stmtSetter binds each surviving element to the statement parameters
+     * @return the number of rows imported
+     * @throws SQLException if a database access error occurs
+     */
+    private static <T> long importData(final Iterator<? extends T> iter, final Predicate<? super T> filter, final PreparedStatement stmt, final int batchSize,
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -1172,6 +1192,10 @@ public final class DataTransferUtil {
         T next = null;
         while (iter.hasNext()) {
             next = iter.next();
+
+            if (filter != null && !filter.test(next)) {
+                continue;
+            }
 
             stmtSetter.accept(stmtForSetter, next);
             // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
@@ -3191,6 +3215,239 @@ public final class DataTransferUtil {
         N.checkArgNotNull(dataset, cs.dataset);
 
         return new DatasetImportBuilder(dataset);
+    }
+
+    /**
+     * Creates a fluent builder for importing the elements of an {@link Iterator} into a database table, one row per element.
+     *
+     * <p>Configure how an element becomes a database row with {@link RowImportBuilder#stmtSetter(Throwables.BiConsumer)},
+     * optionally skipping elements with {@link RowImportBuilder#filter(Predicate)}. The iterator is not closed by this
+     * builder.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * long n = DataTransferUtil.importFrom(users.iterator())
+     *         .stmtSetter((q, u) -> { q.setLong(1, u.getId()); q.setString(2, u.getName()); })
+     *         .to(dataSource, "INSERT INTO users (id, name) VALUES (?, ?)");
+     * }</pre>
+     *
+     * @param <T> the iterator element type
+     * @param iter the iterator whose elements will be imported (must not be {@code null})
+     * @return a {@link RowImportBuilder} over the iterator's elements
+     * @see #importData(Iterator, java.sql.PreparedStatement, int, long, Throwables.BiConsumer)
+     */
+    @Beta
+    public static <T> RowImportBuilder<T> importFrom(final Iterator<? extends T> iter) {
+        N.checkArgNotNull(iter, "iter");
+
+        return new RowImportBuilder<>(iter, null, null);
+    }
+
+    /**
+     * Creates a fluent builder for importing the rows of a CSV {@link File} into a database table.
+     *
+     * <p>The first line is treated as a header and skipped; every subsequent line is tokenized (using the current
+     * {@link CsvUtil} parser) and exposed to the builder as a {@code String[]} of column values. Bind each row with
+     * {@link RowImportBuilder#stmtSetter(Throwables.BiConsumer)}, optionally skipping rows with
+     * {@link RowImportBuilder#filter(Predicate)}. The file is opened when a terminal
+     * {@code to(...)} runs and closed before it returns.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * long n = DataTransferUtil.importCsvFrom(new File("users.csv"))
+     *         .filter(row -> Integer.parseInt(row[1]) >= 18)
+     *         .stmtSetter((q, row) -> { q.setString(1, row[0]); q.setInt(2, Integer.parseInt(row[1])); })
+     *         .to(connection, "INSERT INTO users (name, age) VALUES (?, ?)");
+     * }</pre>
+     *
+     * @param file the CSV file to import (must not be {@code null})
+     * @return a {@link RowImportBuilder} over the CSV rows ({@code String[]} per row)
+     * @see #importCsvFrom(Reader)
+     */
+    @Beta
+    public static RowImportBuilder<String[]> importCsvFrom(final File file) {
+        N.checkArgNotNull(file, "file");
+
+        return new RowImportBuilder<>(null, null, file);
+    }
+
+    /**
+     * Creates a fluent builder for importing the rows of CSV data read from a {@link Reader} into a database table.
+     *
+     * <p>The first line is treated as a header and skipped; each subsequent line is tokenized into a {@code String[]}.
+     * See {@link #importCsvFrom(File)} for configuration. The caller-supplied {@code Reader} is NOT closed by this builder.</p>
+     *
+     * @param reader the reader supplying CSV data (must not be {@code null}); not closed by this builder
+     * @return a {@link RowImportBuilder} over the CSV rows ({@code String[]} per row)
+     * @see #importCsvFrom(File)
+     */
+    @Beta
+    public static RowImportBuilder<String[]> importCsvFrom(final Reader reader) {
+        N.checkArgNotNull(reader, "reader");
+
+        return new RowImportBuilder<>(null, reader, null);
+    }
+
+    /**
+     * A fluent builder that imports rows from an {@link Iterator} or a CSV {@link File}/{@link Reader} into a database table.
+     *
+     * <p>Obtain an instance via {@link DataTransferUtil#importFrom(Iterator)} (one row per element) or
+     * {@link DataTransferUtil#importCsvFrom(File)} / {@link DataTransferUtil#importCsvFrom(Reader)}
+     * (CSV; the header line is skipped; element type {@code String[]}). Chain the optional configuration methods, then
+     * call a terminal {@code to(...)} method to run the import.</p>
+     *
+     * <p>A value-binding strategy must be configured via {@link #stmtSetter(Throwables.BiConsumer)} (binds each element
+     * directly); the terminal {@code to(...)} throws {@link IllegalArgumentException} if it is not set.
+     * {@link #filter(Predicate)} is independent and optional.</p>
+     *
+     * @param <T> the per-row element type ({@code String[]} for CSV import, or the iterator element type)
+     * @see DataTransferUtil#importFrom(Iterator)
+     * @see DataTransferUtil#importCsvFrom(File)
+     */
+    public static final class RowImportBuilder<T> {
+        private final Iterator<? extends T> iter;
+        private final Reader reader;
+        private final File file;
+        private Predicate<? super T> filter;
+        private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        private long batchIntervalInMillis = 0;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter;
+
+        RowImportBuilder(final Iterator<? extends T> iter, final Reader reader, final File file) {
+            this.iter = iter;
+            this.reader = reader;
+            this.file = file;
+        }
+
+        /**
+         * Imports only the elements/rows for which the given predicate returns {@code true}.
+         *
+         * @param filter the row filter; {@code null} imports every row
+         * @return this builder
+         */
+        public RowImportBuilder<T> filter(final Predicate<? super T> filter) {
+            this.filter = filter;
+
+            return this;
+        }
+
+        /**
+         * Sets the number of rows inserted per batch.
+         *
+         * @param batchSize the batch size (must be greater than 0 when {@code to(...)} is called)
+         * @return this builder
+         */
+        public RowImportBuilder<T> batchSize(final int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * Sets the pause between consecutive batch executions.
+         *
+         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @return this builder
+         */
+        public RowImportBuilder<T> batchIntervalInMillis(final long batchIntervalInMillis) {
+            this.batchIntervalInMillis = batchIntervalInMillis;
+
+            return this;
+        }
+
+        /**
+         * Supplies a custom setter that binds each element to the insert statement parameters.
+         *
+         * @param stmtSetter binds the parameters of the {@link PreparedQuery} for each element
+         * @return this builder
+         */
+        public RowImportBuilder<T> stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) {
+            this.stmtSetter = stmtSetter;
+
+            return this;
+        }
+
+        /**
+         * Runs the import against a connection obtained from the given DataSource; the connection is released back to
+         * the DataSource when the import completes.
+         *
+         * @param targetDataSource the DataSource to obtain a database connection from
+         * @param insertSql the SQL insert statement with placeholders
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
+         *         or {@code batchIntervalInMillis < 0}
+         * @throws SQLException if a database access error occurs
+         * @throws UncheckedIOException if an I/O error occurs reading the file/reader
+         */
+        public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+            final Connection conn = JdbcUtil.getConnection(targetDataSource);
+
+            try {
+                return to(conn, insertSql);
+            } finally {
+                JdbcUtil.releaseConnection(conn, targetDataSource);
+            }
+        }
+
+        /**
+         * Runs the import against the given Connection.
+         *
+         * @param conn the Connection to the database
+         * @param insertSql the SQL insert statement with placeholders
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
+         *         or {@code batchIntervalInMillis < 0}
+         * @throws SQLException if a database access error occurs
+         * @throws UncheckedIOException if an I/O error occurs reading the file/reader
+         */
+        public long to(final Connection conn, final String insertSql) throws SQLException {
+            try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
+                return to(stmt);
+            }
+        }
+
+        /**
+         * Runs the import against the given PreparedStatement. A caller-supplied {@code Reader}/{@code Iterator} is
+         * not closed; a {@code File} source is opened and closed by this method.
+         *
+         * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
+         * @return the number of rows successfully imported
+         * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
+         *         or {@code batchIntervalInMillis < 0}
+         * @throws SQLException if a database access error occurs
+         * @throws UncheckedIOException if an I/O error occurs reading the file/reader
+         */
+        public long to(final PreparedStatement stmt) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> setter = resolveSetter();
+
+            if (iter != null) {
+                return importData(iter, filter, stmt, batchSize, batchIntervalInMillis, setter);
+            } else if (file != null) {
+                try (Reader r = IOUtil.newFileReader(file)) {
+                    return importFromCsv(r, stmt, setter);
+                } catch (final IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            } else {
+                return importFromCsv(reader, stmt, setter);
+            }
+        }
+
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        private long importFromCsv(final Reader r, final PreparedStatement stmt,
+                final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> setter) throws SQLException {
+            // A Reader/File source is always CSV; T is String[] for the importCsvFrom(...) entry points.
+            return importCsv(r, (Predicate) filter, stmt, batchSize, batchIntervalInMillis,
+                    (Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>) (Throwables.BiConsumer) setter);
+        }
+
+        private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> resolveSetter() {
+            if (stmtSetter == null) {
+                throw new IllegalArgumentException("'stmtSetter' must be configured before calling to(...)");
+            }
+
+            return stmtSetter;
+        }
     }
 
     /**
