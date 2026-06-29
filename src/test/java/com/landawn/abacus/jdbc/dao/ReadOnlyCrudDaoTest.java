@@ -1,12 +1,10 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +29,7 @@ public class ReadOnlyCrudDaoTest extends TestBase {
 
     @Test
     public void testExtendsNoUpdateCrudDao() {
-        assertTrue(NoUpdateCrudDao.class.isAssignableFrom(ReadOnlyCrudDao.class));
+        assertTrue(ReadableCrudDao.class.isAssignableFrom(ReadOnlyCrudDao.class));
     }
 
     @Test
@@ -41,52 +39,7 @@ public class ReadOnlyCrudDaoTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(ReadOnlyCrudDao.class.getDeclaredMethods().length > 0);
-    }
-
-    @Test
-    public void testInsert() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.insert(new Object()));
-    }
-
-    @Test
-    public void testInsert_PropNamesToInsert() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.insert(new Object(), List.of("name")));
-    }
-
-    @Test
-    public void testInsert_NamedInsertSql() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.insert("insertUser", new Object()));
-    }
-
-    @Test
-    public void testBatchInsert() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(List.of(new Object())));
-    }
-
-    @Test
-    public void testBatchInsert_BatchSize() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(List.of(new Object()), 2));
-    }
-
-    @Test
-    public void testBatchInsert_PropNamesToInsert() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(List.of(new Object()), List.of("name")));
-    }
-
-    @Test
-    public void testBatchInsert_PropNamesToInsertAndBatchSize() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(List.of(new Object()), List.of("name"), 2));
-    }
-
-    @Test
-    public void testBatchInsert_NamedInsertSql() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert("insertUser", List.of(new Object())));
-    }
-
-    @Test
-    public void testBatchInsert_NamedInsertSqlAndBatchSize() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert("insertUser", List.of(new Object()), 2));
+        assertTrue(ReadableCrudDao.class.isAssignableFrom(ReadOnlyCrudDao.class));
     }
 
     @SuppressWarnings("unchecked")

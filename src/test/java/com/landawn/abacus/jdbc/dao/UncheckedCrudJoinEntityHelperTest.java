@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,11 +15,11 @@ import java.util.Collection;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedCrudJoinEntityHelperTest extends TestBase {
@@ -149,17 +149,17 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         List<TestEntity> entities = List.of(new TestEntity(), new TestEntity());
 
         when(dao.batchGet(ids, selectPropNames, 2)).thenReturn(entities);
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
-        doNothing().when(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
+        doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
 
         assertEquals(entities, dao.batchGet(ids, selectPropNames, String.class, 2));
         assertEquals(entities, dao.batchGet(ids, selectPropNames, List.of(String.class, Integer.class), 2));
         assertEquals(entities, dao.batchGet(ids, selectPropNames, true, 2));
 
-        verify(dao, times(2)).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        verify(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
-        verify(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        verify(dao, times(2)).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        verify(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
+        verify(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
     }
 
     // gett(id, joinEntitiesToLoad) with non-null result loads join entities (line 230 branch).
@@ -222,16 +222,16 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         List<TestEntity> entities = List.of(new TestEntity(), new TestEntity(), new TestEntity());
 
         when(dao.batchGet(ids, selectPropNames, 2)).thenReturn(entities);
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
-        doNothing().when(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
+        doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
 
         assertEquals(3, dao.batchGet(ids, selectPropNames, String.class, 2).size());
         assertEquals(3, dao.batchGet(ids, selectPropNames, List.of(String.class, Integer.class), 2).size());
         assertEquals(3, dao.batchGet(ids, selectPropNames, true, 2).size());
 
-        verify(dao, times(4)).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        verify(dao, times(2)).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
-        verify(dao, times(2)).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        verify(dao, times(4)).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        verify(dao, times(2)).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
+        verify(dao, times(2)).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
     }
 }

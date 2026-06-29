@@ -15,12 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.condition.Condition;
 
 /**
  * Interface for an unchecked Data Access Object (DAO) that disables update and delete operations while
@@ -74,118 +69,6 @@ import com.landawn.abacus.query.condition.Condition;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>> extends UncheckedDao<T, TD>, NoUpdateDao<T, TD> {
+public non-sealed interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>> extends UncheckedInsertableDao<T, TD>, NoUpdateDao<T, TD> {
 
-    /**
-     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
-     * Condition-based updates mutate existing records, which is disabled in this DAO type.
-     *
-     * @param propName the property name to update
-     * @param propValue the new value for the property
-     * @param cond the condition identifying the records to update
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
-     */
-    @Override
-    @Deprecated
-    default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
-     * Condition-based updates mutate existing records, which is disabled in this DAO type.
-     *
-     * @param updateProps a map of property names to their new values
-     * @param cond the condition identifying the records to update
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
-     */
-    @Deprecated
-    @Override
-    default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
-     * Condition-based updates mutate existing records, which is disabled in this DAO type.
-     *
-     * @param entity the entity containing values to update
-     * @param cond the condition identifying the records to update
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
-     */
-    @Deprecated
-    @Override
-    default int update(final T entity, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Updating is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
-     * Condition-based updates mutate existing records, which is disabled in this DAO type.
-     *
-     * @param entity the entity containing values to update
-     * @param propNamesToUpdate the property names to include in the update
-     * @param cond the condition identifying the records to update
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since updates are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Updates are not allowed.
-     */
-    @Deprecated
-    @Override
-    default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Upserting is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
-     * Upsert requires update capability, which is disabled in this DAO type.
-     *
-     * @param entity the entity to upsert
-     * @param uniquePropNamesForQuery the property names used to look up an existing record
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since upsert operations are not supported
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Upserts are not allowed.
-     */
-    @Deprecated
-    @Override
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Upserting is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
-     * Upsert requires update capability, which is disabled in this DAO type.
-     *
-     * @param entity the entity to upsert
-     * @param cond the condition used to check whether the record already exists
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since upsert operations are not supported
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Upserts are not allowed.
-     */
-    @Deprecated
-    @Override
-    default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Deleting is not permitted in an {@code UncheckedNoUpdateDao}; this method always throws {@link UnsupportedOperationException}.
-     * Condition-based deletes remove existing records, which is disabled in this DAO type.
-     *
-     * @param cond the condition identifying the records to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletes are not permitted in this DAO
-     * @deprecated Unsupported in {@code UncheckedNoUpdateDao}. Deletes are not allowed.
-     */
-    @Deprecated
-    @Override
-    default int delete(final Condition cond) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
 }

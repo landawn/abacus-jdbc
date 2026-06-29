@@ -19,7 +19,6 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1780,7 +1779,7 @@ public class ResultSetProxyTest extends TestBase {
         when(meta.getColumnCount()).thenReturn(1);
         when(delegate.getMetaData()).thenReturn(meta);
         Blob blob = Mockito.mock(Blob.class);
-        when(blob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(blob.length()).thenReturn(Integer.MAX_VALUE + 1L);
         when(delegate.getObject(1)).thenReturn(blob);
 
         assertThrows(SQLException.class, () -> proxy.getObject(1));
@@ -1794,7 +1793,7 @@ public class ResultSetProxyTest extends TestBase {
         when(meta.getColumnCount()).thenReturn(1);
         when(delegate.getMetaData()).thenReturn(meta);
         Clob clob = Mockito.mock(Clob.class);
-        when(clob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(clob.length()).thenReturn(Integer.MAX_VALUE + 1L);
         when(delegate.getObject(1)).thenReturn(clob);
 
         assertThrows(SQLException.class, () -> proxy.getObject(1));
@@ -1823,7 +1822,7 @@ public class ResultSetProxyTest extends TestBase {
         when(delegate.getMetaData()).thenReturn(meta);
         when(delegate.findColumn("b")).thenReturn(1);
         Blob blob = Mockito.mock(Blob.class);
-        when(blob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(blob.length()).thenReturn(Integer.MAX_VALUE + 1L);
         when(delegate.getObject(1)).thenReturn(blob);
 
         assertThrows(SQLException.class, () -> proxy.getObject("b"));
@@ -1837,7 +1836,7 @@ public class ResultSetProxyTest extends TestBase {
         when(delegate.getMetaData()).thenReturn(meta);
         when(delegate.findColumn("c")).thenReturn(1);
         Clob clob = Mockito.mock(Clob.class);
-        when(clob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(clob.length()).thenReturn(Integer.MAX_VALUE + 1L);
         when(delegate.getObject(1)).thenReturn(clob);
 
         assertThrows(SQLException.class, () -> proxy.getObject("c"));

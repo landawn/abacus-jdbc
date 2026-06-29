@@ -18,7 +18,6 @@ import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.Jdbc;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;

@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
@@ -126,7 +127,7 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.exists(condition)).thenReturn(false);
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        when(dao.list(eq("name"), same(condition), Mockito.<Jdbc.RowMapper<String>> any())).thenReturn(List.of("alice"));
+        when(dao.list(eq("name"), same(condition), ArgumentMatchers.<Jdbc.RowMapper<String>> any())).thenReturn(List.of("alice"));
 
         assertTrue(dao.notExists(condition));
         assertEquals(List.of("alice"), dao.list("name", condition));
@@ -148,7 +149,7 @@ public class UncheckedDaoTest extends TestBase {
         Condition condition = Mockito.mock(Condition.class);
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        when(dao.list(eq(List.of("unknownProp")), same(condition), Mockito.<Jdbc.RowMapper<Object>> any())).thenReturn(List.of("raw"));
+        when(dao.list(eq(List.of("unknownProp")), same(condition), ArgumentMatchers.<Jdbc.RowMapper<Object>> any())).thenReturn(List.of("raw"));
 
         assertEquals(List.of("raw"), dao.list("unknownProp", condition));
     }
@@ -193,7 +194,7 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.update(anyMap(), same(condition))).thenReturn(2);
-        when(dao.update(same(entity), Mockito.<Collection<String>> any(), same(condition))).thenReturn(3);
+        when(dao.update(same(entity), ArgumentMatchers.<Collection<String>> any(), same(condition))).thenReturn(3);
 
         assertEquals(2, dao.update("status", "active", condition));
         assertEquals(3, dao.update(entity, condition));
@@ -243,7 +244,7 @@ public class UncheckedDaoTest extends TestBase {
 
         when(updateDao.targetEntityClass()).thenReturn(TestEntity.class);
         when(updateDao.findOnlyOne(updateCondition)).thenReturn(Optional.of(dbEntity));
-        when(updateDao.update(same(dbEntity), Mockito.<Collection<String>> any(), same(updateCondition))).thenReturn(1);
+        when(updateDao.update(same(dbEntity), ArgumentMatchers.<Collection<String>> any(), same(updateCondition))).thenReturn(1);
 
         TestEntity result = updateDao.upsert(entityToMerge, updateCondition);
 
@@ -265,7 +266,7 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
         when(dao.targetEntityClass()).thenReturn(IdentifiedEntity.class);
-        when(dao.update(same(dbEntity), Mockito.anyCollection(), any(Condition.class))).thenReturn(1);
+        when(dao.update(same(dbEntity), ArgumentMatchers.anyCollection(), any(Condition.class))).thenReturn(1);
 
         IdentifiedEntity result = dao.upsert(entityToMerge, condition);
 
@@ -293,14 +294,14 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.findOnlyOne(lookupCondition)).thenReturn(Optional.of(dbEntity));
         when(dao.targetEntityClass()).thenReturn(IdentifiedEntity.class);
-        when(dao.update(same(dbEntity), Mockito.anyCollection(), any(Condition.class))).thenReturn(1);
+        when(dao.update(same(dbEntity), ArgumentMatchers.anyCollection(), any(Condition.class))).thenReturn(1);
 
         IdentifiedEntity result = dao.upsert(entityToMerge, lookupCondition);
 
         assertSame(dbEntity, result);
 
         ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
-        verify(dao).update(same(dbEntity), Mockito.<Collection<String>> any(), condCaptor.capture());
+        verify(dao).update(same(dbEntity), ArgumentMatchers.<Collection<String>> any(), condCaptor.capture());
 
         Condition usedCond = condCaptor.getValue();
         // Must NOT reuse the original lookup condition; must be an id-based condition built from the db entity.

@@ -20,8 +20,9 @@ public class ReadOnlyCrudJoinEntityHelperTest extends TestBase {
     }
 
     @Test
-    public void testExtendsCrudJoinEntityHelper() {
-        assertTrue(CrudJoinEntityHelper.class.isAssignableFrom(ReadOnlyCrudJoinEntityHelper.class));
+    public void testExtendsReadableCrudJoinEntityHelper() {
+        // Read-only CRUD join helper mixes in the read side only (not the full CrudJoinEntityHelper).
+        assertTrue(ReadableCrudJoinEntityHelper.class.isAssignableFrom(ReadOnlyCrudJoinEntityHelper.class));
     }
 
     @Test

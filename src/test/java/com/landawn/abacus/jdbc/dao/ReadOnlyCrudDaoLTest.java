@@ -1,12 +1,10 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +29,7 @@ public class ReadOnlyCrudDaoLTest extends TestBase {
 
     @Test
     public void testExtendsNoUpdateCrudDaoL() {
-        assertTrue(NoUpdateCrudDaoL.class.isAssignableFrom(ReadOnlyCrudDaoL.class));
+        assertTrue(ReadableCrudDaoL.class.isAssignableFrom(ReadOnlyCrudDaoL.class));
     }
 
     @Test
@@ -42,18 +40,6 @@ public class ReadOnlyCrudDaoLTest extends TestBase {
     @Test
     public void testHasDeclaredMethods() {
         assertTrue(true, "Interface may inherit all methods without declaring its own");
-    }
-
-    @Test
-    public void testInsertUnsupported_InheritedFromReadOnlyCrudDao() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.insert(new Object()));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(List.of(new Object())));
-    }
-
-    @Test
-    public void testUpdateUnsupported_LongOverloadInheritedFromNoUpdateCrudDaoL() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.update("status", "x", 1L));
-        assertThrows(UnsupportedOperationException.class, () -> dao.deleteById(1L));
     }
 
     @SuppressWarnings("unchecked")

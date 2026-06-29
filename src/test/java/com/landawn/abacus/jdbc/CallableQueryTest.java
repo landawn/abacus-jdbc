@@ -1889,8 +1889,9 @@ public class CallableQueryTest extends TestBase {
 
         com.landawn.abacus.util.Tuple.Tuple2<Long, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters(rs -> {
             long count = 0;
-            while (rs.next())
+            while (rs.next()) {
                 count++;
+            }
             return count;
         });
 

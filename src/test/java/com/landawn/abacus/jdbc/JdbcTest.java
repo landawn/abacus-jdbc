@@ -3508,7 +3508,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testHandlerFactory_GetOrCreate_RaceLosingThreadReturnsRegisteredInstance() throws Exception {
         // Pre-register an instance manually to simulate "another thread already won the race".
-        Jdbc.Handler<Object> winner = new Jdbc.Handler<Object>() {
+        Jdbc.Handler<Object> winner = new Jdbc.Handler<>() {
         };
 
         Jdbc.HandlerFactory.register(winner);

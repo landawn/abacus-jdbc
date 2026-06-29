@@ -1,18 +1,14 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.query.condition.Condition;
 
 public class NoUpdateCrudDaoTest extends TestBase {
 
@@ -33,7 +29,7 @@ public class NoUpdateCrudDaoTest extends TestBase {
 
     @Test
     public void testExtendsCrudDao() {
-        assertTrue(CrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
+        assertTrue(ReadableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
     }
 
     @Test
@@ -43,60 +39,7 @@ public class NoUpdateCrudDaoTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(NoUpdateCrudDao.class.getDeclaredMethods().length > 0);
-    }
-
-    @Test
-    public void testUpdate() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.update(new Object()));
-        assertThrows(UnsupportedOperationException.class, () -> dao.update(new Object(), List.of("name")));
-        assertThrows(UnsupportedOperationException.class, () -> dao.update("status", "active", "id-1"));
-        assertThrows(UnsupportedOperationException.class, () -> dao.update(Map.of("status", "active"), "id-1"));
-    }
-
-    @Test
-    public void testBatchUpdate() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpdate(List.of(new Object())));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpdate(List.of(new Object()), 2));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpdate(List.of(new Object()), List.of("name")));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpdate(List.of(new Object()), List.of("name"), 2));
-    }
-
-    @Test
-    public void testUpsert() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.upsert(new Object()));
-        assertThrows(UnsupportedOperationException.class, () -> dao.upsert(new Object(), (Condition) null));
-        assertThrows(UnsupportedOperationException.class, () -> dao.upsert(new Object(), List.of("id")));
-    }
-
-    @Test
-    public void testBatchUpsert() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpsert(List.of(new Object())));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpsert(List.of(new Object()), 2));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpsert(List.of(new Object()), List.of("id")));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchUpsert(List.of(new Object()), List.of("id"), 2));
-    }
-
-    @Test
-    public void testDelete() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.delete(new Object()));
-    }
-
-    @Test
-    public void testDeleteById() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.deleteById("id-1"));
-    }
-
-    @Test
-    public void testBatchDelete() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchDelete(List.of(new Object())));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchDelete(List.of(new Object()), 2));
-    }
-
-    @Test
-    public void testBatchDeleteByIds() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchDeleteByIds(List.of("id-1")));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchDeleteByIds(List.of("id-1"), 2));
+        assertTrue(ReadableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
     }
 
     @SuppressWarnings("unchecked")

@@ -72,6 +72,6 @@ package com.landawn.abacus.jdbc.dao;
  * @see UncheckedCrudJoinEntityHelper
  * @see UncheckedCrudDao
  */
-public interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
-        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedCrudJoinEntityHelper<T, ID, TD> {
+public non-sealed interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
+        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedReadableCrudJoinEntityHelper<T, ID, TD> {
 }

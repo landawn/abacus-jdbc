@@ -25,6 +25,7 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -789,7 +790,7 @@ public class SqlTransactionTest extends TestBase {
         when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
 
         final SQLException isoEx = new SQLException("isolation reset failed");
-        doThrow(isoEx).when(connection).setTransactionIsolation(Mockito.anyInt());
+        doThrow(isoEx).when(connection).setTransactionIsolation(ArgumentMatchers.anyInt());
 
         final SqlTransaction tx = new SqlTransaction(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true);
         tx.incrementAndGetRef(IsolationLevel.DEFAULT, false);
@@ -826,7 +827,7 @@ public class SqlTransactionTest extends TestBase {
         Mockito.reset(connection);
         when(connection.getAutoCommit()).thenReturn(true);
         when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
-        doThrow(new SQLException("isolation restore failed")).when(connection).setTransactionIsolation(Mockito.anyInt());
+        doThrow(new SQLException("isolation restore failed")).when(connection).setTransactionIsolation(ArgumentMatchers.anyInt());
 
         assertThrows(UncheckedSQLException.class, tx::decrementAndGetRef);
 

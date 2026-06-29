@@ -60,7 +60,6 @@ import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableMap;
@@ -629,7 +628,7 @@ public class JdbcUtilTest extends TestBase {
     // still freed in the finally block.
     @Test
     public void testGetColumnValue_BlobSizeOverflow_Throws() throws SQLException {
-        when(mockBlob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(mockBlob.length()).thenReturn(Integer.MAX_VALUE + 1L);
         when(mockResultSet.getObject(1)).thenReturn(mockBlob);
 
         assertThrows(SQLException.class, () -> JdbcUtil.getColumnValue(mockResultSet, 1));
@@ -639,7 +638,7 @@ public class JdbcUtilTest extends TestBase {
     // Clob whose length exceeds Integer.MAX_VALUE trips the size guard (JdbcUtil L2272).
     @Test
     public void testGetColumnValue_ClobSizeOverflow_Throws() throws SQLException {
-        when(mockClob.length()).thenReturn((long) Integer.MAX_VALUE + 1L);
+        when(mockClob.length()).thenReturn(Integer.MAX_VALUE + 1L);
         when(mockResultSet.getObject(1)).thenReturn(mockClob);
 
         assertThrows(SQLException.class, () -> JdbcUtil.getColumnValue(mockResultSet, 1));

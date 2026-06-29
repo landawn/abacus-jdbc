@@ -19,9 +19,7 @@ import static com.landawn.abacus.samples.JdbcTest.deviceDao;
 import static com.landawn.abacus.samples.JdbcTest.employeeDao;
 import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao;
 import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao2;
-import static com.landawn.abacus.samples.JdbcTest.noUpdateUserDao;
 import static com.landawn.abacus.samples.JdbcTest.projectDao;
-import static com.landawn.abacus.samples.JdbcTest.readOnlyUserDao;
 import static com.landawn.abacus.samples.JdbcTest.uncheckedUserDao;
 import static com.landawn.abacus.samples.JdbcTest.uncheckedUserDao2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -323,59 +320,59 @@ public class UncheckedDaoTest {
 
     }
 
-    @SuppressWarnings("deprecation")
-    @Test
-    public void test_readOnlyDao() throws SQLException {
-        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-
-        try {
-            readOnlyUserDao.save(user);
-            fail("Should throw UnsupportedOperationException");
-        } catch (final UnsupportedOperationException e) {
-            //
-        } catch (final Exception e) {
-            //
-            e.printStackTrace();
-        }
-
-        try {
-            readOnlyUserDao.batchSave(N.asList(user));
-            fail("Should throw UnsupportedOperationException");
-        } catch (final UnsupportedOperationException e) {
-            //
-        } catch (final Exception e) {
-            //
-            e.printStackTrace();
-        }
-
-        try {
-            uncheckedUserDao2.deleteJoinEntities(user, Device.class);
-            fail("Should throw UnsupportedOperationException");
-        } catch (final UnsupportedOperationException e) {
-            //
-        }
-
-        noUpdateUserDao.save(user);
-
-        final User userFromDB = readOnlyUserDao.gett(100L);
-        System.out.println(userFromDB);
-
-        try {
-            readOnlyUserDao.delete(user);
-            fail("Should throw UnsupportedOperationException");
-        } catch (final UnsupportedOperationException e) {
-            //
-        }
-
-        try {
-            noUpdateUserDao.delete(user);
-            fail("Should throw UnsupportedOperationException");
-        } catch (final UnsupportedOperationException e) {
-            //
-        }
-
-        uncheckedUserDao.delete(user);
-    }
+    //    @SuppressWarnings("deprecation")
+    //    @Test
+    //    public void test_readOnlyDao() throws SQLException {
+    //        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
+    //
+    //        try {
+    //            readOnlyUserDao.save(user);
+    //            fail("Should throw UnsupportedOperationException");
+    //        } catch (final UnsupportedOperationException e) {
+    //            //
+    //        } catch (final Exception e) {
+    //            //
+    //            e.printStackTrace();
+    //        }
+    //
+    //        try {
+    //            readOnlyUserDao.batchSave(N.asList(user));
+    //            fail("Should throw UnsupportedOperationException");
+    //        } catch (final UnsupportedOperationException e) {
+    //            //
+    //        } catch (final Exception e) {
+    //            //
+    //            e.printStackTrace();
+    //        }
+    //
+    //        //    try {
+    //        //        uncheckedUserDao2.deleteJoinEntities(user, Device.class);
+    //        //        fail("Should throw UnsupportedOperationException");
+    //        //    } catch (final UnsupportedOperationException e) {
+    //        //        //
+    //        //    }
+    //
+    //        noUpdateUserDao.save(user);
+    //
+    //        final User userFromDB = readOnlyUserDao.gett(100L);
+    //        System.out.println(userFromDB);
+    //
+    //        try {
+    //            readOnlyUserDao.delete(user);
+    //            fail("Should throw UnsupportedOperationException");
+    //        } catch (final UnsupportedOperationException e) {
+    //            //
+    //        }
+    //
+    //        try {
+    //            noUpdateUserDao.delete(user);
+    //            fail("Should throw UnsupportedOperationException");
+    //        } catch (final UnsupportedOperationException e) {
+    //            //
+    //        }
+    //
+    //        uncheckedUserDao.delete(user);
+    //    }
 
     @Test
     public void test_batchGet() {

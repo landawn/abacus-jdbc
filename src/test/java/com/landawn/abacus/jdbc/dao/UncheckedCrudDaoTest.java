@@ -12,12 +12,12 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
@@ -160,7 +160,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         dbEntity.setId(1L);
         dbEntity.setName("original");
 
-        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.of(dbEntity));
+        when(dao.findOnlyOne(ArgumentMatchers.any())).thenReturn(Optional.of(dbEntity));
         when(dao.update(dbEntity)).thenReturn(1);
 
         IdentifiedEntity result = dao.upsert(entity, Mockito.mock(com.landawn.abacus.query.condition.Condition.class));
@@ -184,7 +184,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         entity.setId(5L);
         entity.setName("new");
 
-        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.empty());
+        when(dao.findOnlyOne(ArgumentMatchers.any())).thenReturn(Optional.empty());
 
         IdentifiedEntity result = dao.upsert(entity, Mockito.mock(com.landawn.abacus.query.condition.Condition.class));
 
@@ -334,12 +334,12 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdentifiedEntity entity = new IdentifiedEntity();
         entity.setName("Alice");
 
-        Mockito.doReturn(entity).when(dao).upsert(Mockito.same(entity), Mockito.any(Condition.class));
+        Mockito.doReturn(entity).when(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.any(Condition.class));
 
         IdentifiedEntity result = dao.upsert(entity, List.of("name"));
 
         assertSame(entity, result);
-        verify(dao).upsert(Mockito.same(entity), Mockito.any(Condition.class));
+        verify(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.any(Condition.class));
     }
 
     @Test
@@ -360,10 +360,10 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(7L);
 
-        Mockito.doReturn(entity).when(dao).upsert(Mockito.same(entity), Mockito.anyList());
+        Mockito.doReturn(entity).when(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.anyList());
 
         assertSame(entity, dao.upsert(entity));
-        verify(dao).upsert(Mockito.same(entity), Mockito.anyList());
+        verify(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.anyList());
     }
 
     // upsert(entity, cond) — entity class with no id triggers the empty-idPropNameList branch.
@@ -390,7 +390,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         NoIdEntity dbEntity = new NoIdEntity();
         dbEntity.setName("original");
 
-        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.of(dbEntity));
+        when(dao.findOnlyOne(ArgumentMatchers.any())).thenReturn(Optional.of(dbEntity));
         when(dao.update(dbEntity)).thenReturn(1);
 
         NoIdEntity result = dao.upsert(entity, Mockito.mock(Condition.class));
@@ -406,10 +406,10 @@ public class UncheckedCrudDaoTest extends TestBase {
         List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
         List<IdAnnotatedEntity> result = List.of(new IdAnnotatedEntity());
 
-        Mockito.doReturn(result).when(dao).batchUpsert(Mockito.same(entities), Mockito.anyList(), Mockito.eq(2));
+        Mockito.doReturn(result).when(dao).batchUpsert(ArgumentMatchers.same(entities), ArgumentMatchers.anyList(), ArgumentMatchers.eq(2));
 
         assertEquals(result, dao.batchUpsert(entities, 2));
-        verify(dao).batchUpsert(Mockito.same(entities), Mockito.anyList(), Mockito.eq(2));
+        verify(dao).batchUpsert(ArgumentMatchers.same(entities), ArgumentMatchers.anyList(), ArgumentMatchers.eq(2));
     }
 
     // batchUpsert(entities, uniquePropNames) — delegates with default batch size.
@@ -479,7 +479,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(3L);
 
-        when(dao.gett(Mockito.eq(3L), Mockito.anyCollection())).thenReturn(null);
+        when(dao.gett(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(null);
 
         assertFalse(dao.refresh(entity, List.of("name")));
     }
@@ -505,10 +505,10 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
 
-        Mockito.doReturn(true).when(dao).refresh(Mockito.same(entity), Mockito.anyCollection());
+        Mockito.doReturn(true).when(dao).refresh(ArgumentMatchers.same(entity), ArgumentMatchers.anyCollection());
 
         assertTrue(dao.refresh(entity));
-        verify(dao).refresh(Mockito.same(entity), Mockito.anyCollection());
+        verify(dao).refresh(ArgumentMatchers.same(entity), ArgumentMatchers.anyCollection());
     }
 
     // refresh(entity, propNamesToRefresh) — found branch (dbEntity != null)
@@ -522,7 +522,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         dbEntity.setId(3L);
         dbEntity.setName("fresh");
 
-        when(dao.gett(Mockito.eq(3L), Mockito.anyCollection())).thenReturn(dbEntity);
+        when(dao.gett(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(dbEntity);
 
         assertTrue(dao.refresh(entity, List.of("name")));
         assertEquals("fresh", entity.getName());
@@ -534,10 +534,10 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
         List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
 
-        Mockito.doReturn(1).when(dao).batchRefresh(Mockito.same(entities), Mockito.anyCollection(), Mockito.eq(5));
+        Mockito.doReturn(1).when(dao).batchRefresh(ArgumentMatchers.same(entities), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5));
 
         assertEquals(1, dao.batchRefresh(entities, 5));
-        verify(dao).batchRefresh(Mockito.same(entities), Mockito.anyCollection(), Mockito.eq(5));
+        verify(dao).batchRefresh(ArgumentMatchers.same(entities), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5));
     }
 
     // batchRefresh(entities, propNamesToRefresh, batchSize) — dbEntities empty
@@ -547,7 +547,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
 
-        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(5))).thenReturn(List.of());
+        when(dao.batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5))).thenReturn(List.of());
 
         assertEquals(0, dao.batchRefresh(List.of(entity), List.of("name"), 5));
     }
@@ -563,7 +563,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         dbEntity.setId(1L);
         dbEntity.setName("fresh");
 
-        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(5))).thenReturn(List.of(dbEntity));
+        when(dao.batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5))).thenReturn(List.of(dbEntity));
 
         assertEquals(1, dao.batchRefresh(List.of(entity), List.of("name"), 5));
         assertEquals("fresh", entity.getName());
@@ -577,14 +577,14 @@ public class UncheckedCrudDaoTest extends TestBase {
         entity.setId(1L);
         entity.setName("Alice");
 
-        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of());
-        when(dao.batchInsert(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(List.of(1L));
+        when(dao.list(ArgumentMatchers.any(Condition.class))).thenReturn(List.of());
+        when(dao.batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2))).thenReturn(List.of(1L));
 
         List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("name"), 2);
 
         assertEquals(1, result.size());
         assertSame(entity, result.get(0));
-        verify(dao).batchInsert(Mockito.anyCollection(), Mockito.eq(2));
+        verify(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2));
     }
 
     // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — single unique prop, update only
@@ -598,13 +598,13 @@ public class UncheckedCrudDaoTest extends TestBase {
         dbEntity.setId(10L);
         dbEntity.setName("Alice");
 
-        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of(dbEntity));
-        when(dao.batchUpdate(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(1);
+        when(dao.list(ArgumentMatchers.any(Condition.class))).thenReturn(List.of(dbEntity));
+        when(dao.batchUpdate(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2))).thenReturn(1);
 
         List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("name"), 2);
 
         assertEquals(1, result.size());
-        verify(dao).batchUpdate(Mockito.anyCollection(), Mockito.eq(2));
+        verify(dao).batchUpdate(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2));
     }
 
     // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — multi unique prop, insert only
@@ -615,13 +615,13 @@ public class UncheckedCrudDaoTest extends TestBase {
         entity.setId(1L);
         entity.setName("Alice");
 
-        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of());
-        when(dao.batchInsert(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(List.of(1L));
+        when(dao.list(ArgumentMatchers.any(Condition.class))).thenReturn(List.of());
+        when(dao.batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2))).thenReturn(List.of(1L));
 
         List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("id", "name"), 2);
 
         assertEquals(1, result.size());
-        verify(dao).batchInsert(Mockito.anyCollection(), Mockito.eq(2));
+        verify(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2));
     }
 
     // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — multi unique prop, update only
@@ -635,13 +635,13 @@ public class UncheckedCrudDaoTest extends TestBase {
         dbEntity.setId(1L);
         dbEntity.setName("Alice");
 
-        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of(dbEntity));
-        when(dao.batchUpdate(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(1);
+        when(dao.list(ArgumentMatchers.any(Condition.class))).thenReturn(List.of(dbEntity));
+        when(dao.batchUpdate(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2))).thenReturn(1);
 
         List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("id", "name"), 2);
 
         assertEquals(1, result.size());
-        verify(dao).batchUpdate(Mockito.anyCollection(), Mockito.eq(2));
+        verify(dao).batchUpdate(ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2));
     }
 
     // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — insert-only spanning multiple
@@ -663,7 +663,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         e3.setName("Carol");
 
         // No existing rows -> all three entities go to the insert-only group; batchSize 2 -> 3 > 2.
-        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of());
+        when(dao.list(ArgumentMatchers.any(Condition.class))).thenReturn(List.of());
 
         final RuntimeException sentinel = new RuntimeException("dataSource() invoked - transaction branch taken");
         when(dao.dataSource()).thenThrow(sentinel);
@@ -704,7 +704,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         // batchUpsert splits the entities into sub-batches of batchSize and calls list(...) once
         // per sub-batch ([e1,e2] then [e3]), flat-mapping the results into an id-keyed map with a
         // throwing merger; return the matching rows per consecutive call so ids stay unique.
-        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of(db1, db2), List.of(db3));
+        when(dao.list(ArgumentMatchers.any(Condition.class))).thenReturn(List.of(db1, db2), List.of(db3));
 
         final RuntimeException sentinel = new RuntimeException("dataSource() invoked - transaction branch taken");
         when(dao.dataSource()).thenThrow(sentinel);

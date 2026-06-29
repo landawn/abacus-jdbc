@@ -1,12 +1,10 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +24,7 @@ public class UncheckedReadOnlyDaoTest extends TestBase {
 
     @Test
     public void testExtendsUncheckedNoUpdateDao() {
-        assertTrue(UncheckedNoUpdateDao.class.isAssignableFrom(UncheckedReadOnlyDao.class));
+        assertTrue(UncheckedReadableDao.class.isAssignableFrom(UncheckedReadOnlyDao.class));
     }
 
     @Test
@@ -41,24 +39,7 @@ public class UncheckedReadOnlyDaoTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(UncheckedReadOnlyDao.class.getDeclaredMethods().length > 0);
-    }
-
-    @Test
-    public void testSave_UnsupportedOperations() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.save(new Object()));
-        assertThrows(UnsupportedOperationException.class, () -> dao.save(new Object(), List.of("name")));
-        assertThrows(UnsupportedOperationException.class, () -> dao.save("insertUser", new Object()));
-    }
-
-    @Test
-    public void testBatchSave_UnsupportedOperations() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(List.of(new Object())));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(List.of(new Object()), 2));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(List.of(new Object()), List.of("name")));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(List.of(new Object()), List.of("name"), 2));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave("insertUser", List.of(new Object())));
-        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave("insertUser", List.of(new Object()), 2));
+        assertTrue(UncheckedReadableDao.class.isAssignableFrom(UncheckedReadOnlyDao.class));
     }
 
     @SuppressWarnings("unchecked")

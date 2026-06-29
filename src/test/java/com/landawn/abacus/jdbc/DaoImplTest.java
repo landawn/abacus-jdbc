@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static com.landawn.abacus.query.Dsl.PSC;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
@@ -40,8 +40,7 @@ import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.jdbc.dao.NoUpdateDao;
-import static com.landawn.abacus.query.Dsl.PSC;
+import com.landawn.abacus.jdbc.dao.ReadableDao;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
@@ -1023,7 +1022,7 @@ public class DaoImplTest extends TestBase {
         pool.put(poisonedKey, daoForDs1);
 
         try {
-            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, Dao.class);
+            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, ReadableDao.class);
             m.setAccessible(true);
 
             // Create a real DAO bound to ds2 so the fall-through scan can find it.

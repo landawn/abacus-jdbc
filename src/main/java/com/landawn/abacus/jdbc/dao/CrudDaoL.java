@@ -63,7 +63,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long, TD> {
+public non-sealed interface CrudDaoL<T, TD extends CrudDaoL<T, TD>> extends CrudDao<T, Long, TD>, ReadableCrudDaoL<T, TD> {
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.

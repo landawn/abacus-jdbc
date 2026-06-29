@@ -16,10 +16,10 @@
 
 package com.landawn.abacus.jdbc;
 
-import com.landawn.abacus.annotation.Internal;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+
+import com.landawn.abacus.annotation.Internal;
 
 /**
  * A utility class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.

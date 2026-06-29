@@ -1832,8 +1832,9 @@ public class PreparedQueryTest extends TestBase {
 
         List<Integer> results = query.queryAllResultSets(rs -> {
             int count = 0;
-            while (rs.next())
+            while (rs.next()) {
                 count++;
+            }
             return count;
         });
 

@@ -14,24 +14,20 @@ import static org.mockito.Mockito.when;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
-import com.landawn.abacus.jdbc.dao.DaoUtil;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
@@ -296,8 +292,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadJoinEntities_Entity_PropNames_LoopsEach() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString(), isNull());
-        Mockito.doCallRealMethod().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
+        Mockito.doCallRealMethod().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
 
         dao.loadJoinEntities(entity, List.of("orders", "addresses"));
 
@@ -312,7 +308,7 @@ public class JoinEntityHelperTest extends TestBase {
 
         // Empty propNames should not invoke per-name overload at all.
         dao.loadJoinEntities(entity, List.<String> of());
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.eq(entity), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyString());
     }
 
     // loadJoinEntities(entity, propNames, inParallel=false) — falls through to non-parallel path.
@@ -320,7 +316,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadJoinEntities_Entity_PropNames_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(Mockito.same(entity), Mockito.anyCollection());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entity), ArgumentMatchers.anyCollection());
 
         dao.loadJoinEntities(entity, List.of("orders"), false);
 
@@ -332,7 +328,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadJoinEntities_Entity_PropNames_WithExecutor_RunsLoad() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
 
         dao.loadJoinEntities(entity, List.of("orders", "addresses"), Runnable::run);
 
@@ -346,7 +342,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestEntity entity = new TestEntity();
 
         dao.loadJoinEntities(entity, List.<String> of(), Runnable::run);
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.same(entity), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.same(entity), ArgumentMatchers.anyString());
     }
 
     @Test
@@ -354,7 +350,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
 
         dao.loadJoinEntities(entity, List.of("orders"), true);
 
@@ -366,7 +362,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadJoinEntities_Entities_PropNames_LoopsEach() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
         dao.loadJoinEntities(entities, List.of("orders", "addresses"));
 
@@ -379,14 +375,14 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
         dao.loadJoinEntities(List.<TestEntity> of(), List.of("orders"));
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     @Test
     public void testLoadJoinEntities_Entities_PropNames_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyCollection());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyCollection());
 
         dao.loadJoinEntities(entities, List.of("orders"), false);
 
@@ -397,7 +393,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadJoinEntities_Entities_PropNames_WithExecutor_RunsLoad() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
         dao.loadJoinEntities(entities, List.of("orders", "addresses"), Runnable::run);
 
@@ -410,7 +406,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
         dao.loadJoinEntities(List.<TestEntity> of(), List.of("orders"), Runnable::run);
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     @Test
@@ -418,7 +414,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
         dao.loadJoinEntities(entities, List.of("orders"), true);
 
@@ -442,7 +438,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadAllJoinEntities(Mockito.same(entity), Mockito.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.same(entity), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         dao.loadAllJoinEntities(entity, true);
 
@@ -465,7 +461,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadAllJoinEntities(Mockito.same(entities), Mockito.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         dao.loadAllJoinEntities(entities, true);
 
@@ -477,7 +473,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_LoopsEach() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(eq(entity), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntitiesIfAbsent(eq(entity), ArgumentMatchers.anyString());
 
         dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"));
 
@@ -509,7 +505,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_LoopsEach() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.same(entities), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
         dao.loadJoinEntitiesIfAbsent(entities, List.of("orders", "addresses"));
 
@@ -527,12 +523,12 @@ public class JoinEntityHelperTest extends TestBase {
         List<String> selectPropNames = List.of("id");
 
         when(dao.stream(selectPropNames, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(first, second));
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
 
         List<TestEntity> result = dao.stream(selectPropNames, String.class, condition).toList();
 
         assertEquals(2, result.size());
-        verify(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
+        verify(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
     }
 
     @Test
@@ -542,14 +538,14 @@ public class JoinEntityHelperTest extends TestBase {
         Condition condition = Mockito.mock(Condition.class);
 
         when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
 
         List<TestEntity> result = dao.stream(null, List.of(String.class, Integer.class), condition).toList();
 
         assertEquals(1, result.size());
-        verify(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        verify(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
+        verify(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        verify(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
     }
 
     @Test
@@ -563,7 +559,7 @@ public class JoinEntityHelperTest extends TestBase {
 
         assertEquals(List.of(entity), dao.stream(null, (Collection<Class<?>>) null, condition).toList());
         assertEquals(List.of(entity), dao.stream(null, List.of(), condition).toList());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), Mockito.any(Class.class));
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.any(Class.class));
     }
 
     @Test
@@ -573,12 +569,12 @@ public class JoinEntityHelperTest extends TestBase {
         Condition condition = Mockito.mock(Condition.class);
 
         when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
-        doNothing().when(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
 
         List<TestEntity> result = dao.stream(null, true, condition).toList();
 
         assertEquals(1, result.size());
-        verify(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        verify(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
     }
 
     @Test
@@ -644,7 +640,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findFirst(null, String.class, condition);
 
         assertEquals(false, result.isPresent());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<TestEntity> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<TestEntity> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: findFirst(selectPropNames, Collection<Class<?>>, cond) - result not present
@@ -658,7 +654,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findFirst(null, List.of(String.class, Integer.class), condition);
 
         assertEquals(false, result.isPresent());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<TestEntity> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<TestEntity> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: findFirst(selectPropNames, Collection<Class<?>>, cond) - joinEntitiesToLoad empty
@@ -674,7 +670,7 @@ public class JoinEntityHelperTest extends TestBase {
 
         assertTrue(result.isPresent());
         assertSame(entity, result.orElseNull());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<TestEntity> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<TestEntity> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: findFirst(selectPropNames, boolean, cond) - includeAllJoinEntities=false
@@ -689,7 +685,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findFirst(null, false, condition);
 
         assertTrue(result.isPresent());
-        verify(dao, Mockito.never()).loadAllJoinEntities(Mockito.<TestEntity> any());
+        verify(dao, Mockito.never()).loadAllJoinEntities(ArgumentMatchers.<TestEntity> any());
     }
 
     // edge: findFirst(selectPropNames, boolean, cond) - result not present when includeAll=true
@@ -703,7 +699,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findFirst(null, true, condition);
 
         assertEquals(false, result.isPresent());
-        verify(dao, Mockito.never()).loadAllJoinEntities(Mockito.<TestEntity> any());
+        verify(dao, Mockito.never()).loadAllJoinEntities(ArgumentMatchers.<TestEntity> any());
     }
 
     // edge: findOnlyOne(selectPropNames, Class<?>, cond) - result not present
@@ -717,7 +713,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findOnlyOne(null, String.class, condition);
 
         assertEquals(false, result.isPresent());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<TestEntity> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<TestEntity> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: findOnlyOne(selectPropNames, Collection<Class<?>>, cond) - result not present
@@ -731,7 +727,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findOnlyOne(null, List.of(String.class, Integer.class), condition);
 
         assertEquals(false, result.isPresent());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<TestEntity> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<TestEntity> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: findOnlyOne(selectPropNames, Collection<Class<?>>, cond) - joinEntitiesToLoad empty
@@ -746,7 +742,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findOnlyOne(null, List.<Class<?>> of(), condition);
 
         assertTrue(result.isPresent());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<TestEntity> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<TestEntity> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: findOnlyOne(selectPropNames, boolean, cond) - includeAll=false
@@ -761,7 +757,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findOnlyOne(null, false, condition);
 
         assertTrue(result.isPresent());
-        verify(dao, Mockito.never()).loadAllJoinEntities(Mockito.<TestEntity> any());
+        verify(dao, Mockito.never()).loadAllJoinEntities(ArgumentMatchers.<TestEntity> any());
     }
 
     // edge: findOnlyOne(selectPropNames, boolean, cond) - result not present when includeAll=true
@@ -775,7 +771,7 @@ public class JoinEntityHelperTest extends TestBase {
         Optional<TestEntity> result = dao.findOnlyOne(null, true, condition);
 
         assertEquals(false, result.isPresent());
-        verify(dao, Mockito.never()).loadAllJoinEntities(Mockito.<TestEntity> any());
+        verify(dao, Mockito.never()).loadAllJoinEntities(ArgumentMatchers.<TestEntity> any());
     }
 
     // edge: list(selectPropNames, Class<?>, cond) - result empty
@@ -789,7 +785,7 @@ public class JoinEntityHelperTest extends TestBase {
         List<TestEntity> result = dao.list(null, String.class, condition);
 
         assertEquals(0, result.size());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: list(selectPropNames, Collection<Class<?>>, cond) - result empty
@@ -803,7 +799,7 @@ public class JoinEntityHelperTest extends TestBase {
         List<TestEntity> result = dao.list(null, List.of(String.class, Integer.class), condition);
 
         assertEquals(0, result.size());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: list(selectPropNames, Collection<Class<?>>, cond) - joinEntitiesToLoad empty
@@ -819,7 +815,7 @@ public class JoinEntityHelperTest extends TestBase {
         List<TestEntity> result = dao.list(null, List.<Class<?>> of(), condition);
 
         assertEquals(1, result.size());
-        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), Mockito.<Class<?>> any());
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.<Class<?>> any());
     }
 
     // edge: list(selectPropNames, boolean, cond) - includeAll=false
@@ -835,7 +831,7 @@ public class JoinEntityHelperTest extends TestBase {
         List<TestEntity> result = dao.list(null, false, condition);
 
         assertEquals(1, result.size());
-        verify(dao, Mockito.never()).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        verify(dao, Mockito.never()).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
     }
 
     // edge: list(selectPropNames, boolean, cond) - result empty when includeAll=true
@@ -849,7 +845,7 @@ public class JoinEntityHelperTest extends TestBase {
         List<TestEntity> result = dao.list(null, true, condition);
 
         assertEquals(0, result.size());
-        verify(dao, Mockito.never()).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        verify(dao, Mockito.never()).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
     }
 
     // edge: loadJoinEntities(entities, Collection<String>) - empty entities
@@ -859,7 +855,7 @@ public class JoinEntityHelperTest extends TestBase {
         List<TestEntity> entities = List.of(new TestEntity());
 
         dao.loadJoinEntities(entities, List.<String> of());
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     // edge: loadJoinEntities(entities, Collection<String>) - both empty
@@ -868,7 +864,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
         dao.loadJoinEntities(List.<TestEntity> of(), List.<String> of());
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     // edge: loadJoinEntitiesIfAbsent(entity, Collection<String>) - empty propNames
@@ -878,7 +874,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestEntity entity = new TestEntity();
 
         dao.loadJoinEntitiesIfAbsent(entity, List.<String> of());
-        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(Mockito.eq(entity), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entity), ArgumentMatchers.anyString());
     }
 
     // edge: loadJoinEntitiesIfAbsent(entities, Collection<String>) - empty propNames only
@@ -888,7 +884,7 @@ public class JoinEntityHelperTest extends TestBase {
         List<TestEntity> entities = List.of(new TestEntity());
 
         dao.loadJoinEntitiesIfAbsent(entities, List.<String> of());
-        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     // edge: loadJoinEntitiesIfAbsent(entities, Collection<String>) - both empty
@@ -897,7 +893,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
         dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), List.<String> of());
-        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     // loadAllJoinEntities(entity) - calls loadJoinEntities with all join info keys
@@ -905,8 +901,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadAllJoinEntities_SingleEntity() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadAllJoinEntities(entity);
@@ -919,8 +915,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadAllJoinEntities_CollectionEntity() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadAllJoinEntities(entities);
@@ -942,8 +938,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadAllJoinEntities_SingleEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadAllJoinEntities(entity, Runnable::run);
@@ -955,8 +951,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testLoadAllJoinEntities_CollectionEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadAllJoinEntities(entities, Runnable::run);
@@ -977,7 +973,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.same(entity), Mockito.anyCollection());
+        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entity), ArgumentMatchers.anyCollection());
 
         dao.loadJoinEntitiesIfAbsent(entity, List.of("orders"), false);
 
@@ -990,7 +986,9 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.eq(entity), Mockito.anyCollection(), Mockito.<java.util.concurrent.Executor> any());
+        doNothing().when(dao)
+                .loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entity), ArgumentMatchers.anyCollection(),
+                        ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         dao.loadJoinEntitiesIfAbsent(entity, List.of("orders"), true);
 
@@ -1002,7 +1000,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_RunsLoad() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString(), isNull());
+        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
 
         dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), Runnable::run);
 
@@ -1017,7 +1015,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestEntity entity = new TestEntity();
 
         dao.loadJoinEntitiesIfAbsent(entity, List.<String> of(), Runnable::run);
-        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(Mockito.eq(entity), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entity), ArgumentMatchers.anyString());
     }
 
     // loadJoinEntitiesIfAbsent(entities, Collection<String>, boolean) - false branch
@@ -1025,7 +1023,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.same(entities), Mockito.anyCollection());
+        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.anyCollection());
 
         dao.loadJoinEntitiesIfAbsent(entities, List.of("orders"), false);
 
@@ -1038,7 +1036,9 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.eq(entities), Mockito.anyCollection(), Mockito.<java.util.concurrent.Executor> any());
+        doNothing().when(dao)
+                .loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entities), ArgumentMatchers.anyCollection(),
+                        ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         dao.loadJoinEntitiesIfAbsent(entities, List.of("orders"), true);
 
@@ -1050,7 +1050,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_WithExecutor_RunsLoad() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.same(entities), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
         dao.loadJoinEntitiesIfAbsent(entities, List.of("orders", "addresses"), Runnable::run);
 
@@ -1064,7 +1064,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
         dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), List.<String> of(), Runnable::run);
-        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     // loadJoinEntitiesIfAbsent(entity) - loads all join entities if null
@@ -1072,8 +1072,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_SingleEntity_All() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadJoinEntitiesIfAbsent(entity);
@@ -1098,7 +1098,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.eq(entity), Mockito.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entity), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         dao.loadJoinEntitiesIfAbsent(entity, true);
 
@@ -1110,8 +1110,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_SingleEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadJoinEntitiesIfAbsent(entity, Runnable::run);
@@ -1123,8 +1123,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_CollectionEntity_All() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadJoinEntitiesIfAbsent(entities);
@@ -1158,7 +1158,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.eq(entities), Mockito.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entities), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         dao.loadJoinEntitiesIfAbsent(entities, true);
 
@@ -1170,8 +1170,8 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_CollectionEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         dao.loadJoinEntitiesIfAbsent(entities, Runnable::run);
@@ -1192,7 +1192,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteJoinEntities_Entity_PropNames_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doReturn(5).when(dao).deleteJoinEntities(Mockito.same(entity), Mockito.anyCollection());
+        doReturn(5).when(dao).deleteJoinEntities(ArgumentMatchers.same(entity), ArgumentMatchers.anyCollection());
 
         int result = dao.deleteJoinEntities(entity, List.of("orders"), false);
 
@@ -1206,7 +1206,8 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doReturn(3).when(dao).deleteJoinEntities(Mockito.eq(entity), Mockito.anyCollection(), Mockito.<java.util.concurrent.Executor> any());
+        doReturn(3).when(dao)
+                .deleteJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyCollection(), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         int result = dao.deleteJoinEntities(entity, List.of("orders"), true);
 
@@ -1219,7 +1220,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteJoinEntities_Entity_PropNames_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doReturn(2).when(dao).deleteJoinEntities(Mockito.eq(entity), Mockito.anyString());
+        doReturn(2).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyString());
 
         int result = dao.deleteJoinEntities(entity, List.of("orders"), Runnable::run);
 
@@ -1236,7 +1237,7 @@ public class JoinEntityHelperTest extends TestBase {
         int result = dao.deleteJoinEntities(entity, List.<String> of(), Runnable::run);
 
         assertEquals(0, result);
-        verify(dao, Mockito.never()).deleteJoinEntities(Mockito.eq(entity), Mockito.anyString());
+        verify(dao, Mockito.never()).deleteJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyString());
     }
 
     // deleteJoinEntities(entities, Collection<String>, boolean) - false branch
@@ -1244,7 +1245,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteJoinEntities_Entities_PropNames_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doReturn(5).when(dao).deleteJoinEntities(Mockito.same(entities), Mockito.anyCollection());
+        doReturn(5).when(dao).deleteJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyCollection());
 
         int result = dao.deleteJoinEntities(entities, List.of("orders"), false);
 
@@ -1258,7 +1259,8 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doReturn(3).when(dao).deleteJoinEntities(Mockito.eq(entities), Mockito.anyCollection(), Mockito.<java.util.concurrent.Executor> any());
+        doReturn(3).when(dao)
+                .deleteJoinEntities(ArgumentMatchers.eq(entities), ArgumentMatchers.anyCollection(), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         int result = dao.deleteJoinEntities(entities, List.of("orders"), true);
 
@@ -1271,7 +1273,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteJoinEntities_Entities_PropNames_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doReturn(3).when(dao).deleteJoinEntities(Mockito.eq(entities), Mockito.anyString());
+        doReturn(3).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entities), ArgumentMatchers.anyString());
 
         int result = dao.deleteJoinEntities(entities, List.of("orders"), Runnable::run);
 
@@ -1287,7 +1289,7 @@ public class JoinEntityHelperTest extends TestBase {
         int result = dao.deleteJoinEntities(List.<TestEntity> of(), List.<String> of(), Runnable::run);
 
         assertEquals(0, result);
-        verify(dao, Mockito.never()).deleteJoinEntities(Mockito.<List<TestEntity>> any(), Mockito.anyString());
+        verify(dao, Mockito.never()).deleteJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
     // loadJoinEntitiesIfAbsent(entity, String, Collection<String>) - property is null, calls load
@@ -1311,7 +1313,7 @@ public class JoinEntityHelperTest extends TestBase {
 
         dao.loadJoinEntitiesIfAbsent(entity, "orders", null);
 
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<TestEntity> any(), Mockito.anyString(), Mockito.any());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<TestEntity> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
     }
 
     // loadJoinEntitiesIfAbsent(entities, String, Collection<String>) - all properties null, loads all
@@ -1319,7 +1321,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_CollectionEntity_PropName_SelectProps_PropertyNull() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity(), new TestEntity());
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq("orders"), isNull());
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq("orders"), isNull());
 
         dao.loadJoinEntitiesIfAbsent(entities, "orders", null);
 
@@ -1336,7 +1338,8 @@ public class JoinEntityHelperTest extends TestBase {
 
         dao.loadJoinEntitiesIfAbsent(entities, "orders", null);
 
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), Mockito.anyString(), Mockito.any());
+        Mockito.verify(dao, Mockito.never())
+                .loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
     }
 
     // edge: loadJoinEntitiesIfAbsent(entities, String, Collection<String>) - empty entities
@@ -1346,7 +1349,8 @@ public class JoinEntityHelperTest extends TestBase {
 
         dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), "orders", null);
 
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), Mockito.anyString(), Mockito.any());
+        Mockito.verify(dao, Mockito.never())
+                .loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
     }
 
     // deleteAllJoinEntities(entity)
@@ -1354,10 +1358,10 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteAllJoinEntities_SingleEntity() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
-        doReturn(0).when(dao).deleteJoinEntities(Mockito.eq(entity), Mockito.anyCollection());
+        doReturn(0).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyCollection());
 
         int result = dao.deleteAllJoinEntities(entity);
 
@@ -1384,7 +1388,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doReturn(3).when(dao).deleteAllJoinEntities(Mockito.eq(entity), Mockito.<java.util.concurrent.Executor> any());
+        doReturn(3).when(dao).deleteAllJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         int result = dao.deleteAllJoinEntities(entity, true);
 
@@ -1397,10 +1401,11 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteAllJoinEntities_SingleEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
-        doReturn(0).when(dao).deleteJoinEntities(Mockito.eq(entity), Mockito.anyCollection(), Mockito.<java.util.concurrent.Executor> any());
+        doReturn(0).when(dao)
+                .deleteJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyCollection(), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         int result = dao.deleteAllJoinEntities(entity, Runnable::run);
 
@@ -1413,10 +1418,10 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteAllJoinEntities_CollectionEntity() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
-        doReturn(0).when(dao).deleteJoinEntities(Mockito.eq(entities), Mockito.anyCollection());
+        doReturn(0).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entities), ArgumentMatchers.anyCollection());
 
         int result = dao.deleteAllJoinEntities(entities);
 
@@ -1454,7 +1459,7 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doReturn(3).when(dao).deleteAllJoinEntities(Mockito.eq(entities), Mockito.<java.util.concurrent.Executor> any());
+        doReturn(3).when(dao).deleteAllJoinEntities(ArgumentMatchers.eq(entities), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         int result = dao.deleteAllJoinEntities(entities, true);
 
@@ -1467,10 +1472,11 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteAllJoinEntities_CollectionEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
-        doReturn(0).when(dao).deleteJoinEntities(Mockito.eq(entities), Mockito.anyCollection(), Mockito.<java.util.concurrent.Executor> any());
+        doReturn(0).when(dao)
+                .deleteJoinEntities(ArgumentMatchers.eq(entities), ArgumentMatchers.anyCollection(), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
         int result = dao.deleteAllJoinEntities(entities, Runnable::run);
 
@@ -1500,7 +1506,7 @@ public class JoinEntityHelperTest extends TestBase {
         }
 
         when(dao.list((Collection<String>) null, condition)).thenReturn(largeEntities);
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
 
         List<TestEntity> result = dao.list(null, String.class, condition);
 
@@ -1519,8 +1525,8 @@ public class JoinEntityHelperTest extends TestBase {
         }
 
         when(dao.list((Collection<String>) null, condition)).thenReturn(largeEntities);
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
 
         List<TestEntity> result = dao.list(null, List.of(String.class, Integer.class), condition);
 
@@ -1539,7 +1545,7 @@ public class JoinEntityHelperTest extends TestBase {
         }
 
         when(dao.list((Collection<String>) null, condition)).thenReturn(largeEntities);
-        doNothing().when(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
 
         List<TestEntity> result = dao.list(null, true, condition);
 
@@ -1555,7 +1561,7 @@ public class JoinEntityHelperTest extends TestBase {
         Condition condition = Mockito.mock(Condition.class);
 
         when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
-        Mockito.doThrow(new SQLException("db error")).when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
+        Mockito.doThrow(new SQLException("db error")).when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
 
         assertThrows(UncheckedSQLException.class, () -> dao.stream(null, String.class, condition).toList());
     }
@@ -1568,8 +1574,8 @@ public class JoinEntityHelperTest extends TestBase {
         Condition condition = Mockito.mock(Condition.class);
 
         when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
-        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(String.class));
-        Mockito.doThrow(new SQLException("db error")).when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), eq(Integer.class));
+        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
+        Mockito.doThrow(new SQLException("db error")).when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
 
         assertThrows(UncheckedSQLException.class, () -> dao.stream(null, List.of(String.class, Integer.class), condition).toList());
     }
@@ -1582,7 +1588,7 @@ public class JoinEntityHelperTest extends TestBase {
         Condition condition = Mockito.mock(Condition.class);
 
         when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
-        Mockito.doThrow(new SQLException("db error")).when(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
+        Mockito.doThrow(new SQLException("db error")).when(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
 
         assertThrows(UncheckedSQLException.class, () -> dao.stream(null, true, condition).toList());
     }
@@ -1593,12 +1599,14 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(List.of("orders"));
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders"));
             doNothing().when(dao).loadJoinEntities(eq(entity), eq("orders"), eq(null));
 
             dao.loadJoinEntities(entity, String.class, null);
@@ -1613,12 +1621,14 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(List.of("orders"));
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders"));
             doNothing().when(dao).loadJoinEntities(eq(entities), eq("orders"), eq(null));
 
             dao.loadJoinEntities(entities, String.class, null);
@@ -1634,7 +1644,7 @@ public class JoinEntityHelperTest extends TestBase {
 
         dao.loadJoinEntities(List.<TestEntity> of(), String.class, null);
 
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<List<TestEntity>> any(), Mockito.anyString(), Mockito.any());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
     }
 
     // loadJoinEntitiesIfAbsent(T, Class<?>, Collection<String>) - full path (lines 1082, 1084, 1086, 1088-1091)
@@ -1643,12 +1653,14 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(List.of("orders"));
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders"));
             doNothing().when(dao).loadJoinEntitiesIfAbsent(eq(entity), eq("orders"), eq(null));
 
             dao.loadJoinEntitiesIfAbsent(entity, String.class, null);
@@ -1663,14 +1675,16 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
                     .thenReturn(List.of("orders", "addresses"));
-            doNothing().when(dao).loadJoinEntitiesIfAbsent(Mockito.<Collection<TestEntity>> any(), Mockito.anyString(), Mockito.any());
+            doNothing().when(dao)
+                    .loadJoinEntitiesIfAbsent(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
 
             dao.loadJoinEntitiesIfAbsent(entities, String.class, null);
 
@@ -1686,7 +1700,8 @@ public class JoinEntityHelperTest extends TestBase {
 
         dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), String.class, null);
 
-        Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(Mockito.<List<TestEntity>> any(), Mockito.anyString(), Mockito.any());
+        Mockito.verify(dao, Mockito.never())
+                .loadJoinEntitiesIfAbsent(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
     }
 
     // deleteJoinEntities(T, Class<?>) - single propName path (lines 1587-1588)
@@ -1695,12 +1710,14 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(List.of("orders"));
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders"));
             doReturn(5).when(dao).deleteJoinEntities(entity, "orders");
 
             int result = dao.deleteJoinEntities(entity, String.class);
@@ -1718,14 +1735,15 @@ public class JoinEntityHelperTest extends TestBase {
         DataSource dataSource = Mockito.mock(DataSource.class);
         SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
         when(dao.dataSource()).thenReturn(dataSource);
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class);
              MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
                     .thenReturn(List.of("orders", "addresses"));
             daoUtil.when(() -> DaoUtil.getDao(dao)).thenReturn(dao);
             jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
@@ -1747,14 +1765,15 @@ public class JoinEntityHelperTest extends TestBase {
         DataSource dataSource = Mockito.mock(DataSource.class);
         SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
         when(dao.dataSource()).thenReturn(dataSource);
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class);
              MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
                     .thenReturn(List.of("orders", "addresses"));
             daoUtil.when(() -> DaoUtil.getDao(dao)).thenReturn(dao);
             jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
@@ -1774,12 +1793,14 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(List.of("orders"));
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders"));
             doReturn(5).when(dao).deleteJoinEntities(entities, "orders");
 
             int result = dao.deleteJoinEntities(entities, String.class);
@@ -1807,14 +1828,15 @@ public class JoinEntityHelperTest extends TestBase {
         DataSource dataSource = Mockito.mock(DataSource.class);
         SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.targetDaoInterface()).thenReturn((Class) TestJoinDao.class);
-        when(dao.targetEntityClass()).thenReturn((Class) TestEntity.class);
+        when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
         when(dao.dataSource()).thenReturn(dataSource);
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class);
              MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
                     .thenReturn(List.of("orders", "addresses"));
             daoUtil.when(() -> DaoUtil.getDao(dao)).thenReturn(dao);
             jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
@@ -1845,7 +1867,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteJoinEntities_Entity_PropNames_SingleProp() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doReturn(5).when(dao).deleteJoinEntities(Mockito.same(entity), Mockito.anyString());
+        doReturn(5).when(dao).deleteJoinEntities(ArgumentMatchers.same(entity), ArgumentMatchers.anyString());
 
         int result = dao.deleteJoinEntities(entity, List.of("orders"));
 
@@ -1923,7 +1945,7 @@ public class JoinEntityHelperTest extends TestBase {
     public void testDeleteJoinEntities_Entities_PropNames_SingleProp() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doReturn(5).when(dao).deleteJoinEntities(Mockito.same(entities), Mockito.anyString());
+        doReturn(5).when(dao).deleteJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
         int result = dao.deleteJoinEntities(entities, List.of("orders"));
 
@@ -1982,12 +2004,16 @@ public class JoinEntityHelperTest extends TestBase {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(new ArrayList<>());
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(new ArrayList<>());
 
-            int result = dao.deleteJoinEntities(new ArrayList<TestEntity>(), String.class);
+            int result = dao.deleteJoinEntities(new ArrayList<>(), String.class);
 
             assertEquals(0, result);
-            daoUtil.verify(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()), Mockito.never());
+            daoUtil.verify(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()),
+                    Mockito.never());
         }
     }
 }

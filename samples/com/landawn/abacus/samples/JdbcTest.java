@@ -30,12 +30,12 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.DataTransferUtil;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.DataTransferUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.samples.dao.AddressDao;

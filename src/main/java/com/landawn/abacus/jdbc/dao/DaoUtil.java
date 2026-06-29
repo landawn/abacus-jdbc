@@ -65,7 +65,7 @@ import com.landawn.abacus.util.function.Function;
  * @see UncheckedCrudDao
  */
 @Internal
-final class DaoUtil {
+public final class DaoUtil {
     private DaoUtil() {
         // utility class - prevent instantiation.
     }
@@ -253,7 +253,7 @@ final class DaoUtil {
      * @return the DAO instance cast to CrudDao
      * @throws UnsupportedOperationException if the DAO does not implement CrudDao interface
      */
-    static <T, ID, TD extends CrudDao<T, ID, TD>> TD getCrudDao(final CrudJoinEntityHelper<T, ID, TD> dao) {
+    static <T, ID, TD extends CrudDao<T, ID, TD>> TD getCrudDao(final ReadableCrudJoinEntityHelper<T, ID, TD> dao) {
         if (dao instanceof CrudDao) {
             return (TD) dao;
         } else {
@@ -288,7 +288,7 @@ final class DaoUtil {
      * @return the DAO instance cast to Dao
      * @throws UnsupportedOperationException if the DAO does not implement Dao interface
      */
-    static <T, TD extends Dao<T, TD>> TD getDao(final JoinEntityHelper<T, TD> dao) {
+    static <T, TD extends Dao<T, TD>> TD getDao(final ReadableJoinEntityHelper<T, TD> dao) {
         if (dao instanceof Dao) {
             return (TD) dao;
         } else {
@@ -323,7 +323,7 @@ final class DaoUtil {
      * @return the DAO instance cast to UncheckedDao
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedDao interface
      */
-    static <T, TD extends UncheckedDao<T, TD>> TD getDao(final UncheckedJoinEntityHelper<T, TD> dao) {
+    static <T, TD extends UncheckedDao<T, TD>> TD getDao(final UncheckedReadableJoinEntityHelper<T, TD> dao) {
         if (dao instanceof UncheckedDao) {
             return (TD) dao;
         } else {
@@ -359,7 +359,7 @@ final class DaoUtil {
      * @return the DAO instance cast to UncheckedCrudDao
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudDao interface
      */
-    static <T, ID, TD extends UncheckedCrudDao<T, ID, TD>> TD getCrudDao(final UncheckedCrudJoinEntityHelper<T, ID, TD> dao) {
+    static <T, ID, TD extends UncheckedCrudDao<T, ID, TD>> TD getCrudDao(final UncheckedReadableCrudJoinEntityHelper<T, ID, TD> dao) {
         if (dao instanceof UncheckedCrudDao) {
             return (TD) dao;
         } else {
@@ -625,7 +625,7 @@ final class DaoUtil {
      * @param sql the SQL statement to check; may be empty or {@code null}
      * @return {@code true} if the SQL is a SELECT query, {@code false} otherwise
      */
-    static boolean isSelectQuery(final String sql) {
+    public static boolean isSelectQuery(final String sql) {
         return "SELECT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
     }
 
@@ -662,7 +662,7 @@ final class DaoUtil {
      * @param sql the SQL statement to check; may be empty or {@code null}
      * @return {@code true} if the SQL is an INSERT query, {@code false} otherwise
      */
-    static boolean isInsertQuery(final String sql) {
+    public static boolean isInsertQuery(final String sql) {
         return "INSERT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
     }
 
@@ -683,7 +683,7 @@ final class DaoUtil {
      * @return {@code true} if the SQL is a read-only SELECT query, {@code false} otherwise
      * @see #isSelectQuery(String)
      */
-    static boolean isReadOnlyQuery(final String sql) {
+    public static boolean isReadOnlyQuery(final String sql) {
         return isSelectQuery(sql) && !containsMutationQueryKeyword(sql) && !containsSelectIntoClause(sql);
     }
 
@@ -712,7 +712,7 @@ final class DaoUtil {
      * @see #isSelectQuery(String)
      * @see #isInsertQuery(String)
      */
-    static boolean isNoUpdateQuery(final String sql) {
+    public static boolean isNoUpdateQuery(final String sql) {
         if (!(isSelectQuery(sql) || isInsertQuery(sql))) {
             return false;
         }

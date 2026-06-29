@@ -21,7 +21,7 @@ public class UncheckedReadOnlyCrudDaoLTest extends TestBase {
 
     @Test
     public void testExtendsUncheckedNoUpdateCrudDaoL() {
-        assertTrue(UncheckedNoUpdateCrudDaoL.class.isAssignableFrom(UncheckedReadOnlyCrudDaoL.class));
+        assertTrue(UncheckedReadableCrudDaoL.class.isAssignableFrom(UncheckedReadOnlyCrudDaoL.class));
     }
 
     @Test

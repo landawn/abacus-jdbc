@@ -14,12 +14,12 @@ import java.util.Collection;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import static com.landawn.abacus.query.Dsl.PSC;
 import com.landawn.abacus.util.u.Optional;
 
 public class CrudDaoTest extends TestBase {
@@ -168,7 +168,7 @@ public class CrudDaoTest extends TestBase {
         dbEntity.setId(1L);
         dbEntity.setName("original");
 
-        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.of(dbEntity));
+        when(dao.findOnlyOne(ArgumentMatchers.any())).thenReturn(Optional.of(dbEntity));
         when(dao.update(dbEntity)).thenReturn(1);
 
         IdentifiedEntity result = dao.upsert(entity, Mockito.mock(com.landawn.abacus.query.condition.Condition.class));
@@ -192,7 +192,7 @@ public class CrudDaoTest extends TestBase {
         entity.setId(5L);
         entity.setName("new");
 
-        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.empty());
+        when(dao.findOnlyOne(ArgumentMatchers.any())).thenReturn(Optional.empty());
 
         IdentifiedEntity result = dao.upsert(entity, Mockito.mock(com.landawn.abacus.query.condition.Condition.class));
 
@@ -349,10 +349,10 @@ public class CrudDaoTest extends TestBase {
         entity.setId(7L);
         entity.setName("X");
 
-        Mockito.doReturn(entity).when(dao).upsert(Mockito.same(entity), Mockito.anyList());
+        Mockito.doReturn(entity).when(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.anyList());
 
         assertSame(entity, dao.upsert(entity));
-        verify(dao).upsert(Mockito.same(entity), Mockito.anyList());
+        verify(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.anyList());
     }
 
     // upsert(entity, cond) — entity class with no @Id triggers the empty-idPropNameList branch
@@ -380,7 +380,7 @@ public class CrudDaoTest extends TestBase {
         NoIdEntity dbEntity = new NoIdEntity();
         dbEntity.setName("original");
 
-        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.of(dbEntity));
+        when(dao.findOnlyOne(ArgumentMatchers.any())).thenReturn(Optional.of(dbEntity));
         when(dao.update(dbEntity)).thenReturn(1);
 
         NoIdEntity result = dao.upsert(entity, Mockito.mock(com.landawn.abacus.query.condition.Condition.class));
@@ -397,10 +397,10 @@ public class CrudDaoTest extends TestBase {
         List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
         List<IdAnnotatedEntity> result = List.of(new IdAnnotatedEntity());
 
-        Mockito.doReturn(result).when(dao).batchUpsert(Mockito.same(entities), Mockito.anyList(), Mockito.eq(2));
+        Mockito.doReturn(result).when(dao).batchUpsert(ArgumentMatchers.same(entities), ArgumentMatchers.anyList(), ArgumentMatchers.eq(2));
 
         assertEquals(result, dao.batchUpsert(entities, 2));
-        verify(dao).batchUpsert(Mockito.same(entities), Mockito.anyList(), Mockito.eq(2));
+        verify(dao).batchUpsert(ArgumentMatchers.same(entities), ArgumentMatchers.anyList(), ArgumentMatchers.eq(2));
     }
 
     // batchUpsert(entities, uniquePropNamesForQuery) — delegates with default batch size
@@ -467,7 +467,7 @@ public class CrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(3L);
 
-        when(dao.gett(Mockito.eq(3L), Mockito.anyCollection())).thenReturn(null);
+        when(dao.gett(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(null);
 
         assertFalse(dao.refresh(entity, List.of("name")));
     }
@@ -497,7 +497,7 @@ public class CrudDaoTest extends TestBase {
         dbEntity.setId(5L);
         dbEntity.setName("fresh");
 
-        when(dao.gett(Mockito.anyLong(), Mockito.anyCollection())).thenReturn(dbEntity);
+        when(dao.gett(ArgumentMatchers.anyLong(), ArgumentMatchers.anyCollection())).thenReturn(dbEntity);
 
         assertTrue(dao.refresh(entity, List.of("name")));
         assertEquals("fresh", entity.getName());
@@ -511,10 +511,10 @@ public class CrudDaoTest extends TestBase {
         entity.setId(1L);
         entity.setName("test");
 
-        Mockito.doReturn(true).when(dao).refresh(Mockito.same(entity), Mockito.any(Collection.class));
+        Mockito.doReturn(true).when(dao).refresh(ArgumentMatchers.same(entity), ArgumentMatchers.any(Collection.class));
 
         assertTrue(dao.refresh(entity));
-        Mockito.verify(dao).refresh(Mockito.same(entity), Mockito.any(Collection.class));
+        Mockito.verify(dao).refresh(ArgumentMatchers.same(entity), ArgumentMatchers.any(Collection.class));
     }
 
     // batchRefresh(entities, batchSize) — non-empty path delegates to full signature (lines 1498-1506).
@@ -526,10 +526,10 @@ public class CrudDaoTest extends TestBase {
         entity.setName("X");
         List<IdAnnotatedEntity> entities = List.of(entity);
 
-        Mockito.doReturn(2).when(dao).batchRefresh(Mockito.same(entities), Mockito.any(Collection.class), Mockito.eq(3));
+        Mockito.doReturn(2).when(dao).batchRefresh(ArgumentMatchers.same(entities), ArgumentMatchers.any(Collection.class), ArgumentMatchers.eq(3));
 
         assertEquals(2, dao.batchRefresh(entities, 3));
-        Mockito.verify(dao).batchRefresh(Mockito.same(entities), Mockito.any(Collection.class), Mockito.eq(3));
+        Mockito.verify(dao).batchRefresh(ArgumentMatchers.same(entities), ArgumentMatchers.any(Collection.class), ArgumentMatchers.eq(3));
     }
 
     // batchRefresh(entities, propNamesToRefresh, batchSize) — non-empty entities, DB returns entities, copies and returns refreshed count (lines 1563-1588).
@@ -544,7 +544,7 @@ public class CrudDaoTest extends TestBase {
         dbEntity.setId(7L);
         dbEntity.setName("fresh");
 
-        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(2))).thenReturn(List.of(dbEntity));
+        when(dao.batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2))).thenReturn(List.of(dbEntity));
 
         int count = dao.batchRefresh(entities, List.of("name"), 2);
 
@@ -568,7 +568,7 @@ public class CrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
 
-        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(5))).thenReturn(List.of());
+        when(dao.batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5))).thenReturn(List.of());
 
         assertEquals(0, dao.batchRefresh(List.of(entity), List.of("name"), 5));
     }

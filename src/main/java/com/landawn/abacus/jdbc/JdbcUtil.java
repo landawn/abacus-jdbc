@@ -72,6 +72,7 @@ import com.landawn.abacus.jdbc.SqlTransaction.CreatedBy;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.jdbc.dao.ReadableDao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.JsonParser;
@@ -11509,7 +11510,7 @@ public final class JdbcUtil {
 
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
-            final Class<? extends Dao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
+            final Class<? extends ReadableDao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (!Beans.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
@@ -12028,7 +12029,7 @@ public final class JdbcUtil {
      * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
+    public static <TD extends ReadableDao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
         return DaoImpl.createDao(daoInterface, null, ds, Dsl.PSC, null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
@@ -12086,7 +12087,8 @@ public final class JdbcUtil {
      * @see DaoCreationOptions
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions) {
+    public static <TD extends ReadableDao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
+            final DaoCreationOptions daoCreationOptions) {
         final DaoCreationOptions options = daoCreationOptions == null ? DaoCreationOptions.builder().build() : daoCreationOptions;
         final Dsl dsl = options.dsl() == null ? Dsl.PSC : options.dsl();
         final Executor executor = options.executor() == null ? JdbcUtil.asyncExecutor.getExecutor() : options.executor();

@@ -108,7 +108,7 @@ plus the generated-key prepare overloads
 
 ### 4.3 Join-helper level (declared in `JoinEntityHelper`)
 
-**ReadableJoinEntityHelper**: `loadJoinEntities` (×14), `loadAllJoinEntities` (×6), `loadJoinEntitiesIfNull` (all).
+**ReadableJoinEntityHelper**: `loadJoinEntities` (×14), `loadAllJoinEntities` (×6), `loadJoinEntitiesIfAbsent` (all).
 **DeletableJoinEntityHelper**: `deleteJoinEntities` (×9).
 (There is **no** `saveJoinEntities` in the base — joins have only load + delete.)
 
@@ -355,3 +355,158 @@ Smallest blast radius first:
 If the appetite is only for the highest-ROI slice: **Phase 0 + Phase 1 + Phase 3**
 removes the join stubs *and* every prepare stub with minimal generics churn, and
 leaves the (larger but mechanical) entity-op split (Phase 2) as a follow-up.
+
+## 11. Implementation status
+
+**Phase 0 (`Cacheable` marker) — DONE.** New `dao/Cacheable.java`; `NoUpdateDao extends
+Cacheable`; the three `DaoImpl` cache gates (was `2241/2275/6386`) now test
+`Cacheable.class.isAssignableFrom(daoInterface)` with updated messages; the
+`NoUpdateDao`/`UncheckedNoUpdateDao` imports in `DaoImpl` were dropped. Behavior
+preserved (cache still enabled exactly on NoUpdate/ReadOnly + Unchecked).
+
+**Phase 1 (join-helper read/delete split) — DONE.** All 32 `deleteJoinEntities`/
+`deleteAllJoinEntities` throw-stubs (16 checked in `ReadOnlyJoinEntityHelper` + 16
+unchecked in `UncheckedReadOnlyJoinEntityHelper`) are eliminated; calling them on a
+read-only join DAO is now a **compile error**.
+
+New interfaces (6): `ReadableJoinEntityHelper`, `DeletableJoinEntityHelper`
+(`extends ReadableJoinEntityHelper`), `ReadableCrudJoinEntityHelper`, and the
+`Unchecked*` twins `UncheckedReadableJoinEntityHelper`,
+`UncheckedDeletableJoinEntityHelper`, `UncheckedReadableCrudJoinEntityHelper`.
+
+Re-parented composites: `JoinEntityHelper = Readable + Deletable`;
+`CrudJoinEntityHelper = ReadableCrud + JoinEntityHelper`;
+`UncheckedJoinEntityHelper = UncheckedReadable + UncheckedDeletable + JoinEntityHelper`;
+`UncheckedCrudJoinEntityHelper = UncheckedReadableCrud + UncheckedJoinEntityHelper + CrudJoinEntityHelper`.
+Re-parented read-only variants to extend only the `Readable*` side.
+
+Supporting changes:
+* `DaoUtil.getDao`/`getCrudDao` parameter types widened to the `Readable*` roots
+  (`ReadableJoinEntityHelper`, `ReadableCrudJoinEntityHelper`, and unchecked twins),
+  since `Deletable extends Readable` and every read-only variant is a `Readable*`.
+* `DaoImpl` join detection switched from `JoinEntityHelper`/`CrudJoinEntityHelper`
+  `isAssignableFrom` to `ReadableJoinEntityHelper`/`ReadableCrudJoinEntityHelper`
+  (the new common roots that *all* join DAOs — full and read-only — share); the
+  abstract-join-method dispatch guard (`declaringClass.equals(...)`) was broadened to
+  the four new `Readable*`/`Deletable*` declaring classes.
+
+Deviations from §5: the `Deletable*` interfaces `extend Readable*` (rather than being
+fully orthogonal) — there is no delete-only join use case, and this avoids duplicating
+the four internal accessor methods and keeps the `getDao` helpers single-overload. The
+read-only `*L` variants extend `ReadOnlyCrudJoinEntityHelper<…,Long,…>` only and so drop
+the primitive-`long` `get(long, …)` convenience overloads; these still resolve via
+autoboxing to the `Long` overloads, so it is behavior-preserving for callers.
+
+Verification: `mvn clean test` → **3331 tests, 0 failures/0 errors**; `mvn javadoc:javadoc`
+→ BUILD SUCCESS. ~24 obsolete tests (asserting the old hierarchy / runtime-UOE delete
+behavior) were updated to assert the new capability structure via reflection.
+
+**Phase 2 (entity-op split in `Dao`/`CrudDao`) — DONE.** All entity-operation throw-stubs
+are eliminated: `ReadOnlyCrudDao`/`NoUpdateCrudDao` and **every** `Unchecked*` restricted
+variant now carry **0** stubs (was 21/21/9/9/3/3); `ReadOnlyDao` (24→**6**) and
+`NoUpdateDao` (27→**15**) retain only the runtime-checked read/insert `prepareXxx`
+overrides (Option A; Phase 3 would centralize those to reach 0). `save`/`insert`/`update`/
+`upsert`/`delete`/`batchXxx` and `prepareCallableQuery`/stmtCreator-prepares on a
+restricted DAO are now **compile errors**.
+
+New interfaces (18): condition-level `ReadableDao`/`InsertableDao`/`UpdatableDao`/
+`DeletableDao` + unchecked twins; CRUD-level `ReadableCrudDao`/`InsertableCrudDao`/
+`UpdatableCrudDao`/`DeletableCrudDao` + unchecked twins; and the `Long`-id markers
+`ReadableCrudDaoL`/`UncheckedReadableCrudDaoL`.
+
+Key structural decisions:
+* Capability self-type bound is `TD extends ReadableDao<T,TD>` (not `Dao<T,TD>` as
+  sketched in §5.1) — required so `ReadOnlyDao`/`NoUpdateDao` (whose self-type is not a
+  `Dao`) can extend the capabilities. `Insertable/Updatable/Deletable extend ReadableDao`
+  (and CRUD twins extend their condition twin), matching the Phase 1 join precedent, so
+  the shared internal accessors live once in `ReadableDao`.
+* `Dao = Insertable + Updatable + Deletable` (+ compound `upsert`/`batchUpsert` and
+  stmtCreator/callable prepares kept in `Dao`); `NoUpdateDao = InsertableDao + Cacheable`;
+  `ReadOnlyDao = ReadableDao + Cacheable` (no longer a `NoUpdateDao` — the old Liskov
+  edge is gone). `CrudDao = Dao + the four *CrudDao caps`; `NoUpdateCrudDao = NoUpdateDao
+  + ReadableCrudDao + InsertableCrudDao`; `ReadOnlyCrudDao = ReadOnlyDao + ReadableCrudDao`.
+* Restricted `*L` variants extend the empty `ReadableCrudDaoL`/`UncheckedReadableCrudDaoL`
+  marker (not the full `CrudDaoL`), dropping primitive-`long` convenience (boxing covers it).
+
+`DaoImpl`/`JdbcUtil` supporting changes: `createDao` bound and
+`JdbcUtil.getIdGeneratorGetterSetter` widened `Dao` → `ReadableDao`; `isUncheckedDao`
+→ `UncheckedReadableDao`, `isCrudDao` → `ReadableCrudDao`, `isCrudDaoL` →
+`ReadableCrudDaoL`, the entity-class type-arg extraction (`Dao`/`UncheckedDao`
+`isAssignableFrom`) and the join-helper-requires-Dao check → `ReadableDao`; the two
+`declaringClass.equals(Dao.class)`/`CrudDao.class` proxy-dispatch guards broadened to the
+10 condition-level / 10 CRUD-level capability classes; the proxy invoker plumbing
+(`Throwables.BiFunction<Dao,…>`, `(Dao) proxy` cast, `daoPool`/`joinEntityDaoPool`,
+`getApplicableDaoForJoinEntity`) retyped `Dao` → `ReadableDao` (the universal proxy root,
+since a read-only proxy no longer implements `Dao`); internal CRUD-insert handlers route
+generated-key prepares through `JdbcUtil.prepareNamedQuery(proxy.dataSource(), …)` and
+cast `(ReadableCrudDao) proxy` for `generateId()`.
+
+Verification: `mvn clean test-compile` clean; `mvn clean test` → **3268 tests, 0
+failures/0 errors** (count dropped from 3331 as ~63 obsolete runtime-UOE restriction
+tests became compile-time-enforced and were removed); `mvn javadoc:javadoc` → BUILD
+SUCCESS.
+
+*Test-suite flakiness note:* one clean run intermittently hit `NoClassDefFoundError`
+for `JdbcUtil`/`DaoUtil` inside `CrudDaoTest`/`JoinEntityHelperTest` `refresh`/`stream`/
+`loadJoinEntitiesIfAbsent` tests — a pre-existing Mockito `mockStatic` +
+`CALLS_REAL_METHODS` instrumentation-dispatch fragility (the real default method, now in
+`ReadableCrudDao`/`ReadableJoinEntityHelper`, is invoked via Mockito's
+`InstrumentationMemberAccessor`, whose dispatcher classloader can't always resolve the
+mocked-static class). It is **order-sensitive and non-deterministic** (passed on rerun;
+`CrudDaoTest` passes in isolation), surfaced only because the refactor changed suite
+discovery order. Not a product regression — `refresh`/`stream`/join-load work unchanged
+in real DAO proxies. Stabilizing these mock-heavy tests is tracked separately.
+
+**Phase 3 (centralize the `prepareQuery` SQL-kind check) — DONE.** The residual runtime-checked
+`prepareXxx` overrides are gone: `ReadOnlyDao` (6) and `NoUpdateDao` (15) are now **empty capability
+composites** (`ReadOnlyDao = ReadableDao + Cacheable`, `NoUpdateDao = InsertableDao + Cacheable`),
+so **every** restricted DAO interface in the tree now carries **0** stubs (the original ~165 are
+fully eliminated).
+
+The SELECT-only / SELECT+INSERT gate moved into the `DaoImpl` proxy: at proxy creation it computes
+`isReadOnlyDao = ReadOnlyDao.class.isAssignableFrom(daoInterface)` and
+`isNoUpdateDao = !isReadOnlyDao && NoUpdateDao.class.isAssignableFrom(daoInterface)`; the
+default-method dispatch then gates the `prepareQuery`/`prepareNamedQuery`/`*ForLargeResult` overloads
+whose first arg is a raw `String`/`ParsedSql` — `ParsedSql` null → `IllegalArgumentException` (mirrors
+the old `checkArgNotNull`), then `DaoUtil.isReadOnlyQuery`/`isNoUpdateQuery` → `UnsupportedOperationException`
+with the original messages. The `Condition`/`Collection`-based prepare *builders* (always SELECT) are
+intentionally excluded. To let `DaoImpl` (package `com.landawn.abacus.jdbc`) reuse the hardened
+tokenizer, `dao.DaoUtil` was promoted to `public` (still `@Internal`) with `isReadOnlyQuery`/
+`isNoUpdateQuery` made `public` (all other members stay package-private).
+
+Because the gate now lives in the proxy (not the interface defaults), the former `Mockito.mock(...,
+CALLS_REAL_METHODS)` + `mockStatic` unit tests of `NoUpdateDaoTest`/`ReadOnlyDaoTest` could no longer
+exercise it; both were rewritten to drive a real `createDao` proxy (mock `DataSource`) and assert
+allowed SELECT/INSERT vs rejected UPDATE/DELETE/CTE/`SELECT INTO`, plus `ParsedSql` null → IAE.
+
+Verification (Phase 3): `mvn clean test` → **3255 tests, 0 failures/0 errors** (count vs Phase 2's
+3268: ~21 mock-based prepare tests replaced by ~9 proxy-based gate tests); `mvn javadoc:javadoc` →
+BUILD SUCCESS.
+
+All three phases are now implemented; the capability redesign is complete.
+
+## 12. Post-implementation review & test hardening
+
+A full behavior-preservation review was performed across all phases (the hierarchy has since also
+been `sealed`/`non-sealed` with explicit `permits` clauses — compiles clean):
+
+* **No functional regressions found.** The centralized prepare-gate fires for exactly the prepare
+  overloads the old per-interface overrides covered (raw `String`/`ParsedSql` first arg;
+  `Condition`/`Collection` SELECT-builders excluded), preserves `ParsedSql` null → `IllegalArgumentException`
+  and bad-SQL → `UnsupportedOperationException` with identical messages; `isReadOnly`/`isNoUpdate` are
+  derived from `daoInterface` and disjoint. The detection retypings (`UncheckedReadableDao`/
+  `ReadableCrudDao`/`ReadableCrudDaoL`) select the same DAO sets as the old `Dao`/`CrudDao`/`CrudDaoL`
+  checks, and the `Dao` → `ReadableDao` proxy-plumbing/cast retyping is *required* (a read-only proxy
+  no longer implements `Dao`), not merely neutral.
+* **Tests added** for the new surface: `CapabilityGatingTest` (Cacheable marker structure; cache
+  permitted on ReadOnly/NoUpdate DAOs but rejected on a full `Dao` with message check; CRUD-level
+  prepare-gate via real `createDao` proxies for ReadOnly/NoUpdate/full; capability composition graph);
+  `DaoUtilTest` (the now-public `isReadOnlyQuery`/`isNoUpdateQuery` gates incl. UPDATE/DELETE/MERGE,
+  upsert clauses, `INSERT OVERWRITE`, `SELECT INTO`, mutating CTE, literal-`'DELETE'`, null);
+  `NoUpdateDaoTest`/`ReadOnlyDaoTest` already rewritten in Phase 3 to drive real proxies.
+* **Javadoc** reviewed: the restricted interfaces (`ReadOnlyDao`/`NoUpdateDao`) and markers
+  (`Cacheable`/`ReadableCrudDaoL`) were given accurate class docs; the generated capability interfaces
+  carry concise accurate class docs with `@param`/`@see`; `mvn javadoc:javadoc` → BUILD SUCCESS.
+
+Verification: `mvn clean test` → **3265 tests, 0 failures/0 errors**; `mvn javadoc:javadoc` →
+BUILD SUCCESS.

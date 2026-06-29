@@ -1,12 +1,10 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +29,7 @@ public class UncheckedNoUpdateCrudDaoLTest extends TestBase {
 
     @Test
     public void testExtendsUncheckedCrudDaoL() {
-        assertTrue(UncheckedCrudDaoL.class.isAssignableFrom(UncheckedNoUpdateCrudDaoL.class));
+        assertTrue(UncheckedReadableCrudDaoL.class.isAssignableFrom(UncheckedNoUpdateCrudDaoL.class));
     }
 
     @Test
@@ -41,22 +39,7 @@ public class UncheckedNoUpdateCrudDaoLTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(UncheckedNoUpdateCrudDaoL.class.getDeclaredMethods().length > 0);
-    }
-
-    @Test
-    public void testUpdate() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.update("status", "active", 1L));
-    }
-
-    @Test
-    public void testUpdate_Map() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.update(Map.of("status", "active"), 1L));
-    }
-
-    @Test
-    public void testDeleteById() {
-        assertThrows(UnsupportedOperationException.class, () -> dao.deleteById(1L));
+        assertTrue(UncheckedReadableCrudDaoL.class.isAssignableFrom(UncheckedNoUpdateCrudDaoL.class));
     }
 
     @SuppressWarnings("unchecked")

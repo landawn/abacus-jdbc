@@ -15,8 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.util.Map;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 
@@ -62,54 +60,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedNoUpdateCrudDaoL<T, TD extends UncheckedNoUpdateCrudDaoL<T, TD>>
-        extends UncheckedNoUpdateCrudDao<T, Long, TD>, UncheckedCrudDaoL<T, TD> {
+public non-sealed interface UncheckedNoUpdateCrudDaoL<T, TD extends UncheckedNoUpdateCrudDaoL<T, TD>>
+        extends UncheckedNoUpdateCrudDao<T, Long, TD>, UncheckedReadableCrudDaoL<T, TD> {
 
-    /**
-     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDaoL}; this method always throws {@link UnsupportedOperationException}.
-     * Single-property updates by primitive {@code long} ID would mutate a stored record, violating the read/insert-only contract.
-     *
-     * @param propName the property name to update
-     * @param propValue the new value for the property
-     * @param id the primitive {@code long} ID of the entity to update
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since updates are not permitted
-     * @deprecated Unsupported in {@code UncheckedNoUpdateCrudDaoL}. Updates are not allowed.
-     */
-    @Deprecated
-    @Override
-    default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Updating is not permitted in a {@code UncheckedNoUpdateCrudDaoL}; this method always throws {@link UnsupportedOperationException}.
-     * Multi-property updates by primitive {@code long} ID would mutate a stored record, violating the read/insert-only contract.
-     *
-     * @param updateProps a map of property names to their new values
-     * @param id the primitive {@code long} ID of the entity to update
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since updates are not permitted
-     * @deprecated Unsupported in {@code UncheckedNoUpdateCrudDaoL}. Updates are not allowed.
-     */
-    @Deprecated
-    @Override
-    default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
-
-    /**
-     * Deleting is not permitted in a {@code UncheckedNoUpdateCrudDaoL}; this method always throws {@link UnsupportedOperationException}.
-     * Deleting by primitive {@code long} ID would remove a stored record, violating the read/insert-only contract.
-     *
-     * @param id the primitive {@code long} ID of the entity to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletes are not permitted
-     * @deprecated Unsupported in {@code UncheckedNoUpdateCrudDaoL}. Deletes are not allowed.
-     */
-    @Deprecated
-    @Override
-    default int deleteById(final long id) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This update/delete operation is not supported in a no-update DAO");
-    }
 }

@@ -58,6 +58,6 @@ package com.landawn.abacus.jdbc.dao;
  * @see CrudJoinEntityHelperL
  * @see CrudDaoL
  */
-public interface ReadOnlyCrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends ReadOnlyCrudJoinEntityHelper<T, Long, TD>, CrudJoinEntityHelperL<T, TD> {
+public interface ReadOnlyCrudJoinEntityHelperL<T, TD extends CrudDaoL<T, TD>> extends ReadOnlyCrudJoinEntityHelper<T, Long, TD> {
 
 }

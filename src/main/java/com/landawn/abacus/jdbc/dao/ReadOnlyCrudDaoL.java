@@ -70,5 +70,5 @@ import com.landawn.abacus.annotation.Beta;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface ReadOnlyCrudDaoL<T, TD extends ReadOnlyCrudDaoL<T, TD>> extends ReadOnlyCrudDao<T, Long, TD>, NoUpdateCrudDaoL<T, TD> {
+public non-sealed interface ReadOnlyCrudDaoL<T, TD extends ReadOnlyCrudDaoL<T, TD>> extends ReadOnlyCrudDao<T, Long, TD>, ReadableCrudDaoL<T, TD> {
 }

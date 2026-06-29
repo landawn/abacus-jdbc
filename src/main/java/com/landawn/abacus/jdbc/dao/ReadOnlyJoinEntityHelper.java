@@ -15,17 +15,15 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.util.Collection;
-import java.util.concurrent.Executor;
-
 /**
  * Read-only helper for join entity operations in DAOs.
- * This interface extends {@link JoinEntityHelper} but overrides all mutation methods to throw
- * {@link UnsupportedOperationException}, enforcing read-only behavior for join entity operations.
  *
- * <p>This interface provides read-only access to join entity operations,
- * preventing any modifications to entity relationships while still allowing
- * load operations inherited from the parent interface.</p>
+ * <p>This interface mixes in only the read side of join-entity support
+ * ({@link ReadableJoinEntityHelper}); it does <b>not</b> extend
+ * {@link DeletableJoinEntityHelper}, so the {@code deleteJoinEntities} and
+ * {@code deleteAllJoinEntities} families are simply absent from the type. Attempting to
+ * call them fails at <b>compile time</b> rather than throwing
+ * {@link UnsupportedOperationException} at runtime.</p>
  *
  * <p><b>Supported Join Entity Read Operations:</b></p>
  * <ul>
@@ -37,311 +35,32 @@ import java.util.concurrent.Executor;
  *   <li>{@code loadAllJoinEntities(Collection)} - Batch load all join entities for multiple entities</li>
  * </ul>
  *
- * <p>All {@code deleteJoinEntities} and {@code deleteAllJoinEntities} operations throw
- * {@link UnsupportedOperationException}.</p>
- *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support
  * public interface UserReadOnlyDao
  *         extends ReadOnlyDao<User, UserReadOnlyDao>, ReadOnlyJoinEntityHelper<User, UserReadOnlyDao> {
  *     // All load operations work normally
- *     // All delete operations throw UnsupportedOperationException
+ *     // Delete-join operations do not compile
  * }
  *
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
- * // Supported operations - all work fine:
- *
  * // Load join entities for a single user
  * User user = userDao.findFirst(null, Order.class, Filters.eq("id", 1L)).orElseThrow();
  * userDao.loadJoinEntities(user, Order.class);   // Loads associated orders
- * userDao.loadJoinEntities(user, "addresses");   // Loads addresses by property name
- * userDao.loadAllJoinEntities(user);   // Loads all defined join entities
+ * userDao.loadAllJoinEntities(user);             // Loads all defined join entities
  *
- * // Load join entities for multiple users (batch loading)
- * List<User> users = userDao.list(Filters.alwaysTrue());
- * userDao.loadJoinEntities(users, Order.class);   // Batch loads orders for all users
- * userDao.loadAllJoinEntities(users);   // Batch loads all join entities
- *
- * // Load specific join entities by property names
- * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses"));
- *
- * // Unsupported operations - all throw UnsupportedOperationException:
- * userDao.deleteJoinEntities(user, Order.class);   // Throws exception
- * userDao.deleteJoinEntities(user, "orders");   // Throws exception
- * userDao.deleteAllJoinEntities(user);   // Throws exception
- * userDao.deleteJoinEntities(users, Order.class);   // Throws exception
+ * // userDao.deleteJoinEntities(user, Order.class);   // Does not compile
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
  * @param <TD> the companion {@link Dao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
+ * @see ReadableJoinEntityHelper
  * @see JoinEntityHelper
  * @see Dao
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-@SuppressWarnings("RedundantThrows")
-public interface ReadOnlyJoinEntityHelper<T, TD extends Dao<T, TD>> extends JoinEntityHelper<T, TD> {
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities of the given type associated with the specified entity.
-     *
-     * @param entity the entity whose join entities would be deleted
-     * @param joinEntityClass the class of the join entity to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities of the given type associated with the specified entities.
-     *
-     * @param entities the collection of entities whose join entities would be deleted
-     * @param joinEntityClass the class of the join entity to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property name for the specified entity.
-     *
-     * @param entity the entity whose join entities would be deleted
-     * @param joinEntityPropName the property name of the join entity to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property name for the specified entities.
-     *
-     * @param entities the collection of entities whose join entities would be deleted
-     * @param joinEntityPropName the property name of the join entity to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property names for the specified entity.
-     *
-     * @param entity the entity whose join entities would be deleted
-     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property names for the specified entity, optionally in parallel.
-     *
-     * @param entity the entity whose join entities would be deleted
-     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @param inParallel {@code true} for parallel execution; {@code false} for sequential
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property names for the specified entity, in parallel using the given executor.
-     *
-     * @param entity the entity whose join entities would be deleted
-     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @param executor the {@link Executor} for parallel execution
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property names for the specified entities.
-     *
-     * @param entities the collection of entities whose join entities would be deleted
-     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property names for the specified entities, optionally in parallel.
-     *
-     * @param entities the collection of entities whose join entities would be deleted
-     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @param inParallel {@code true} for parallel execution; {@code false} for sequential
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete the join entities mapped to the given property names for the specified entities, in parallel using the given executor.
-     *
-     * @param entities the collection of entities whose join entities would be deleted
-     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @param executor the {@link Executor} for parallel execution
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete all join entities associated with the specified entity.
-     *
-     * @param entity the entity whose join entities would all be deleted
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteAllJoinEntities(final T entity) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete all join entities associated with the specified entity, optionally in parallel.
-     *
-     * @param entity the entity whose join entities would all be deleted
-     * @param inParallel {@code true} for parallel execution; {@code false} for sequential
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete all join entities associated with the specified entity, in parallel using the given executor.
-     *
-     * @param entity the entity whose join entities would all be deleted
-     * @param executor the {@link Executor} for parallel execution
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteAllJoinEntities(final T entity, final Executor executor) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete all join entities associated with the specified entities.
-     *
-     * @param entities the collection of entities whose join entities would all be deleted
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteAllJoinEntities(final Collection<T> entities) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete all join entities associated with the specified entities, optionally in parallel.
-     *
-     * @param entities the collection of entities whose join entities would all be deleted
-     * @param inParallel {@code true} for parallel execution; {@code false} for sequential
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
-
-    /**
-     * Deleting join entities is not permitted in a {@code ReadOnlyJoinEntityHelper}; this method always throws {@link UnsupportedOperationException}.
-     * It would delete all join entities associated with the specified entities, in parallel using the given executor.
-     *
-     * @param entities the collection of entities whose join entities would all be deleted
-     * @param executor the {@link Executor} for parallel execution
-     * @return never returns normally
-     * @throws UnsupportedOperationException always, since deletions are not permitted in read-only mode
-     * @deprecated Unsupported in {@code ReadOnlyJoinEntityHelper}. Deletions are prohibited.
-     */
-    @Deprecated
-    @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException("This delete-join operation is not supported in a read-only DAO");
-    }
+public non-sealed interface ReadOnlyJoinEntityHelper<T, TD extends Dao<T, TD>> extends ReadableJoinEntityHelper<T, TD> {
 }

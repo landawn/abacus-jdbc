@@ -1,9 +1,5 @@
 package com.landawn.abacus.jdbc.dao;
 
-import static com.landawn.abacus.query.Dsl.PAC;
-import static com.landawn.abacus.query.Dsl.PLC;
-import static com.landawn.abacus.query.Dsl.PSB;
-import static com.landawn.abacus.query.Dsl.PSC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -117,6 +113,37 @@ public class DaoUtilTest extends TestBase {
         assertTrue(DaoUtil.isInsertQuery(sql));
     }
 
+    // isReadOnlyQuery / isNoUpdateQuery are the public gates used by the DaoImpl proxy to enforce
+    // ReadOnlyDao (SELECT-only) and NoUpdateDao (SELECT/INSERT-only) restrictions.
+    @Test
+    public void testIsReadOnlyQuery() {
+        assertTrue(DaoUtil.isReadOnlyQuery("SELECT * FROM demo"));
+        assertTrue(DaoUtil.isReadOnlyQuery("  select id from demo where name = 'DELETE'")); // 'DELETE' is a literal, not a keyword
+        assertFalse(DaoUtil.isReadOnlyQuery("INSERT INTO demo(id) VALUES (1)"));
+        assertFalse(DaoUtil.isReadOnlyQuery("UPDATE demo SET name = 'x'"));
+        assertFalse(DaoUtil.isReadOnlyQuery("DELETE FROM demo"));
+        assertFalse(DaoUtil.isReadOnlyQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
+        assertFalse(DaoUtil.isReadOnlyQuery("SELECT * INTO demo_copy FROM demo"));
+        assertFalse(DaoUtil.isReadOnlyQuery("WITH c AS (DELETE FROM demo RETURNING *) SELECT * FROM c")); // mutating CTE
+        assertFalse(DaoUtil.isReadOnlyQuery(null));
+    }
+
+    @Test
+    public void testIsNoUpdateQuery() {
+        assertTrue(DaoUtil.isNoUpdateQuery("SELECT * FROM demo"));
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1)"));
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT DO NOTHING")); // never overwrites
+        assertFalse(DaoUtil.isNoUpdateQuery("UPDATE demo SET name = 'x'"));
+        assertFalse(DaoUtil.isNoUpdateQuery("DELETE FROM demo"));
+        assertFalse(DaoUtil.isNoUpdateQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OR REPLACE INTO demo(id) VALUES (1)"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON DUPLICATE KEY UPDATE name = 'x'"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT(id) DO UPDATE SET name = 'x'"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OVERWRITE TABLE demo SELECT * FROM staging"));
+        assertFalse(DaoUtil.isNoUpdateQuery("SELECT * INTO demo_copy FROM demo"));
+        assertFalse(DaoUtil.isNoUpdateQuery(null));
+    }
+
     @Test
     public void testIsSelectQuery_CommentsOnly() {
         assertFalse(DaoUtil.isSelectQuery(" /* block */ -- line\n # shell\n "));
@@ -184,8 +211,8 @@ public class DaoUtilTest extends TestBase {
 
         Seid id = DaoUtil.extractId(entity, Arrays.asList("orderId", "lineNum"), beanInfo);
         assertNotNull(id);
-        assertEquals((Object) 10L, id.get("orderId"));
-        assertEquals((Object) 2, id.get("lineNum"));
+        assertEquals(10L, (Long) id.get("orderId"));
+        assertEquals(2, (Integer) id.get("lineNum"));
     }
 
     @Test
@@ -210,7 +237,7 @@ public class DaoUtilTest extends TestBase {
 
         Seid id = extractor.apply(entity);
         assertNotNull(id);
-        assertEquals((Object) 5L, id.get("orderId"));
+        assertEquals(5L, (Long) id.get("orderId"));
     }
 
     @Test

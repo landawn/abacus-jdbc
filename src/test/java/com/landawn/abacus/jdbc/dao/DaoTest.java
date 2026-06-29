@@ -27,6 +27,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -210,7 +211,7 @@ public class DaoTest extends TestBase {
 
         when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        when(dao.update(Mockito.same(dbEntity), Mockito.anyCollection(), Mockito.same(condition))).thenReturn(1);
+        when(dao.update(ArgumentMatchers.same(dbEntity), ArgumentMatchers.anyCollection(), ArgumentMatchers.same(condition))).thenReturn(1);
 
         final TestEntity result = dao.upsert(entity, condition);
 
@@ -293,10 +294,10 @@ public class DaoTest extends TestBase {
         final List<String> props = List.of("id", "name");
 
         Mockito.doReturn(pq).when(dao).prepareQuery(props, cond);
-        when(pq.configureStatement(Mockito.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(pq);
+        when(pq.configureStatement(ArgumentMatchers.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(pq);
 
         assertSame(pq, dao.prepareQueryForLargeResult(props, cond));
-        verify(pq).configureStatement((Throwables.Consumer<? super PreparedStatement, ? extends SQLException>) DaoUtil.stmtSetterForBigQueryResult);
+        verify(pq).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 
     @Test
@@ -460,10 +461,10 @@ public class DaoTest extends TestBase {
         final List<String> props = List.of("id");
 
         Mockito.doReturn(nq).when(dao).prepareNamedQuery(props, cond);
-        when(nq.configureStatement(Mockito.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(nq);
+        when(nq.configureStatement(ArgumentMatchers.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(nq);
 
         assertSame(nq, dao.prepareNamedQueryForLargeResult(props, cond));
-        verify(nq).configureStatement((Throwables.Consumer<? super PreparedStatement, ? extends SQLException>) DaoUtil.stmtSetterForBigQueryResult);
+        verify(nq).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 
     @Test
@@ -471,10 +472,10 @@ public class DaoTest extends TestBase {
         final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
         final Condition cond = Mockito.mock(Condition.class);
 
-        when(dao.update(Mockito.anyMap(), Mockito.same(cond))).thenReturn(5);
+        when(dao.update(ArgumentMatchers.anyMap(), ArgumentMatchers.same(cond))).thenReturn(5);
 
         assertEquals(5, dao.update("name", "Alice", cond));
-        verify(dao).update(Mockito.anyMap(), Mockito.same(cond));
+        verify(dao).update(ArgumentMatchers.anyMap(), ArgumentMatchers.same(cond));
     }
 
     @Test
@@ -483,12 +484,12 @@ public class DaoTest extends TestBase {
         final TestEntity entity = new TestEntity();
         entity.setName("Bob");
 
-        Mockito.doReturn(entity).when(dao).upsert(Mockito.same(entity), Mockito.any(Condition.class));
+        Mockito.doReturn(entity).when(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.any(Condition.class));
 
         final TestEntity result = dao.upsert(entity, List.of("name"));
 
         assertSame(entity, result);
-        verify(dao).upsert(Mockito.same(entity), Mockito.any(Condition.class));
+        verify(dao).upsert(ArgumentMatchers.same(entity), ArgumentMatchers.any(Condition.class));
     }
 
     @Test
@@ -510,7 +511,9 @@ public class DaoTest extends TestBase {
         final List<String> expected = List.of("Alice");
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        Mockito.doReturn(expected).when(dao).list(Mockito.anyList(), Mockito.same(cond), Mockito.<Jdbc.RowMapper<? extends Object>> any());
+        Mockito.doReturn(expected)
+                .when(dao)
+                .list(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.<Jdbc.RowMapper<? extends Object>> any());
 
         final List<String> result = dao.list("name", cond);
 
@@ -524,7 +527,7 @@ public class DaoTest extends TestBase {
         final Jdbc.RowMapper<String> rowMapper = rs -> rs.getString(1);
         final List<String> expected = List.of("X");
 
-        when(dao.list(Mockito.anyList(), Mockito.same(cond), Mockito.same(rowMapper))).thenReturn(expected);
+        when(dao.list(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.same(rowMapper))).thenReturn(expected);
 
         assertSame(expected, dao.list("name", cond, rowMapper));
     }
@@ -537,7 +540,8 @@ public class DaoTest extends TestBase {
         final Jdbc.RowMapper<String> rowMapper = rs -> rs.getString(1);
         final List<String> expected = List.of("Y");
 
-        when(dao.list(Mockito.anyList(), Mockito.same(cond), Mockito.same(rowFilter), Mockito.same(rowMapper))).thenReturn(expected);
+        when(dao.list(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.same(rowFilter), ArgumentMatchers.same(rowMapper)))
+                .thenReturn(expected);
 
         assertSame(expected, dao.list("name", cond, rowFilter, rowMapper));
     }
@@ -550,7 +554,9 @@ public class DaoTest extends TestBase {
         final Stream<String> expected = Mockito.mock(Stream.class);
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        Mockito.doReturn(expected).when(dao).stream(Mockito.anyList(), Mockito.same(cond), Mockito.<Jdbc.RowMapper<? extends Object>> any());
+        Mockito.doReturn(expected)
+                .when(dao)
+                .stream(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.<Jdbc.RowMapper<? extends Object>> any());
 
         assertSame(expected, dao.stream("name", cond));
     }
@@ -563,7 +569,7 @@ public class DaoTest extends TestBase {
         @SuppressWarnings("unchecked")
         final Stream<String> expected = Mockito.mock(Stream.class);
 
-        Mockito.doReturn(expected).when(dao).stream(Mockito.anyList(), Mockito.same(cond), Mockito.same(rowMapper));
+        Mockito.doReturn(expected).when(dao).stream(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.same(rowMapper));
 
         assertSame(expected, dao.stream("name", cond, rowMapper));
     }
@@ -577,7 +583,9 @@ public class DaoTest extends TestBase {
         @SuppressWarnings("unchecked")
         final Stream<String> expected = Mockito.mock(Stream.class);
 
-        Mockito.doReturn(expected).when(dao).stream(Mockito.anyList(), Mockito.same(cond), Mockito.same(rowFilter), Mockito.same(rowMapper));
+        Mockito.doReturn(expected)
+                .when(dao)
+                .stream(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.same(rowFilter), ArgumentMatchers.same(rowMapper));
 
         assertSame(expected, dao.stream("name", cond, rowFilter, rowMapper));
     }
@@ -591,11 +599,11 @@ public class DaoTest extends TestBase {
         };
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        Mockito.doNothing().when(dao).forEach(Mockito.same(props), Mockito.same(cond), Mockito.any(Jdbc.RowConsumer.class));
+        Mockito.doNothing().when(dao).forEach(ArgumentMatchers.same(props), ArgumentMatchers.same(cond), ArgumentMatchers.any(Jdbc.RowConsumer.class));
 
         dao.foreach(props, cond, rowConsumer);
 
-        verify(dao).forEach(Mockito.same(props), Mockito.same(cond), Mockito.any(Jdbc.RowConsumer.class));
+        verify(dao).forEach(ArgumentMatchers.same(props), ArgumentMatchers.same(cond), ArgumentMatchers.any(Jdbc.RowConsumer.class));
     }
 
     @Test
@@ -606,11 +614,11 @@ public class DaoTest extends TestBase {
         };
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        Mockito.doNothing().when(dao).forEach(Mockito.same(cond), Mockito.any(Jdbc.RowConsumer.class));
+        Mockito.doNothing().when(dao).forEach(ArgumentMatchers.same(cond), ArgumentMatchers.any(Jdbc.RowConsumer.class));
 
         dao.foreach(cond, rowConsumer);
 
-        verify(dao).forEach(Mockito.same(cond), Mockito.any(Jdbc.RowConsumer.class));
+        verify(dao).forEach(ArgumentMatchers.same(cond), ArgumentMatchers.any(Jdbc.RowConsumer.class));
     }
 
     @Test
@@ -619,7 +627,7 @@ public class DaoTest extends TestBase {
         final TestEntity entity = new TestEntity();
         entity.setName("new");
 
-        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.empty());
+        when(dao.findOnlyOne(ArgumentMatchers.any())).thenReturn(Optional.empty());
 
         final TestEntity result = dao.upsert(entity, Mockito.mock(Condition.class));
 
@@ -655,7 +663,7 @@ public class DaoTest extends TestBase {
 
         when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
         when(dao.targetEntityClass()).thenReturn(NoIdEntity.class);
-        when(dao.update(Mockito.same(dbEntity), Mockito.same(condition))).thenReturn(1);
+        when(dao.update(ArgumentMatchers.same(dbEntity), ArgumentMatchers.same(condition))).thenReturn(1);
 
         final NoIdEntity result = dao.upsert(entity, condition);
 
@@ -708,7 +716,9 @@ public class DaoTest extends TestBase {
         final List<Object> expected = List.of("value");
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        Mockito.doReturn(expected).when(dao).list(Mockito.anyList(), Mockito.same(cond), Mockito.<Jdbc.RowMapper<? extends Object>> any());
+        Mockito.doReturn(expected)
+                .when(dao)
+                .list(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.<Jdbc.RowMapper<? extends Object>> any());
 
         final List<Object> result = dao.list("nonexistent", cond);
 
@@ -725,7 +735,9 @@ public class DaoTest extends TestBase {
         final Stream<Object> expected = Mockito.mock(Stream.class);
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        Mockito.doReturn(expected).when(dao).stream(Mockito.anyList(), Mockito.same(cond), Mockito.<Jdbc.RowMapper<? extends Object>> any());
+        Mockito.doReturn(expected)
+                .when(dao)
+                .stream(ArgumentMatchers.anyList(), ArgumentMatchers.same(cond), ArgumentMatchers.<Jdbc.RowMapper<? extends Object>> any());
 
         assertSame(expected, dao.stream("nonexistent", cond));
     }

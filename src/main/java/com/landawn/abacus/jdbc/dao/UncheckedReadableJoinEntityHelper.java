@@ -1,0 +1,1581 @@
+/*
+ * Copyright (c) 2021, Haiyang Li.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.landawn.abacus.jdbc.dao;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.Executor;
+
+import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.exception.DuplicateResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.parser.ParserUtil;
+import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.u.Optional;
+import com.landawn.abacus.util.stream.Stream;
+
+/**
+ * Read-side view of {@link UncheckedJoinEntityHelper}: the join-entity <i>load</i> operations
+ * (find/list/stream with join loading and the {@code loadJoinEntities}/{@code loadAllJoinEntities}/
+ * {@code loadJoinEntitiesIfAbsent} families) that throw {@link com.landawn.abacus.exception.UncheckedSQLException}
+ * instead of the checked {@link java.sql.SQLException}.
+ *
+ * <p>Contains no database-modifying operation, so it can be mixed into read-only unchecked DAOs
+ * (see {@link UncheckedReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
+ *
+ * @param <T> the entity type that this helper manages
+ * @param <TD> the companion {@link UncheckedDao} type that owns this helper
+ * @see ReadableJoinEntityHelper
+ * @see UncheckedJoinEntityHelper
+ * @see com.landawn.abacus.annotation.JoinedBy
+ */
+@SuppressWarnings("resource")
+public sealed interface UncheckedReadableJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> extends ReadableJoinEntityHelper<T, TD>
+        permits UncheckedDeletableJoinEntityHelper, UncheckedReadableCrudJoinEntityHelper, UncheckedReadOnlyJoinEntityHelper {
+
+    /**
+     * Finds the first entity matching the condition and loads the specified join entity class.
+     * This is a convenience method that combines finding and join loading in one operation.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Find user and load their orders
+     * Optional<User> user = userDao.findFirst(
+     *     null,         // select all user properties
+     *     Order.class,  // also load orders
+     *     Filters.eq("email", "john@example.com")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param cond the condition to match
+     * @return an Optional containing the entity with join entities loaded, or empty if not found
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @Override
+    default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
+            throws UncheckedSQLException {
+        final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
+
+        if (result.isPresent()) {
+            loadJoinEntities(result.get(), joinEntitiesToLoad);
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds the first entity matching the condition and loads multiple join entity classes.
+     * The matching join property of every requested type is populated in place on the returned entity.
+     * If {@code joinEntitiesToLoad} is {@code null} or empty, the entity is returned without any join entities loaded.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Find user and load both orders and profile
+     * Optional<User> user = userDao.findFirst(
+     *     Arrays.asList("id", "name", "email"),
+     *     Arrays.asList(Order.class, UserProfile.class),
+     *     Filters.eq("status", "ACTIVE")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param cond the condition to match
+     * @return an Optional containing the entity with the requested join entities loaded, or empty if not found
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     */
+    @Override
+    default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
+            throws UncheckedSQLException {
+        final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
+
+        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                loadJoinEntities(result.get(), joinEntityClass);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds the first entity matching the condition and optionally loads all join entities.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Find user and load all related entities
+     * Optional<User> user = userDao.findFirst(
+     *     null,  // select all properties
+     *     true,  // load all join entities
+     *     Filters.eq("id", 1)
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
+     * @param cond the condition to match
+     * @return an Optional containing the entity with join entities loaded, or empty if not found
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    default Optional<T> findFirst(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+            throws UncheckedSQLException {
+        final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
+
+        if (includeAllJoinEntities && result.isPresent()) {
+            loadAllJoinEntities(result.get());
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds exactly one entity matching the condition and loads the specified join entity class.
+     * Throws an exception if multiple entities are found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Find unique user by email and load profile
+     * Optional<User> user = userDao.findOnlyOne(
+     *     null,
+     *     UserProfile.class,
+     *     Filters.eq("email", "unique@example.com")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param cond the condition to match
+     * @return an Optional containing the unique entity with loaded join entities, or empty if not found
+     * @throws DuplicateResultException if more than one record is found for the specified condition
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @Override
+    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
+            throws DuplicateResultException, UncheckedSQLException {
+        final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
+
+        if (result.isPresent()) {
+            loadJoinEntities(result.get(), joinEntitiesToLoad);
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds exactly one entity matching the condition and loads multiple join entity classes.
+     * Throws an exception if multiple entities are found. The matching join property of every requested type is
+     * populated in place on the returned entity. If {@code joinEntitiesToLoad} is {@code null} or empty, the entity is
+     * returned without any join entities loaded.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<User> user = userDao.findOnlyOne(
+     *     Arrays.asList("id", "name"),
+     *     Arrays.asList(Order.class, UserProfile.class, Address.class),
+     *     Filters.eq("username", "john_doe")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param cond the condition to match
+     * @return an Optional containing the unique entity with loaded join entities, or empty if not found
+     * @throws DuplicateResultException if more than one record is found for the specified condition
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     */
+    @Override
+    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
+            throws DuplicateResultException, UncheckedSQLException {
+        final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
+
+        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
+            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                loadJoinEntities(result.get(), joinEntityClass);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds exactly one entity matching the condition and optionally loads all join entities.
+     * Throws an exception if multiple entities are found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<User> user = userDao.findOnlyOne(
+     *     Arrays.asList("id", "name", "email"),
+     *     true,  // load all join entities
+     *     Filters.eq("accountNumber", "ACC-12345")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
+     * @param cond the condition to match
+     * @return an Optional containing the unique entity with loaded join entities, or empty if not found
+     * @throws DuplicateResultException if more than one record is found for the specified condition
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+            throws DuplicateResultException, UncheckedSQLException {
+        final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
+
+        if (includeAllJoinEntities && result.isPresent()) {
+            loadAllJoinEntities(result.get());
+        }
+
+        return result;
+    }
+
+    /**
+     * Lists all entities matching the condition and loads the specified join entity class for each.
+     * This is a beta API that provides batch loading of join entities for better performance. Each returned
+     * entity has its matching join property populated in place. For result sets larger than
+     * {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches to keep the
+     * generated queries bounded in size.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get all active users with their orders loaded
+     * List<User> users = userDao.list(
+     *     null,         // select all user properties
+     *     Order.class,  // load orders for each user
+     *     Filters.eq("status", "ACTIVE")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param cond the condition to match
+     * @return a list of entities, each with the specified join property populated in place; empty if no entity matches
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @Beta
+    @Override
+    default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws UncheckedSQLException {
+        final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
+
+        if (N.notEmpty(result)) {
+            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
+                loadJoinEntities(result, joinEntitiesToLoad);
+            } else {
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad));
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Lists all entities matching the condition and loads multiple join entity classes for each.
+     * This is a beta API that efficiently loads multiple relationships in batches. Each returned entity has the
+     * matching join property of every requested type populated in place. For result sets larger than
+     * {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches. If
+     * {@code joinEntitiesToLoad} is {@code null} or empty, the entities are returned without any join entities loaded.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get users with orders, profiles, and addresses loaded
+     * List<User> users = userDao.list(
+     *     Arrays.asList("id", "name", "email"),
+     *     Arrays.asList(Order.class, UserProfile.class, Address.class),
+     *     Filters.in("department", Arrays.asList("IT", "Sales"))
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param cond the condition to match
+     * @return a list of entities, each with the requested join properties populated in place; empty if no entity matches
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     */
+    @Beta
+    @Override
+    default List<T> list(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
+            throws UncheckedSQLException {
+        final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
+
+        if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
+            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
+                for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    loadJoinEntities(result, joinEntityClass);
+                }
+            } else {
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> {
+                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                        loadJoinEntities(batchEntities, joinEntityClass);
+                    }
+                });
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Lists all entities matching the condition and optionally loads all join entities for each.
+     * This is a beta API that provides automatic loading of all relationships. When loading is requested, every
+     * property annotated with {@code @JoinedBy} is populated in place on each returned entity. For result sets larger
+     * than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get all premium users with all relationships loaded
+     * List<User> users = userDao.list(
+     *     null,
+     *     true,  // load all join entities
+     *     Filters.eq("accountType", "PREMIUM")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
+     * @param cond the condition to match
+     * @return a list of entities, each with all join properties populated in place when {@code includeAllJoinEntities} is
+     *         {@code true}; empty if no entity matches
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Beta
+    @Override
+    default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws UncheckedSQLException {
+        final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
+
+        if (includeAllJoinEntities && N.notEmpty(result)) {
+            if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
+                loadAllJoinEntities(result);
+            } else {
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, this::loadAllJoinEntities);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Loads join entities of the specified class for a single entity.
+     * The join properties are determined by the {@code @JoinedBy} relationship annotations in the entity class and are
+     * populated in place on the entity. If the entity class declares more than one join property of the specified type,
+     * all of them are loaded.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Load all orders for this user
+     * userDao.loadJoinEntities(user, Order.class);
+     * // Now user.getOrders() will contain the loaded orders
+     * }</pre>
+     *
+     * @param entity the entity to load join entities for
+     * @param joinEntityClass the class of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @Override
+    default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+        loadJoinEntities(entity, joinEntityClass, null);
+    }
+
+    /**
+     * Loads join entities of the specified class with selected properties for a single entity.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Load orders but only fetch id, orderDate, and total
+     * userDao.loadJoinEntities(
+     *     user,
+     *     Order.class,
+     *     Arrays.asList("id", "orderDate", "total")
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to load join entities for
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException {
+        final Class<?> targetEntityClass = targetEntityClass();
+        final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
+                joinEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+        }
+    }
+
+    /**
+     * Loads join entities of the specified class for multiple entities in batch.
+     * This is more efficient than loading join entities one by one, as it avoids the N+1 query problem. The matching
+     * join property is populated in place on each entity. If the entity class declares more than one join property of
+     * the specified type, all of them are loaded.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
+     * // Load orders for all users in batch
+     * userDao.loadJoinEntities(users, Order.class);
+     * }</pre>
+     *
+     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
+     * @param joinEntityClass the class of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @Override
+    default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+        loadJoinEntities(entities, joinEntityClass, null);
+    }
+
+    /**
+     * Loads join entities of the specified class with selected properties for multiple entities.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(Filters.gt("createdDate", lastMonth));
+     * // Load minimal order info for all users
+     * userDao.loadJoinEntities(
+     *     users,
+     *     Order.class,
+     *     Arrays.asList("id", "total", "status")
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+            throws UncheckedSQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
+        final Class<?> targetEntityClass = targetEntityClass();
+        final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
+                joinEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            loadJoinEntities(entities, joinEntityPropName, selectPropNames);
+        }
+    }
+
+    /**
+     * Loads join entities for a specific property name of a single entity.
+     * This method provides fine-grained control over which join property to load.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Specifically load the "orders" property
+     * userDao.loadJoinEntities(user, "orders");
+     * // Load the "profile" property
+     * userDao.loadJoinEntities(user, "profile");
+     * }</pre>
+     *
+     * @param entity the entity to load join entities for
+     * @param joinEntityPropName the property name of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Override
+    default void loadJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
+        loadJoinEntities(entity, joinEntityPropName, null);
+    }
+
+    /**
+     * Loads join entities for a specific property name with selected properties for a single entity.
+     * This is the core implementation method for loading join entities in unchecked mode.
+     *
+     * <p>It queries the database for related entities based on the join relationship defined in the
+     * {@code @JoinedBy} annotation and populates the specified property in the entity. Unlike the
+     * checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming
+     * contexts and lambda expressions.</p>
+     *
+     * <p>The implementation handles both collection-type properties (List, Set, etc.) and
+     * single-entity properties. For collection types, all matching join entities are loaded into
+     * the collection. For single-entity properties, only one matching entity is loaded.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Load orders property with only specific fields
+     * userDao.loadJoinEntities(
+     *     user,
+     *     "orders",
+     *     Arrays.asList("id", "orderDate", "total", "status")
+     * );
+     *
+     * // Use in functional context without try-catch
+     * Optional.ofNullable(user)
+     *     .ifPresent(u -> userDao.loadJoinEntities(u, "addresses", null));
+     * }</pre>
+     *
+     * @param entity the entity to load join entities for. Must not be {@code null}
+     * @param joinEntityPropName the property name of the join entities to load. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected.
+     *                       This parameter is useful for performance optimization when only
+     *                       specific fields are needed
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
+     */
+    @Override
+    void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
+
+    /**
+     * Loads join entities for a specific property name for multiple entities in batch.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(Filters.eq("department", "Sales"));
+     * // Load orders for all users
+     * userDao.loadJoinEntities(users, "orders");
+     * }</pre>
+     *
+     * @param entities the collection of entities to load join entities for
+     * @param joinEntityPropName the property name of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Override
+    default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
+        loadJoinEntities(entities, joinEntityPropName, null);
+    }
+
+    /**
+     * Loads join entities for a specific property name with selected properties for multiple entities.
+     * This is the core batch implementation method for loading join entities in unchecked mode.
+     *
+     * <p>It efficiently loads related entities for multiple parent entities in a single operation,
+     * avoiding the N+1 query problem. The implementation typically uses an IN clause to fetch all
+     * related entities in one query, then distributes them to the appropriate parent entities based
+     * on the foreign key relationship.</p>
+     *
+     * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
+     * such as Stream operations and lambda expressions without requiring explicit exception handling.</p>
+     *
+     * <p>Performance characteristics:</p>
+     * <ul>
+     *   <li>For N parent entities, this method executes O(1) queries instead of O(N)</li>
+     *   <li>Large collections may be automatically batched to prevent excessive memory usage</li>
+     *   <li>Selecting fewer properties via {@code selectPropNames} can significantly improve performance</li>
+     * </ul>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.batchGet(userIds);
+     * // Load address property with selected fields for all users in a single batched query
+     * userDao.loadJoinEntities(
+     *     users,
+     *     "addresses",
+     *     Arrays.asList("street", "city", "country", "isPrimary")
+     * );
+     *
+     * // Load orders for all users without try-catch (UncheckedSQLException is unchecked)
+     * userDao.loadJoinEntities(users, "orders", null);
+     * users.stream()
+     *     .filter(u -> u.getOrders().size() > 5)
+     *     .collect(Collectors.toList());
+     * }</pre>
+     *
+     * @param entities the collection of entities to load join entities for. Can be empty
+     *                 but not {@code null}. If empty, this method returns immediately
+     * @param joinEntityPropName the property name of the join entities to load. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected.
+     *                       Specifying only needed properties can significantly improve query
+     *                       performance and reduce memory usage
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
+     */
+    @Override
+    void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
+
+    /**
+     * Loads join entities for multiple property names of a single entity.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Load specific join properties
+     * userDao.loadJoinEntities(
+     *     user,
+     *     Arrays.asList("orders", "profile", "addresses")
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to load join entities for
+     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Override
+    default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+        if (N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            loadJoinEntities(entity, joinEntityPropName);
+        }
+    }
+
+    /**
+     * Loads join entities for multiple property names of a single entity, optionally in parallel.
+     * This is a beta API that can improve performance for loading multiple unrelated join entities.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Load multiple properties in parallel
+     * userDao.loadJoinEntities(
+     *     user,
+     *     Arrays.asList("orders", "reviews", "wishlist"),
+     *     true  // load in parallel
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to load join entities for
+     * @param joinEntityPropNames the property names of join entities to load
+     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
+        if (inParallel) {
+            loadJoinEntities(entity, joinEntityPropNames, executor());
+        } else {
+            loadJoinEntities(entity, joinEntityPropNames);
+        }
+    }
+
+    /**
+     * Loads join entities for multiple property names using a custom executor for parallel execution.
+     * This is a beta API for advanced parallel loading scenarios.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
+     * User user = userDao.gett(userId);
+     *
+     * userDao.loadJoinEntities(
+     *     user,
+     *     Arrays.asList("orders", "reviews", "addresses", "payments"),
+     *     customExecutor
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to load join entities for
+     * @param joinEntityPropNames the property names of join entities to load
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Beta
+    @Override
+    default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+        if (N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
+                .toList();
+
+        DaoUtil.uncheckedComplete(futures);
+    }
+
+    /**
+     * Loads join entities for multiple property names for multiple entities.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
+     * // Load multiple properties for all users
+     * userDao.loadJoinEntities(
+     *     users,
+     *     Arrays.asList("orders", "addresses")
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Override
+    default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            loadJoinEntities(entities, joinEntityPropName);
+        }
+    }
+
+    /**
+     * Loads join entities for multiple property names for multiple entities, optionally in parallel.
+     * This is a beta API for batch parallel loading.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.batchGet(userIds);
+     * // Load multiple properties in parallel for better performance
+     * userDao.loadJoinEntities(
+     *     users,
+     *     Arrays.asList("orders", "reviews", "addresses"),
+     *     true  // load in parallel
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to load join entities for
+     * @param joinEntityPropNames the property names of join entities to load
+     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+            throws UncheckedSQLException {
+        if (inParallel) {
+            loadJoinEntities(entities, joinEntityPropNames, executor());
+        } else {
+            loadJoinEntities(entities, joinEntityPropNames);
+        }
+    }
+
+    /**
+     * Loads join entities for multiple property names for multiple entities using a custom executor.
+     * This is a beta API for advanced batch parallel loading scenarios.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ExecutorService batchExecutor = Executors.newCachedThreadPool();
+     * List<User> users = userDao.list(Filters.isNotNull("premiumAccount"));
+     *
+     * userDao.loadJoinEntities(
+     *     users,
+     *     Arrays.asList("orders", "subscriptions", "invoices"),
+     *     batchExecutor
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to load join entities for
+     * @param joinEntityPropNames the property names of join entities to load
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Beta
+    @Override
+    default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+            throws UncheckedSQLException {
+        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
+                .toList();
+
+        DaoUtil.uncheckedComplete(futures);
+    }
+
+    /**
+     * Loads all join entities defined in the entity class for a single entity.
+     * This loads every property annotated with {@code @JoinedBy}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Load all related entities (orders, profile, addresses, etc.)
+     * userDao.loadAllJoinEntities(user);
+     * }</pre>
+     *
+     * @param entity the entity to load all join entities for
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadAllJoinEntities(final T entity) throws UncheckedSQLException {
+        loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+    }
+
+    /**
+     * Loads all join entities for a single entity, optionally in parallel.
+     * This is a beta API for loading all relationships with parallel execution option.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = userDao.gett(userId);
+     * // Load all join entities in parallel for better performance
+     * userDao.loadAllJoinEntities(user, true);
+     * }</pre>
+     *
+     * @param entity the entity to load all join entities for
+     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
+        if (inParallel) {
+            loadAllJoinEntities(entity, executor());
+        } else {
+            loadAllJoinEntities(entity);
+        }
+    }
+
+    /**
+     * Loads all join entities for a single entity using a custom executor.
+     * This is a beta API for advanced parallel loading of all relationships.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ForkJoinPool customPool = new ForkJoinPool(8);
+     * User user = userDao.gett(userId);
+     *
+     * // Load all join entities with custom thread pool
+     * userDao.loadAllJoinEntities(user, customPool);
+     * }</pre>
+     *
+     * @param entity the entity to load all join entities for
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
+        loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+    }
+
+    /**
+     * Loads all join entities for multiple entities in batch.
+     * Every property annotated with {@code @JoinedBy} is populated in place on each entity.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(Filters.eq("accountType", "PREMIUM"));
+     * // Load all relationships for all users
+     * userDao.loadAllJoinEntities(users);
+     * }</pre>
+     *
+     * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
+        loadJoinEntities(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+    }
+
+    /**
+     * Loads all join entities for multiple entities, optionally in parallel.
+     * This is a beta API for batch loading all relationships with parallel execution option.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.batchGet(userIds);
+     * // Load all join entities in parallel for better performance
+     * userDao.loadAllJoinEntities(users, true);
+     * }</pre>
+     *
+     * @param entities the collection of entities to load all join entities for
+     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+        if (inParallel) {
+            loadAllJoinEntities(entities, executor());
+        } else {
+            loadAllJoinEntities(entities);
+        }
+    }
+
+    /**
+     * Loads all join entities for multiple entities using a custom executor.
+     * This is a beta API for advanced batch parallel loading of all relationships.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ExecutorService loadingPool = Executors.newWorkStealingPool();
+     * List<User> users = userDao.list(Filters.isNotNull("vipStatus"));
+     *
+     * // Load all relationships with custom executor
+     * userDao.loadAllJoinEntities(users, loadingPool);
+     * }</pre>
+     *
+     * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
+        loadJoinEntities(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+    }
+
+    /**
+     * Loads join entities of the specified class only if they are currently {@code null}.
+     * This is useful for lazy loading scenarios.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getCachedUser();
+     * // Only load orders if not already loaded
+     * userDao.loadJoinEntitiesIfAbsent(user, Order.class);
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load join entities for
+     * @param joinEntityClass the class of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, joinEntityClass, null);
+    }
+
+    /**
+     * Loads join entities of the specified class with selected properties only if they are currently {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getPartiallyLoadedUser();
+     * // Load profile with specific fields if not already loaded
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     user,
+     *     UserProfile.class,
+     *     Arrays.asList("bio", "avatarUrl", "preferences")
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load join entities for
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+            throws UncheckedSQLException {
+        final Class<?> targetEntityClass = targetEntityClass();
+        final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
+                joinEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropName, selectPropNames);
+        }
+    }
+
+    /**
+     * Loads join entities of the specified class for multiple entities only where they are {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getCachedUsers();
+     * // Only load orders for users that don't have them loaded
+     * userDao.loadJoinEntitiesIfAbsent(users, Order.class);
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load join entities for
+     * @param joinEntityClass the class of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entities, joinEntityClass, null);
+    }
+
+    /**
+     * Loads join entities of the specified class with selected properties for multiple entities only where they are {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyCachedUsers();
+     * // Load minimal address info only for users without addresses
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     users,
+     *     Address.class,
+     *     Arrays.asList("city", "country")
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load join entities for
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+            throws UncheckedSQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
+        final Class<?> targetEntityClass = targetEntityClass();
+        final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
+                joinEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
+
+        if (joinEntityPropNames.size() == 1) {
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames.get(0), selectPropNames);
+        } else {
+            for (final String joinEntityPropName : joinEntityPropNames) {
+                loadJoinEntitiesIfAbsent(entities, joinEntityPropName, selectPropNames);
+            }
+        }
+    }
+
+    /**
+     * Loads join entities for a specific property only if it is currently {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getUser();
+     * // Only load profile if user.getProfile() is null
+     * userDao.loadJoinEntitiesIfAbsent(user, "profile");
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load join entities for
+     * @param joinEntityPropName the property name of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, joinEntityPropName, null);
+    }
+
+    /**
+     * Loads join entities for a specific property with selected fields only if the property is {@code null}.
+     * If the property already holds a non-{@code null} value, it is left unchanged and no query is executed.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getUser();
+     * // Load addresses with specific fields if not already loaded
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     user,
+     *     "addresses",
+     *     Arrays.asList("street", "city", "postalCode")
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load join entities for
+     * @param joinEntityPropName the property name of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
+            throws UncheckedSQLException {
+        final Class<?> cls = entity.getClass();
+        final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
+
+        if (propInfo == null) {
+            throw new IllegalArgumentException("No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
+        }
+
+        if (propInfo.getPropValue(entity) == null) {
+            loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+        }
+    }
+
+    /**
+     * Loads join entities for a specific property for multiple entities only where the property is {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getMixedUsers();
+     * // Only load orders for users that don't have them
+     * userDao.loadJoinEntitiesIfAbsent(users, "orders");
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load join entities for
+     * @param joinEntityPropName the property name of the join entities to load
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entities, joinEntityPropName, null);
+    }
+
+    /**
+     * Loads join entities for a specific property with selected fields for multiple entities only where {@code null}.
+     * Entities that already have the property populated are skipped; only those whose property value is {@code null}
+     * trigger a load, and the matching join entities are populated in place on them.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getCachedUsers();
+     * // Load payment methods with minimal info for users without them
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     users,
+     *     "paymentMethods",
+     *     Arrays.asList("type", "lastFourDigits", "expiryDate")
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropName the property name of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If {@code null}, all properties of the join entities are selected
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
+            throws UncheckedSQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
+        final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
+        final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
+
+        if (propInfo == null) {
+            throw new IllegalArgumentException("No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
+        }
+
+        final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
+
+        if (N.notEmpty(newEntities)) {
+            loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
+        }
+    }
+
+    /**
+     * Loads multiple join properties only if they are {@code null} for a single entity.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getPartialUser();
+     * // Load multiple properties if not already loaded
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     user,
+     *     Arrays.asList("orders", "profile", "preferences")
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load join entities for
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+        if (N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropName);
+        }
+    }
+
+    /**
+     * Loads multiple join properties only if they are {@code null}, optionally in parallel.
+     * This is a beta API for conditional parallel loading.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getCachedUser();
+     * // Load missing properties in parallel
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     user,
+     *     Arrays.asList("orders", "reviews", "wishlist"),
+     *     true  // parallel loading
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load join entities for
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
+        if (inParallel) {
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropNames, executor());
+        } else {
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropNames);
+        }
+    }
+
+    /**
+     * Loads multiple join properties only if they are {@code null} using a custom executor.
+     * This is a beta API for advanced conditional parallel loading.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ExecutorService lazyLoader = Executors.newCachedThreadPool();
+     * User user = getUser();
+     *
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     user,
+     *     Arrays.asList("heavyData1", "heavyData2", "heavyData3"),
+     *     lazyLoader
+     * );
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load join entities for
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+        if (N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                .filter(joinEntityPropName -> Beans.getPropValue(entity, joinEntityPropName) == null)
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor))
+                .toList();
+
+        DaoUtil.uncheckedComplete(futures);
+    }
+
+    /**
+     * Loads multiple join properties for multiple entities only where they are {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getMixedCacheUsers();
+     * // Load missing properties for all users
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     users,
+     *     Arrays.asList("orders", "addresses")
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropName);
+        }
+    }
+
+    /**
+     * Loads multiple join properties for multiple entities only where {@code null}, optionally in parallel.
+     * This is a beta API for batch conditional parallel loading.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getLargeUserList();
+     * // Efficiently load missing data in parallel
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     users,
+     *     Arrays.asList("orders", "subscriptions", "activities"),
+     *     true
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load join entities for
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
+            throws UncheckedSQLException {
+        if (inParallel) {
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames, executor());
+        } else {
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropNames);
+        }
+    }
+
+    /**
+     * Loads multiple join properties for multiple entities only where {@code null} using a custom executor.
+     * This is a beta API for advanced batch conditional parallel loading.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ForkJoinPool fjPool = new ForkJoinPool(16);
+     * List<User> users = getThousandsOfUsers();
+     *
+     * userDao.loadJoinEntitiesIfAbsent(
+     *     users,
+     *     Arrays.asList("transactions", "analytics", "recommendations"),
+     *     fjPool
+     * );
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load join entities for
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     */
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
+            throws UncheckedSQLException {
+        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+            return;
+        }
+
+        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor))
+                .toList();
+
+        DaoUtil.uncheckedComplete(futures);
+    }
+
+    /**
+     * Loads all join entities only if they are {@code null} for a single entity.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getCachedUser();
+     * // Load all missing relationships
+     * userDao.loadJoinEntitiesIfAbsent(user);
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load all join entities for
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+    }
+
+    /**
+     * Loads all join entities only if they are {@code null}, optionally in parallel.
+     * This is a beta API for conditional loading of all relationships.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * User user = getPartialUser();
+     * // Load all missing relationships in parallel
+     * userDao.loadJoinEntitiesIfAbsent(user, true);
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load all join entities for
+     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws UncheckedSQLException {
+        if (inParallel) {
+            loadJoinEntitiesIfAbsent(entity, executor());
+        } else {
+            loadJoinEntitiesIfAbsent(entity);
+        }
+    }
+
+    /**
+     * Loads all join entities only if they are {@code null} using a custom executor.
+     * This is a beta API for advanced conditional loading of all relationships.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+     * User user = getUser();
+     *
+     * userDao.loadJoinEntitiesIfAbsent(user, scheduler);
+     * }</pre>
+     *
+     * @param entity the entity to conditionally load all join entities for
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final T entity, final Executor executor) throws UncheckedSQLException {
+        loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+    }
+
+    /**
+     * Loads all join entities only if they are {@code null} for multiple entities.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getCachedUsers();
+     * // Load all missing relationships for all users
+     * userDao.loadJoinEntitiesIfAbsent(users);
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load all join entities for
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities) throws UncheckedSQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
+        loadJoinEntitiesIfAbsent(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
+    }
+
+    /**
+     * Loads all join entities only if they are {@code null} for multiple entities, optionally in parallel.
+     * This is a beta API for batch conditional loading of all relationships.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load all missing relationships in parallel
+     * userDao.loadJoinEntitiesIfAbsent(users, true);
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load all join entities for
+     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+        if (inParallel) {
+            loadJoinEntitiesIfAbsent(entities, executor());
+        } else {
+            loadJoinEntitiesIfAbsent(entities);
+        }
+    }
+
+    /**
+     * Loads all join entities only if they are {@code null} for multiple entities using a custom executor.
+     * This is a beta API for advanced batch conditional loading of all relationships.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ExecutorService batchLoader = Executors.newWorkStealingPool();
+     * List<User> users = getLargeUserCollection();
+     *
+     * userDao.loadJoinEntitiesIfAbsent(users, batchLoader);
+     * }</pre>
+     *
+     * @param entities the collection of entities to conditionally load all join entities for
+     * @param executor the {@code Executor} to use for parallel execution
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @SuppressWarnings("deprecation")
+    @Beta
+    @Override
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
+        loadJoinEntitiesIfAbsent(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+    }
+
+}
