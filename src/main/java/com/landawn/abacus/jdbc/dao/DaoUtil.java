@@ -684,7 +684,7 @@ final class DaoUtil {
      * @see #isSelectQuery(String)
      */
     static boolean isReadOnlyQuery(final String sql) {
-        return isSelectQuery(sql) && !containsMutationQueryKeyword(sql);
+        return isSelectQuery(sql) && !containsMutationQueryKeyword(sql) && !containsSelectIntoClause(sql);
     }
 
     /**
@@ -718,7 +718,7 @@ final class DaoUtil {
         }
 
         return !containsQueryKeyword(sql, "UPDATE") && !containsQueryKeyword(sql, "DELETE") && !containsQueryKeyword(sql, "MERGE")
-                && !containsInsertUpdateClause(sql);
+                && !containsInsertUpdateClause(sql) && !containsSelectIntoClause(sql) && !containsTokenSequence(sql, "INSERT", "OVERWRITE");
     }
 
     private static boolean containsMutationQueryKeyword(final String sql) {
@@ -728,6 +728,51 @@ final class DaoUtil {
 
     private static boolean containsInsertUpdateClause(final String sql) {
         return isInsertOrReplaceQuery(sql) || containsTokenSequence(sql, "DUPLICATE", "KEY", "UPDATE") || containsTokenSequence(sql, "DO", "UPDATE");
+    }
+
+    private static boolean containsSelectIntoClause(final String sql) {
+        return isSelectQuery(sql) && containsToken(sql, "INTO");
+    }
+
+    private static boolean containsToken(final String sql, final String tokenToFind) {
+        if (Strings.isEmpty(sql)) {
+            return false;
+        }
+
+        int index = 0;
+
+        while (index < sql.length()) {
+            index = skipLeadingWhitespaceAndComments(sql, index);
+
+            if (index >= sql.length()) {
+                break;
+            }
+
+            final char ch = sql.charAt(index);
+
+            if (ch == '\'' || ch == '"' || ch == '`') {
+                index = skipQuotedLiteral(sql, index, ch);
+                continue;
+            } else if (ch == '[') {
+                index = skipBracketQuotedIdentifier(sql, index);
+                continue;
+            }
+
+            if (Character.isLetter(ch)) {
+                final String token = readIdentifierToken(sql, index);
+
+                if (tokenToFind.equalsIgnoreCase(token)) {
+                    return true;
+                }
+
+                index += token.length();
+                continue;
+            }
+
+            index++;
+        }
+
+        return false;
     }
 
     private static boolean isInsertOrReplaceQuery(final String sql) {
@@ -769,6 +814,10 @@ final class DaoUtil {
 
             if (ch == '\'' || ch == '"' || ch == '`') {
                 index = skipQuotedLiteral(sql, index, ch);
+                matched = 0;
+                continue;
+            } else if (ch == '[') {
+                index = skipBracketQuotedIdentifier(sql, index);
                 matched = 0;
                 continue;
             }
@@ -817,6 +866,10 @@ final class DaoUtil {
 
             if (ch == '\'' || ch == '"' || ch == '`') {
                 index = skipQuotedLiteral(sql, index, ch);
+                canStartQueryKeyword = false;
+                continue;
+            } else if (ch == '[') {
+                index = skipBracketQuotedIdentifier(sql, index);
                 canStartQueryKeyword = false;
                 continue;
             }
@@ -902,6 +955,9 @@ final class DaoUtil {
 
             if (ch == '\'' || ch == '"' || ch == '`') {
                 fromIndex = skipQuotedLiteral(sql, fromIndex, ch);
+                continue;
+            } else if (ch == '[') {
+                fromIndex = skipBracketQuotedIdentifier(sql, fromIndex);
                 continue;
             }
 
@@ -1015,12 +1071,49 @@ final class DaoUtil {
         return fromIndex;
     }
 
+    private static int skipBracketQuotedIdentifier(final String sql, int fromIndex) {
+        fromIndex++;
+
+        while (fromIndex < sql.length()) {
+            if (sql.charAt(fromIndex) == ']') {
+                if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex + 1) == ']') {
+                    fromIndex += 2;
+                } else {
+                    fromIndex++;
+                    break;
+                }
+            } else {
+                fromIndex++;
+            }
+        }
+
+        return fromIndex;
+    }
+
     private static String readKeyword(final String sql, int fromIndex) {
         fromIndex = skipLeadingWhitespaceAndComments(sql, fromIndex);
 
         final int startIndex = fromIndex;
 
         while (fromIndex < sql.length() && Character.isLetter(sql.charAt(fromIndex))) {
+            fromIndex++;
+        }
+
+        return fromIndex > startIndex ? sql.substring(startIndex, fromIndex) : "";
+    }
+
+    private static String readIdentifierToken(final String sql, int fromIndex) {
+        fromIndex = skipLeadingWhitespaceAndComments(sql, fromIndex);
+
+        final int startIndex = fromIndex;
+
+        while (fromIndex < sql.length()) {
+            final char ch = sql.charAt(fromIndex);
+
+            if (!(Character.isLetterOrDigit(ch) || ch == '_')) {
+                break;
+            }
+
             fromIndex++;
         }
 

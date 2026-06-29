@@ -205,6 +205,29 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testGenerateSelectSql_QuotesSinglePartIdentifierStartingWithDigit() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("1st_value");
+
+        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "123abc");
+
+        assertEquals("SELECT id, `1st_value` FROM `123abc`", sql);
+    }
+
+    @Test
     public void testGenerateSelectSql_EscapesEmbeddedBacktickInColumnName() throws SQLException {
         final Connection conn = Mockito.mock(Connection.class);
         final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
@@ -448,6 +471,22 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .build();
         String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
+    }
+
+    @Test
+    public void testGenerateEntityClass_CopyMethodParsesInitializedAdditionalFieldName() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalFieldsOrLines("    private int retryCount = 1;")
+                .build();
+
+        String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("private int retryCount = 1;"));
+        assertTrue(result.contains("copy.retryCount = this.retryCount;"));
+        assertFalse(result.contains("copy.1 = this.1;"));
     }
 
     // Test generateEntityClass with conflicting readOnly and nonUpdatable for same field

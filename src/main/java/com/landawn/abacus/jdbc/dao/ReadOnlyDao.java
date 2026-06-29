@@ -24,6 +24,7 @@ import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.util.N;
 
 /**
  * Strictly read-only DAO that permits only {@code SELECT} queries.
@@ -345,6 +346,8 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
+        N.checkArgNotNull(namedQuery, "namedQuery");
+
         if (!DaoUtil.isReadOnlyQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO");
         }
@@ -389,6 +392,8 @@ public interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends NoUpdateD
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
+        N.checkArgNotNull(namedQuery, "namedQuery");
+
         if (!DaoUtil.isReadOnlyQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO");
         }

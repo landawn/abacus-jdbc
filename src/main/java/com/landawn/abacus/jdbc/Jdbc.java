@@ -1188,8 +1188,11 @@ public final class Jdbc {
          * @param <R> final result type
          * @param after the function to apply to the intermediate {@code Dataset}
          * @return a {@code ResultExtractor} that produces the transformed result
+         * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         static <R> ResultExtractor<R> toDatasetAndThen(final Throwables.Function<Dataset, R, SQLException> after) {
+            N.checkArgNotNull(after, cs.after);
+
             return rs -> after.apply(TO_DATASET.apply(rs));
         }
     }
@@ -7181,7 +7184,7 @@ public final class Jdbc {
             if (Strings.isEmpty(updatedTableName)) {
                 pool.clear();
             } else {
-                pool.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(pool::remove);
+                pool.keySet().stream().filter(k -> cacheKeyMatchesTable(k, updatedTableName)).toList().forEach(pool::remove);
             }
         }
     }
@@ -7286,8 +7289,14 @@ public final class Jdbc {
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
             } else {
-                cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName));
+                cache.entrySet().removeIf(e -> cacheKeyMatchesTable(e.getKey(), updatedTableName));
             }
         }
+    }
+
+    private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) {
+        final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
+
+        return Strings.isNotEmpty(cachedTableName) && cachedTableName.equalsIgnoreCase(tableName);
     }
 }

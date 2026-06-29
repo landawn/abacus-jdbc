@@ -154,7 +154,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
     @Deprecated
     @NonDBOperation
     default ID generateId() throws SQLException, UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("ID generation is not supported by default");
     }
 
     /**
@@ -788,6 +788,7 @@ public interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>> extends Dao<T, TD
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
+    // Rename to getOrNull?
     T gett(final ID id) throws DuplicateResultException, SQLException;
 
     /**

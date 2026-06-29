@@ -64,6 +64,8 @@ public class NoUpdateDaoTest extends TestBase {
         TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
 
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("UPDATE demo SET name = 'x'"));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("SELECT * INTO demo_copy FROM demo"));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("INSERT OVERWRITE TABLE demo SELECT * FROM staging_demo"));
     }
 
     @Test
@@ -179,6 +181,11 @@ public class NoUpdateDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedUpdate, new int[] { 1 }));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedUpdate, new String[] { "id" }));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult(parsedUpdate));
+        assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null));
+        assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null, true));
+        assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null, new int[] { 1 }));
+        assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null, new String[] { "id" }));
+        assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQueryForLargeResult((ParsedSql) null));
     }
 
     @Test

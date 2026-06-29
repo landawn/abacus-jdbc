@@ -665,6 +665,28 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
+    public void testCopyWithSelectedColumnsQuotesSinglePartIdentifierStartingWithDigit() throws SQLException {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
+        final Collection<String> selectColumns = List.of("2024_total");
+
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "2024_source", "2024_target", selectColumns);
+
+        assertEquals(1, result);
+        verify(mockConnection).prepareStatement("SELECT `2024_total` FROM `2024_source`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO \"2024_target\"(\"2024_total\") VALUES (?)");
+    }
+
+    @Test
     public void testCopyWithSelectedColumnsQuotesQualifiedTableNamesPerPart() throws SQLException {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);

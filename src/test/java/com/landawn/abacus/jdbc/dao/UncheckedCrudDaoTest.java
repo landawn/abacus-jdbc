@@ -82,7 +82,8 @@ public class UncheckedCrudDaoTest extends TestBase {
     public void testGenerateId_UnsupportedOperation() {
         TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
 
-        assertThrows(UnsupportedOperationException.class, dao::generateId);
+        UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class, dao::generateId);
+        assertEquals("ID generation is not supported by default", e.getMessage());
     }
 
     @Test

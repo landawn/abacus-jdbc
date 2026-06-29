@@ -66,7 +66,9 @@ public class ReadOnlyDaoTest extends TestBase {
         }
 
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("UPDATE users SET name = 'x'"));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("SELECT * INTO user_copy FROM users"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQueryForLargeResult("DELETE FROM users"));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQueryForLargeResult("SELECT * INTO user_copy FROM users"));
     }
 
     @Test
@@ -120,6 +122,8 @@ public class ReadOnlyDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedUpdate));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult("DELETE FROM users WHERE id = :id"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult(parsedUpdate));
+        assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null));
+        assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQueryForLargeResult((ParsedSql) null));
     }
 
     @Test

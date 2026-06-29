@@ -37,7 +37,8 @@ package com.landawn.abacus.jdbc.dao;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with primitive long IDs
- * public interface ReadOnlyUserDao extends UncheckedReadOnlyCrudJoinEntityHelperL<User, ReadOnlyUserDao> {
+ * public interface ReadOnlyUserDao
+ *         extends UncheckedReadOnlyCrudDaoL<User, ReadOnlyUserDao>, UncheckedReadOnlyCrudJoinEntityHelperL<User, ReadOnlyUserDao> {
  *     // Inherits read-only operations with join loading and primitive long ID support
  * }
  *

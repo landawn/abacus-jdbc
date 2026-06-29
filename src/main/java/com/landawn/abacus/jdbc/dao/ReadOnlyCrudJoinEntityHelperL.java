@@ -27,7 +27,8 @@ package com.landawn.abacus.jdbc.dao;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support for Long IDs
- * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelperL<User, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao
+ *         extends ReadOnlyCrudDaoL<User, UserReadOnlyDao>, ReadOnlyCrudJoinEntityHelperL<User, UserReadOnlyDao> {
  *     // Can read join entities (e.g., user roles, permissions)
  *     // Cannot delete join entities
  * }

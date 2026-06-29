@@ -3257,18 +3257,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBooleanForIndices(true, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param parameterValue the Boolean value to set
+     * @param value the Boolean value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setBooleanForIndices(final Boolean parameterValue, final int... parameterIndices) throws SQLException {
+    public This setBooleanForIndices(final Boolean value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setBoolean(parameterIndex, parameterValue);
+            setBoolean(parameterIndex, value);
         }
 
         return (This) this;
@@ -3283,18 +3283,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setIntForIndices(0, 2, 5, 8);
      * }</pre>
      *
-     * @param parameterValue the Integer value to set
+     * @param value the Integer value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setIntForIndices(final Integer parameterValue, final int... parameterIndices) throws SQLException {
+    public This setIntForIndices(final Integer value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setInt(parameterIndex, parameterValue);
+            setInt(parameterIndex, value);
         }
 
         return (This) this;
@@ -3303,17 +3303,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    /**
     //     * Note: The reason for giving name: {@code setIntegerForIndices}, not {@code setIntForIndices} is because of error: <i>The method setIntForIndices(int, int[]) is ambiguous for the type</i>.
     //     *
-    //     * @param parameterValue
+    //     * @param value
     //     * @param parameterIndices
     //     * @return
     //     * @throws SQLException
     //     */
     //    @Beta
-    //    public This setIntegerForIndices(final Integer parameterValue, final int... parameterIndices) throws SQLException {
+    //    public This setIntegerForIndices(final Integer value, final int... parameterIndices) throws SQLException {
     //        checkParameterIndices(parameterIndices);
     //
     //        for (int parameterIndex : parameterIndices) {
-    //            setInt(parameterIndex, parameterValue);
+    //            setInt(parameterIndex, value);
     //        }
     //
     //        return (This) this;
@@ -3323,17 +3323,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    /**
     //     *
     //     *
-    //     * @param parameterValue
+    //     * @param value
     //     * @param parameterIndices
     //     * @return
     //     * @throws SQLException
     //     */
     //    @Beta
-    //    public This setLongForIndices(final long parameterValue, final int... parameterIndices) throws SQLException {
+    //    public This setLongForIndices(final long value, final int... parameterIndices) throws SQLException {
     //        checkParameterIndices(parameterIndices);
     //
     //        for (int parameterIndex : parameterIndices) {
-    //            setLong(parameterIndex, parameterValue);
+    //            setLong(parameterIndex, value);
     //        }
     //
     //        return (This) this;
@@ -3347,18 +3347,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setLongForIndices(System.currentTimeMillis(), 2, 4, 6);
      * }</pre>
      *
-     * @param parameterValue the Long value to set
+     * @param value the Long value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setLongForIndices(final Long parameterValue, final int... parameterIndices) throws SQLException {
+    public This setLongForIndices(final Long value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setLong(parameterIndex, parameterValue);
+            setLong(parameterIndex, value);
         }
 
         return (This) this;
@@ -3372,18 +3372,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDoubleForIndices(0.0, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param parameterValue the Double value to set
+     * @param value the Double value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDoubleForIndices(final Double parameterValue, final int... parameterIndices) throws SQLException {
+    public This setDoubleForIndices(final Double value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setDouble(parameterIndex, parameterValue);
+            setDouble(parameterIndex, value);
         }
 
         return (This) this;
@@ -3397,18 +3397,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setStringForIndices("N/A", 2, 4, 6, 8);
      * }</pre>
      *
-     * @param parameterValue the String value to set
+     * @param value the String value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setStringForIndices(final String parameterValue, final int... parameterIndices) throws SQLException {
+    public This setStringForIndices(final String value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setString(parameterIndex, parameterValue);
+            setString(parameterIndex, value);
         }
 
         return (This) this;
@@ -3423,18 +3423,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDateForIndices(today, 1, 3, 5);
      * }</pre>
      *
-     * @param parameterValue the Date value to set
+     * @param value the Date value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDateForIndices(final java.sql.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setDateForIndices(final java.sql.Date value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setDate(parameterIndex, parameterValue);
+            setDate(parameterIndex, value);
         }
 
         return (This) this;
@@ -3449,18 +3449,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDateForIndices(now, 2, 4, 6);
      * }</pre>
      *
-     * @param parameterValue the Date value to set
+     * @param value the Date value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDateForIndices(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setDateForIndices(final java.util.Date value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setDate(parameterIndex, parameterValue);
+            setDate(parameterIndex, value);
         }
 
         return (This) this;
@@ -3475,18 +3475,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimeForIndices(noon, 1, 3, 5);
      * }</pre>
      *
-     * @param parameterValue the Time value to set
+     * @param value the Time value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimeForIndices(final java.sql.Time parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimeForIndices(final java.sql.Time value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setTime(parameterIndex, parameterValue);
+            setTime(parameterIndex, value);
         }
 
         return (This) this;
@@ -3501,18 +3501,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimeForIndices(time, 2, 4, 6);
      * }</pre>
      *
-     * @param parameterValue the Date value to set as Time
+     * @param value the Date value to set as Time
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimeForIndices(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimeForIndices(final java.util.Date value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setTime(parameterIndex, parameterValue);
+            setTime(parameterIndex, value);
         }
 
         return (This) this;
@@ -3527,18 +3527,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestampForIndices(ts, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param parameterValue the Timestamp value to set
+     * @param value the Timestamp value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimestampForIndices(final java.sql.Timestamp parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimestampForIndices(final java.sql.Timestamp value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setTimestamp(parameterIndex, parameterValue);
+            setTimestamp(parameterIndex, value);
         }
 
         return (This) this;
@@ -3553,18 +3553,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestampForIndices(now, 2, 4, 6, 8);
      * }</pre>
      *
-     * @param parameterValue the Date value to set as Timestamp
+     * @param value the Date value to set as Timestamp
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimestampForIndices(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimestampForIndices(final java.util.Date value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setTimestamp(parameterIndex, parameterValue);
+            setTimestamp(parameterIndex, value);
         }
 
         return (This) this;
@@ -3579,18 +3579,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setObjectForIndices(defaultId, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param parameterValue the Object value to set
+     * @param value the Object value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setObjectForIndices(final Object parameterValue, final int... parameterIndices) throws SQLException {
+    public This setObjectForIndices(final Object value, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
-            setObject(parameterIndex, parameterValue);
+            setObject(parameterIndex, value);
         }
 
         return (This) this;
@@ -5829,16 +5829,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <E> the type of exception that may be thrown by the consumer
-     * @param action the consumer action to apply to the {@code Dataset} resulting from the query
-     * @throws IllegalArgumentException if {@code action} is {@code null}
+     * @param consumer the consumer to apply to the {@code Dataset} resulting from the query
+     * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer action throws an exception
      */
     @Beta
-    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> action) throws IllegalArgumentException, SQLException, E {
-        checkArgNotNull(action, cs.action);
+    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> consumer) throws IllegalArgumentException, SQLException, E {
+        checkArgNotNull(consumer, cs.consumer);
 
-        action.accept(query());
+        consumer.accept(query());
     }
 
     /**
@@ -5859,18 +5859,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <E> the type of exception that may be thrown by the consumer
      * @param entityClassForExtractor the class used to provide metadata for column mapping
-     * @param action the consumer action to apply to the {@code Dataset} resulting from the query
-     * @throws IllegalArgumentException if {@code action} is {@code null}, or if {@code entityClassForExtractor} is {@code null}
+     * @param consumer the consumer to apply to the {@code Dataset} resulting from the query
+     * @throws IllegalArgumentException if {@code consumer} is {@code null}, or if {@code entityClassForExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer action throws an exception
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     @Beta
-    public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super Dataset, E> action)
+    public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super Dataset, E> consumer)
             throws IllegalArgumentException, SQLException, E {
-        checkArgNotNull(action, cs.action);
+        checkArgNotNull(consumer, cs.consumer);
 
-        action.accept(query(entityClassForExtractor));
+        consumer.accept(query(entityClassForExtractor));
     }
 
     /**
@@ -9634,14 +9634,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * to access statement metadata or handle complex result processing.</p>
      *
      * <p><b>Important:</b> Do not return the {@code PreparedStatement}, a {@code ResultSet},
-     * or any other unfinished JDBC resource from {@code getter} unless
+     * or any other unfinished JDBC resource from {@code func} unless
      * {@code closeAfterExecution(false)} has been set — the statement (and any associated
-     * {@code ResultSet}) is closed in this method's {@code finally} block once {@code getter}
+     * {@code ResultSet}) is closed in this method's {@code finally} block once {@code func}
      * returns. Finish all consumption inside the function.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Drain the first result set fully inside the getter
+     * // Drain the first result set fully inside the func
      * List<String> rows = preparedQuery.executeThenApply(stmt -> {
      *     final List<String> out = new ArrayList<>();
      *     try (ResultSet rs = stmt.getResultSet()) {
@@ -9662,24 +9662,24 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <R> the type of result returned from the operation
-     * @param getter the function to apply to the PreparedStatement after execution.
+     * @param func the function to apply to the PreparedStatement after execution.
      *               Must not be {@code null}.
-     * @return the result of applying {@code getter} to the executed PreparedStatement
+     * @return the result of applying {@code func} to the executed PreparedStatement
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code getter} is {@code null}
-     * @throws SQLException if a database access error occurs or {@code getter} throws
+     * @throws IllegalArgumentException if {@code func} is {@code null}
+     * @throws SQLException if a database access error occurs or {@code func} throws
      * @see #execute()
      * @see #executeThenApply(Throwables.BiFunction)
      */
-    public <R> R executeThenApply(final Throwables.Function<? super Stmt, ? extends R, SQLException> getter)
+    public <R> R executeThenApply(final Throwables.Function<? super Stmt, ? extends R, SQLException> func)
             throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
-        checkArgNotNull(getter, cs.getter);
+        checkArgNotNull(func, cs.func);
 
         try {
             JdbcUtil.execute(stmt);
 
-            return getter.apply(stmt);
+            return func.apply(stmt);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9704,7 +9704,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <R> the type of result returned from the operation
-     * @param getter the function to apply to the PreparedStatement. The first parameter is the executed PreparedStatement,
+     * @param func the function to apply to the PreparedStatement. The first parameter is the executed PreparedStatement,
      *               the second parameter indicates if the first result is a ResultSet object.
      *               Must not be {@code null}.
      * @return The result of applying the function to the PreparedStatement
@@ -9713,15 +9713,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      * @see #executeThenApply(Throwables.Function)
      */
-    public <R> R executeThenApply(final Throwables.BiFunction<? super Stmt, Boolean, ? extends R, SQLException> getter)
+    public <R> R executeThenApply(final Throwables.BiFunction<? super Stmt, Boolean, ? extends R, SQLException> func)
             throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
-        checkArgNotNull(getter, cs.getter);
+        checkArgNotNull(func, cs.func);
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
-            return getter.apply(stmt, isFirstResultSet);
+            return func.apply(stmt, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -10082,8 +10082,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *   <li>Mark this instance as closed</li>
      * </ul>
      *
-     * <p><b>Note:</b> After calling close(), any attempt to use this query instance
-     * will result in an IllegalStateException.</p>
+     * <p><b>Note:</b> After calling close(), execution and parameter-setting methods
+     * that check the query state throw {@link IllegalStateException}; calling
+     * {@code close()} again is a no-op.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -2152,6 +2152,25 @@ public class JdbcTest extends TestBase {
         assertEquals("result2", cache.get("method#products#params2", null, null, methodSignature));
     }
 
+    @Test
+    public void testDefaultDaoCacheUpdate_OnlyInvalidatesExactTableSegment() throws Exception {
+        Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(100, 1000);
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        cache.put("method#users#params1", "users", null, null, methodSignature);
+        cache.put("method#superusers#params2", "superusers", null, null, methodSignature);
+        cache.put("method#orders#[\"users\"]", "orders", null, null, methodSignature);
+
+        cache.update("method#users#updateParams", 1, null, null, methodSignature);
+
+        assertNull(cache.get("method#users#params1", null, null, methodSignature));
+        assertEquals("superusers", cache.get("method#superusers#params2", null, null, methodSignature));
+        assertEquals("orders", cache.get("method#orders#[\"users\"]", null, null, methodSignature));
+    }
+
     // DaoCacheByMap Tests
     @Test
     public void testDaoCacheByMapGetPut() throws Exception {
@@ -2209,6 +2228,25 @@ public class JdbcTest extends TestBase {
         assertNull(cache.get("method#users#params3", null, null, methodSignature));
         // Products entry should remain
         assertEquals("result2", cache.get("method#products#params2", null, null, methodSignature));
+    }
+
+    @Test
+    public void testDaoCacheByMapUpdate_OnlyInvalidatesExactTableSegment() throws Exception {
+        Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        cache.put("method#users#params1", "users", null, null, methodSignature);
+        cache.put("method#superusers#params2", "superusers", null, null, methodSignature);
+        cache.put("method#orders#[\"users\"]", "orders", null, null, methodSignature);
+
+        cache.update("method#users#updateParams", 1, null, null, methodSignature);
+
+        assertNull(cache.get("method#users#params1", null, null, methodSignature));
+        assertEquals("superusers", cache.get("method#superusers#params2", null, null, methodSignature));
+        assertEquals("orders", cache.get("method#orders#[\"users\"]", null, null, methodSignature));
     }
 
     @Test
@@ -2897,6 +2935,11 @@ public class JdbcTest extends TestBase {
 
         Integer result = extractor.apply(mockResultSet);
         assertEquals(0, result);
+    }
+
+    @Test
+    public void testResultExtractorToDatasetAndThen_NullAfterThrowsImmediately() {
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.ResultExtractor.toDatasetAndThen(null));
     }
 
     @Test

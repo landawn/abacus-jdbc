@@ -1390,7 +1390,7 @@ public interface JoinEntityHelper<T, TD extends Dao<T, TD>> {
 
         final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
                 .filter(joinEntityPropName -> Beans.getPropValue(entity, joinEntityPropName) == null)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor))
                 .toList();
 
         DaoUtil.complete(futures);

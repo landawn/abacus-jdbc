@@ -113,6 +113,12 @@ public class DaoImplTest extends TestBase {
         Jdbc.OutParamResult call();
     }
 
+    interface ZeroPositionOutParameterDao extends Dao<TestEntity, ZeroPositionOutParameterDao> {
+        @Query(value = "{call test_proc(?)}", isProcedure = true, op = OP.executeAndGetOutParameters)
+        @OutParameter(position = 0, sqlType = Types.INTEGER)
+        Jdbc.OutParamResult call() throws SQLException;
+    }
+
     interface IncompatibleRowMapperListDao {
         @Query("select * from test")
         List<String> list(Jdbc.RowMapper<TestEntity> mapper);
@@ -863,6 +869,16 @@ public class DaoImplTest extends TestBase {
         DataSource ds = mockDataSourceForDaoCreation();
 
         assertThrows(UnsupportedOperationException.class, () -> DaoImpl.createDao(AmbiguousOutParameterDao.class, null, ds, PSC, null, null, null));
+    }
+
+    @Test
+    public void testCreateDao_RejectsOutParameterWithZeroPosition() throws SQLException {
+        DataSource ds = mockDataSourceForDaoCreation();
+
+        final UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(ZeroPositionOutParameterDao.class, null, ds, PSC, null, null, null));
+
+        assertTrue(e.getMessage().contains("@OutParameter position must be greater than 0"), e.getMessage());
     }
 
     @Test

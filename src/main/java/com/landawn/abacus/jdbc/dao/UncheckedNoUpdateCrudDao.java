@@ -28,10 +28,9 @@ import com.landawn.abacus.query.condition.Condition;
  * This interface is designed for use cases where stored records must remain immutable after insertion.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
- * <p>This is an "unchecked" DAO variant. All read and insert methods throw {@link UncheckedSQLException}
- * instead of checked {@link java.sql.SQLException}, allowing for cleaner code without explicit exception
- * handling. This makes it particularly convenient for use in lambda expressions, stream operations, and
- * other functional programming patterns where checked exceptions would be cumbersome.</p>
+ * <p>This is an "unchecked" DAO variant. Read and insert methods redeclared by this interface or its
+ * unchecked parents throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}.
+ * Inherited methods that are not redeclared keep their checked-exception contract.</p>
  *
  * <p>This interface extends {@link UncheckedNoUpdateDao}, {@link NoUpdateCrudDao} and {@link UncheckedCrudDao}
  * to provide comprehensive read/insert functionality while blocking update and delete operations. It's

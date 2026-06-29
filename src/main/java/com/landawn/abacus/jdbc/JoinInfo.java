@@ -1144,8 +1144,8 @@ public final class JoinInfo {
 
         if (!allowJoiningByNullOrDefaultValue && JdbcUtil.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
-                    + ". Annotated the Dao class of " + ClassUtil.getCanonicalClassName(entityClass)
-                    + " with @DaoConfig{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
+                    + ". Annotate the Dao class for " + ClassUtil.getCanonicalClassName(entityClass)
+                    + " with @DaoConfig(allowJoiningByNullOrDefaultValue = true) to allow null/default join values");
         }
 
         return value;

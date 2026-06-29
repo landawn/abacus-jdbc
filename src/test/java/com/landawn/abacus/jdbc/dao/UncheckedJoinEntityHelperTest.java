@@ -466,6 +466,26 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
     }
 
     @Test
+    public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_RechecksBeforeLoading() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        java.util.concurrent.Executor executor = command -> {
+            entity.setOrders("already-loaded");
+            command.run();
+        };
+
+        Mockito.doAnswer(invocation -> {
+            entity.setOrders("loaded-by-dao");
+            return null;
+        }).when(dao).loadJoinEntities(entity, "orders");
+
+        dao.loadJoinEntitiesIfAbsent(entity, List.of("orders"), executor);
+
+        assertEquals("already-loaded", entity.getOrders());
+        verify(dao, Mockito.never()).loadJoinEntities(entity, "orders");
+    }
+
+    @Test
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_LoopsEach() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
@@ -621,12 +641,12 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         TestEntity entity = new TestEntity();
         entity.setOrders("existing"); // non-null so filter skips
         entity.setAddresses(null); // null so filter includes
-        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString(), isNull());
 
         dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), Runnable::run);
 
-        verify(dao).loadJoinEntities(entity, "addresses");
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(eq(entity), eq("orders"));
+        verify(dao).loadJoinEntities(entity, "addresses", null);
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(eq(entity), eq("orders"), isNull());
     }
 
     // loadJoinEntitiesIfAbsent(Collection, Collection<String>, boolean) — false branch

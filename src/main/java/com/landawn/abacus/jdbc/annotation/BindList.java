@@ -30,6 +30,12 @@ import com.landawn.abacus.annotation.Beta;
  * bind a variable number of values. The framework automatically handles the expansion
  * of the collection into individual parameter bindings.</p>
  *
+ * <p><b>Note on the name:</b> despite the {@code List} suffix, {@code @BindList} is <em>not</em> a
+ * {@code @Repeatable} container (unlike {@code HandlerList} or {@code OutParameterList}, which hold
+ * multiple {@code @Handler}/{@code @OutParameter} instances). It is an independent parameter
+ * annotation applied to a single collection/array parameter, which it expands into the appropriate
+ * number of JDBC placeholders.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {

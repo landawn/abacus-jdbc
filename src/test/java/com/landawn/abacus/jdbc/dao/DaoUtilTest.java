@@ -596,6 +596,37 @@ public class DaoUtilTest extends TestBase {
         assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON CONFLICT DO UPDATE')"));
     }
 
+    @Test
+    public void testIsReadOnlyQuery_RejectsSelectInto() {
+        assertFalse(DaoUtil.isReadOnlyQuery("SELECT * INTO user_copy FROM users"));
+        assertFalse(DaoUtil.isReadOnlyQuery("WITH src AS (SELECT * FROM users) SELECT * INTO user_copy FROM src"));
+        assertTrue(DaoUtil.isReadOnlyQuery("SELECT 'INTO' AS keyword_text FROM users"));
+        assertTrue(DaoUtil.isReadOnlyQuery("SELECT [INTO] FROM users"));
+        assertTrue(DaoUtil.isReadOnlyQuery("SELECT into_column FROM users"));
+    }
+
+    @Test
+    public void testIsNoUpdateQuery_RejectsSelectIntoAndInsertOverwrite() {
+        assertFalse(DaoUtil.isNoUpdateQuery("SELECT * INTO user_copy FROM users"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OVERWRITE TABLE users SELECT * FROM staging_users"));
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('INSERT OVERWRITE TABLE users')"));
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log([INSERT OVERWRITE]) VALUES (1)"));
+    }
+
+    @Test
+    public void testIsReadOnlyQuery_IgnoresBracketQuotedMutationKeywords() {
+        assertTrue(DaoUtil.isReadOnlyQuery("SELECT [DELETE], [UPDATE], [MERGE] FROM [INSERT]"));
+        assertTrue(DaoUtil.isReadOnlyQuery("WITH [DELETE] AS (SELECT 1) SELECT * FROM [DELETE]"));
+        assertFalse(DaoUtil.isReadOnlyQuery("SELECT [DELETE] FROM audit_log; DELETE FROM audit_log"));
+    }
+
+    @Test
+    public void testIsNoUpdateQuery_IgnoresBracketQuotedConflictUpdateText() {
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log([DO], [UPDATE]) VALUES (1, 2)"));
+        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log([DO UPDATE]) VALUES (1)"));
+        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
+    }
+
     // Backtick-quoted identifiers in WITH clause exercises quote-type branch (line 941)
     @Test
     public void testIsSelectQuery_CteWithBacktickQuotes() {

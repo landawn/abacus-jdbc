@@ -4275,16 +4275,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final Object first = iter.next();
 
             if (first == null) {
-                if (parameterCount != 1) {
-                    throw new IllegalArgumentException("Unsupported named parameter type: null for SQL: " + namedSql.originalSql());
-                }
-
-                stmt.setObject(1, first);
-                addBatch();
+                addNullBatchParameter();
 
                 while (iter.hasNext()) {
-                    stmt.setObject(1, iter.next());
-                    addBatch();
+                    final Object params = iter.next();
+
+                    if (params == null) {
+                        addNullBatchParameter();
+                    } else {
+                        stmt.clearParameters();
+                        stmt.setObject(1, params);
+                        addBatch();
+                    }
                 }
             } else {
                 final Class<?> cls = first.getClass();
@@ -4318,6 +4320,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     while (iter.hasNext()) {
                         params = iter.next();
 
+                        if (params == null) {
+                            addNullBatchParameter();
+                            continue;
+                        }
+
                         for (int i = 0; i < parameterCount; i++) {
                             propInfo = propInfos[i];
 
@@ -4336,6 +4343,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                     while (iter.hasNext()) {
                         params = (Map<String, ?>) iter.next();
+
+                        if (params == null) {
+                            addNullBatchParameter();
+                            continue;
+                        }
+
                         stmt.clearParameters();
                         setParameters(params);
                         addBatch();
@@ -4347,6 +4360,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     Collection params = null;
                     while (iter.hasNext()) {
                         params = (Collection) iter.next();
+
+                        if (params == null) {
+                            addNullBatchParameter();
+                            continue;
+                        }
+
                         stmt.clearParameters();
                         setParameters(params);
                         addBatch();
@@ -4358,6 +4377,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     Object[] params = null;
                     while (iter.hasNext()) {
                         params = (Object[]) iter.next();
+
+                        if (params == null) {
+                            addNullBatchParameter();
+                            continue;
+                        }
+
                         stmt.clearParameters();
                         setParameters(params);
                         addBatch();
@@ -4369,6 +4394,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     EntityId params = null;
                     while (iter.hasNext()) {
                         params = (EntityId) iter.next();
+
+                        if (params == null) {
+                            addNullBatchParameter();
+                            continue;
+                        }
+
                         stmt.clearParameters();
                         setParameters(params);
                         addBatch();
@@ -4394,6 +4425,16 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
 
         return this;
+    }
+
+    private void addNullBatchParameter() throws SQLException {
+        if (parameterCount != 1) {
+            throw new IllegalArgumentException("Unsupported named parameter type: null for SQL: " + namedSql.originalSql());
+        }
+
+        stmt.clearParameters();
+        stmt.setObject(1, null);
+        addBatch();
     }
 
 }

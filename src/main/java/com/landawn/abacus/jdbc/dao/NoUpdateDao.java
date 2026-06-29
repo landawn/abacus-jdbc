@@ -31,6 +31,7 @@ import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
 
 /**
@@ -499,6 +500,8 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
+        N.checkArgNotNull(namedQuery, "namedQuery");
+
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a no-update DAO");
         }
@@ -531,6 +534,8 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
+        N.checkArgNotNull(namedQuery, "namedQuery");
+
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a no-update DAO");
         }
@@ -564,6 +569,8 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
+        N.checkArgNotNull(namedQuery, "namedQuery");
+
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a no-update DAO");
         }
@@ -597,6 +604,8 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
+        N.checkArgNotNull(namedQuery, "namedQuery");
+
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a no-update DAO");
         }
@@ -631,6 +640,8 @@ public interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends Dao<T, TD
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
+        N.checkArgNotNull(namedQuery, "namedQuery");
+
         if (!DaoUtil.isNoUpdateQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a no-update DAO");
         }

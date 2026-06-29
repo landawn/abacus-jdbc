@@ -118,7 +118,7 @@ public interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
     @NonDBOperation
     @Override
     default ID generateId() throws UncheckedSQLException, UnsupportedOperationException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("ID generation is not supported by default");
     }
 
     /**

@@ -43,7 +43,8 @@ import java.util.concurrent.Executor;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support
- * public interface UserReadOnlyDao extends ReadOnlyJoinEntityHelper<User, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao
+ *         extends ReadOnlyDao<User, UserReadOnlyDao>, ReadOnlyJoinEntityHelper<User, UserReadOnlyDao> {
  *     // All load operations work normally
  *     // All delete operations throw UnsupportedOperationException
  * }

@@ -30,8 +30,9 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * with the convenience of primitive {@code long} ID methods. It's useful for append-only data stores
  * where records can be added and read, but never modified.</p>
  *
- * <p>Read and insert methods throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
- * making it easier to work with in functional programming contexts. All update and delete operations
+ * <p>Read and insert methods redeclared by this interface or its unchecked parents throw
+ * {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}. Inherited methods that
+ * are not redeclared keep their checked-exception contract. All update and delete operations
  * (including the primitive {@code long} ID variants declared on this interface) throw
  * {@link UnsupportedOperationException}.</p>
  *

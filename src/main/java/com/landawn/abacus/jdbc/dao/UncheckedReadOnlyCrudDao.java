@@ -27,9 +27,9 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * ensuring data safety by throwing {@link UnsupportedOperationException} on any modification attempt.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
- * <p>This is an "unchecked" DAO variant. Query methods throw {@link UncheckedSQLException} instead of checked
- * {@link java.sql.SQLException}, making it easier to work with in functional programming contexts, lambda
- * expressions, and stream operations without requiring explicit exception handling.</p>
+ * <p>This is an "unchecked" DAO variant. Query methods redeclared by this interface or its unchecked
+ * parents throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}. Inherited
+ * methods that are not redeclared keep their checked-exception contract.</p>
  *
  * <p>All write operations (insert, update, delete, and their batch variants) are disabled and throw
  * {@link UnsupportedOperationException}.</p>

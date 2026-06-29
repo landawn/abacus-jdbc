@@ -3573,6 +3573,19 @@ public class NamedQueryTest extends TestBase {
         verify(mockPreparedStatement, times(2)).addBatch();
     }
 
+    @Test
+    public void testAddBatchParameters_Iterator_MapThenNullSingleParameter() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        q.addBatchParameters(Arrays.asList(Map.of("id", 1), null).iterator());
+
+        verify(mockPreparedStatement).setInt(1, 1);
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
     // --- setParameters(entity, Collection): 2 occurrences of same param (L4065-4066) ---
 
     @Test

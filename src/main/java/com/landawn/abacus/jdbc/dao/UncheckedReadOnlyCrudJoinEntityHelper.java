@@ -33,7 +33,8 @@ package com.landawn.abacus.jdbc.dao;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only CRUD DAO with join entity support
- * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudJoinEntityHelper<User, Long, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao
+ *         extends UncheckedReadOnlyCrudDao<User, Long, UserReadOnlyDao>, UncheckedReadOnlyCrudJoinEntityHelper<User, Long, UserReadOnlyDao> {
  *     // Inherits read-only CRUD and join entity operations with unchecked exceptions
  * }
  *

@@ -412,7 +412,7 @@ public final class JdbcCodeGenerationUtil {
 
             return generateEntityClass(entityName, rs, config);
         } catch (final SQLException e) {
-            logger.warn(e, "Failed to generate entity class(entityName={}, query={})", entityName, query);
+            logger.warn(e, "Failed to generate entity class(entityName={}, queryLength={})", entityName, query == null ? 0 : query.length());
             throw new UncheckedSQLException(e);
         }
     }
@@ -479,8 +479,12 @@ public final class JdbcCodeGenerationUtil {
                         .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
                         .map(it -> Strings.substringBetween(it, " ", ";").trim())
                         .map(it -> {
-                            final int idx = it.lastIndexOf(' ');
-                            return Tuple.of(it.substring(0, idx).trim(), it.substring(idx + 1).trim());
+                            final int assignmentIdx = it.indexOf('=');
+                            final String withoutInitializer = assignmentIdx >= 0 ? it.substring(0, assignmentIdx).trim() : it;
+                            final int commaIdx = withoutInitializer.indexOf(',');
+                            final String declaration = commaIdx >= 0 ? withoutInitializer.substring(0, commaIdx).trim() : withoutInitializer.trim();
+                            final int idx = declaration.lastIndexOf(' ');
+                            return Tuple.of(declaration.substring(0, idx).trim(), declaration.substring(idx + 1).trim());
                         })
                         .toList();
 
@@ -2115,8 +2119,7 @@ public final class JdbcCodeGenerationUtil {
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
 
         if (parts.length == 1) {
-            return CharStream.of(parts[0]).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? parts[0]
-                    : quoteIdentifier(parts[0], quote);
+            return isSimpleSqlIdentifier(parts[0]) ? parts[0] : quoteIdentifier(parts[0], quote);
         }
 
         final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
@@ -2137,8 +2140,21 @@ public final class JdbcCodeGenerationUtil {
 
         String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
-        return CharStream.of(columnLabel).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnLabel
-                : quoteIdentifier(columnLabel, quote);
+        return isSimpleSqlIdentifier(columnLabel) ? columnLabel : quoteIdentifier(columnLabel, quote);
+    }
+
+    private static boolean isSimpleSqlIdentifier(final String identifier) {
+        if (Strings.isEmpty(identifier)) {
+            return false;
+        }
+
+        final char first = identifier.charAt(0);
+
+        if (!(Strings.isAsciiAlpha(first) || first == '_')) {
+            return false;
+        }
+
+        return CharStream.of(identifier).skip(1).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_');
     }
 
     private static String quoteIdentifier(final String identifier, final String quote) {

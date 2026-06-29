@@ -486,6 +486,26 @@ public class JoinEntityHelperTest extends TestBase {
     }
 
     @Test
+    public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_RechecksBeforeLoading() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        java.util.concurrent.Executor executor = command -> {
+            entity.setOrders("already-loaded");
+            command.run();
+        };
+
+        Mockito.doAnswer(invocation -> {
+            entity.setOrders("loaded-by-dao");
+            return null;
+        }).when(dao).loadJoinEntities(entity, "orders");
+
+        dao.loadJoinEntitiesIfAbsent(entity, List.of("orders"), executor);
+
+        assertEquals("already-loaded", entity.getOrders());
+        verify(dao, Mockito.never()).loadJoinEntities(entity, "orders");
+    }
+
+    @Test
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_LoopsEach() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
@@ -982,12 +1002,12 @@ public class JoinEntityHelperTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_RunsLoad() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString(), isNull());
 
         dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), Runnable::run);
 
-        verify(dao).loadJoinEntities(entity, "orders");
-        verify(dao).loadJoinEntities(entity, "addresses");
+        verify(dao).loadJoinEntities(entity, "orders", null);
+        verify(dao).loadJoinEntities(entity, "addresses", null);
     }
 
     // edge: loadJoinEntitiesIfAbsent(entity, Collection<String>, Executor) - empty propNames

@@ -2836,8 +2836,7 @@ public final class DataTransferUtil {
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
 
         if (parts.length == 1) {
-            return CharStream.of(parts[0]).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? parts[0]
-                    : quoteIdentifier(parts[0], quote);
+            return isSimpleSqlIdentifier(parts[0]) ? parts[0] : quoteIdentifier(parts[0], quote);
         }
 
         final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
@@ -2856,8 +2855,21 @@ public final class DataTransferUtil {
     private static String checkColumnName(final String columnName, final DBProductInfo dbProductInfo) {
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
-        return CharStream.of(columnName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnName
-                : quoteIdentifier(columnName, quote);
+        return isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quote);
+    }
+
+    private static boolean isSimpleSqlIdentifier(final String identifier) {
+        if (Strings.isEmpty(identifier)) {
+            return false;
+        }
+
+        final char first = identifier.charAt(0);
+
+        if (!(Strings.isAsciiAlpha(first) || first == '_')) {
+            return false;
+        }
+
+        return CharStream.of(identifier).skip(1).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_');
     }
 
     private static String quoteIdentifier(final String identifier, final String quote) {

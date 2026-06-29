@@ -39,7 +39,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with unchecked exceptions
- * public interface UserReadOnlyDao extends UncheckedReadOnlyJoinEntityHelper<User, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao
+ *         extends UncheckedReadOnlyDao<User, UserReadOnlyDao>, UncheckedReadOnlyJoinEntityHelper<User, UserReadOnlyDao> {
  *     // All load operations work normally with unchecked exceptions
  *     // All delete operations will throw UnsupportedOperationException
  * }

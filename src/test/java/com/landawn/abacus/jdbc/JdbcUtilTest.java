@@ -2456,6 +2456,17 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(2, skipped);
     }
 
+    @Test
+    public void testSkip_GetRowUnsupported_FallsBackToManualIteration() throws SQLException {
+        ResultSet freshRs = mock(ResultSet.class);
+        when(freshRs.getRow()).thenThrow(new SQLException("getRow not supported"));
+        when(freshRs.next()).thenReturn(true, true, false);
+
+        long skipped = JdbcUtil.skip(freshRs, 2L);
+
+        assertEquals(2, skipped);
+    }
+
     // getInsertPropNames overloads
     @Test
     public void testGetInsertPropNames_WithExclusions() {

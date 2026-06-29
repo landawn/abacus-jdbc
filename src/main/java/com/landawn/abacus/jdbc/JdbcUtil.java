@@ -585,11 +585,11 @@ public final class JdbcUtil {
             config.setPassword(password);
 
             final com.zaxxer.hikari.HikariDataSource dataSource = new com.zaxxer.hikari.HikariDataSource(config);
-            logger.info("Created HikariDataSource(url={}, user={})", url, user);
+            logger.info("Created HikariDataSource(urlConfigured={}, userConfigured={})", Strings.isNotEmpty(url), Strings.isNotEmpty(user));
 
             return dataSource;
         } catch (final Exception e) {
-            logger.warn(e, "Failed to create HikariDataSource(url={}, user={})", url, user);
+            logger.warn(e, "Failed to create HikariDataSource(urlConfigured={}, userConfigured={})", Strings.isNotEmpty(url), Strings.isNotEmpty(user));
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -641,11 +641,13 @@ public final class JdbcUtil {
             config.setMaximumPoolSize(maxPoolSize);
 
             final com.zaxxer.hikari.HikariDataSource dataSource = new com.zaxxer.hikari.HikariDataSource(config);
-            logger.info("Created HikariDataSource(url={}, user={}, minIdle={}, maxPoolSize={})", url, user, minIdle, maxPoolSize);
+            logger.info("Created HikariDataSource(urlConfigured={}, userConfigured={}, minIdle={}, maxPoolSize={})", Strings.isNotEmpty(url),
+                    Strings.isNotEmpty(user), minIdle, maxPoolSize);
 
             return dataSource;
         } catch (final Exception e) {
-            logger.warn(e, "Failed to create HikariDataSource(url={}, user={}, poolSize={})", url, user, minIdle + ".." + maxPoolSize);
+            logger.warn(e, "Failed to create HikariDataSource(urlConfigured={}, userConfigured={}, poolSize={})", Strings.isNotEmpty(url),
+                    Strings.isNotEmpty(user), minIdle + ".." + maxPoolSize);
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -687,11 +689,11 @@ public final class JdbcUtil {
             cpds.setUser(user);
             cpds.setPassword(password);
 
-            logger.info("Created C3P0 DataSource(url={}, user={})", url, user);
+            logger.info("Created C3P0 DataSource(urlConfigured={}, userConfigured={})", Strings.isNotEmpty(url), Strings.isNotEmpty(user));
 
             return cpds;
         } catch (final Exception e) {
-            logger.warn(e, "Failed to create C3P0 DataSource(url={}, user={})", url, user);
+            logger.warn(e, "Failed to create C3P0 DataSource(urlConfigured={}, userConfigured={})", Strings.isNotEmpty(url), Strings.isNotEmpty(user));
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -740,11 +742,13 @@ public final class JdbcUtil {
             cpds.setPassword(password);
             cpds.setMinPoolSize(minPoolSize);
             cpds.setMaxPoolSize(maxPoolSize);
-            logger.info("Created C3P0 DataSource(url={}, user={}, minPoolSize={}, maxPoolSize={})", url, user, minPoolSize, maxPoolSize);
+            logger.info("Created C3P0 DataSource(urlConfigured={}, userConfigured={}, minPoolSize={}, maxPoolSize={})", Strings.isNotEmpty(url),
+                    Strings.isNotEmpty(user), minPoolSize, maxPoolSize);
 
             return cpds;
         } catch (final Exception e) {
-            logger.warn(e, "Failed to create C3P0 DataSource(url={}, user={}, poolSize={})", url, user, minPoolSize + ".." + maxPoolSize);
+            logger.warn(e, "Failed to create C3P0 DataSource(urlConfigured={}, userConfigured={}, poolSize={})", Strings.isNotEmpty(url),
+                    Strings.isNotEmpty(user), minPoolSize + ".." + maxPoolSize);
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -875,7 +879,8 @@ public final class JdbcUtil {
 
             return DriverManager.getConnection(url, user, password);
         } catch (final SQLException e) {
-            logger.warn(e, "Failed to create JDBC connection(url={}, user={}, driver={})", url, user, ClassUtil.getCanonicalClassName(driverClass));
+            logger.warn(e, "Failed to create JDBC connection(urlConfigured={}, userConfigured={}, driver={})", Strings.isNotEmpty(url),
+                    Strings.isNotEmpty(user), ClassUtil.getCanonicalClassName(driverClass));
             throw new UncheckedSQLException("Failed to create connection", e);
         }
     }
@@ -1748,7 +1753,22 @@ public final class JdbcUtil {
         } else if (rowsToSkip == 1) {
             return rs.next() ? 1 : 0;
         } else {
-            final int currentRow = rs.getRow();
+            final int currentRow;
+
+            try {
+                currentRow = rs.getRow();
+            } catch (final SQLException e) {
+                logger.warn(e, "Failed to call ResultSet.getRow(); falling back to manual iteration");
+
+                long skipped = 0;
+
+                while (rowsToSkip-- > 0L && rs.next()) {
+                    skipped++;
+                }
+
+                return skipped;
+            }
+
             long skipped = 0;
 
             if ((rowsToSkip > Integer.MAX_VALUE) || (rowsToSkip > Integer.MAX_VALUE - currentRow)

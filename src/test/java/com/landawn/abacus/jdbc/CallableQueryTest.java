@@ -1025,6 +1025,9 @@ public class CallableQueryTest extends TestBase {
         ResultSet rs = callableQuery.executeQuery();
         assertNotNull(rs);
         assertFalse(rs.next());
+        assertTrue(rs.equals(rs));
+        assertEquals(System.identityHashCode(rs), rs.hashCode());
+        assertTrue(rs.toString().contains("did not return a ResultSet"));
         verify(callableStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
     }
 

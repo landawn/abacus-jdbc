@@ -1518,7 +1518,7 @@ public class AbstractQueryTest extends TestBase {
         final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
                 () -> query.queryThenAccept((Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
 
-        assertTrue(iae.getMessage().contains("action"));
+        assertTrue(iae.getMessage().contains("consumer"));
         verify(preparedStatement, never()).executeQuery();
     }
 
@@ -1527,7 +1527,7 @@ public class AbstractQueryTest extends TestBase {
         final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
                 () -> query.queryThenAccept(String.class, (Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
 
-        assertTrue(iae.getMessage().contains("action"));
+        assertTrue(iae.getMessage().contains("consumer"));
         verify(preparedStatement, never()).executeQuery();
     }
 

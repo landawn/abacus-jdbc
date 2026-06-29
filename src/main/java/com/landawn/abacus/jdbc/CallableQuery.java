@@ -2216,7 +2216,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * class ReportConfig {
      *     boolean includeTotal;
      *     boolean includeAvg;
-     *     // getters
+     *     // getters/setters...
      * }
      * ReportConfig config = new ReportConfig(true, false);
      *
@@ -2359,7 +2359,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                         return ((Class<?>) args[0]).isInstance(proxy);
                     }
 
-                    return defaultResultSetReturnValue(methodName, method.getReturnType(), "Empty ResultSet metadata has no columns");
+                    return defaultResultSetReturnValue(proxy, args, methodName, method.getReturnType(), "Empty ResultSet metadata has no columns");
                 });
         final boolean[] closed = { false };
 
@@ -2389,17 +2389,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 return ((Class<?>) args[0]).isInstance(proxy);
             }
 
-            return defaultResultSetReturnValue(methodName, method.getReturnType(), "The stored procedure did not return a ResultSet");
+            return defaultResultSetReturnValue(proxy, args, methodName, method.getReturnType(), "The stored procedure did not return a ResultSet");
         });
     }
 
-    private static Object defaultResultSetReturnValue(final String methodName, final Class<?> returnType, final String message) throws SQLException {
+    private static Object defaultResultSetReturnValue(final Object proxy, final Object[] args, final String methodName, final Class<?> returnType,
+            final String message) throws SQLException {
         if (methodName.equals("toString")) {
             return message;
         } else if (methodName.equals("hashCode")) {
-            return System.identityHashCode(message);
+            return System.identityHashCode(proxy);
         } else if (methodName.equals("equals")) {
-            return false;
+            return args != null && args.length > 0 && proxy == args[0];
         } else if (Void.TYPE.equals(returnType)) {
             return null;
         } else if (Boolean.TYPE.equals(returnType)) {
@@ -2450,18 +2451,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <R> the type of the result returned by the function
-     * @param getter the function to apply to the executed CallableStatement. Must not be {@code null}.
+     * @param func the function to apply to the executed CallableStatement. Must not be {@code null}.
      * @return the result of applying the function
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if {@code getter} is {@code null}
+     * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
      */
     @Override
-    public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
-        return super.executeThenApply(getter);
+    public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> func) throws SQLException { //NOSONAR
+        return super.executeThenApply(func);
     }
 
     /**
@@ -2486,19 +2487,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <R> the type of the result returned by the function
-     * @param getter the bi-function to apply. The first parameter is the executed CallableStatement,
+     * @param func the bi-function to apply. The first parameter is the executed CallableStatement,
      *               the second parameter is {@code true} if the first result is a ResultSet, {@code false} otherwise.
      *               Must not be {@code null}.
      * @return the result of applying the bi-function
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if {@code getter} is {@code null}
+     * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      */
     @Override
-    public <R> R executeThenApply(final Throwables.BiFunction<? super CallableStatement, Boolean, ? extends R, SQLException> getter) throws SQLException { //NOSONAR
-        return super.executeThenApply(getter);
+    public <R> R executeThenApply(final Throwables.BiFunction<? super CallableStatement, Boolean, ? extends R, SQLException> func) throws SQLException { //NOSONAR
+        return super.executeThenApply(func);
     }
 
     /**
@@ -2534,27 +2535,27 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <R> the type of the result returned by the function
-     * @param getter the tri-function to apply. Parameters are:
+     * @param func the tri-function to apply. Parameters are:
      *               1. The executed CallableStatement
      *               2. List of registered OUT parameters (never {@code null}; empty if none were registered)
      *               3. Boolean indicating if the first result is a ResultSet
      * @return the result of applying the tri-function
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if getter is null
+     * @throws IllegalArgumentException if func is null
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see Jdbc.OutParam
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      */
-    public <R> R executeThenApply(final Throwables.TriFunction<? super CallableStatement, List<Jdbc.OutParam>, Boolean, ? extends R, SQLException> getter)
+    public <R> R executeThenApply(final Throwables.TriFunction<? super CallableStatement, List<Jdbc.OutParam>, Boolean, ? extends R, SQLException> func)
             throws SQLException {
         assertNotClosed();
-        checkArgNotNull(getter, cs.getter);
+        checkArgNotNull(func, cs.func);
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
             final List<Jdbc.OutParam> outParamsToUse = outParams == null ? N.emptyList() : outParams;
 
-            return getter.apply(cstmt, outParamsToUse, isFirstResultSet);
+            return func.apply(cstmt, outParamsToUse, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }

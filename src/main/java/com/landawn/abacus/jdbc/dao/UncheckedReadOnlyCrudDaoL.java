@@ -29,8 +29,9 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * while the primitive-{@code long} update and {@code deleteById} overloads inherited from
  * {@link UncheckedNoUpdateCrudDaoL} throw {@link UnsupportedOperationException}.</p>
  *
- * <p>Query methods throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
- * making it easier to work with in functional programming contexts.</p>
+ * <p>Query methods redeclared by this interface or its unchecked parents throw {@link UncheckedSQLException}
+ * instead of checked {@link java.sql.SQLException}. Inherited methods that are not redeclared keep their
+ * checked-exception contract.</p>
  *
  * <p>All mutation operations (insert, update, delete and their batch variants) inherited from parent
  * interfaces throw {@link UnsupportedOperationException}, while read operations (get, exists, list, count)

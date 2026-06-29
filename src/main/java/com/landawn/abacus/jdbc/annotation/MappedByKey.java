@@ -27,10 +27,13 @@ import java.util.Map;
  * This annotation is useful when you need to quickly lookup entities by a unique identifier
  * or when you want to group results by a specific field value.
  *
- * <p>The annotation extracts the value of the specified key field from each result row
- * and uses it as the map key. If multiple rows have the same key value, the last row
- * will overwrite previous ones; use {@link MergedById} when you need to combine
- * one-to-many rows into a single entity instead.</p>
+ * <p>The annotation extracts the value of the specified key from each result row and
+ * uses it as the map key. For entity/bean results, the key is an entity property name
+ * (for example, {@code id} or {@code email}); SQL column labels must map to that
+ * property. For row-map results, the key is the result-map key/column label. If
+ * multiple rows have the same key value, the last row will overwrite previous ones;
+ * use {@link MergedById} when you need to combine one-to-many rows into a single
+ * entity instead.</p>
  *
  * <p>Per its {@code @Target}, this annotation is placed on a DAO query method whose declared return
  * type is a {@code Map} (or a {@code Map} subtype); see {@link #mapClass()} to control the concrete
@@ -67,7 +70,8 @@ import java.util.Map;
  *
  * <p>Important considerations:</p>
  * <ul>
- *   <li>The key field must exist in the query results</li>
+ *   <li>For entity/bean results, the key must be an entity property name</li>
+ *   <li>For row-map results, the key must exist in the returned map keys/column labels</li>
  *   <li>Null key values will be included in the map (if the Map implementation supports {@code null} keys)</li>
  *   <li>Duplicate keys will result in later values overwriting earlier ones</li>
  *   <li>The return type must be a Map or a subtype of Map</li>
@@ -103,33 +107,26 @@ public @interface MappedByKey {
     String value() default "";
 
     /**
-     * Specifies the name of the field to use as the map key.
-     * This field must exist in the query result set.
+     * Specifies the property name or row-map key to use as the map key.
      *
-     * <p>The field value is extracted from each result row and used as the key
-     * in the resulting map. The field can be:</p>
+     * <p>The value is extracted from each result row and used as the key in the resulting map.
+     * The key can be:</p>
      * <ul>
-     *   <li>A database column name</li>
-     *   <li>An entity property name (if using entity mapping)</li>
-     *   <li>An alias defined in the SQL query</li>
+     *   <li>An entity property name when the result value is an entity/bean</li>
+     *   <li>A result-map key or column label when the result value is a {@code Map}</li>
      * </ul>
      *
      * <p>Examples:</p>
      * <pre>{@code
-     * // Using database column name
-     * @Query("SELECT user_id, user_name, email FROM users")
-     * @MappedByKey(keyName = "user_id")
+     * // Using a row-map key/column label
+     * @Query("SELECT user_id AS userId, user_name AS userName, email FROM users")
+     * @MappedByKey(keyName = "userId")
      * Map<Long, Map<String, Object>> getUsers();
      *
      * // Using entity property name
      * @Query("SELECT * FROM products WHERE category = :category")
      * @MappedByKey(keyName = "productCode")  // Maps to product_code column
      * Map<String, Product> getProductsByCategory(@Bind("category") String category);
-     *
-     * // Using SQL alias
-     * @Query("SELECT id, name, price * 0.9 as discounted_price FROM products")
-     * @MappedByKey(keyName = "discounted_price")
-     * Map<BigDecimal, Product> getProductsByDiscountPrice();
      * }</pre>
      *
      * @return the field name to use as map key, or empty string if using the deprecated {@link #value()} instead
