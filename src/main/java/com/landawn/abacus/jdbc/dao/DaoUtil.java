@@ -48,7 +48,6 @@ import com.landawn.abacus.util.function.Function;
  *   <li>ID extraction from entities (single and composite IDs)</li>
  *   <li>DAO type casting and validation</li>
  *   <li>Asynchronous operation completion and result aggregation</li>
- *   <li>Query preparation and SQL type detection</li>
  *   <li>Join entity information retrieval</li>
  * </ul>
  *
@@ -275,10 +274,10 @@ public final class DaoUtil {
     }
 
     /**
-     * Casts a {@link CrudJoinEntityHelper} to a {@link CrudDao} instance.
+     * Casts a {@link ReadableCrudJoinEntityHelper} to a {@link CrudDao} instance.
      * <p>
      * This method is used internally to ensure type safety when working with DAO instances
-     * that implement both CrudJoinEntityHelper and CrudDao interfaces. It validates that
+     * that implement both ReadableCrudJoinEntityHelper and CrudDao interfaces. It validates that
      * the provided DAO actually extends CrudDao before performing the cast.
      * </p>
      *
@@ -298,7 +297,7 @@ public final class DaoUtil {
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
      * @param <TD> the DAO type
-     * @param dao the CrudJoinEntityHelper instance to cast
+     * @param dao the ReadableCrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to CrudDao
      * @throws UnsupportedOperationException if the DAO does not implement CrudDao interface
      */
@@ -311,10 +310,10 @@ public final class DaoUtil {
     }
 
     /**
-     * Casts a {@link JoinEntityHelper} to a {@link Dao} instance.
+     * Casts a {@link ReadableJoinEntityHelper} to a {@link Dao} instance.
      * <p>
      * This method is used internally to ensure type safety when working with DAO instances
-     * that implement both JoinEntityHelper and Dao interfaces. It validates that the provided
+     * that implement both ReadableJoinEntityHelper and Dao interfaces. It validates that the provided
      * DAO actually extends Dao before performing the cast.
      * </p>
      *
@@ -333,7 +332,7 @@ public final class DaoUtil {
      *
      * @param <T> the entity type managed by this DAO
      * @param <TD> the DAO type
-     * @param dao the JoinEntityHelper instance to cast
+     * @param dao the ReadableJoinEntityHelper instance to cast
      * @return the DAO instance cast to Dao
      * @throws UnsupportedOperationException if the DAO does not implement Dao interface
      */
@@ -346,10 +345,10 @@ public final class DaoUtil {
     }
 
     /**
-     * Casts an {@link UncheckedJoinEntityHelper} to an {@link UncheckedDao} instance.
+     * Casts an {@link UncheckedReadableJoinEntityHelper} to an {@link UncheckedDao} instance.
      * <p>
      * This method is used internally to ensure type safety when working with unchecked DAO instances
-     * that implement both UncheckedJoinEntityHelper and UncheckedDao interfaces. It validates that
+     * that implement both UncheckedReadableJoinEntityHelper and UncheckedDao interfaces. It validates that
      * the provided DAO actually extends UncheckedDao before performing the cast.
      * </p>
      *
@@ -368,7 +367,7 @@ public final class DaoUtil {
      *
      * @param <T> the entity type managed by this DAO
      * @param <TD> the DAO type
-     * @param dao the UncheckedJoinEntityHelper instance to cast
+     * @param dao the UncheckedReadableJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedDao
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedDao interface
      */
@@ -381,10 +380,10 @@ public final class DaoUtil {
     }
 
     /**
-     * Casts an {@link UncheckedCrudJoinEntityHelper} to an {@link UncheckedCrudDao} instance.
+     * Casts an {@link UncheckedReadableCrudJoinEntityHelper} to an {@link UncheckedCrudDao} instance.
      * <p>
      * This method is used internally to ensure type safety when working with unchecked CRUD DAO instances
-     * that implement both UncheckedCrudJoinEntityHelper and UncheckedCrudDao interfaces. It validates that
+     * that implement both UncheckedReadableCrudJoinEntityHelper and UncheckedCrudDao interfaces. It validates that
      * the provided DAO actually extends UncheckedCrudDao before performing the cast.
      * </p>
      *
@@ -404,7 +403,7 @@ public final class DaoUtil {
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
      * @param <TD> the DAO type
-     * @param dao the UncheckedCrudJoinEntityHelper instance to cast
+     * @param dao the UncheckedReadableCrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedCrudDao
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudDao interface
      */

@@ -31,8 +31,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * <p>Read and insert methods redeclared by this interface or its unchecked parents throw
  * {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}. Inherited methods that
  * are not redeclared keep their checked-exception contract. All update and delete operations
- * (including the primitive {@code long} ID variants declared on this interface) throw
- * {@link UnsupportedOperationException}.</p>
+ * (including any primitive {@code long} ID variants) are <b>absent from the type</b> — calling them is a
+ * compile error rather than a runtime {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -48,15 +48,15 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * boolean exists = dao.exists(123L);
  * List<EventLog> logs = dao.list(Filters.eq("severity", "ERROR"));
  *
- * // These operations throw UnsupportedOperationException:
- * // dao.update("status", "PROCESSED", 123L);   // not allowed
- * // dao.deleteById(123L);   // not allowed
+ * // These operations are absent from the type and do not compile:
+ * // dao.update("status", "PROCESSED", 123L);   // does not compile
+ * // dao.deleteById(123L);                      // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateCrudDao
- * @see UncheckedCrudDaoL
+ * @see UncheckedReadableCrudDaoL
  * @see com.landawn.abacus.query.Filters
  */
 @Beta

@@ -4183,8 +4183,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param direction one of {@link FetchDirection#FORWARD}, {@link FetchDirection#REVERSE},
      *                  or {@link FetchDirection#UNKNOWN}
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code direction} is {@code null}
      * @throws IllegalStateException if this query is already closed
+     * @throws IllegalArgumentException if {@code direction} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see FetchDirection
      * @see java.sql.Statement#setFetchDirection(int)

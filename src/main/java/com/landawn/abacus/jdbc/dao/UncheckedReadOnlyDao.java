@@ -19,18 +19,21 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * A read-only DAO interface that provides only query operations without any write capabilities.
- * This interface disables all save and batch-save operations by overriding them to throw {@link UnsupportedOperationException},
- * and it inherits the disabling of update and delete operations from {@link UncheckedNoUpdateDao}, so no modification of any kind is permitted.
+ * It is a pure capability composite of {@link UncheckedReadableDao} (reads only) and {@link ReadOnlyDao}.
+ * Save, update, delete, upsert, and batch-write operations are <b>absent from the type</b> — calling them is a
+ * compile error rather than a runtime {@link UnsupportedOperationException} — so no modification of any kind is permitted.
  * It is ideal for scenarios where data should only be read, never modified.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant, meaning query methods redeclared by this interface throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of checked {@link java.sql.SQLException}.
  * Inherited methods that are not redeclared here keep their checked-exception contract. Write operations
- * (save/batchSave) are disabled and throw {@link UnsupportedOperationException}.</p>
+ * (save/update/delete/upsert/batch-write) are absent from the type (a compile error if called).</p>
  *
- * <p>This interface extends both {@link UncheckedNoUpdateDao} and {@link ReadOnlyDao}, further
- * restricting save and batch-save operations to ensure complete read-only access to the database.</p>
+ * <p>This interface extends {@link UncheckedReadableDao} and {@link ReadOnlyDao} to ensure complete
+ * read-only access to the database. (The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery}
+ * overloads reject any non-{@code SELECT} statement at runtime with an {@link UnsupportedOperationException},
+ * enforced centrally by the DAO proxy.)</p>
  *
  * <p>Use cases include:</p>
  * <ul>
@@ -59,16 +62,16 @@ import com.landawn.abacus.annotation.Beta;
  *       .filter(Optional::isPresent)
  *       .forEach(report -> System.out.println(report.get()));
  *
- * // All write operations throw UnsupportedOperationException:
- * // dao.save(report);   // throws exception
- * // dao.update(...);   // throws exception
- * // dao.delete(...);   // throws exception
- * // dao.batchSave(reports);   // throws exception
+ * // All write operations are absent from the type and do not compile:
+ * // dao.save(report);          // does not compile
+ * // dao.update(...);           // does not compile
+ * // dao.delete(...);           // does not compile
+ * // dao.batchSave(reports);    // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
- * @see UncheckedNoUpdateDao
+ * @see UncheckedReadableDao
  * @see ReadOnlyDao
  */
 @Beta

@@ -25,9 +25,10 @@ package com.landawn.abacus.jdbc.dao;
  * cannot be deleted through this DAO. It maintains data integrity by preventing cascading deletes
  * on joined entities while avoiding checked exception handling.</p>
  *
- * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityHelper} and
+ * <p>Read/load operations inherited from {@link UncheckedReadableCrudJoinEntityHelper} and
  * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}
- * instead of the checked {@link java.sql.SQLException}. All delete operations on join entities throw
+ * instead of the checked {@link java.sql.SQLException}. The {@code deleteJoinEntities}/{@code deleteAllJoinEntities}
+ * operations are <b>absent from the type</b> — calling them is a compile error rather than a runtime
  * {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -52,24 +53,19 @@ package com.landawn.abacus.jdbc.dao;
  *     User user = userWithOrders.get();
  *     List<Order> orders = user.getOrders();   // Orders are loaded
  *
- *     // But you cannot delete join entities through this DAO
- *     try {
- *         userDao.deleteJoinEntities(user, Order.class);
- *         // Will throw UnsupportedOperationException
- *     } catch (UnsupportedOperationException e) {
- *         // Expected behavior for read-only join operations
- *     }
+ *     // But you cannot delete join entities through this DAO — the methods are absent from the type:
+ *     // userDao.deleteJoinEntities(user, Order.class);   // does not compile
  * }
  * }</pre>
  *
- * <p>This interface extends both {@link UncheckedReadOnlyJoinEntityHelper} and {@link UncheckedCrudJoinEntityHelper},
- * inheriting read operations from both while overriding modification operations to throw {@link UnsupportedOperationException}.</p>
+ * <p>This interface extends {@link UncheckedReadOnlyJoinEntityHelper} and {@link UncheckedReadableCrudJoinEntityHelper},
+ * inheriting read operations from both; modification operations are absent from the type (a compile error if called).</p>
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
- * @see UncheckedCrudJoinEntityHelper
+ * @see UncheckedReadableCrudJoinEntityHelper
  * @see UncheckedCrudDao
  */
 public non-sealed interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>

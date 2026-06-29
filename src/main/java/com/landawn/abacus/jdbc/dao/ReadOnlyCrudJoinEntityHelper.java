@@ -17,12 +17,13 @@ package com.landawn.abacus.jdbc.dao;
 
 /**
  * Read-only helper for join entity operations in CRUD DAOs.
- * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link CrudJoinEntityHelper}
+ * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link ReadableCrudJoinEntityHelper}
  * to provide read-only access to join entity operations for CRUD-based DAOs.
  *
  * <p>This interface is designed for scenarios where you need to read join entity
  * relationships (such as many-to-many associations) but should not be able to
- * modify them. All delete operations for join entities are disabled and throw
+ * modify them. The {@code deleteJoinEntities}/{@code deleteAllJoinEntities} operations are
+ * <b>absent from the type</b> — calling them is a compile error rather than a runtime
  * {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -46,8 +47,8 @@ package com.landawn.abacus.jdbc.dao;
  * User existingUser = userDao.gett(1L);
  * userDao.loadJoinEntities(existingUser, "orders");
  *
- * // All delete operations throw UnsupportedOperationException
- * userDao.deleteJoinEntities(existingUser, Order.class);   // Throws exception
+ * // Delete-join operations are absent from the type and do not compile
+ * // userDao.deleteJoinEntities(existingUser, Order.class);   // does not compile
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
@@ -55,7 +56,7 @@ package com.landawn.abacus.jdbc.dao;
  * @param <TD> the companion {@link CrudDao} type that owns this helper (used for fluent
  *             method chaining and access to CRUD operations)
  * @see ReadOnlyJoinEntityHelper
- * @see CrudJoinEntityHelper
+ * @see ReadableCrudJoinEntityHelper
  * @see CrudDao
  */
 public non-sealed interface ReadOnlyCrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>>

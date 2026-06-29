@@ -27,10 +27,10 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
 /**
- * Unchecked-exception variant of {@link CrudJoinEntityHelper} that combines CRUD-by-ID operations
- * with join entity loading, throwing {@link UncheckedSQLException} instead of {@link java.sql.SQLException}.
- * It extends both {@link UncheckedJoinEntityHelper} and {@link CrudJoinEntityHelper}, overriding every
- * method to narrow the declared exception from {@code SQLException} to {@code UncheckedSQLException}.
+ * Unchecked-exception variant that combines read-side CRUD-by-ID operations with join entity loading,
+ * throwing {@link UncheckedSQLException} instead of {@link java.sql.SQLException}.
+ * It extends {@link UncheckedReadableJoinEntityHelper} and {@link ReadableCrudJoinEntityHelper}, redeclaring
+ * the read/load methods to narrow the declared exception from {@code SQLException} to {@code UncheckedSQLException}.
  *
  * <p>This interface enables efficient loading of related entities when retrieving data by ID,
  * making it ideal for entities with complex relationships that need to be fetched together.</p>

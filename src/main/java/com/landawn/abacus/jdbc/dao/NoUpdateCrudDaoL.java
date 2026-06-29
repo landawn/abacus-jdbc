@@ -19,14 +19,15 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * CRUD DAO for entities with {@code Long} primary keys that disables update and delete operations.
- * This interface extends both {@link NoUpdateCrudDao} and {@link CrudDaoL}, providing
+ * This interface extends {@link NoUpdateCrudDao} and {@link ReadableCrudDaoL}, providing
  * read and insert operations while blocking update and delete functionality.
  *
  * <p>This interface combines the convenience of primitive {@code long} ID support from
- * {@link CrudDaoL} with the safety guarantees of {@link NoUpdateCrudDao}, making it ideal
+ * {@link ReadableCrudDaoL} with the safety guarantees of {@link NoUpdateCrudDao}, making it ideal
  * for append-only data stores with numeric identifiers.</p>
  *
- * <p>All update and delete methods throw {@link UnsupportedOperationException}.
+ * <p>All update and delete methods are <b>absent from the type</b> — calling them is a compile error
+ * rather than a runtime {@link UnsupportedOperationException}.
  * This is particularly beneficial for:</p>
  * <ul>
  *   <li>Audit trail systems where historical records must be immutable</li>
@@ -69,16 +70,16 @@ import com.landawn.abacus.annotation.Beta;
  * List<AuditLog> userLogs = auditLogDao.findByUserId(123L);
  * int logCount = auditLogDao.count(Filters.eq("action", "LOGIN"));
  *
- * // All update and delete operations throw UnsupportedOperationException:
- * auditLogDao.update("status", "processed", id);   // Throws UnsupportedOperationException
- * auditLogDao.deleteById(123L);   // Throws UnsupportedOperationException
- * auditLogDao.batchDelete(logs);   // Throws UnsupportedOperationException
+ * // All update and delete operations are absent from the type and do not compile:
+ * // auditLogDao.update("status", "processed", id);   // does not compile
+ * // auditLogDao.deleteById(123L);                    // does not compile
+ * // auditLogDao.batchDelete(logs);                   // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see NoUpdateCrudDao
- * @see CrudDaoL
+ * @see ReadableCrudDaoL
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")

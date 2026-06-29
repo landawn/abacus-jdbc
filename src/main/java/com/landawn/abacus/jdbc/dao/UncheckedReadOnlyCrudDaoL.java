@@ -26,16 +26,16 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * <p>This interface is particularly useful for entities that use numeric long IDs,
  * which is a common pattern in many database schemas. Read-oriented primitive-{@code long}
  * convenience methods delegate to their corresponding {@code Long} counterparts after boxing,
- * while the primitive-{@code long} update and {@code deleteById} overloads inherited from
- * {@link UncheckedNoUpdateCrudDaoL} throw {@link UnsupportedOperationException}.</p>
+ * while primitive-{@code long} update and {@code deleteById} overloads are <b>absent from the type</b> —
+ * calling them is a compile error rather than a runtime {@link UnsupportedOperationException}.</p>
  *
  * <p>Query methods redeclared by this interface or its unchecked parents throw {@link UncheckedSQLException}
  * instead of checked {@link java.sql.SQLException}. Inherited methods that are not redeclared keep their
  * checked-exception contract.</p>
  *
- * <p>All mutation operations (insert, update, delete and their batch variants) inherited from parent
- * interfaces throw {@link UnsupportedOperationException}, while read operations (get, exists, list, count)
- * remain fully functional.</p>
+ * <p>All mutation operations (insert, update, delete and their batch variants) are <b>absent from the type</b>
+ * — calling them is a compile error rather than a runtime {@link UnsupportedOperationException} — while read
+ * operations (get, exists, list, count) remain fully functional.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -50,15 +50,15 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * boolean exists = userDao.exists(123L);
  * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
  *
- * // Write operations will throw UnsupportedOperationException
- * // userDao.insert(newUser);   // This will fail
- * // userDao.deleteById(123L);   // This will fail
+ * // Write operations are absent from the type and do not compile
+ * // userDao.insert(newUser);    // does not compile
+ * // userDao.deleteById(123L);   // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedReadOnlyCrudDao
- * @see UncheckedNoUpdateCrudDaoL
+ * @see UncheckedReadableCrudDaoL
  * @see UncheckedSQLException
  */
 @Beta

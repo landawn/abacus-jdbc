@@ -783,7 +783,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws ArithmeticException if the BigInteger value will not fit in a {@code long}
+     * @throws ArithmeticException if the BigInteger value will not fit in a {@code long}; when this is thrown the underlying statement is also closed
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setLong(final String parameterName, final BigInteger value) throws IllegalArgumentException, SQLException {

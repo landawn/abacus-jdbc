@@ -481,7 +481,21 @@ public final class JdbcCodeGenerationUtil {
                         .map(it -> {
                             final int assignmentIdx = it.indexOf('=');
                             final String withoutInitializer = assignmentIdx >= 0 ? it.substring(0, assignmentIdx).trim() : it;
-                            final int commaIdx = withoutInitializer.indexOf(',');
+                            // Split a multi-variable declaration (e.g. "int a, b") on its first top-level comma, but
+                            // ignore commas nested inside generic type arguments/brackets (e.g. "Map<String, Object>").
+                            int commaIdx = -1;
+                            int depth = 0;
+                            for (int i = 0, len = withoutInitializer.length(); i < len; i++) {
+                                final char ch = withoutInitializer.charAt(i);
+                                if (ch == '<' || ch == '(' || ch == '[') {
+                                    depth++;
+                                } else if (ch == '>' || ch == ')' || ch == ']') {
+                                    depth--;
+                                } else if (ch == ',' && depth <= 0) {
+                                    commaIdx = i;
+                                    break;
+                                }
+                            }
                             final String declaration = commaIdx >= 0 ? withoutInitializer.substring(0, commaIdx).trim() : withoutInitializer.trim();
                             final int idx = declaration.lastIndexOf(' ');
                             return Tuple.of(declaration.substring(0, idx).trim(), declaration.substring(idx + 1).trim());

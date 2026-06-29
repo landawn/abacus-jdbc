@@ -19,12 +19,12 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * Read-only CRUD DAO for entities with {@code Long} primary keys.
- * This interface combines {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDaoL} to provide
+ * This interface combines {@link ReadOnlyCrudDao} and {@link ReadableCrudDaoL} to provide
  * a complete read-only DAO with convenient primitive {@code long} ID support.
  *
- * <p>All mutation operations (insert, update, delete, upsert) inherited from the parent interfaces
- * throw {@link UnsupportedOperationException}, while read operations remain fully functional.
- * This is ideal for:</p>
+ * <p>All mutation operations (insert, update, delete, upsert) are <b>absent from the type</b> — calling
+ * them is a compile error rather than a runtime {@link UnsupportedOperationException} — while read
+ * operations remain fully functional. This is ideal for:</p>
  * <ul>
  *   <li>Read-only database connections with {@code Long} ID entities</li>
  *   <li>Reporting systems that query numeric ID-based tables</li>
@@ -56,17 +56,16 @@ import com.landawn.abacus.annotation.Beta;
  * List<Report> activeReports = reportDao.list(Filters.eq("status", "ACTIVE"));
  * int count = reportDao.count(Filters.ge("created_date", startDate));
  *
- * // All modification operations throw UnsupportedOperationException:
- * reportDao.insert(new Report());   // Throws UnsupportedOperationException
- * reportDao.update("status", "ARCHIVED", 123L);   // Throws UnsupportedOperationException
- * reportDao.deleteById(123L);   // Throws UnsupportedOperationException
+ * // All modification operations are absent from the type and do not compile:
+ * // reportDao.insert(new Report());                  // does not compile
+ * // reportDao.update("status", "ARCHIVED", 123L);    // does not compile
+ * // reportDao.deleteById(123L);                      // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyCrudDao
- * @see NoUpdateCrudDaoL
- * @see CrudDaoL
+ * @see ReadableCrudDaoL
  * @see com.landawn.abacus.query.Filters
  */
 @Beta

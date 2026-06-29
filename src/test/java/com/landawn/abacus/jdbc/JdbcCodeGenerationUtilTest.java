@@ -489,6 +489,23 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertFalse(result.contains("copy.1 = this.1;"));
     }
 
+    @Test
+    public void testGenerateEntityClass_AdditionalFieldWithGenericTypeComma() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalFieldsOrLines("    private Map<String, Object> attrs;")
+                .build();
+
+        // A generic type with a comma (Map<String, Object>) must not be mis-parsed as a multi-variable declaration.
+        String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("private Map<String, Object> attrs;"));
+        assertTrue(result.contains("copy.attrs = this.attrs;"));
+        assertFalse(result.contains("copy.Object> = this.Object>;"));
+    }
+
     // Test generateEntityClass with conflicting readOnly and nonUpdatable for same field
     @Test
     public void testGenerateEntityClass_ConflictingReadOnlyAndNonUpdatable() throws SQLException {

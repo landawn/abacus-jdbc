@@ -21,15 +21,18 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 /**
  * A read-only CRUD DAO interface that provides only query operations without any insert, update, or delete capabilities.
  * This interface is useful for creating DAOs that should only have read access to the database,
- * ensuring data safety by throwing {@link UnsupportedOperationException} on any modification attempt.
+ * ensuring data safety: insert/update/delete/upsert operations are absent from the type, so any modification
+ * attempt is a compile error rather than a runtime {@link UnsupportedOperationException}.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant. Query methods redeclared by this interface or its unchecked
  * parents throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}. Inherited
  * methods that are not redeclared keep their checked-exception contract.</p>
  *
- * <p>All write operations (insert, update, delete, and their batch variants) are disabled and throw
- * {@link UnsupportedOperationException}.</p>
+ * <p>All write operations (insert, update, delete, upsert, and their batch variants) are <b>absent from the
+ * type</b> — calling them is a compile error rather than a runtime {@link UnsupportedOperationException}. (The
+ * inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads reject non-{@code SELECT} statements
+ * at runtime, enforced centrally by the DAO proxy.)</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -53,17 +56,17 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *     .map(Optional::get)
  *     .collect(Collectors.toList());
  *
- * // Write operations throw UnsupportedOperationException:
- * // userDao.insert(user);   // Throws UnsupportedOperationException
- * // userDao.update(user);   // Throws UnsupportedOperationException
- * // userDao.deleteById(id);   // Throws UnsupportedOperationException
+ * // Write operations are absent from the type and do not compile:
+ * // userDao.insert(user);     // does not compile
+ * // userDao.update(user);     // does not compile
+ * // userDao.deleteById(id);   // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedReadOnlyDao
- * @see UncheckedNoUpdateCrudDao
+ * @see UncheckedReadableCrudDao
  * @see ReadOnlyCrudDao
  */
 @Beta

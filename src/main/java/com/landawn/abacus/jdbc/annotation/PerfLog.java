@@ -31,7 +31,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * log entry only when:</p>
  * <ul>
  *   <li>The SQL portion of the call exceeded {@link #minExecutionTimeForSql()} milliseconds — the
- *       statement text (capped at {@link #maxSqlLogLength()} characters) is logged at WARN level.</li>
+ *       statement text (capped at {@link #maxSqlLogLength()} characters) is logged at INFO level
+ *       (as a {@code [SQL-PERF]} entry on the SQL logger).</li>
  *   <li>The whole DAO-method invocation exceeded {@link #minExecutionTimeForOperation()} ms —
  *       the method name and total elapsed time are logged.</li>
  * </ul>

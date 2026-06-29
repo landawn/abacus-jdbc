@@ -1903,8 +1903,8 @@ public sealed interface ReadableDao<T, TD extends ReadableDao<T, TD>>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
      *
-     * ContinuableFuture<Integer> future = dao.asyncCall(
-     *     d -> d.update("status", "PROCESSED", Filters.eq("status", "PENDING")),
+     * ContinuableFuture<Boolean> future = dao.asyncCall(
+     *     d -> d.exists(Filters.eq("status", "PENDING")),
      *     customExecutor
      * );
      * }</pre>
@@ -1934,8 +1934,8 @@ public sealed interface ReadableDao<T, TD extends ReadableDao<T, TD>>
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * dao.asyncRun(d -> {
-     *     d.delete(Filters.lt("createdDate", oneYearAgo));
-     *     d.update("archived", true, Filters.lt("lastAccess", sixMonthsAgo));
+     *     List<User> stale = d.list(Filters.lt("lastAccess", sixMonthsAgo));
+     *     System.out.println("stale accounts: " + stale.size());
      * });
      * }</pre>
      *
@@ -1960,10 +1960,13 @@ public sealed interface ReadableDao<T, TD extends ReadableDao<T, TD>>
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
      *
      * dao.asyncRun(
-     *     d -> d.save(generateDailyReport()),
+     *     d -> {
+     *         long highValue = d.list(Filters.gt("amount", 1000)).size();
+     *         System.out.println("high-value rows: " + highValue);
+     *     },
      *     scheduler
      * ).thenRunAsync(() ->
-     *     System.out.println("Report saved")
+     *     System.out.println("Report generated")
      * );
      * }</pre>
      *

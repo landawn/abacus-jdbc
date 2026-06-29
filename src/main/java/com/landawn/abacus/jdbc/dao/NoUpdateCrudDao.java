@@ -19,8 +19,8 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * CRUD DAO that disables update and delete operations while permitting read and insert operations.
- * This interface extends both {@link NoUpdateDao} and {@link CrudDao}, effectively creating a DAO that can only
- * read existing records and insert new ones, but cannot modify or remove existing records.
+ * This interface extends {@link NoUpdateDao}, {@link ReadableCrudDao} and {@link InsertableCrudDao}, effectively
+ * creating a DAO that can only read existing records and insert new ones, but cannot modify or remove existing records.
  *
  * <p>This pattern is particularly useful for:</p>
  * <ul>
@@ -30,8 +30,10 @@ import com.landawn.abacus.annotation.Beta;
  *   <li>Enforcing data integrity by preventing updates at the DAO level</li>
  * </ul>
  *
- * <p>All update, upsert, and delete operations throw {@link UnsupportedOperationException}.
- * Read operations (find, exists, query) and insert operations remain functional.</p>
+ * <p>Update, upsert, and delete operations are <b>absent from the type</b> — calling them is a compile error
+ * rather than a runtime {@link UnsupportedOperationException}. Read operations (find, exists, query) and insert
+ * operations remain functional. (The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads
+ * accept only {@code SELECT} and {@code INSERT} statements at runtime, enforced centrally by the DAO proxy.)</p>
  *
  * <p><b>Supported Operations:</b></p>
  * <ul>
@@ -87,20 +89,21 @@ import com.landawn.abacus.annotation.Beta;
  *         .setString(2, "COMPLETED")
  *         .list(Transaction.class);
  *
- * // Unsupported operations - all throw UnsupportedOperationException:
- * transactionDao.update(txn);   // Throws exception
- * transactionDao.update("status", "CANCELLED", txnId);   // Throws exception
- * transactionDao.deleteById(txnId);   // Throws exception
- * transactionDao.delete(txn);   // Throws exception
- * transactionDao.batchDelete(transactions);   // Throws exception
- * transactionDao.upsert(txn);   // Throws exception
+ * // Unsupported operations - these are absent from the type and do not compile:
+ * // transactionDao.update(txn);                            // does not compile
+ * // transactionDao.update("status", "CANCELLED", txnId);   // does not compile
+ * // transactionDao.deleteById(txnId);                      // does not compile
+ * // transactionDao.delete(txn);                            // does not compile
+ * // transactionDao.batchDelete(transactions);             // does not compile
+ * // transactionDao.upsert(txn);                            // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see NoUpdateDao
- * @see CrudDao
+ * @see ReadableCrudDao
+ * @see InsertableCrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")

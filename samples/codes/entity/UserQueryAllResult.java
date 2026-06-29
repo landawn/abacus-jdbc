@@ -25,7 +25,8 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-@JsonXmlConfig(namingPolicy = NamingPolicy.SCREAMING_SNAKE_CASE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumType.ORDINAL)
+@JsonXmlConfig(namingPolicy = NamingPolicy.SCREAMING_SNAKE_CASE, ignoredFields = { "id",
+        "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumType.ORDINAL)
 @Table(name = "UserQueryAllResult")
 public class UserQueryAllResult {
 

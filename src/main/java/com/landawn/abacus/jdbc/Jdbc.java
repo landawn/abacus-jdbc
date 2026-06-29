@@ -4209,7 +4209,7 @@ public final class Jdbc {
              * @param columnName the name of the column
              * @param type the target class type to convert the column value to
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnName} is {@code null}
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}, or {@code type} is {@code null}
              */
             public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) {
                 return get(columnName, ColumnGetter.forType(type));

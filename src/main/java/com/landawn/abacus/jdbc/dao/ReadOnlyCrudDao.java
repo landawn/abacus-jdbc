@@ -19,10 +19,13 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * Completely read-only CRUD DAO that prevents all data modification operations.
- * This interface extends both {@link ReadOnlyDao} and {@link NoUpdateCrudDao}, providing the most
- * restrictive DAO implementation where only read operations are permitted.
+ * This interface extends {@link ReadOnlyDao} and {@link ReadableCrudDao}, providing the most
+ * restrictive CRUD DAO implementation where only read operations are permitted.
  *
- * <p>All insert, update, delete, and upsert operations throw {@link UnsupportedOperationException}.
+ * <p>Insert, update, delete, and upsert operations are <b>absent from the type</b> — calling them is a
+ * compile error rather than a runtime {@link UnsupportedOperationException}. (The inherited
+ * {@code prepareQuery}/{@code prepareNamedQuery} overloads that take raw SQL reject any non-{@code SELECT}
+ * statement at runtime; this SQL-kind gate is enforced centrally by the DAO proxy.)
  * This interface is ideal for:</p>
  * <ul>
  *   <li>Read-only database connections</li>
@@ -85,19 +88,19 @@ import com.landawn.abacus.annotation.Beta;
  *                                 .setInt(1, 2023)
  *                                 .list(Report.class);
  *
- * // Unsupported operations - all throw UnsupportedOperationException:
- * reportDao.insert(new Report());   // Throws exception
- * reportDao.update(report2);   // Throws exception
- * reportDao.deleteById(123L);   // Throws exception
- * reportDao.batchInsert(reports);   // Throws exception
- * reportDao.upsert(report2);   // Throws exception
+ * // Unsupported operations - these are absent from the type and do not compile:
+ * // reportDao.insert(new Report());     // does not compile
+ * // reportDao.update(report2);          // does not compile
+ * // reportDao.deleteById(123L);         // does not compile
+ * // reportDao.batchInsert(reports);     // does not compile
+ * // reportDao.upsert(report2);          // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyDao
- * @see NoUpdateCrudDao
+ * @see ReadableCrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")

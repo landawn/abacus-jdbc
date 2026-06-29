@@ -29,10 +29,10 @@ package com.landawn.abacus.jdbc.dao;
  *   <li>Unchecked exception handling is preferred</li>
  * </ul>
  *
- * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityHelperL} and
- * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}
- * instead of the checked {@link java.sql.SQLException}. All {@code deleteJoinEntities} and
- * {@code deleteAllJoinEntities} operations throw {@link UnsupportedOperationException}.</p>
+ * <p>Read/load operations inherited from {@link UncheckedReadOnlyCrudJoinEntityHelper} throw
+ * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of the checked {@link java.sql.SQLException}.
+ * All {@code deleteJoinEntities} and {@code deleteAllJoinEntities} operations are <b>absent from the type</b> —
+ * calling them is a compile error rather than a runtime {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -55,15 +55,15 @@ package com.landawn.abacus.jdbc.dao;
  * // Get with selected properties and join entities
  * User userSelected = dao.gett(123L, Arrays.asList("id", "name", "email"), Order.class);
  *
- * // All delete-join operations are disabled:
- * // dao.deleteJoinEntities(user, Order.class);   // throws UnsupportedOperationException
- * // dao.deleteAllJoinEntities(user);   // throws UnsupportedOperationException
+ * // All delete-join operations are absent from the type and do not compile:
+ * // dao.deleteJoinEntities(user, Order.class);   // does not compile
+ * // dao.deleteAllJoinEntities(user);   // does not compile
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDaoL}
  * @see UncheckedReadOnlyJoinEntityHelper
- * @see UncheckedCrudJoinEntityHelperL
+ * @see UncheckedReadOnlyCrudJoinEntityHelper
  * @see UncheckedCrudDaoL
  */
 public interface UncheckedReadOnlyCrudJoinEntityHelperL<T, TD extends UncheckedCrudDaoL<T, TD>> extends UncheckedReadOnlyCrudJoinEntityHelper<T, Long, TD> {

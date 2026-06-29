@@ -20,7 +20,8 @@ import com.landawn.abacus.annotation.Beta;
 /**
  * Interface for an unchecked Data Access Object (DAO) that disables update and delete operations while
  * allowing read and insert operations. It supports create (insert/save) and read (select/query) operations,
- * while all update, delete, upsert, and stored-procedure (callable) methods throw {@link UnsupportedOperationException}.
+ * while all update, delete, upsert, and stored-procedure (callable) methods are <b>absent from the type</b> —
+ * calling them is a compile error rather than a runtime {@link UnsupportedOperationException}.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant. Read and insert methods redeclared by this interface throw
@@ -57,9 +58,9 @@ import com.landawn.abacus.annotation.Beta;
  * Stream.of("INFO", "WARN", "ERROR")
  *       .forEach(level -> dao.save(new EventLog("Log level: " + level)));
  *
- * // Update and delete operations throw UnsupportedOperationException:
- * // dao.update("status", "ARCHIVED", Filters.lt("timestamp", cutoffTime));   // Throws exception
- * // dao.delete(Filters.eq("id", 123));   // Throws exception
+ * // Update and delete operations are absent from the type and do not compile:
+ * // dao.update("status", "ARCHIVED", Filters.lt("timestamp", cutoffTime));   // does not compile
+ * // dao.delete(Filters.eq("id", 123));   // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

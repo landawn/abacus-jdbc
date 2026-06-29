@@ -27,13 +27,14 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * unchecked parents throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}.
  * Inherited methods that are not redeclared keep their checked-exception contract.</p>
  *
- * <p>This interface extends {@link UncheckedNoUpdateDao}, {@link NoUpdateCrudDao} and {@link UncheckedCrudDao}
- * to provide comprehensive read/insert functionality while blocking update and delete operations. It's
- * particularly useful in audit systems, append-only data stores, or scenarios where historical data must
- * remain immutable.</p>
+ * <p>This interface extends {@link UncheckedNoUpdateDao}, {@link NoUpdateCrudDao}, {@link UncheckedReadableCrudDao}
+ * and {@link UncheckedInsertableCrudDao} to provide comprehensive read/insert functionality while blocking update
+ * and delete operations. It's particularly useful in audit systems, append-only data stores, or scenarios where
+ * historical data must remain immutable.</p>
  *
  * <p>All update-related methods (including {@code update}, {@code batchUpdate}, and {@code upsert}) and all
- * delete-related methods will throw {@link UnsupportedOperationException}.</p>
+ * delete-related methods are <b>absent from the type</b> — calling them is a compile error rather than a runtime
+ * {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -63,13 +64,13 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * List<Long> logIds = Arrays.asList(1L, 2L, 3L);
  * logIds.forEach(logId -> auditDao.get(logId).ifPresent(System.out::println));
  *
- * // Update operations throw UnsupportedOperationException:
- * // auditDao.update(log);   // Throws exception
- * // auditDao.upsert(log);   // Throws exception
+ * // Update operations are absent from the type and do not compile:
+ * // auditDao.update(log);   // does not compile
+ * // auditDao.upsert(log);   // does not compile
  *
- * // Delete operations also throw UnsupportedOperationException:
- * // auditDao.deleteById(id);   // Throws exception
- * // auditDao.delete(Filters.lt("timestamp", cutoffDate));   // Throws exception
+ * // Delete operations are also absent from the type and do not compile:
+ * // auditDao.deleteById(id);   // does not compile
+ * // auditDao.delete(Filters.lt("timestamp", cutoffDate));   // does not compile
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
@@ -77,7 +78,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateDao
  * @see NoUpdateCrudDao
- * @see UncheckedCrudDao
+ * @see UncheckedReadableCrudDao
+ * @see UncheckedInsertableCrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
