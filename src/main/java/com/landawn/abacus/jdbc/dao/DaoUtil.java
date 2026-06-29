@@ -36,7 +36,6 @@ import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.Seid;
-import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.function.Function;
 
@@ -68,6 +67,56 @@ import com.landawn.abacus.util.function.Function;
 public final class DaoUtil {
     private DaoUtil() {
         // utility class - prevent instantiation.
+    }
+
+    public static boolean isCacheable(final Class<?> daoInterface) {
+        return Cacheable.class.isAssignableFrom(daoInterface);
+    }
+
+    public static boolean isReadableCrudDao(final Class<?> daoInterface) {
+        return ReadableCrudDao.class.isAssignableFrom(daoInterface);
+    }
+
+    public static boolean isReadableCrudDaoL(final Class<?> daoInterface) {
+        return ReadableCrudDaoL.class.isAssignableFrom(daoInterface);
+    }
+
+    public static boolean isReadableCrudJoinEntityHelper(final Class<?> daoInterface) {
+        return ReadableCrudJoinEntityHelper.class.isAssignableFrom(daoInterface);
+    }
+
+    public static boolean isReadableJoinEntityHelper(final Class<?> daoInterface) {
+        return ReadableJoinEntityHelper.class.isAssignableFrom(daoInterface);
+    }
+
+    public static boolean isUncheckedReadableDao(final Class<?> daoInterface) {
+        return UncheckedReadableDao.class.isAssignableFrom(daoInterface);
+    }
+
+    public static boolean isDaoOperationDeclaringClass(final Class<?> declaringClass) {
+        return declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class) || declaringClass.equals(ReadableDao.class)
+                || declaringClass.equals(InsertableDao.class) || declaringClass.equals(UpdatableDao.class) || declaringClass.equals(DeletableDao.class)
+                || declaringClass.equals(UncheckedReadableDao.class) || declaringClass.equals(UncheckedInsertableDao.class)
+                || declaringClass.equals(UncheckedUpdatableDao.class) || declaringClass.equals(UncheckedDeletableDao.class);
+    }
+
+    public static boolean isCrudDaoOperationDeclaringClass(final Class<?> declaringClass) {
+        return declaringClass.equals(CrudDao.class) || declaringClass.equals(UncheckedCrudDao.class) || declaringClass.equals(ReadableCrudDao.class)
+                || declaringClass.equals(InsertableCrudDao.class) || declaringClass.equals(UpdatableCrudDao.class)
+                || declaringClass.equals(DeletableCrudDao.class) || declaringClass.equals(UncheckedReadableCrudDao.class)
+                || declaringClass.equals(UncheckedInsertableCrudDao.class) || declaringClass.equals(UncheckedUpdatableCrudDao.class)
+                || declaringClass.equals(UncheckedDeletableCrudDao.class);
+    }
+
+    public static boolean isJoinEntityHelperDeclaringClass(final Class<?> declaringClass) {
+        return declaringClass.equals(ReadableJoinEntityHelper.class) || declaringClass.equals(DeletableJoinEntityHelper.class)
+                || declaringClass.equals(UncheckedReadableJoinEntityHelper.class) || declaringClass.equals(UncheckedDeletableJoinEntityHelper.class)
+                || declaringClass.equals(JoinEntityHelper.class) || declaringClass.equals(UncheckedJoinEntityHelper.class);
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
+    public static Object generateId(final ReadableDao dao) throws SQLException {
+        return ((ReadableCrudDao) dao).generateId();
     }
 
     /**
@@ -589,535 +638,6 @@ public final class DaoUtil {
         }
 
         return Math.toIntExact(result);
-    }
-
-    /**
-     * Checks if the given SQL statement is a SELECT query.
-     * <p>
-     * This method performs a case-insensitive check on the leading SQL keyword (after skipping
-     * any leading whitespace, line comments {@code --}/{@code #} and block comments
-     * {@code /}{@code * ... *}{@code /}). Any leading parentheses are skipped as well, so a
-     * parenthesized query such as {@code (SELECT ...) UNION ALL (SELECT ...)} is still recognized
-     * as a SELECT. For statements that start with a {@code WITH} (CTE) clause, the keyword that
-     * follows the CTE definitions is examined instead.
-     * </p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Valid SELECT queries
-     * boolean result1 = DaoUtil.isSelectQuery("SELECT * FROM users");
-     * // result1 = true
-     *
-     * boolean result2 = DaoUtil.isSelectQuery("select id, name from products");
-     * // result2 = true
-     *
-     * boolean result3 = DaoUtil.isSelectQuery("  SELECT count(*) FROM orders");
-     * // result3 = true
-     *
-     * // Non-SELECT queries
-     * boolean result4 = DaoUtil.isSelectQuery("UPDATE users SET name = 'John'");
-     * // result4 = false
-     *
-     * boolean result5 = DaoUtil.isSelectQuery("INSERT INTO users VALUES (1, 'John')");
-     * // result5 = false
-     * }</pre>
-     *
-     * @param sql the SQL statement to check; may be empty or {@code null}
-     * @return {@code true} if the SQL is a SELECT query, {@code false} otherwise
-     */
-    public static boolean isSelectQuery(final String sql) {
-        return "SELECT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
-    }
-
-    /**
-     * Checks if the given SQL statement is an INSERT query.
-     * <p>
-     * This method performs a case-insensitive check on the leading SQL keyword (after skipping
-     * any leading whitespace, line comments {@code --}/{@code #} and block comments
-     * {@code /}{@code * ... *}{@code /}). Any leading parentheses are skipped as well. For
-     * statements that start with a {@code WITH} (CTE) clause, the keyword that follows the CTE
-     * definitions is examined instead.
-     * </p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Valid INSERT queries
-     * boolean result1 = DaoUtil.isInsertQuery("INSERT INTO users VALUES (1, 'John')");
-     * // result1 = true
-     *
-     * boolean result2 = DaoUtil.isInsertQuery("insert into products (name, price) values ('Widget', 9.99)");
-     * // result2 = true
-     *
-     * boolean result3 = DaoUtil.isInsertQuery("  INSERT INTO orders (order_id) VALUES (100)");
-     * // result3 = true
-     *
-     * // Non-INSERT queries
-     * boolean result4 = DaoUtil.isInsertQuery("UPDATE users SET name = 'John'");
-     * // result4 = false
-     *
-     * boolean result5 = DaoUtil.isInsertQuery("SELECT * FROM users");
-     * // result5 = false
-     * }</pre>
-     *
-     * @param sql the SQL statement to check; may be empty or {@code null}
-     * @return {@code true} if the SQL is an INSERT query, {@code false} otherwise
-     */
-    public static boolean isInsertQuery(final String sql) {
-        return "INSERT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
-    }
-
-    /**
-     * Checks whether the given SQL statement is read-only, i.e. a SELECT that performs no data
-     * mutation. This is the gate used by read-only DAOs (see {@link ReadOnlyDao}) to reject any
-     * statement that could modify data.
-     * <p>
-     * A statement is considered read-only only if its leading keyword is {@code SELECT}
-     * (see {@link #isSelectQuery(String)}) <i>and</i> it contains no top-level mutation keyword
-     * ({@code INSERT}, {@code UPDATE}, {@code DELETE} or {@code MERGE}). Keyword matching ignores
-     * occurrences inside quoted string literals and SQL comments, so a SELECT that merely returns
-     * the literal text {@code 'DELETE'} is still treated as read-only, whereas a data-changing
-     * CTE such as {@code WITH t AS (...) DELETE ...} is not.
-     * </p>
-     *
-     * @param sql the SQL statement to check; may be empty or {@code null}
-     * @return {@code true} if the SQL is a read-only SELECT query, {@code false} otherwise
-     * @see #isSelectQuery(String)
-     */
-    public static boolean isReadOnlyQuery(final String sql) {
-        return isSelectQuery(sql) && !containsMutationQueryKeyword(sql) && !containsSelectIntoClause(sql);
-    }
-
-    /**
-     * Checks whether the given SQL statement neither updates nor deletes existing rows. This is the
-     * gate used by no-update DAOs (see {@link NoUpdateDao}), which permit reads and plain inserts of
-     * new rows but forbid statements that mutate existing data.
-     * <p>
-     * A statement qualifies as "no-update" only if its leading keyword is {@code SELECT} or
-     * {@code INSERT} <i>and</i> it contains none of the following (matching outside of quoted string
-     * literals and SQL comments):
-     * </p>
-     * <ul>
-     *   <li>an {@code UPDATE}, {@code DELETE} or {@code MERGE} keyword; or</li>
-     *   <li>an upsert clause that can modify existing rows, namely {@code INSERT OR REPLACE},
-     *       {@code ON DUPLICATE KEY UPDATE} (MySQL) or {@code ON CONFLICT ... DO UPDATE}
-     *       (PostgreSQL/SQLite).</li>
-     * </ul>
-     * <p>
-     * A plain {@code INSERT}, and an {@code INSERT ... ON CONFLICT ... DO NOTHING}, are therefore
-     * accepted, since they never overwrite existing rows.
-     * </p>
-     *
-     * @param sql the SQL statement to check; may be empty or {@code null}
-     * @return {@code true} if the SQL neither updates nor deletes existing rows, {@code false} otherwise
-     * @see #isSelectQuery(String)
-     * @see #isInsertQuery(String)
-     */
-    public static boolean isNoUpdateQuery(final String sql) {
-        if (!(isSelectQuery(sql) || isInsertQuery(sql))) {
-            return false;
-        }
-
-        return !containsQueryKeyword(sql, "UPDATE") && !containsQueryKeyword(sql, "DELETE") && !containsQueryKeyword(sql, "MERGE")
-                && !containsInsertUpdateClause(sql) && !containsSelectIntoClause(sql) && !containsTokenSequence(sql, "INSERT", "OVERWRITE");
-    }
-
-    private static boolean containsMutationQueryKeyword(final String sql) {
-        return containsQueryKeyword(sql, "INSERT") || containsQueryKeyword(sql, "UPDATE") || containsQueryKeyword(sql, "DELETE")
-                || containsQueryKeyword(sql, "MERGE");
-    }
-
-    private static boolean containsInsertUpdateClause(final String sql) {
-        return isInsertOrReplaceQuery(sql) || containsTokenSequence(sql, "DUPLICATE", "KEY", "UPDATE") || containsTokenSequence(sql, "DO", "UPDATE");
-    }
-
-    private static boolean containsSelectIntoClause(final String sql) {
-        return isSelectQuery(sql) && containsToken(sql, "INTO");
-    }
-
-    private static boolean containsToken(final String sql, final String tokenToFind) {
-        if (Strings.isEmpty(sql)) {
-            return false;
-        }
-
-        int index = 0;
-
-        while (index < sql.length()) {
-            index = skipLeadingWhitespaceAndComments(sql, index);
-
-            if (index >= sql.length()) {
-                break;
-            }
-
-            final char ch = sql.charAt(index);
-
-            if (ch == '\'' || ch == '"' || ch == '`') {
-                index = skipQuotedLiteral(sql, index, ch);
-                continue;
-            } else if (ch == '[') {
-                index = skipBracketQuotedIdentifier(sql, index);
-                continue;
-            }
-
-            if (Character.isLetter(ch)) {
-                final String token = readIdentifierToken(sql, index);
-
-                if (tokenToFind.equalsIgnoreCase(token)) {
-                    return true;
-                }
-
-                index += token.length();
-                continue;
-            }
-
-            index++;
-        }
-
-        return false;
-    }
-
-    private static boolean isInsertOrReplaceQuery(final String sql) {
-        int index = skipLeadingWhitespaceAndComments(sql, 0);
-        String keyword = readKeyword(sql, index);
-
-        if (!"INSERT".equalsIgnoreCase(keyword)) {
-            return false;
-        }
-
-        index = skipLeadingWhitespaceAndComments(sql, index + keyword.length());
-        keyword = readKeyword(sql, index);
-
-        if (!"OR".equalsIgnoreCase(keyword)) {
-            return false;
-        }
-
-        index = skipLeadingWhitespaceAndComments(sql, index + keyword.length());
-
-        return "REPLACE".equalsIgnoreCase(readKeyword(sql, index));
-    }
-
-    private static boolean containsTokenSequence(final String sql, final String... tokens) {
-        if (Strings.isEmpty(sql) || tokens.length == 0) {
-            return false;
-        }
-
-        int index = 0;
-        int matched = 0;
-
-        while (index < sql.length()) {
-            index = skipLeadingWhitespaceAndComments(sql, index);
-
-            if (index >= sql.length()) {
-                break;
-            }
-
-            final char ch = sql.charAt(index);
-
-            if (ch == '\'' || ch == '"' || ch == '`') {
-                index = skipQuotedLiteral(sql, index, ch);
-                matched = 0;
-                continue;
-            } else if (ch == '[') {
-                index = skipBracketQuotedIdentifier(sql, index);
-                matched = 0;
-                continue;
-            }
-
-            if (Character.isLetter(ch)) {
-                final String token = readKeyword(sql, index);
-
-                if (tokens[matched].equalsIgnoreCase(token)) {
-                    matched++;
-
-                    if (matched == tokens.length) {
-                        return true;
-                    }
-                } else {
-                    matched = tokens[0].equalsIgnoreCase(token) ? 1 : 0;
-                }
-
-                index += token.length();
-                continue;
-            }
-
-            matched = 0;
-            index++;
-        }
-
-        return false;
-    }
-
-    private static boolean containsQueryKeyword(final String sql, final String keywordToFind) {
-        if (Strings.isEmpty(sql)) {
-            return false;
-        }
-
-        int index = 0;
-        boolean canStartQueryKeyword = true;
-        String previousKeyword = "";
-
-        while (index < sql.length()) {
-            index = skipLeadingWhitespaceAndComments(sql, index);
-
-            if (index >= sql.length()) {
-                break;
-            }
-
-            final char ch = sql.charAt(index);
-
-            if (ch == '\'' || ch == '"' || ch == '`') {
-                index = skipQuotedLiteral(sql, index, ch);
-                canStartQueryKeyword = false;
-                continue;
-            } else if (ch == '[') {
-                index = skipBracketQuotedIdentifier(sql, index);
-                canStartQueryKeyword = false;
-                continue;
-            }
-
-            if (Character.isLetter(ch)) {
-                final String token = readKeyword(sql, index);
-
-                if (canStartQueryKeyword && keywordToFind.equalsIgnoreCase(token)) {
-                    return true;
-                }
-
-                previousKeyword = token;
-                canStartQueryKeyword = false;
-                index += token.length();
-                continue;
-            }
-
-            if (ch == ';') {
-                canStartQueryKeyword = true;
-            } else if (ch == '(') {
-                canStartQueryKeyword = "AS".equalsIgnoreCase(previousKeyword) || "MATERIALIZED".equalsIgnoreCase(previousKeyword);
-            } else if (!Character.isWhitespace(ch)) {
-                canStartQueryKeyword = false;
-            }
-
-            index++;
-        }
-
-        return false;
-    }
-
-    private static String getLeadingQueryKeyword(final String sql) {
-        if (Strings.isEmpty(sql)) {
-            return "";
-        }
-
-        int index = skipLeadingWhitespaceAndComments(sql, 0);
-
-        // A query may be wrapped in one or more leading parentheses, e.g. "(SELECT 1)" or
-        // "(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)". Skip past those so the leading verb
-        // (SELECT/INSERT/...) is still recognized instead of being classified as no leading keyword.
-        while (index < sql.length() && sql.charAt(index) == '(') {
-            index = skipLeadingWhitespaceAndComments(sql, index + 1);
-        }
-
-        if (index >= sql.length()) {
-            return "";
-        }
-
-        String keyword = readKeyword(sql, index);
-
-        if (Strings.isEmpty(keyword)) {
-            return "";
-        }
-
-        if (!"WITH".equalsIgnoreCase(keyword)) {
-            return keyword;
-        }
-
-        index += keyword.length();
-        index = skipLeadingWhitespaceAndComments(sql, index);
-
-        keyword = readKeyword(sql, index);
-
-        if ("RECURSIVE".equalsIgnoreCase(keyword)) {
-            index += keyword.length();
-        }
-
-        return findKeywordAfterWithClause(sql, index);
-    }
-
-    private static String findKeywordAfterWithClause(final String sql, int fromIndex) {
-        int depth = 0;
-
-        while (fromIndex < sql.length()) {
-            fromIndex = skipLeadingWhitespaceAndComments(sql, fromIndex);
-
-            if (fromIndex >= sql.length()) {
-                break;
-            }
-
-            final char ch = sql.charAt(fromIndex);
-
-            if (ch == '\'' || ch == '"' || ch == '`') {
-                fromIndex = skipQuotedLiteral(sql, fromIndex, ch);
-                continue;
-            } else if (ch == '[') {
-                fromIndex = skipBracketQuotedIdentifier(sql, fromIndex);
-                continue;
-            }
-
-            if (ch == '(') {
-                depth++;
-                fromIndex++;
-                continue;
-            }
-
-            if (ch == ')') {
-                if (depth > 0) {
-                    depth--;
-                }
-
-                fromIndex++;
-                continue;
-            }
-
-            if (Character.isLetter(ch)) {
-                final String token = readKeyword(sql, fromIndex);
-
-                if (depth == 0 && isQueryKeyword(token)) {
-                    return token;
-                }
-
-                fromIndex += token.length();
-                continue;
-            }
-
-            fromIndex++;
-        }
-
-        return "";
-    }
-
-    private static boolean isQueryKeyword(final String token) {
-        return "SELECT".equalsIgnoreCase(token) || "INSERT".equalsIgnoreCase(token) || "UPDATE".equalsIgnoreCase(token) || "DELETE".equalsIgnoreCase(token)
-                || "MERGE".equalsIgnoreCase(token);
-    }
-
-    private static int skipLeadingWhitespaceAndComments(final String sql, int fromIndex) {
-        while (fromIndex < sql.length()) {
-            while (fromIndex < sql.length() && Character.isWhitespace(sql.charAt(fromIndex))) {
-                fromIndex++;
-            }
-
-            if (fromIndex >= sql.length()) {
-                break;
-            }
-
-            if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex) == '-' && sql.charAt(fromIndex + 1) == '-') {
-                fromIndex += 2;
-
-                while (fromIndex < sql.length() && sql.charAt(fromIndex) != '\n' && sql.charAt(fromIndex) != '\r') {
-                    fromIndex++;
-                }
-
-                continue;
-            }
-
-            if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex) == '/' && sql.charAt(fromIndex + 1) == '*') {
-                fromIndex += 2;
-
-                while ((fromIndex + 1 < sql.length()) && !(sql.charAt(fromIndex) == '*' && sql.charAt(fromIndex + 1) == '/')) {
-                    fromIndex++;
-                }
-
-                fromIndex = Math.min(fromIndex + 2, sql.length());
-                continue;
-            }
-
-            if (sql.charAt(fromIndex) == '#') {
-                do {
-                    fromIndex++;
-                } while (fromIndex < sql.length() && sql.charAt(fromIndex) != '\n' && sql.charAt(fromIndex) != '\r');
-
-                continue;
-            }
-
-            break;
-        }
-
-        return fromIndex;
-    }
-
-    private static int skipQuotedLiteral(final String sql, int fromIndex, final char quoteChar) {
-        fromIndex++;
-
-        while (fromIndex < sql.length()) {
-            final char ch = sql.charAt(fromIndex);
-
-            if (ch == '\\') {
-                // Skip backslash-escaped character (e.g., \' in MySQL)
-                fromIndex += 2;
-                if (fromIndex >= sql.length()) {
-                    break;
-                }
-            } else if (ch == quoteChar) {
-                if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex + 1) == quoteChar) {
-                    // Doubled quote escape (SQL standard)
-                    fromIndex += 2;
-                } else {
-                    fromIndex++;
-                    break;
-                }
-            } else {
-                fromIndex++;
-            }
-        }
-
-        return fromIndex;
-    }
-
-    private static int skipBracketQuotedIdentifier(final String sql, int fromIndex) {
-        fromIndex++;
-
-        while (fromIndex < sql.length()) {
-            if (sql.charAt(fromIndex) == ']') {
-                if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex + 1) == ']') {
-                    fromIndex += 2;
-                } else {
-                    fromIndex++;
-                    break;
-                }
-            } else {
-                fromIndex++;
-            }
-        }
-
-        return fromIndex;
-    }
-
-    private static String readKeyword(final String sql, int fromIndex) {
-        fromIndex = skipLeadingWhitespaceAndComments(sql, fromIndex);
-
-        final int startIndex = fromIndex;
-
-        while (fromIndex < sql.length() && Character.isLetter(sql.charAt(fromIndex))) {
-            fromIndex++;
-        }
-
-        return fromIndex > startIndex ? sql.substring(startIndex, fromIndex) : "";
-    }
-
-    private static String readIdentifierToken(final String sql, int fromIndex) {
-        fromIndex = skipLeadingWhitespaceAndComments(sql, fromIndex);
-
-        final int startIndex = fromIndex;
-
-        while (fromIndex < sql.length()) {
-            final char ch = sql.charAt(fromIndex);
-
-            if (!(Character.isLetterOrDigit(ch) || ch == '_')) {
-                break;
-            }
-
-            fromIndex++;
-        }
-
-        return fromIndex > startIndex ? sql.substring(startIndex, fromIndex) : "";
     }
 
     /**

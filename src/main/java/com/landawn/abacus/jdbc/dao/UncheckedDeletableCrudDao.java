@@ -32,7 +32,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
-public sealed interface UncheckedDeletableCrudDao<T, ID, TD extends UncheckedReadableDao<T, TD>> extends DeletableCrudDao<T, ID, TD>, UncheckedDeletableDao<T, TD>
+sealed interface UncheckedDeletableCrudDao<T, ID, TD extends UncheckedReadableDao<T, TD>> extends DeletableCrudDao<T, ID, TD>, UncheckedDeletableDao<T, TD>
         permits UncheckedCrudDao {
     /**
      * Deletes the specified entity from the database. The entity must have its ID set.

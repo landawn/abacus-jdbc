@@ -56,7 +56,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public sealed interface ReadableCrudDao<T, ID, TD extends ReadableDao<T, TD>> extends ReadableDao<T, TD>
+sealed interface ReadableCrudDao<T, ID, TD extends ReadableDao<T, TD>> extends ReadableDao<T, TD>
         permits CrudDao, ReadableCrudDaoL, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedReadableCrudDao {
     /**
      * Returns a {@link Jdbc.BiRowMapper} that extracts the ID from a database row.

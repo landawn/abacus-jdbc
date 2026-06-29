@@ -96,8 +96,7 @@ public class ReadOnlyDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("SELECT * INTO test_copy FROM test"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQueryForLargeResult("DELETE FROM test"));
         // mutating CTE is not read-only even though it starts with WITH ... SELECT.
-        assertThrows(UnsupportedOperationException.class,
-                () -> dao.prepareQuery("WITH d AS (DELETE FROM test WHERE id = ? RETURNING *) SELECT * FROM d"));
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("WITH d AS (DELETE FROM test WHERE id = ? RETURNING *) SELECT * FROM d"));
     }
 
     @Test

@@ -32,8 +32,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public sealed interface UpdatableCrudDao<T, ID, TD extends ReadableDao<T, TD>> extends UpdatableDao<T, TD>
-        permits CrudDao, UncheckedUpdatableCrudDao {
+sealed interface UpdatableCrudDao<T, ID, TD extends ReadableDao<T, TD>> extends UpdatableDao<T, TD> permits CrudDao, UncheckedUpdatableCrudDao {
     /**
      * Updates an existing entity in the database, locating the row by its ID property(ies).
      * All updatable properties of the entity will be written; the entity's ID must be populated.

@@ -56,7 +56,7 @@ import com.landawn.abacus.util.stream.Stream;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
-public sealed interface UncheckedReadableCrudDao<T, ID, TD extends UncheckedReadableDao<T, TD>> extends ReadableCrudDao<T, ID, TD>, UncheckedReadableDao<T, TD>
+sealed interface UncheckedReadableCrudDao<T, ID, TD extends UncheckedReadableDao<T, TD>> extends ReadableCrudDao<T, ID, TD>, UncheckedReadableDao<T, TD>
         permits UncheckedCrudDao, UncheckedReadableCrudDaoL, UncheckedNoUpdateCrudDao, UncheckedReadOnlyCrudDao {
     /**
      * Generates a new ID for entity insertion.

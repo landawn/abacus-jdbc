@@ -34,7 +34,7 @@ import com.landawn.abacus.query.ParsedSql;
  * @see Dao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public sealed interface InsertableDao<T, TD extends ReadableDao<T, TD>> extends ReadableDao<T, TD>
+sealed interface InsertableDao<T, TD extends ReadableDao<T, TD>> extends ReadableDao<T, TD>
         permits Dao, NoUpdateDao, InsertableCrudDao, UncheckedInsertableDao {
     /**
      * Creates a PreparedQuery with the option to generate keys for INSERT statements.

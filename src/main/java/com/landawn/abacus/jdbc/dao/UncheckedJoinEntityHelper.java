@@ -30,5 +30,6 @@ package com.landawn.abacus.jdbc.dao;
  * @see JoinEntityHelper
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-public non-sealed interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> extends UncheckedDeletableJoinEntityHelper<T, TD>, JoinEntityHelper<T, TD> {
+public non-sealed interface UncheckedJoinEntityHelper<T, TD extends UncheckedDao<T, TD>>
+        extends UncheckedDeletableJoinEntityHelper<T, TD>, JoinEntityHelper<T, TD> {
 }

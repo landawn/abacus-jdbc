@@ -45,9 +45,8 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings("resource")
-public sealed interface UncheckedDeletableJoinEntityHelper<T, TD extends UncheckedDao<T, TD>>
-        extends DeletableJoinEntityHelper<T, TD>, UncheckedReadableJoinEntityHelper<T, TD>
-        permits UncheckedJoinEntityHelper {
+sealed interface UncheckedDeletableJoinEntityHelper<T, TD extends UncheckedDao<T, TD>>
+        extends DeletableJoinEntityHelper<T, TD>, UncheckedReadableJoinEntityHelper<T, TD> permits UncheckedJoinEntityHelper {
     /**
      * Deletes all join entities of the specified class related to the given entity.
      * This deletes the join entities associated with the specified relationship type.

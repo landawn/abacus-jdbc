@@ -49,7 +49,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings("resource")
-public sealed interface UncheckedReadableJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> extends ReadableJoinEntityHelper<T, TD>
+sealed interface UncheckedReadableJoinEntityHelper<T, TD extends UncheckedDao<T, TD>> extends ReadableJoinEntityHelper<T, TD>
         permits UncheckedDeletableJoinEntityHelper, UncheckedReadableCrudJoinEntityHelper, UncheckedReadOnlyJoinEntityHelper {
 
     /**

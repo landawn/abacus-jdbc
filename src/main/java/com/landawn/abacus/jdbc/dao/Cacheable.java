@@ -39,5 +39,5 @@ import com.landawn.abacus.annotation.Beta;
  * @see ReadOnlyDao
  */
 @Beta
-public sealed interface Cacheable permits NoUpdateDao, ReadOnlyDao {
+sealed interface Cacheable permits NoUpdateDao, ReadOnlyDao {
 }

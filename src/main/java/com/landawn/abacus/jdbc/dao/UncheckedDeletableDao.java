@@ -30,7 +30,7 @@ import com.landawn.abacus.query.condition.Condition;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
-public sealed interface UncheckedDeletableDao<T, TD extends UncheckedReadableDao<T, TD>> extends DeletableDao<T, TD>, UncheckedReadableDao<T, TD>
+sealed interface UncheckedDeletableDao<T, TD extends UncheckedReadableDao<T, TD>> extends DeletableDao<T, TD>, UncheckedReadableDao<T, TD>
         permits UncheckedDao, UncheckedDeletableCrudDao {
     /**
      * Deletes all records that match the specified condition.

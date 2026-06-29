@@ -32,7 +32,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public sealed interface InsertableCrudDao<T, ID, TD extends ReadableDao<T, TD>> extends InsertableDao<T, TD>
+sealed interface InsertableCrudDao<T, ID, TD extends ReadableDao<T, TD>> extends InsertableDao<T, TD>
         permits CrudDao, NoUpdateCrudDao, UncheckedInsertableCrudDao {
     /**
      * Inserts the specified entity into the database and returns its ID.

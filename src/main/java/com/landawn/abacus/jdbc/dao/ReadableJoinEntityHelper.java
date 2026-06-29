@@ -54,7 +54,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public sealed interface ReadableJoinEntityHelper<T, TD extends Dao<T, TD>>
+sealed interface ReadableJoinEntityHelper<T, TD extends Dao<T, TD>>
         permits DeletableJoinEntityHelper, ReadableCrudJoinEntityHelper, ReadOnlyJoinEntityHelper, UncheckedReadableJoinEntityHelper {
     /**
      * Retrieves the class type of the target DAO interface.

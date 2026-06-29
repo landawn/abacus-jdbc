@@ -22,6 +22,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
+import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.Seid;
@@ -88,14 +89,14 @@ public class DaoUtilTest extends TestBase {
 
     @Test
     public void testIsSelectQuery() {
-        assertTrue(DaoUtil.isSelectQuery("  select * from demo"));
-        assertFalse(DaoUtil.isSelectQuery("update demo set name = 'x'"));
+        assertTrue(SqlParser.isSelectQuery("  select * from demo"));
+        assertFalse(SqlParser.isSelectQuery("update demo set name = 'x'"));
     }
 
     @Test
     public void testIsInsertQuery() {
-        assertTrue(DaoUtil.isInsertQuery("insert into demo(id) values (1)"));
-        assertFalse(DaoUtil.isInsertQuery("delete from demo"));
+        assertTrue(SqlParser.isInsertQuery("insert into demo(id) values (1)"));
+        assertFalse(SqlParser.isInsertQuery("delete from demo"));
     }
 
     // CTE and leading-comment SQL classification exercises the keyword scanner.
@@ -103,50 +104,50 @@ public class DaoUtilTest extends TestBase {
     public void testIsSelectQuery_WithLeadingCommentsAndCte() {
         final String sql = "  -- leading comment\n/* block comment */\n# shell comment\nWITH cte AS (SELECT 'not final' AS name) SELECT * FROM cte";
 
-        assertTrue(DaoUtil.isSelectQuery(sql));
+        assertTrue(SqlParser.isSelectQuery(sql));
     }
 
     @Test
     public void testIsInsertQuery_WithRecursiveCte() {
         final String sql = "WITH RECURSIVE cte AS (SELECT 1) INSERT INTO audit_log(id) SELECT id FROM cte";
 
-        assertTrue(DaoUtil.isInsertQuery(sql));
+        assertTrue(SqlParser.isInsertQuery(sql));
     }
 
     // isReadOnlyQuery / isNoUpdateQuery are the public gates used by the DaoImpl proxy to enforce
     // ReadOnlyDao (SELECT-only) and NoUpdateDao (SELECT/INSERT-only) restrictions.
     @Test
     public void testIsReadOnlyQuery() {
-        assertTrue(DaoUtil.isReadOnlyQuery("SELECT * FROM demo"));
-        assertTrue(DaoUtil.isReadOnlyQuery("  select id from demo where name = 'DELETE'")); // 'DELETE' is a literal, not a keyword
-        assertFalse(DaoUtil.isReadOnlyQuery("INSERT INTO demo(id) VALUES (1)"));
-        assertFalse(DaoUtil.isReadOnlyQuery("UPDATE demo SET name = 'x'"));
-        assertFalse(DaoUtil.isReadOnlyQuery("DELETE FROM demo"));
-        assertFalse(DaoUtil.isReadOnlyQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
-        assertFalse(DaoUtil.isReadOnlyQuery("SELECT * INTO demo_copy FROM demo"));
-        assertFalse(DaoUtil.isReadOnlyQuery("WITH c AS (DELETE FROM demo RETURNING *) SELECT * FROM c")); // mutating CTE
-        assertFalse(DaoUtil.isReadOnlyQuery(null));
+        assertTrue(SqlParser.isReadOnlyQuery("SELECT * FROM demo"));
+        assertTrue(SqlParser.isReadOnlyQuery("  select id from demo where name = 'DELETE'")); // 'DELETE' is a literal, not a keyword
+        assertFalse(SqlParser.isReadOnlyQuery("INSERT INTO demo(id) VALUES (1)"));
+        assertFalse(SqlParser.isReadOnlyQuery("UPDATE demo SET name = 'x'"));
+        assertFalse(SqlParser.isReadOnlyQuery("DELETE FROM demo"));
+        assertFalse(SqlParser.isReadOnlyQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
+        assertFalse(SqlParser.isReadOnlyQuery("SELECT * INTO demo_copy FROM demo"));
+        assertFalse(SqlParser.isReadOnlyQuery("WITH c AS (DELETE FROM demo RETURNING *) SELECT * FROM c")); // mutating CTE
+        assertFalse(SqlParser.isReadOnlyQuery(null));
     }
 
     @Test
     public void testIsNoUpdateQuery() {
-        assertTrue(DaoUtil.isNoUpdateQuery("SELECT * FROM demo"));
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1)"));
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT DO NOTHING")); // never overwrites
-        assertFalse(DaoUtil.isNoUpdateQuery("UPDATE demo SET name = 'x'"));
-        assertFalse(DaoUtil.isNoUpdateQuery("DELETE FROM demo"));
-        assertFalse(DaoUtil.isNoUpdateQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OR REPLACE INTO demo(id) VALUES (1)"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON DUPLICATE KEY UPDATE name = 'x'"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT(id) DO UPDATE SET name = 'x'"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OVERWRITE TABLE demo SELECT * FROM staging"));
-        assertFalse(DaoUtil.isNoUpdateQuery("SELECT * INTO demo_copy FROM demo"));
-        assertFalse(DaoUtil.isNoUpdateQuery(null));
+        assertTrue(SqlParser.isNoUpdateQuery("SELECT * FROM demo"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1)"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT DO NOTHING")); // never overwrites
+        assertFalse(SqlParser.isNoUpdateQuery("UPDATE demo SET name = 'x'"));
+        assertFalse(SqlParser.isNoUpdateQuery("DELETE FROM demo"));
+        assertFalse(SqlParser.isNoUpdateQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT OR REPLACE INTO demo(id) VALUES (1)"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON DUPLICATE KEY UPDATE name = 'x'"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT(id) DO UPDATE SET name = 'x'"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT OVERWRITE TABLE demo SELECT * FROM staging"));
+        assertFalse(SqlParser.isNoUpdateQuery("SELECT * INTO demo_copy FROM demo"));
+        assertFalse(SqlParser.isNoUpdateQuery(null));
     }
 
     @Test
     public void testIsSelectQuery_CommentsOnly() {
-        assertFalse(DaoUtil.isSelectQuery(" /* block */ -- line\n # shell\n "));
+        assertFalse(SqlParser.isSelectQuery(" /* block */ -- line\n # shell\n "));
     }
 
     // Simple entity for extractId / createIdExtractor tests
@@ -548,159 +549,160 @@ public class DaoUtilTest extends TestBase {
 
     @Test
     public void testIsSelectQueryDoesNotThrow() {
-        assertFalse(DaoUtil.isSelectQuery(null));
-        assertFalse(DaoUtil.isSelectQuery(""));
-        assertTrue(DaoUtil.isSelectQuery("SELECT * FROM t"));
-        assertFalse(DaoUtil.isSelectQuery("INSERT INTO t VALUES(1)"));
+        assertFalse(SqlParser.isSelectQuery(null));
+        assertFalse(SqlParser.isSelectQuery(""));
+        assertTrue(SqlParser.isSelectQuery("SELECT * FROM t"));
+        assertFalse(SqlParser.isSelectQuery("INSERT INTO t VALUES(1)"));
     }
 
     @Test
     public void testIsInsertQueryDoesNotThrow() {
-        assertFalse(DaoUtil.isInsertQuery(null));
-        assertFalse(DaoUtil.isInsertQuery(""));
-        assertTrue(DaoUtil.isInsertQuery("INSERT INTO t VALUES(1)"));
-        assertFalse(DaoUtil.isInsertQuery("SELECT * FROM t"));
+        assertFalse(SqlParser.isInsertQuery(null));
+        assertFalse(SqlParser.isInsertQuery(""));
+        assertTrue(SqlParser.isInsertQuery("INSERT INTO t VALUES(1)"));
+        assertFalse(SqlParser.isInsertQuery("SELECT * FROM t"));
     }
 
     // SQL keyword parsing edge cases: non-letter leading characters (line 910)
     @Test
     public void testIsSelectQuery_NonLetterSql() {
-        assertFalse(DaoUtil.isSelectQuery("123 SELECT * FROM t"));
-        assertFalse(DaoUtil.isSelectQuery("_abc SELECT * FROM t"));
-        assertFalse(DaoUtil.isSelectQuery("-- comment\n123"));
+        assertFalse(SqlParser.isSelectQuery("123 SELECT * FROM t"));
+        assertFalse(SqlParser.isSelectQuery("_abc SELECT * FROM t"));
+        assertFalse(SqlParser.isSelectQuery("-- comment\n123"));
     }
 
     @Test
     public void testIsInsertQuery_NonLetterSql() {
-        assertFalse(DaoUtil.isInsertQuery("123 INSERT INTO t VALUES(1)"));
+        assertFalse(SqlParser.isInsertQuery("123 INSERT INTO t VALUES(1)"));
     }
 
     // WITH clause with no final DML keyword (lines 936, 975)
     @Test
     public void testIsSelectQuery_CteNoFinalKeyword() {
-        assertFalse(DaoUtil.isSelectQuery("WITH cte AS (SELECT 1)"));
-        assertFalse(DaoUtil.isInsertQuery("WITH cte AS (SELECT 1)"));
+        assertFalse(SqlParser.isSelectQuery("WITH cte AS (SELECT 1)"));
+        assertFalse(SqlParser.isInsertQuery("WITH cte AS (SELECT 1)"));
     }
 
     @Test
     public void testIsSelectQuery_CteNoFinalKeyword_WithRecursive() {
-        assertFalse(DaoUtil.isSelectQuery("WITH RECURSIVE cte AS (SELECT 1)"));
-        assertFalse(DaoUtil.isInsertQuery("WITH RECURSIVE cte AS (SELECT 1)"));
+        assertFalse(SqlParser.isSelectQuery("WITH RECURSIVE cte AS (SELECT 1)"));
+        assertFalse(SqlParser.isInsertQuery("WITH RECURSIVE cte AS (SELECT 1)"));
     }
 
     // WITH clause containing DML keywords in CTE body — exercises isQueryKeyword branches (line 979) and depth tracking (line 953)
     @Test
     public void testIsSelectQuery_CteWithNestedUpdate() {
-        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (UPDATE t SET x=1 RETURNING *) SELECT * FROM cte"));
+        assertTrue(SqlParser.isSelectQuery("WITH cte AS (UPDATE t SET x=1 RETURNING *) SELECT * FROM cte"));
     }
 
     @Test
     public void testIsSelectQuery_CteWithNestedDelete() {
-        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (DELETE FROM t WHERE id=1 RETURNING *) SELECT * FROM cte"));
+        assertTrue(SqlParser.isSelectQuery("WITH cte AS (DELETE FROM t WHERE id=1 RETURNING *) SELECT * FROM cte"));
     }
 
     @Test
     public void testIsInsertQuery_CteWithNestedMerge() {
-        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (MERGE INTO t USING s ON t.id=s.id WHEN MATCHED THEN UPDATE SET x=1) INSERT INTO t2 SELECT * FROM cte"));
+        assertTrue(
+                SqlParser.isInsertQuery("WITH cte AS (MERGE INTO t USING s ON t.id=s.id WHEN MATCHED THEN UPDATE SET x=1) INSERT INTO t2 SELECT * FROM cte"));
     }
 
     @Test
     public void testIsNoUpdateQuery_AllowsPlainInsertAndDoNothing() {
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(id, message) VALUES (1, 'created')"));
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO NOTHING"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(id, message) VALUES (1, 'created')"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO NOTHING"));
     }
 
     @Test
     public void testIsNoUpdateQuery_RejectsInsertConflictUpdateClauses() {
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = VALUES(name)"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OR REPLACE INTO users(id, name) VALUES (1, 'a')"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = VALUES(name)"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT OR REPLACE INTO users(id, name) VALUES (1, 'a')"));
     }
 
     @Test
     public void testIsNoUpdateQuery_IgnoresQuotedConflictUpdateText() {
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON DUPLICATE KEY UPDATE name = VALUES(name)')"));
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON CONFLICT DO UPDATE')"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON DUPLICATE KEY UPDATE name = VALUES(name)')"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON CONFLICT DO UPDATE')"));
     }
 
     @Test
     public void testIsReadOnlyQuery_RejectsSelectInto() {
-        assertFalse(DaoUtil.isReadOnlyQuery("SELECT * INTO user_copy FROM users"));
-        assertFalse(DaoUtil.isReadOnlyQuery("WITH src AS (SELECT * FROM users) SELECT * INTO user_copy FROM src"));
-        assertTrue(DaoUtil.isReadOnlyQuery("SELECT 'INTO' AS keyword_text FROM users"));
-        assertTrue(DaoUtil.isReadOnlyQuery("SELECT [INTO] FROM users"));
-        assertTrue(DaoUtil.isReadOnlyQuery("SELECT into_column FROM users"));
+        assertFalse(SqlParser.isReadOnlyQuery("SELECT * INTO user_copy FROM users"));
+        assertFalse(SqlParser.isReadOnlyQuery("WITH src AS (SELECT * FROM users) SELECT * INTO user_copy FROM src"));
+        assertTrue(SqlParser.isReadOnlyQuery("SELECT 'INTO' AS keyword_text FROM users"));
+        assertTrue(SqlParser.isReadOnlyQuery("SELECT [INTO] FROM users"));
+        assertTrue(SqlParser.isReadOnlyQuery("SELECT into_column FROM users"));
     }
 
     @Test
     public void testIsNoUpdateQuery_RejectsSelectIntoAndInsertOverwrite() {
-        assertFalse(DaoUtil.isNoUpdateQuery("SELECT * INTO user_copy FROM users"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT OVERWRITE TABLE users SELECT * FROM staging_users"));
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('INSERT OVERWRITE TABLE users')"));
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log([INSERT OVERWRITE]) VALUES (1)"));
+        assertFalse(SqlParser.isNoUpdateQuery("SELECT * INTO user_copy FROM users"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT OVERWRITE TABLE users SELECT * FROM staging_users"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('INSERT OVERWRITE TABLE users')"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log([INSERT OVERWRITE]) VALUES (1)"));
     }
 
     @Test
     public void testIsReadOnlyQuery_IgnoresBracketQuotedMutationKeywords() {
-        assertTrue(DaoUtil.isReadOnlyQuery("SELECT [DELETE], [UPDATE], [MERGE] FROM [INSERT]"));
-        assertTrue(DaoUtil.isReadOnlyQuery("WITH [DELETE] AS (SELECT 1) SELECT * FROM [DELETE]"));
-        assertFalse(DaoUtil.isReadOnlyQuery("SELECT [DELETE] FROM audit_log; DELETE FROM audit_log"));
+        assertTrue(SqlParser.isReadOnlyQuery("SELECT [DELETE], [UPDATE], [MERGE] FROM [INSERT]"));
+        assertTrue(SqlParser.isReadOnlyQuery("WITH [DELETE] AS (SELECT 1) SELECT * FROM [DELETE]"));
+        assertFalse(SqlParser.isReadOnlyQuery("SELECT [DELETE] FROM audit_log; DELETE FROM audit_log"));
     }
 
     @Test
     public void testIsNoUpdateQuery_IgnoresBracketQuotedConflictUpdateText() {
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log([DO], [UPDATE]) VALUES (1, 2)"));
-        assertTrue(DaoUtil.isNoUpdateQuery("INSERT INTO audit_log([DO UPDATE]) VALUES (1)"));
-        assertFalse(DaoUtil.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log([DO], [UPDATE]) VALUES (1, 2)"));
+        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log([DO UPDATE]) VALUES (1)"));
+        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
     }
 
     // Backtick-quoted identifiers in WITH clause exercises quote-type branch (line 941)
     @Test
     public void testIsSelectQuery_CteWithBacktickQuotes() {
-        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT `col` FROM `tbl`) SELECT * FROM cte"));
+        assertTrue(SqlParser.isSelectQuery("WITH cte AS (SELECT `col` FROM `tbl`) SELECT * FROM cte"));
     }
 
     @Test
     public void testIsInsertQuery_CteWithBacktickQuotes() {
-        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (SELECT `col` FROM `tbl`) INSERT INTO t2 SELECT * FROM cte"));
+        assertTrue(SqlParser.isInsertQuery("WITH cte AS (SELECT `col` FROM `tbl`) INSERT INTO t2 SELECT * FROM cte"));
     }
 
     // CTE with parenthesized sub-expressions at different depths
     @Test
     public void testIsSelectQuery_CteWithNestedParens() {
-        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT x FROM (SELECT 1 AS x) sub WHERE x > 0) SELECT * FROM cte"));
+        assertTrue(SqlParser.isSelectQuery("WITH cte AS (SELECT x FROM (SELECT 1 AS x) sub WHERE x > 0) SELECT * FROM cte"));
     }
 
     // A query wrapped in leading parentheses must still be classified by its leading verb.
     // Regression for getLeadingQueryKeyword treating a leading '(' as "no keyword".
     @Test
     public void testIsSelectQuery_LeadingParenthesis() {
-        assertTrue(DaoUtil.isSelectQuery("(SELECT 1)"));
-        assertTrue(DaoUtil.isSelectQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
-        assertTrue(DaoUtil.isSelectQuery("((SELECT 1))"));
-        assertTrue(DaoUtil.isSelectQuery("  ( SELECT 1 )"));
-        assertTrue(DaoUtil.isSelectQuery("-- comment\n(SELECT 1)"));
-        assertTrue(DaoUtil.isSelectQuery("/* block */ (SELECT id FROM users)"));
+        assertTrue(SqlParser.isSelectQuery("(SELECT 1)"));
+        assertTrue(SqlParser.isSelectQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
+        assertTrue(SqlParser.isSelectQuery("((SELECT 1))"));
+        assertTrue(SqlParser.isSelectQuery("  ( SELECT 1 )"));
+        assertTrue(SqlParser.isSelectQuery("-- comment\n(SELECT 1)"));
+        assertTrue(SqlParser.isSelectQuery("/* block */ (SELECT id FROM users)"));
         // Still not a SELECT when the wrapped verb is something else.
-        assertFalse(DaoUtil.isSelectQuery("(UPDATE t SET x = 1)"));
+        assertFalse(SqlParser.isSelectQuery("(UPDATE t SET x = 1)"));
     }
 
     @Test
     public void testIsReadOnlyQuery_LeadingParenthesis() {
-        assertTrue(DaoUtil.isReadOnlyQuery("(SELECT 1)"));
-        assertTrue(DaoUtil.isReadOnlyQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
+        assertTrue(SqlParser.isNoUpdateQuery("(SELECT 1)"));
+        assertTrue(SqlParser.isReadOnlyQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
     }
 
     @Test
     public void testIsNoUpdateQuery_LeadingParenthesis() {
-        assertTrue(DaoUtil.isNoUpdateQuery("(SELECT 1)"));
-        assertTrue(DaoUtil.isNoUpdateQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
+        assertTrue(SqlParser.isNoUpdateQuery("(SELECT 1)"));
+        assertTrue(SqlParser.isNoUpdateQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
     }
 
     @Test
     public void testIsInsertQuery_LeadingParenthesis() {
-        assertTrue(DaoUtil.isInsertQuery("(INSERT INTO t VALUES (1))"));
-        assertFalse(DaoUtil.isInsertQuery("(SELECT 1)"));
+        assertTrue(SqlParser.isInsertQuery("(INSERT INTO t VALUES (1))"));
+        assertFalse(SqlParser.isInsertQuery("(SELECT 1)"));
     }
 
     // getEntityJoinInfo delegation (line 1097)
@@ -725,39 +727,39 @@ public class DaoUtilTest extends TestBase {
     // Shell-comment (#) in skipLeadingWhitespaceAndComments exercises the continue at line 1019.
     @Test
     public void testIsSelectQuery_ShellComment() {
-        assertTrue(DaoUtil.isSelectQuery("# comment\nSELECT * FROM t"));
+        assertTrue(SqlParser.isSelectQuery("# comment\nSELECT * FROM t"));
     }
 
     @Test
     public void testIsInsertQuery_ShellComment() {
-        assertTrue(DaoUtil.isInsertQuery("# comment\nINSERT INTO t VALUES(1)"));
+        assertTrue(SqlParser.isInsertQuery("# comment\nINSERT INTO t VALUES(1)"));
     }
 
     // Backslash-escaped quote inside a CTE quoted literal exercises skipQuotedLiteral lines 1036-1038.
     @Test
     public void testIsSelectQuery_CteWithBackslashEscapedQuote() {
-        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT 'it\\'s' AS name) SELECT * FROM cte"));
+        assertTrue(SqlParser.isSelectQuery("WITH cte AS (SELECT 'it\\'s' AS name) SELECT * FROM cte"));
     }
 
     @Test
     public void testIsInsertQuery_CteWithBackslashEscapedQuote() {
-        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (SELECT 'it\\'s' AS name) INSERT INTO t SELECT * FROM cte"));
+        assertTrue(SqlParser.isInsertQuery("WITH cte AS (SELECT 'it\\'s' AS name) INSERT INTO t SELECT * FROM cte"));
     }
 
     // Backslash at end of quoted literal exercises the break at line 1038.
     @Test
     public void testIsSelectQuery_CteWithBackslashAtEndOfQuote() {
-        assertFalse(DaoUtil.isSelectQuery("WITH cte AS (SELECT 'test\\' AS name) SELECT * FROM cte"));
+        assertFalse(SqlParser.isSelectQuery("WITH cte AS (SELECT 'test\\' AS name) SELECT * FROM cte"));
     }
 
     // Doubled-quote escape (SQL standard) inside a CTE exercises skipQuotedLiteral line 1043.
     @Test
     public void testIsSelectQuery_CteWithDoubledQuoteEscape() {
-        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT 'it''s' AS name) SELECT * FROM cte"));
+        assertTrue(SqlParser.isSelectQuery("WITH cte AS (SELECT 'it''s' AS name) SELECT * FROM cte"));
     }
 
     @Test
     public void testIsInsertQuery_CteWithDoubledQuoteEscape() {
-        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (SELECT 'it''s' AS name) INSERT INTO t SELECT * FROM cte"));
+        assertTrue(SqlParser.isInsertQuery("WITH cte AS (SELECT 'it''s' AS name) INSERT INTO t SELECT * FROM cte"));
     }
 }

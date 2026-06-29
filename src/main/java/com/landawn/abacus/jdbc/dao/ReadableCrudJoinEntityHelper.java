@@ -84,7 +84,7 @@ import com.landawn.abacus.util.u.Optional;
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-public sealed interface ReadableCrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> extends ReadableJoinEntityHelper<T, TD>
+sealed interface ReadableCrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> extends ReadableJoinEntityHelper<T, TD>
         permits CrudJoinEntityHelper, ReadOnlyCrudJoinEntityHelper, UncheckedReadableCrudJoinEntityHelper {
 
     /**

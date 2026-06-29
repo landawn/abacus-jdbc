@@ -71,38 +71,12 @@ import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.annotation.Transactional;
-import com.landawn.abacus.jdbc.dao.Cacheable;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.DaoUtil;
-import com.landawn.abacus.jdbc.dao.DeletableCrudDao;
-import com.landawn.abacus.jdbc.dao.DeletableDao;
-import com.landawn.abacus.jdbc.dao.DeletableJoinEntityHelper;
-import com.landawn.abacus.jdbc.dao.InsertableCrudDao;
-import com.landawn.abacus.jdbc.dao.InsertableDao;
-import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.jdbc.dao.NoUpdateDao;
 import com.landawn.abacus.jdbc.dao.ReadOnlyDao;
-import com.landawn.abacus.jdbc.dao.ReadableCrudDao;
-import com.landawn.abacus.jdbc.dao.ReadableCrudDaoL;
-import com.landawn.abacus.jdbc.dao.ReadableCrudJoinEntityHelper;
 import com.landawn.abacus.jdbc.dao.ReadableDao;
-import com.landawn.abacus.jdbc.dao.ReadableJoinEntityHelper;
-import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
-import com.landawn.abacus.jdbc.dao.UncheckedDao;
-import com.landawn.abacus.jdbc.dao.UncheckedDeletableCrudDao;
-import com.landawn.abacus.jdbc.dao.UncheckedDeletableDao;
-import com.landawn.abacus.jdbc.dao.UncheckedDeletableJoinEntityHelper;
-import com.landawn.abacus.jdbc.dao.UncheckedInsertableCrudDao;
-import com.landawn.abacus.jdbc.dao.UncheckedInsertableDao;
-import com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper;
-import com.landawn.abacus.jdbc.dao.UncheckedReadableCrudDao;
-import com.landawn.abacus.jdbc.dao.UncheckedReadableDao;
-import com.landawn.abacus.jdbc.dao.UncheckedReadableJoinEntityHelper;
-import com.landawn.abacus.jdbc.dao.UncheckedUpdatableCrudDao;
-import com.landawn.abacus.jdbc.dao.UncheckedUpdatableDao;
-import com.landawn.abacus.jdbc.dao.UpdatableCrudDao;
-import com.landawn.abacus.jdbc.dao.UpdatableDao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.JsonParser;
@@ -122,6 +96,7 @@ import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlDialect.SqlPolicy;
 import com.landawn.abacus.query.SqlMapper;
+import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.query.condition.Expression;
@@ -1949,9 +1924,9 @@ final class DaoImpl {
         }
 
         final AsyncExecutor asyncExecutor = executor == null ? JdbcUtil.asyncExecutor : new AsyncExecutor(executor);
-        final boolean isUncheckedDao = UncheckedReadableDao.class.isAssignableFrom(daoInterface);
-        final boolean isCrudDao = ReadableCrudDao.class.isAssignableFrom(daoInterface);
-        final boolean isCrudDaoL = ReadableCrudDaoL.class.isAssignableFrom(daoInterface);
+        final boolean isUncheckedDao = DaoUtil.isUncheckedReadableDao(daoInterface);
+        final boolean isCrudDao = DaoUtil.isReadableCrudDao(daoInterface);
+        final boolean isCrudDaoL = DaoUtil.isReadableCrudDaoL(daoInterface);
         // Restriction level for centralizing the prepareQuery/prepareNamedQuery SQL-kind gate (formerly per-method overrides in ReadOnlyDao/NoUpdateDao).
         final boolean isReadOnlyDao = ReadOnlyDao.class.isAssignableFrom(daoInterface);
         final boolean isNoUpdateDao = !isReadOnlyDao && NoUpdateDao.class.isAssignableFrom(daoInterface);
@@ -2064,7 +2039,7 @@ final class DaoImpl {
                                 + typeArguments[0]);
             }
 
-            if (ReadableJoinEntityHelper.class.isAssignableFrom(daoInterface) && (typeArguments.length >= 1 && typeArguments[0] instanceof Class)
+            if (DaoUtil.isReadableJoinEntityHelper(daoInterface) && (typeArguments.length >= 1 && typeArguments[0] instanceof Class)
                     && ParserUtil.getBeanInfo((Class) typeArguments[0]).propInfoList.stream().noneMatch(it -> it.isSubEntity)) {
                 throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(daoInterface)
                         + " extends JoinEntityHelper, but the entity class: " + typeArguments[0] + " has no sub-entity properties.");
@@ -2268,7 +2243,7 @@ final class DaoImpl {
         final CacheResult daoClassCacheResultAnno = tmpDaoClassCacheResultAnno;
         final RefreshCache daoClassRefreshCacheAnno = tmpDaoClassRefreshCacheAnno;
 
-        if (Cacheable.class.isAssignableFrom(daoInterface)) {
+        if (DaoUtil.isCacheable(daoInterface)) {
             // OK
         } else {
             // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
@@ -2303,7 +2278,7 @@ final class DaoImpl {
 
         final com.landawn.abacus.jdbc.annotation.Cache daoClassCacheAnno = tmpDaoClassCacheAnno;
 
-        if (Cacheable.class.isAssignableFrom(daoInterface)) {
+        if (DaoUtil.isCacheable(daoInterface)) {
             // OK
         } else {
             // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
@@ -2329,18 +2304,18 @@ final class DaoImpl {
 
         final Set<Method> nonDBOperationSet = N.newConcurrentHashSet();
 
-        final Map<String, JoinInfo> joinBeanInfo = ReadableJoinEntityHelper.class.isAssignableFrom(daoInterface)
+        final Map<String, JoinInfo> joinBeanInfo = DaoUtil.isReadableJoinEntityHelper(daoInterface)
                 ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass, tableName)
                 : null;
 
-        if (ReadableJoinEntityHelper.class.isAssignableFrom(daoInterface) && N.isEmpty(joinBeanInfo)) {
+        if (DaoUtil.isReadableJoinEntityHelper(daoInterface) && N.isEmpty(joinBeanInfo)) {
             throw new IllegalArgumentException(
                     "Entity class: " + ClassUtil.getCanonicalClassName(entityClass) + " must have at least one join entity property for its Dao interface: "
                             + ClassUtil.getCanonicalClassName(daoInterface) + " which extends JoinEntityHelper interface");
         }
 
-        if ((ReadableJoinEntityHelper.class.isAssignableFrom(daoInterface) && !ReadableDao.class.isAssignableFrom(daoInterface))
-                || (ReadableCrudJoinEntityHelper.class.isAssignableFrom(daoInterface) && !CrudDao.class.isAssignableFrom(daoInterface))) {
+        if ((DaoUtil.isReadableJoinEntityHelper(daoInterface) && !ReadableDao.class.isAssignableFrom(daoInterface))
+                || (DaoUtil.isReadableCrudJoinEntityHelper(daoInterface) && !CrudDao.class.isAssignableFrom(daoInterface))) {
             throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(daoInterface)
                     + " extending JoinEntityHelper/CrudJoinEntityHelper must extend the corresponding Dao interface:Dao/CrudDao");
         }
@@ -2428,8 +2403,8 @@ final class DaoImpl {
             // in ReadOnlyDao/NoUpdateDao. The Condition/Collection-based prepare builders always produce SELECTs and are
             // intentionally excluded. 1 = read-only gate, 2 = no-update gate, 0 = no gate.
             final int prepareSqlGate = (isReadOnlyDao || isNoUpdateDao) && paramLen >= 1
-                    && (methodName.equals("prepareQuery") || methodName.equals("prepareNamedQuery")
-                            || methodName.equals("prepareQueryForLargeResult") || methodName.equals("prepareNamedQueryForLargeResult"))
+                    && (methodName.equals("prepareQuery") || methodName.equals("prepareNamedQuery") || methodName.equals("prepareQueryForLargeResult")
+                            || methodName.equals("prepareNamedQueryForLargeResult"))
                     && (paramTypes[0].equals(String.class) || paramTypes[0].equals(ParsedSql.class)) ? (isReadOnlyDao ? 1 : 2) : 0;
             final boolean prepareSqlIsParsed = prepareSqlGate != 0 && paramTypes[0].equals(ParsedSql.class);
 
@@ -2448,10 +2423,10 @@ final class DaoImpl {
                         }
 
                         if (prepareSqlGate == 1) {
-                            if (!DaoUtil.isReadOnlyQuery(sqlToCheck)) {
+                            if (!SqlParser.isReadOnlyQuery(sqlToCheck)) {
                                 throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO");
                             }
-                        } else if (!DaoUtil.isNoUpdateQuery(sqlToCheck)) {
+                        } else if (!SqlParser.isNoUpdateQuery(sqlToCheck)) {
                             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a no-update DAO");
                         }
                     }
@@ -2514,10 +2489,7 @@ final class DaoImpl {
                         .first()
                         .orElseNull();
 
-                if (declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class) || declaringClass.equals(ReadableDao.class)
-                        || declaringClass.equals(InsertableDao.class) || declaringClass.equals(UpdatableDao.class) || declaringClass.equals(DeletableDao.class)
-                        || declaringClass.equals(UncheckedReadableDao.class) || declaringClass.equals(UncheckedInsertableDao.class)
-                        || declaringClass.equals(UncheckedUpdatableDao.class) || declaringClass.equals(UncheckedDeletableDao.class)) {
+                if (DaoUtil.isDaoOperationDeclaringClass(declaringClass)) {
                     if (methodName.equals("save") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Object entity = args[0];
@@ -4011,11 +3983,7 @@ final class DaoImpl {
                             throw new UnsupportedOperationException("Unsupported operation: " + method);
                         };
                     }
-                } else if (declaringClass.equals(CrudDao.class) || declaringClass.equals(UncheckedCrudDao.class) || declaringClass.equals(ReadableCrudDao.class)
-                        || declaringClass.equals(InsertableCrudDao.class) || declaringClass.equals(UpdatableCrudDao.class)
-                        || declaringClass.equals(DeletableCrudDao.class) || declaringClass.equals(UncheckedReadableCrudDao.class)
-                        || declaringClass.equals(UncheckedInsertableCrudDao.class) || declaringClass.equals(UncheckedUpdatableCrudDao.class)
-                        || declaringClass.equals(UncheckedDeletableCrudDao.class)) {
+                } else if (DaoUtil.isCrudDaoOperationDeclaringClass(declaringClass)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
@@ -4026,7 +3994,7 @@ final class DaoImpl {
 
                             if (isDefaultIdTester.test(idGetter.apply(entity))) {
                                 if (callGenerateIdForInsert) {
-                                    idSetter.accept(((ReadableCrudDao) proxy).generateId(), entity);
+                                    idSetter.accept(DaoUtil.generateId(proxy), entity);
 
                                     namedInsertSql = namedInsertWithIdSQL;
                                 } else {
@@ -4051,7 +4019,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(propNamesToInsert, cs.propNamesToInsert);
 
                             if ((callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) && isDefaultIdTester.test(idGetter.apply(entity))) {
-                                idSetter.accept(((ReadableCrudDao) proxy).generateId(), entity);
+                                idSetter.accept(DaoUtil.generateId(proxy), entity);
                             }
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).build().query();
@@ -4071,7 +4039,7 @@ final class DaoImpl {
                             N.checkArgNotNull(entity, cs.entity);
 
                             if (callGenerateIdForInsertWithSql && isDefaultIdTester.test(idGetter.apply(entity))) {
-                                idSetter.accept(((ReadableCrudDao) proxy).generateId(), entity);
+                                idSetter.accept(DaoUtil.generateId(proxy), entity);
                             }
 
                             return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
@@ -4095,11 +4063,9 @@ final class DaoImpl {
                             boolean allDefaultIdValue = N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
 
                             if (callGenerateIdForInsert) {
-                                final ReadableCrudDao crudDao = (ReadableCrudDao) proxy;
-
                                 for (final Object entity : entities) {
                                     if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(crudDao.generateId(), entity);
+                                        idSetter.accept(DaoUtil.generateId(proxy), entity);
                                     }
                                 }
 
@@ -4171,11 +4137,9 @@ final class DaoImpl {
                             }
 
                             if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
-                                final ReadableCrudDao crudDao = (ReadableCrudDao) proxy;
-
                                 for (final Object entity : entities) {
                                     if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(crudDao.generateId(), entity);
+                                        idSetter.accept(DaoUtil.generateId(proxy), entity);
                                     }
                                 }
                             }
@@ -4244,11 +4208,9 @@ final class DaoImpl {
                             }
 
                             if (callGenerateIdForInsertWithSql) {
-                                final ReadableCrudDao crudDao = (ReadableCrudDao) proxy;
-
                                 for (final Object entity : entities) {
                                     if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(crudDao.generateId(), entity);
+                                        idSetter.accept(DaoUtil.generateId(proxy), entity);
                                     }
                                 }
                             }
@@ -4951,9 +4913,7 @@ final class DaoImpl {
                             throw new UnsupportedOperationException("Unsupported operation: " + method);
                         };
                     }
-                } else if (declaringClass.equals(ReadableJoinEntityHelper.class) || declaringClass.equals(DeletableJoinEntityHelper.class)
-                        || declaringClass.equals(UncheckedReadableJoinEntityHelper.class) || declaringClass.equals(UncheckedDeletableJoinEntityHelper.class)
-                        || declaringClass.equals(JoinEntityHelper.class) || declaringClass.equals(UncheckedJoinEntityHelper.class)) {
+                } else if (DaoUtil.isJoinEntityHelperDeclaringClass(declaringClass)) {
                     if (methodName.equals("loadJoinEntities") && paramLen == 3 && !Collection.class.isAssignableFrom(paramTypes[0])
                             && String.class.isAssignableFrom(paramTypes[1]) && Collection.class.isAssignableFrom(paramTypes[2])) {
                         call = (proxy, args) -> {
@@ -6457,7 +6417,7 @@ final class DaoImpl {
                 // Base this check on the current method's own annotation flags (not the cumulative atomics): the loop runs
                 // in parallel, so reading the shared flags here could report an unrelated method in the message and be
                 // non-deterministic about which method is named.
-                if ((isAnnotatedRefreshResult || isAnnotatedCacheResult) && !Cacheable.class.isAssignableFrom(daoInterface)) {
+                if ((isAnnotatedRefreshResult || isAnnotatedCacheResult) && !DaoUtil.isCacheable(daoInterface)) {
                     throw new UnsupportedOperationException(
                             "Cache is only supported for methods declared in Cacheable DAOs (NoUpdate/ReadOnly and their Unchecked variants), not supported for method: "
                                     + fullClassMethodName);

@@ -46,7 +46,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public sealed interface DeletableJoinEntityHelper<T, TD extends Dao<T, TD>> extends ReadableJoinEntityHelper<T, TD>
+sealed interface DeletableJoinEntityHelper<T, TD extends Dao<T, TD>> extends ReadableJoinEntityHelper<T, TD>
         permits JoinEntityHelper, UncheckedDeletableJoinEntityHelper {
     /**
      * Deletes all join entities of the specified type for a single entity.
