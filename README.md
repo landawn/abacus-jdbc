@@ -1,7 +1,7 @@
 # abacus-jdbc
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.7.6)
-[![Javadocs](https://img.shields.io/badge/javadoc-4.7.6-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/4.7.6/index.html)
+[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.7.7)
+[![Javadocs](https://img.shields.io/badge/javadoc-4.7.7-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/4.7.7/index.html)
 
 Experience the simplicity of working with SQL/DB as naturally as working with Collections.
 
@@ -144,13 +144,13 @@ Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
-* [Maven](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.7.6)
+* [Maven](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.7.7)
 
 ```xml
 <dependency>
 	<groupId>com.landawn.abacus</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>4.7.6</version> 
+	<version>4.7.7</version> 
 <dependency>
 ```
 
@@ -158,7 +158,7 @@ Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A
 
 ```gradle
 // JDK 17 or above:
-compile 'com.landawn.abacus:abacus-jdbc:4.7.6'
+compile 'com.landawn.abacus:abacus-jdbc:4.7.7'
 ```
 
 ## User Guide:
