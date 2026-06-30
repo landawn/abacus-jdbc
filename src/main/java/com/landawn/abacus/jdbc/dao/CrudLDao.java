@@ -50,7 +50,7 @@ import com.landawn.abacus.annotation.Beta;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface CrudLDao<T, TD extends CrudLDao<T, TD>> extends CrudDao<T, Long, TD>, LongIdCrudReadOps<T, TD> {
+public non-sealed interface CrudLDao<T, TD extends CrudLDao<T, TD>> extends CrudDao<T, Long, TD>, CrudLReadOps<T, TD> {
 
     /**
      * Updates a single property of an entity identified by ID.

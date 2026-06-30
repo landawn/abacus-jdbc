@@ -49,7 +49,7 @@ import com.landawn.abacus.util.stream.Stream;
  * Read capability of {@link CrudDao}: id-based reads ({@code get}/{@code gett}/{@code batchGet}),
  * {@code exists}/{@code count} by id, {@code queryForXxx(propName, id)}, {@code refresh}, and {@code generateId()}.
  * Extends {@link ReadOps}.
- * 
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type
@@ -748,6 +748,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
+    @Beta
     default boolean refresh(final T entity) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
 
@@ -777,6 +778,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
      */
+    @Beta
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
@@ -816,6 +818,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws SQLException if a database access error occurs
      */
+    @Beta
     default int batchRefresh(final Collection<? extends T> entities) throws SQLException {
         return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
@@ -839,6 +842,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws SQLException if a database access error occurs
      */
+    @Beta
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException {
         if (N.isEmpty(entities)) {
             return 0;
@@ -870,6 +874,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty
      */
+    @Beta
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws SQLException {
         return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
@@ -896,6 +901,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null}/empty or {@code batchSize} is not positive
      */
+    @Beta
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
         N.checkArgPositive(batchSize, cs.batchSize);

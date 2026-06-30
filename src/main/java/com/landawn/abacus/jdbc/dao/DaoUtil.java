@@ -46,7 +46,7 @@ import com.landawn.abacus.util.function.Function;
  * various operations including:
  * <ul>
  *   <li>Capability detection — determining which optional DAO interfaces (for example
- *       {@link Cacheable}, {@link CrudReadOps}, {@link JoinEntityReadOps}) a given DAO
+ *       {@link CrudReadOps}, {@link JoinEntityReadOps}) a given DAO
  *       interface extends</li>
  *   <li>Method classification — recognizing whether a method's declaring class belongs to the base
  *       DAO, CRUD DAO, or join-entity-helper families, used to drive proxy-based dispatch</li>
@@ -83,10 +83,12 @@ public final class DaoUtil {
      * Returns whether the specified DAO interface supports DAO result caching.
      *
      * @param daoInterface the DAO interface to inspect.
-     * @return {@code true} if {@code daoInterface} extends {@link Cacheable}; otherwise {@code false}.
+     * @return {@code true} if {@code daoInterface} extends {@link NoUpdateDao} or {@link ReadOnlyDao}
+     *         (and therefore cannot perform update/delete operations that would invalidate cached rows);
+     *         otherwise {@code false}.
      */
     public static boolean isCacheable(final Class<?> daoInterface) {
-        return Cacheable.class.isAssignableFrom(daoInterface);
+        return NoUpdateDao.class.isAssignableFrom(daoInterface) || ReadOnlyDao.class.isAssignableFrom(daoInterface);
     }
 
     /**

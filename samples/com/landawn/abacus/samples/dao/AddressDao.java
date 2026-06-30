@@ -13,8 +13,8 @@
  */
 package com.landawn.abacus.samples.dao;
 
-import com.landawn.abacus.jdbc.dao.CrudDaoL;
+import com.landawn.abacus.jdbc.dao.CrudLDao;
 import com.landawn.abacus.samples.entity.Address;
 
-public interface AddressDao extends CrudDaoL<Address, AddressDao> {
+public interface AddressDao extends CrudLDao<Address, AddressDao> {
 }

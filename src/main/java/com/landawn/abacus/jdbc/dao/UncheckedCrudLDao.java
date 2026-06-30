@@ -52,7 +52,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  */
 @Beta
 public non-sealed interface UncheckedCrudLDao<T, TD extends UncheckedCrudLDao<T, TD>>
-        extends UncheckedCrudDao<T, Long, TD>, CrudLDao<T, TD>, UncheckedLongIdCrudReadOps<T, TD> {
+        extends UncheckedCrudDao<T, Long, TD>, CrudLDao<T, TD>, UncheckedCrudLReadOps<T, TD> {
 
     /**
      * Updates a single property of an entity identified by ID.

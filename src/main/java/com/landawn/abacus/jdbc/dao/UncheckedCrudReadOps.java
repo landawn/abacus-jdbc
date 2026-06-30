@@ -47,7 +47,7 @@ import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Unchecked-exception read capability of {@link CrudDao} (throws {@link com.landawn.abacus.exception.UncheckedSQLException}).
- * 
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type

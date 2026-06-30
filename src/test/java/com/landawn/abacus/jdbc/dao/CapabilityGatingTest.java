@@ -25,8 +25,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
 
 /**
- * Behavioral coverage for the capability-based DAO redesign: the {@link Cacheable} cache-eligibility
- * marker (cache permitted on read-only / no-update DAOs but not on a full {@link Dao}) and the
+ * Behavioral coverage for the capability-based DAO redesign: the {@link DaoUtil#isCacheable} cache-eligibility
+ * gate (cache permitted on read-only / no-update DAOs but not on a full {@link Dao}) and the
  * centralized {@code prepareQuery}/{@code prepareNamedQuery} SQL-kind gate enforced by the
  * {@code DaoImpl} proxy for CRUD-level restricted DAOs. Plus structural assertions that lock down the
  * capability composition graph.
@@ -93,19 +93,19 @@ public class CapabilityGatingTest extends TestBase {
         return ds;
     }
 
-    // ----- Cacheable marker / cache-eligibility gate -----
+    // ----- cache-eligibility gate -----
 
     @Test
-    public void testCacheableMarkerStructure() {
-        // The marker permits exactly the read-restricted condition-level roots; every restricted DAO
-        // is therefore Cacheable, while a full Dao is not.
-        assertTrue(Cacheable.class.isAssignableFrom(NoUpdateDao.class));
-        assertTrue(Cacheable.class.isAssignableFrom(ReadOnlyDao.class));
-        assertTrue(Cacheable.class.isAssignableFrom(NoUpdateCrudDao.class));
-        assertTrue(Cacheable.class.isAssignableFrom(ReadOnlyCrudDao.class));
-        assertTrue(Cacheable.class.isAssignableFrom(UncheckedReadOnlyDao.class));
-        assertFalse(Cacheable.class.isAssignableFrom(Dao.class));
-        assertFalse(Cacheable.class.isAssignableFrom(CrudDao.class));
+    public void testCacheEligibilityGate() {
+        // The gate accepts exactly the read-restricted roots and their variants; every restricted DAO
+        // is therefore cacheable, while a full Dao is not.
+        assertTrue(DaoUtil.isCacheable(NoUpdateDao.class));
+        assertTrue(DaoUtil.isCacheable(ReadOnlyDao.class));
+        assertTrue(DaoUtil.isCacheable(NoUpdateCrudDao.class));
+        assertTrue(DaoUtil.isCacheable(ReadOnlyCrudDao.class));
+        assertTrue(DaoUtil.isCacheable(UncheckedReadOnlyDao.class));
+        assertFalse(DaoUtil.isCacheable(Dao.class));
+        assertFalse(DaoUtil.isCacheable(CrudDao.class));
     }
 
     @Test
