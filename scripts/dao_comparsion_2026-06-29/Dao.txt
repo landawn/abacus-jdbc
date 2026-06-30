@@ -2,7 +2,7 @@ Method-surface comparison: type extending Dao
 =============================================
 Scope        : public methods inherited by a DAO type that extends Dao.
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
 Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
                compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
 Totals       : 7beb529f = 136 methods ; current = 136 methods.
@@ -27,13 +27,13 @@ interfaces, as the declaring-interface counts below show.
 
   declaring interface counts
   --------------------------
-  ┌──────────┬───────┬───────────────┬───────┐
-  │ 7beb529f │ count │ current       │ count │
-  ├──────────┼───────┼───────────────┼───────┤
-  │ Dao      │   136 │ ReadableDao   │   106 │
-  │          │       │ InsertableDao │    18 │
-  │          │       │ Dao           │     7 │
-  │          │       │ UpdatableDao  │     4 │
-  │          │       │ DeletableDao  │     1 │
-  └──────────┴───────┴───────────────┴───────┘
+  ┌──────────┬───────┬───────────┬───────┐
+  │ 7beb529f │ count │ current   │ count │
+  ├──────────┼───────┼───────────┼───────┤
+  │ Dao      │   136 │ ReadOps   │   106 │
+  │          │       │ InsertOps │    18 │
+  │          │       │ Dao       │     7 │
+  │          │       │ UpdateOps │     4 │
+  │          │       │ DeleteOps │     1 │
+  └──────────┴───────┴───────────┴───────┘
 

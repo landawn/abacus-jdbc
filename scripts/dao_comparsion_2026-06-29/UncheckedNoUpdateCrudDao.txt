@@ -2,7 +2,7 @@ Method-surface comparison: type extending UncheckedNoUpdateCrudDao
 ==================================================================
 Scope        : public methods inherited by a DAO type that extends UncheckedNoUpdateCrudDao.
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
 Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
                compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
 Totals       : 7beb529f = 202 methods ; current = 171 methods.
@@ -80,15 +80,15 @@ any that merely moved to a different declaring interface -- are shown by the cou
 
   declaring interface counts
   --------------------------
-  ┌──────────────────────────┬───────┬────────────────────────────┬───────┐
-  │ 7beb529f                 │ count │ current                    │ count │
-  ├──────────────────────────┼───────┼────────────────────────────┼───────┤
-  │ UncheckedDao             │    72 │ UncheckedReadableDao       │    63 │
-  │ UncheckedCrudDao         │    46 │ ReadableDao                │    43 │
-  │ Dao                      │    37 │ UncheckedReadableCrudDao   │    37 │
-  │ UncheckedNoUpdateCrudDao │    21 │ InsertableDao              │     9 │
-  │ NoUpdateDao              │    20 │ UncheckedInsertableCrudDao │     9 │
-  │ UncheckedNoUpdateDao     │     5 │ UncheckedInsertableDao     │     9 │
-  │ CrudDao                  │     1 │ ReadableCrudDao            │     1 │
-  └──────────────────────────┴───────┴────────────────────────────┴───────┘
+  ┌──────────────────────────┬───────┬────────────────────────┬───────┐
+  │ 7beb529f                 │ count │ current                │ count │
+  ├──────────────────────────┼───────┼────────────────────────┼───────┤
+  │ UncheckedDao             │    72 │ UncheckedReadOps       │    63 │
+  │ UncheckedCrudDao         │    46 │ ReadOps                │    43 │
+  │ Dao                      │    37 │ UncheckedCrudReadOps   │    37 │
+  │ UncheckedNoUpdateCrudDao │    21 │ InsertOps              │     9 │
+  │ NoUpdateDao              │    20 │ UncheckedCrudInsertOps │     9 │
+  │ UncheckedNoUpdateDao     │     5 │ UncheckedInsertOps     │     9 │
+  │ CrudDao                  │     1 │ CrudReadOps            │     1 │
+  └──────────────────────────┴───────┴────────────────────────┴───────┘
 

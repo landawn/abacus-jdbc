@@ -2,7 +2,7 @@ Method-surface comparison: type extending CrudDao
 =================================================
 Scope        : public methods inherited by a DAO type that extends CrudDao.
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
 Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
                compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
 Totals       : 7beb529f = 202 methods ; current = 202 methods.
@@ -27,18 +27,18 @@ interfaces, as the declaring-interface counts below show.
 
   declaring interface counts
   --------------------------
-  ┌──────────┬───────┬───────────────────┬───────┐
-  │ 7beb529f │ count │ current           │ count │
-  ├──────────┼───────┼───────────────────┼───────┤
-  │ Dao      │   135 │ ReadableDao       │   106 │
-  │ CrudDao  │    67 │ ReadableCrudDao   │    38 │
-  │          │       │ InsertableDao     │    18 │
-  │          │       │ InsertableCrudDao │     9 │
-  │          │       │ UpdatableCrudDao  │     8 │
-  │          │       │ CrudDao           │     6 │
-  │          │       │ Dao               │     6 │
-  │          │       │ DeletableCrudDao  │     6 │
-  │          │       │ UpdatableDao      │     4 │
-  │          │       │ DeletableDao      │     1 │
-  └──────────┴───────┴───────────────────┴───────┘
+  ┌──────────┬───────┬───────────────┬───────┐
+  │ 7beb529f │ count │ current       │ count │
+  ├──────────┼───────┼───────────────┼───────┤
+  │ Dao      │   135 │ ReadOps       │   106 │
+  │ CrudDao  │    67 │ CrudReadOps   │    38 │
+  │          │       │ InsertOps     │    18 │
+  │          │       │ CrudInsertOps │     9 │
+  │          │       │ CrudUpdateOps │     8 │
+  │          │       │ CrudDao       │     6 │
+  │          │       │ Dao           │     6 │
+  │          │       │ CrudDeleteOps │     6 │
+  │          │       │ UpdateOps     │     4 │
+  │          │       │ DeleteOps     │     1 │
+  └──────────┴───────┴───────────────┴───────┘
 

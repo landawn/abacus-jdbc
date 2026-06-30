@@ -2,7 +2,7 @@ Method-surface comparison: type extending UncheckedJoinEntityHelper
 ===================================================================
 Scope        : public methods inherited by a join-entity-helper type that mixes in UncheckedJoinEntityHelper.
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
 Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
                compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
 Totals       : 7beb529f = 72 methods ; current = 72 methods.
@@ -27,11 +27,11 @@ interfaces, as the declaring-interface counts below show.
 
   declaring interface counts
   --------------------------
-  ┌───────────────────────────┬───────┬────────────────────────────────────┬───────┐
-  │ 7beb529f                  │ count │ current                            │ count │
-  ├───────────────────────────┼───────┼────────────────────────────────────┼───────┤
-  │ UncheckedJoinEntityHelper │    65 │ UncheckedReadableJoinEntityHelper  │    49 │
-  │ JoinEntityHelper          │     7 │ UncheckedDeletableJoinEntityHelper │    16 │
-  │                           │       │ ReadableJoinEntityHelper           │     7 │
-  └───────────────────────────┴───────┴────────────────────────────────────┴───────┘
+  ┌───────────────────────────┬───────┬──────────────────────────────┬───────┐
+  │ 7beb529f                  │ count │ current                      │ count │
+  ├───────────────────────────┼───────┼──────────────────────────────┼───────┤
+  │ UncheckedJoinEntityHelper │    65 │ UncheckedJoinEntityReadOps   │    49 │
+  │ JoinEntityHelper          │     7 │ UncheckedJoinEntityDeleteOps │    16 │
+  │                           │       │ JoinEntityReadOps            │     7 │
+  └───────────────────────────┴───────┴──────────────────────────────┴───────┘
 
