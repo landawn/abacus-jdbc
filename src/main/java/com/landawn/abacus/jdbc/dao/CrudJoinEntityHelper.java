@@ -20,17 +20,16 @@ package com.landawn.abacus.jdbc.dao;
  * with join loading) on top of the full {@link JoinEntityHelper} (load + delete).
  *
  * <p>This is the full CRUD join capability, composed of the read side
- * ({@link ReadableCrudJoinEntityHelper}) and the base {@link JoinEntityHelper}. Read-only CRUD
- * DAOs mix in only {@link ReadableCrudJoinEntityHelper} (via {@link ReadOnlyCrudJoinEntityHelper}).</p>
+ * ({@link CrudJoinEntityReadOps}) and the base {@link JoinEntityHelper}. Read-only CRUD
+ * DAOs mix in only {@link CrudJoinEntityReadOps} (via {@link ReadOnlyCrudJoinEntityHelper}).</p>
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
  * @param <TD> the companion {@link CrudDao} type that owns this helper
  *
- * @see ReadableCrudJoinEntityHelper
+ * @see CrudJoinEntityReadOps
  * @see JoinEntityHelper
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-public non-sealed interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>>
-        extends ReadableCrudJoinEntityHelper<T, ID, TD>, JoinEntityHelper<T, TD> {
+public non-sealed interface CrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>> extends CrudJoinEntityReadOps<T, ID, TD>, JoinEntityHelper<T, TD> {
 }

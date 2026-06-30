@@ -52,7 +52,7 @@ import com.landawn.abacus.util.N;
  */
 @Beta
 public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
-        extends UncheckedInsertableDao<T, TD>, UncheckedUpdatableDao<T, TD>, UncheckedDeletableDao<T, TD>, Dao<T, TD> {
+        extends UncheckedInsertOps<T, TD>, UncheckedUpdateOps<T, TD>, UncheckedDeleteOps<T, TD>, Dao<T, TD> {
     /**
      * Executes an upsert operation: inserts the entity if no record matches the unique properties,
      * otherwise updates the existing record.

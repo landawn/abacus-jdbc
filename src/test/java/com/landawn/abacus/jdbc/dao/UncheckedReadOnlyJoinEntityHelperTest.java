@@ -28,12 +28,12 @@ public class UncheckedReadOnlyJoinEntityHelperTest extends TestBase {
     }
 
     @Test
-    public void testExtendsUncheckedReadableButNotDeletable() {
+    public void testExtendsUncheckedReadOpsButNotDeleteOps() {
         // The read-only unchecked join helper mixes in only the read side; the delete side is absent.
-        assertTrue(UncheckedReadableJoinEntityHelper.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
-        assertTrue(ReadableJoinEntityHelper.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
-        assertFalse(UncheckedDeletableJoinEntityHelper.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
-        assertFalse(DeletableJoinEntityHelper.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
+        assertTrue(UncheckedJoinEntityReadOps.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
+        assertTrue(JoinEntityReadOps.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
+        assertFalse(UncheckedJoinEntityDeleteOps.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
+        assertFalse(JoinEntityDeleteOps.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
         assertFalse(UncheckedJoinEntityHelper.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
     }
 

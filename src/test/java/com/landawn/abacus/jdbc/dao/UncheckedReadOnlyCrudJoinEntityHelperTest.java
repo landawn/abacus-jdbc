@@ -20,9 +20,9 @@ public class UncheckedReadOnlyCrudJoinEntityHelperTest extends TestBase {
     }
 
     @Test
-    public void testExtendsUncheckedReadableCrudJoinEntityHelper() {
+    public void testExtendsUncheckedCrudJoinEntityReadOps() {
         // Read-only unchecked CRUD join helper mixes in the read side only (not the full UncheckedCrudJoinEntityHelper).
-        assertTrue(UncheckedReadableCrudJoinEntityHelper.class.isAssignableFrom(UncheckedReadOnlyCrudJoinEntityHelper.class));
+        assertTrue(UncheckedCrudJoinEntityReadOps.class.isAssignableFrom(UncheckedReadOnlyCrudJoinEntityHelper.class));
     }
 
     @Test

@@ -85,9 +85,8 @@ import com.landawn.abacus.util.stream.Stream;
  */
 @SuppressWarnings("resource")
 @Beta
-public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
-        extends UncheckedReadableCrudDao<T, ID, TD>, UncheckedInsertableCrudDao<T, ID, TD>, UncheckedUpdatableCrudDao<T, ID, TD>,
-        UncheckedDeletableCrudDao<T, ID, TD>, UncheckedDao<T, TD>, CrudDao<T, ID, TD> {
+public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>> extends UncheckedCrudReadOps<T, ID, TD>,
+        UncheckedCrudInsertOps<T, ID, TD>, UncheckedCrudUpdateOps<T, ID, TD>, UncheckedCrudDeleteOps<T, ID, TD>, UncheckedDao<T, TD>, CrudDao<T, ID, TD> {
     /**
      * Performs an upsert operation: inserts the entity if it doesn't exist based on ID fields, otherwise updates the existing entity.
      * The entity must have ID field(s) defined.

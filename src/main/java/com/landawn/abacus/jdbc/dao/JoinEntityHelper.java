@@ -20,17 +20,17 @@ package com.landawn.abacus.jdbc.dao;
  * {@code @JoinedBy}) on a {@link Dao}'s entity type.
  *
  * <p>This is the full join-entity capability, composed of the read side
- * ({@link ReadableJoinEntityHelper}) and the delete side ({@link DeletableJoinEntityHelper}).
+ * ({@link JoinEntityReadOps}) and the delete side ({@link JoinEntityDeleteOps}).
  * See those interfaces for the individual operations; read-only DAOs mix in only
- * {@link ReadableJoinEntityHelper} (via {@link ReadOnlyJoinEntityHelper}).</p>
+ * {@link JoinEntityReadOps} (via {@link ReadOnlyJoinEntityHelper}).</p>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
- * @see ReadableJoinEntityHelper
- * @see DeletableJoinEntityHelper
+ * @see JoinEntityReadOps
+ * @see JoinEntityDeleteOps
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
-public non-sealed interface JoinEntityHelper<T, TD extends Dao<T, TD>> extends DeletableJoinEntityHelper<T, TD> {
+public non-sealed interface JoinEntityHelper<T, TD extends Dao<T, TD>> extends JoinEntityDeleteOps<T, TD> {
 }

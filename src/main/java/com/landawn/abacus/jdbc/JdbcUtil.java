@@ -72,7 +72,7 @@ import com.landawn.abacus.jdbc.SqlTransaction.CreatedBy;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.jdbc.dao.ReadableDao;
+import com.landawn.abacus.jdbc.dao.ReadOps;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.JsonParser;
@@ -11495,7 +11495,7 @@ public final class JdbcUtil {
 
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
-            final Class<? extends ReadableDao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
+            final Class<? extends ReadOps> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (!Beans.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
@@ -12001,11 +12001,12 @@ public final class JdbcUtil {
      *       {@code DataSource} requires a separate {@code createDao} call.</li>
      * </ul>
      *
-     * @param <TD> the type parameter of the DAO interface, must extend {@link Dao}
+     * @param <TD> the DAO interface type, must extend {@link ReadOps}
      * @param daoInterface the DAO interface class to implement, must not be {@code null}. The interface should
-     *                     extend {@link Dao} or {@link CrudDao} and define the entity type and ID type
+     *                     extend {@link Dao}, {@link CrudDao}, or another {@link ReadOps}-based DAO facade and define
+     *                     the entity type and ID type when applicable
      * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
-     * @return a dynamically generated DAO instance implementing the specified interface with full CRUD capabilities.
+     * @return a dynamically generated DAO instance implementing the specified interface.
      *         Cache and reuse this instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, or if
      *         {@code daoInterface} is not an interface
@@ -12014,7 +12015,7 @@ public final class JdbcUtil {
      * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends ReadableDao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
+    public static <TD extends ReadOps> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
         return DaoImpl.createDao(daoInterface, null, ds, Dsl.PSC, null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
@@ -12036,7 +12037,7 @@ public final class JdbcUtil {
      *       defaults to none.</li>
      *   <li>{@code cache} — a {@link Jdbc.DaoCache} for {@code @CacheResult} methods. When unset,
      *       cache annotations use their configured implementation or the default DAO cache. Only permitted
-     *       for DAO interfaces that extend {@code NoUpdateDao} (see below).</li>
+     *       for cacheable DAO interfaces such as {@code ReadOnlyDao} and {@code NoUpdateDao} (see below).</li>
      *   <li>{@code executor} — the {@link Executor} backing the DAO's asynchronous methods; defaults to the
      *       shared async executor.</li>
      * </ul>
@@ -12055,7 +12056,7 @@ public final class JdbcUtil {
      *                 .build());
      * }</pre>
      *
-     * @param <TD> the type parameter of the DAO interface, must extend {@link Dao}
+     * @param <TD> the DAO interface type, must extend {@link ReadOps}
      * @param daoInterface the DAO interface class to implement, must not be {@code null} and must be an interface
      * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
      * @param daoCreationOptions the creation options; when {@code null}, all defaults are applied (equivalent
@@ -12066,14 +12067,13 @@ public final class JdbcUtil {
      *         {@code daoInterface} is not an interface, or if the supplied {@code dsl}'s SQL policy is neither
      *         {@code null} nor {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}
      * @throws UnsupportedOperationException if a non-{@code null} {@code cache} option is supplied for a DAO
-     *         interface that supports update/delete operations (only interfaces extending {@code NoUpdateDao} —
-     *         such as {@code NoUpdateCrudDao} and the unchecked variants — may be cached)
+     *         interface that supports update/delete operations (only cacheable read-only/no-update interfaces,
+     *         such as {@code ReadOnlyDao}, {@code NoUpdateCrudDao}, and the unchecked variants, may be cached)
      * @see #createDao(Class, javax.sql.DataSource)
      * @see DaoCreationOptions
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends ReadableDao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds,
-            final DaoCreationOptions daoCreationOptions) {
+    public static <TD extends ReadOps> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions) {
         final DaoCreationOptions options = daoCreationOptions == null ? DaoCreationOptions.builder().build() : daoCreationOptions;
         final Dsl dsl = options.dsl() == null ? Dsl.PSC : options.dsl();
         final Executor executor = options.executor() == null ? JdbcUtil.asyncExecutor.getExecutor() : options.executor();

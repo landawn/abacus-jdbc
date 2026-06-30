@@ -25,7 +25,7 @@ package com.landawn.abacus.jdbc.dao;
  * cannot be deleted through this DAO. It maintains data integrity by preventing cascading deletes
  * on joined entities while avoiding checked exception handling.</p>
  *
- * <p>Read/load operations inherited from {@link UncheckedReadableCrudJoinEntityHelper} and
+ * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityReadOps} and
  * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}
  * instead of the checked {@link java.sql.SQLException}. The {@code deleteJoinEntities}/{@code deleteAllJoinEntities}
  * operations are <b>absent from the type</b> — calling them is a compile error rather than a runtime
@@ -58,16 +58,16 @@ package com.landawn.abacus.jdbc.dao;
  * }
  * }</pre>
  *
- * <p>This interface extends {@link UncheckedReadOnlyJoinEntityHelper} and {@link UncheckedReadableCrudJoinEntityHelper},
+ * <p>This interface extends {@link UncheckedReadOnlyJoinEntityHelper} and {@link UncheckedCrudJoinEntityReadOps},
  * inheriting read operations from both; modification operations are absent from the type (a compile error if called).</p>
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
- * @see UncheckedReadableCrudJoinEntityHelper
+ * @see UncheckedCrudJoinEntityReadOps
  * @see UncheckedCrudDao
  */
 public non-sealed interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
-        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedReadableCrudJoinEntityHelper<T, ID, TD> {
+        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedCrudJoinEntityReadOps<T, ID, TD> {
 }

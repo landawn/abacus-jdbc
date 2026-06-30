@@ -53,7 +53,7 @@ import com.landawn.abacus.util.stream.Stream;
  * to the caller. For a variant whose methods instead throw the unchecked
  * {@link com.landawn.abacus.exception.UncheckedSQLException}, see {@link UncheckedCrudDao}. For variants
  * that forbid mutating operations, see {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDao}. When the
- * entity's ID is a {@code long}/{@code Long}, the convenience sub-interface {@link CrudDaoL} adds
+ * entity's ID is a {@code long}/{@code Long}, the convenience sub-interface {@link CrudLDao} adds
  * primitive-{@code long} id overloads.</p>
  *
  * <p><b>ID semantics:</b> the entity class must declare one or more {@code @Id} properties. A single id
@@ -83,13 +83,13 @@ import com.landawn.abacus.util.stream.Stream;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
- * @see CrudDaoL
+ * @see CrudLDao
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
-        extends Dao<T, TD>, ReadableCrudDao<T, ID, TD>, InsertableCrudDao<T, ID, TD>, UpdatableCrudDao<T, ID, TD>, DeletableCrudDao<T, ID, TD> {
+        extends Dao<T, TD>, CrudReadOps<T, ID, TD>, CrudInsertOps<T, ID, TD>, CrudUpdateOps<T, ID, TD>, CrudDeleteOps<T, ID, TD> {
     /**
      * Performs an upsert operation, matching existing records by the entity's ID property(ies):
      * inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record

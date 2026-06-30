@@ -23,11 +23,11 @@ public class ReadOnlyJoinEntityHelperTest extends TestBase {
     }
 
     @Test
-    public void testExtendsReadableButNotDeletable() {
+    public void testExtendsReadOpsButNotDeleteOps() {
         // The read-only join helper mixes in only the read side; the delete side is absent,
-        // so it is no longer assignable to the full JoinEntityHelper / DeletableJoinEntityHelper.
-        assertTrue(ReadableJoinEntityHelper.class.isAssignableFrom(ReadOnlyJoinEntityHelper.class));
-        assertFalse(DeletableJoinEntityHelper.class.isAssignableFrom(ReadOnlyJoinEntityHelper.class));
+        // so it is no longer assignable to the full JoinEntityHelper / JoinEntityDeleteOps.
+        assertTrue(JoinEntityReadOps.class.isAssignableFrom(ReadOnlyJoinEntityHelper.class));
+        assertFalse(JoinEntityDeleteOps.class.isAssignableFrom(ReadOnlyJoinEntityHelper.class));
         assertFalse(JoinEntityHelper.class.isAssignableFrom(ReadOnlyJoinEntityHelper.class));
     }
 

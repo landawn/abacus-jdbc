@@ -19,7 +19,7 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * CRUD DAO that disables update and delete operations while permitting read and insert operations.
- * This interface extends {@link NoUpdateDao}, {@link ReadableCrudDao} and {@link InsertableCrudDao}, effectively
+ * This interface extends {@link NoUpdateDao}, {@link CrudReadOps} and {@link CrudInsertOps}, effectively
  * creating a DAO that can only read existing records and insert new ones, but cannot modify or remove existing records.
  *
  * <p>This pattern is particularly useful for:</p>
@@ -102,13 +102,13 @@ import com.landawn.abacus.annotation.Beta;
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see NoUpdateDao
- * @see ReadableCrudDao
- * @see InsertableCrudDao
+ * @see CrudReadOps
+ * @see CrudInsertOps
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
 public non-sealed interface NoUpdateCrudDao<T, ID, TD extends NoUpdateCrudDao<T, ID, TD>>
-        extends NoUpdateDao<T, TD>, ReadableCrudDao<T, ID, TD>, InsertableCrudDao<T, ID, TD> {
+        extends NoUpdateDao<T, TD>, CrudReadOps<T, ID, TD>, CrudInsertOps<T, ID, TD> {
 
 }

@@ -19,7 +19,7 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * Completely read-only CRUD DAO that prevents all data modification operations.
- * This interface extends {@link ReadOnlyDao} and {@link ReadableCrudDao}, providing the most
+ * This interface extends {@link ReadOnlyDao} and {@link CrudReadOps}, providing the most
  * restrictive CRUD DAO implementation where only read operations are permitted.
  *
  * <p>Insert, update, delete, and upsert operations are <b>absent from the type</b> — calling them is a
@@ -100,11 +100,11 @@ import com.landawn.abacus.annotation.Beta;
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyDao
- * @see ReadableCrudDao
+ * @see CrudReadOps
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public non-sealed interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> extends ReadOnlyDao<T, TD>, ReadableCrudDao<T, ID, TD> {
+public non-sealed interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> extends ReadOnlyDao<T, TD>, CrudReadOps<T, ID, TD> {
 
 }

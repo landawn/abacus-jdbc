@@ -17,7 +17,7 @@ package com.landawn.abacus.jdbc.dao;
 
 /**
  * Read-only helper for join entity operations in CRUD DAOs.
- * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link ReadableCrudJoinEntityHelper}
+ * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link CrudJoinEntityReadOps}
  * to provide read-only access to join entity operations for CRUD-based DAOs.
  *
  * <p>This interface is designed for scenarios where you need to read join entity
@@ -56,10 +56,10 @@ package com.landawn.abacus.jdbc.dao;
  * @param <TD> the companion {@link CrudDao} type that owns this helper (used for fluent
  *             method chaining and access to CRUD operations)
  * @see ReadOnlyJoinEntityHelper
- * @see ReadableCrudJoinEntityHelper
+ * @see CrudJoinEntityReadOps
  * @see CrudDao
  */
 public non-sealed interface ReadOnlyCrudJoinEntityHelper<T, ID, TD extends CrudDao<T, ID, TD>>
-        extends ReadOnlyJoinEntityHelper<T, TD>, ReadableCrudJoinEntityHelper<T, ID, TD> {
+        extends ReadOnlyJoinEntityHelper<T, TD>, CrudJoinEntityReadOps<T, ID, TD> {
 
 }

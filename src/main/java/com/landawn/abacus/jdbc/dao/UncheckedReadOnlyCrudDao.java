@@ -66,11 +66,11 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedReadOnlyDao
- * @see UncheckedReadableCrudDao
+ * @see UncheckedCrudReadOps
  * @see ReadOnlyCrudDao
  */
 @Beta
 public non-sealed interface UncheckedReadOnlyCrudDao<T, ID, TD extends UncheckedReadOnlyCrudDao<T, ID, TD>>
-        extends UncheckedReadOnlyDao<T, TD>, UncheckedReadableCrudDao<T, ID, TD>, ReadOnlyCrudDao<T, ID, TD> {
+        extends UncheckedReadOnlyDao<T, TD>, UncheckedCrudReadOps<T, ID, TD>, ReadOnlyCrudDao<T, ID, TD> {
 
 }

@@ -19,8 +19,8 @@ package com.landawn.abacus.jdbc.dao;
  * Read-only helper for join entity operations in DAOs.
  *
  * <p>This interface mixes in only the read side of join-entity support
- * ({@link ReadableJoinEntityHelper}); it does <b>not</b> extend
- * {@link DeletableJoinEntityHelper}, so the {@code deleteJoinEntities} and
+ * ({@link JoinEntityReadOps}); it does <b>not</b> extend
+ * {@link JoinEntityDeleteOps}, so the {@code deleteJoinEntities} and
  * {@code deleteAllJoinEntities} families are simply absent from the type. Attempting to
  * call them fails at <b>compile time</b> rather than throwing
  * {@link UnsupportedOperationException} at runtime.</p>
@@ -57,10 +57,10 @@ package com.landawn.abacus.jdbc.dao;
  * @param <T> the entity type that this helper manages
  * @param <TD> the companion {@link Dao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
- * @see ReadableJoinEntityHelper
+ * @see JoinEntityReadOps
  * @see JoinEntityHelper
  * @see Dao
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-public non-sealed interface ReadOnlyJoinEntityHelper<T, TD extends Dao<T, TD>> extends ReadableJoinEntityHelper<T, TD> {
+public non-sealed interface ReadOnlyJoinEntityHelper<T, TD extends Dao<T, TD>> extends JoinEntityReadOps<T, TD> {
 }

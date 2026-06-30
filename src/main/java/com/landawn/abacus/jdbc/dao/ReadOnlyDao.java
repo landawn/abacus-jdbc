@@ -21,8 +21,8 @@ import com.landawn.abacus.annotation.Beta;
  * Strictly read-only DAO that permits only {@code SELECT} queries. This is the most restrictive DAO
  * interface in the hierarchy.
  *
- * <p>It is a pure capability composite of {@link ReadableDao} (reads only) plus the {@link Cacheable}
- * marker. It does <b>not</b> mix in {@link InsertableDao}/{@code UpdatableDao}/{@code DeletableDao},
+ * <p>It is a pure capability composite of {@link ReadOps} (reads only) plus the {@link Cacheable}
+ * marker. It does <b>not</b> mix in {@link InsertOps}/{@code UpdateOps}/{@code DeleteOps},
  * so {@code save}/{@code insert}/{@code update}/{@code upsert}/{@code delete}/{@code batchXxx} (and
  * {@code prepareCallableQuery}) are simply <b>absent from the type</b> — calling them is a compile
  * error rather than a runtime {@link UnsupportedOperationException}. Note this is no longer a
@@ -54,10 +54,10 @@ import com.landawn.abacus.annotation.Beta;
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
- * @see ReadableDao
+ * @see ReadOps
  * @see NoUpdateDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends ReadableDao<T, TD>, Cacheable {
+public non-sealed interface ReadOnlyDao<T, TD extends ReadOnlyDao<T, TD>> extends ReadOps<T, TD>, Cacheable {
 }

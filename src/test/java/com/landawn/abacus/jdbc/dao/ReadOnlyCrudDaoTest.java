@@ -29,7 +29,7 @@ public class ReadOnlyCrudDaoTest extends TestBase {
 
     @Test
     public void testExtendsNoUpdateCrudDao() {
-        assertTrue(ReadableCrudDao.class.isAssignableFrom(ReadOnlyCrudDao.class));
+        assertTrue(CrudReadOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
     }
 
     @Test
@@ -39,7 +39,7 @@ public class ReadOnlyCrudDaoTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(ReadableCrudDao.class.isAssignableFrom(ReadOnlyCrudDao.class));
+        assertTrue(CrudReadOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
     }
 
     @SuppressWarnings("unchecked")

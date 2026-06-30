@@ -76,7 +76,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.DaoUtil;
 import com.landawn.abacus.jdbc.dao.NoUpdateDao;
 import com.landawn.abacus.jdbc.dao.ReadOnlyDao;
-import com.landawn.abacus.jdbc.dao.ReadableDao;
+import com.landawn.abacus.jdbc.dao.ReadOps;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.JsonParser;
@@ -236,7 +236,7 @@ final class DaoImpl {
     static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
     @SuppressWarnings("rawtypes")
-    private static final Map<String, ReadableDao> daoPool = new ConcurrentHashMap<>();
+    private static final Map<String, ReadOps> daoPool = new ConcurrentHashMap<>();
 
     private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SqlMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
@@ -1495,8 +1495,8 @@ final class DaoImpl {
     }
 
     @SuppressWarnings({ "rawtypes", "unused" })
-    private static AbstractQuery prepareQuery(final ReadableDao proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno,
-            final String fullClassMethodName, final Method method, final Class<?> returnType, final Object[] args, final int[] fragmentParamIndexes,
+    private static AbstractQuery prepareQuery(final ReadOps proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final String fullClassMethodName,
+            final Method method, final Class<?> returnType, final Object[] args, final int[] fragmentParamIndexes,
             final Tuple2<Annotation, String>[] fragmentAnnos, final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys,
             final String[] returnColumnNames, final List<OutParameter> outParameterList,
             final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter) throws SQLException {
@@ -1726,7 +1726,7 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiRowMapper<Object> getIdExtractor(final Holder<Jdbc.BiRowMapper<Object>> idExtractorHolder,
-            final Jdbc.BiRowMapper<Object> defaultIdExtractor, final ReadableDao dao) {
+            final Jdbc.BiRowMapper<Object> defaultIdExtractor, final ReadOps dao) {
         Jdbc.BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
 
         if (keyExtractor == null) {
@@ -1827,7 +1827,7 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<String, ReadableDao> joinEntityDaoPool = new ConcurrentHashMap<>();
+    private static final Map<String, ReadOps> joinEntityDaoPool = new ConcurrentHashMap<>();
 
     /**
      * Creates a dynamic proxy implementation of the specified DAO interface backed by the given {@link javax.sql.DataSource}.
@@ -1877,7 +1877,7 @@ final class DaoImpl {
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
-    static <TD extends ReadableDao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
+    static <TD extends ReadOps> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
             final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(ds, cs.dataSource);
@@ -1924,9 +1924,9 @@ final class DaoImpl {
         }
 
         final AsyncExecutor asyncExecutor = executor == null ? JdbcUtil.asyncExecutor : new AsyncExecutor(executor);
-        final boolean isUncheckedDao = DaoUtil.isUncheckedReadableDao(daoInterface);
-        final boolean isCrudDao = DaoUtil.isReadableCrudDao(daoInterface);
-        final boolean isCrudDaoL = DaoUtil.isReadableCrudDaoL(daoInterface);
+        final boolean isUncheckedDao = DaoUtil.isUncheckedReadOps(daoInterface);
+        final boolean isCrudDao = DaoUtil.isCrudReadOps(daoInterface);
+        final boolean isCrudLDao = DaoUtil.isCrudLReadOps(daoInterface);
         // Restriction level for centralizing the prepareQuery/prepareNamedQuery SQL-kind gate (formerly per-method overrides in ReadOnlyDao/NoUpdateDao).
         final boolean isReadOnlyDao = ReadOnlyDao.class.isAssignableFrom(daoInterface);
         final boolean isNoUpdateDao = !isReadOnlyDao && NoUpdateDao.class.isAssignableFrom(daoInterface);
@@ -2021,7 +2021,7 @@ final class DaoImpl {
                         return false;
                     }
 
-                    return ReadableDao.class.isAssignableFrom(rawType);
+                    return ReadOps.class.isAssignableFrom(rawType);
                 })
                 .map(ParameterizedType::getActualTypeArguments)
                 .filter(it -> N.notEmpty(it) && it[0] instanceof Class)
@@ -2039,7 +2039,7 @@ final class DaoImpl {
                                 + typeArguments[0]);
             }
 
-            if (DaoUtil.isReadableJoinEntityHelper(daoInterface) && (typeArguments.length >= 1 && typeArguments[0] instanceof Class)
+            if (DaoUtil.isJoinEntityReadOps(daoInterface) && (typeArguments.length >= 1 && typeArguments[0] instanceof Class)
                     && ParserUtil.getBeanInfo((Class) typeArguments[0]).propInfoList.stream().noneMatch(it -> it.isSubEntity)) {
                 throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(daoInterface)
                         + " extends JoinEntityHelper, but the entity class: " + typeArguments[0] + " has no sub-entity properties.");
@@ -2047,7 +2047,7 @@ final class DaoImpl {
 
             if (isCrudDao) {
                 final List<String> idFieldNames = QueryUtil.getIdPropNames((Class) typeArguments[0]);
-                final Class<?> declaredIdClass = isCrudDaoL ? Long.class : (Class) typeArguments[1];
+                final Class<?> declaredIdClass = isCrudLDao ? Long.class : (Class) typeArguments[1];
 
                 if (idFieldNames.size() == 0) {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
@@ -2067,7 +2067,7 @@ final class DaoImpl {
             }
         }
 
-        final Map<Method, Throwables.BiFunction<ReadableDao, Object[], ?, Throwable>> methodInvokerMap = new ConcurrentHashMap<>();
+        final Map<Method, Throwables.BiFunction<ReadOps, Object[], ?, Throwable>> methodInvokerMap = new ConcurrentHashMap<>();
 
         final List<Method> sqlMethods = Stream.of(allInterfaces)
                 .reversed()
@@ -2085,7 +2085,7 @@ final class DaoImpl {
         final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
         final String tableName = entityInfo == null ? null : getTableName(entityClass, entityInfo, namingPolicy, targetTableName);
 
-        final Class<?> idClass = isCrudDao ? (isCrudDaoL ? Long.class : (Class) typeArguments[1]) : null;
+        final Class<?> idClass = isCrudDao ? (isCrudLDao ? Long.class : (Class) typeArguments[1]) : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
         final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 
@@ -2304,18 +2304,17 @@ final class DaoImpl {
 
         final Set<Method> nonDBOperationSet = N.newConcurrentHashSet();
 
-        final Map<String, JoinInfo> joinBeanInfo = DaoUtil.isReadableJoinEntityHelper(daoInterface)
-                ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass, tableName)
+        final Map<String, JoinInfo> joinBeanInfo = DaoUtil.isJoinEntityReadOps(daoInterface) ? JoinInfo.getEntityJoinInfo(daoInterface, entityClass, tableName)
                 : null;
 
-        if (DaoUtil.isReadableJoinEntityHelper(daoInterface) && N.isEmpty(joinBeanInfo)) {
+        if (DaoUtil.isJoinEntityReadOps(daoInterface) && N.isEmpty(joinBeanInfo)) {
             throw new IllegalArgumentException(
                     "Entity class: " + ClassUtil.getCanonicalClassName(entityClass) + " must have at least one join entity property for its Dao interface: "
                             + ClassUtil.getCanonicalClassName(daoInterface) + " which extends JoinEntityHelper interface");
         }
 
-        if ((DaoUtil.isReadableJoinEntityHelper(daoInterface) && !ReadableDao.class.isAssignableFrom(daoInterface))
-                || (DaoUtil.isReadableCrudJoinEntityHelper(daoInterface) && !CrudDao.class.isAssignableFrom(daoInterface))) {
+        if ((DaoUtil.isJoinEntityReadOps(daoInterface) && !ReadOps.class.isAssignableFrom(daoInterface))
+                || (DaoUtil.isCrudJoinEntityReadOps(daoInterface) && !CrudDao.class.isAssignableFrom(daoInterface))) {
             throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(daoInterface)
                     + " extending JoinEntityHelper/CrudJoinEntityHelper must extend the corresponding Dao interface:Dao/CrudDao");
         }
@@ -2395,7 +2394,7 @@ final class DaoImpl {
                 }
             }
 
-            Throwables.BiFunction<ReadableDao, Object[], ?, Throwable> call = null;
+            Throwables.BiFunction<ReadOps, Object[], ?, Throwable> call = null;
 
             // Centralized SQL-kind gate for read-only / no-update DAOs: the prepareQuery/prepareNamedQuery (and
             // *ForLargeResult) overloads whose first argument is a raw SQL String or ParsedSql must be restricted to
@@ -4932,7 +4931,7 @@ final class DaoImpl {
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSqlPlan(parameterizedDsl);
 
-                            final ReadableDao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
@@ -4975,7 +4974,7 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final ReadableDao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (N.isEmpty(entities)) {
                                 // Do nothing.
@@ -5065,7 +5064,7 @@ final class DaoImpl {
                             final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getDeleteSqlPlan(parameterizedDsl);
 
-                            final ReadableDao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (Strings.isEmpty(tp._2)) {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
@@ -5095,7 +5094,7 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final ReadableDao<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (N.isEmpty(entities)) {
                                 return 0;
@@ -5810,7 +5809,7 @@ final class DaoImpl {
                 }
 
                 if (!throwsSQLException) {
-                    final Throwables.BiFunction<ReadableDao, Object[], ?, SQLException> tmp = (Throwables.BiFunction) call;
+                    final Throwables.BiFunction<ReadOps, Object[], ?, SQLException> tmp = (Throwables.BiFunction) call;
 
                     call = (proxy, args) -> {
                         try {
@@ -5863,7 +5862,7 @@ final class DaoImpl {
                 //    final boolean isSqlPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed;
                 //    final boolean isDaoPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed;
 
-                final Throwables.BiFunction<ReadableDao, Object[], ?, Throwable> tmp = call;
+                final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> tmp = call;
 
                 if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                     if (hasSqlLogAnno || hasPerfLogAnno) {
@@ -6178,7 +6177,7 @@ final class DaoImpl {
                         }
                     };
 
-                    final Throwables.BiFunction<ReadableDao, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
                         final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
@@ -6258,7 +6257,7 @@ final class DaoImpl {
                         .toList();
 
                 if (N.notEmpty(handlerList)) {
-                    final Throwables.BiFunction<ReadableDao, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
                         final boolean isInDaoMethod = isInDaoMethod_TL.get();
@@ -6437,7 +6436,7 @@ final class DaoImpl {
                     + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
         }
 
-        final Throwables.TriFunction<ReadableDao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> {
+        final Throwables.TriFunction<ReadOps, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> {
             if (method.getDeclaringClass() == Object.class) {
                 final String methodName = method.getName();
 
@@ -6450,7 +6449,7 @@ final class DaoImpl {
                 }
             }
 
-            final Throwables.BiFunction<ReadableDao, Object[], ?, Throwable> invoker = methodInvokerMap.get(method);
+            final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> invoker = methodInvokerMap.get(method);
 
             if (invoker == null) {
                 throw new UnsupportedOperationException(
@@ -6469,7 +6468,7 @@ final class DaoImpl {
             }
 
             try {
-                return proxyInvoker.apply((ReadableDao) proxy, method, args);
+                return proxyInvoker.apply((ReadOps) proxy, method, args);
             } catch (final Throwable t) {
                 if (shouldLogInvocation) {
                     daoLogger.debug(t, "Dao method invocation failed(method={})", method.getName());
@@ -6481,7 +6480,7 @@ final class DaoImpl {
 
         daoInstance = N.newProxyInstance(interfaceClasses, h);
 
-        final ReadableDao existingDaoInstance = daoPool.putIfAbsent(daoCacheKey, daoInstance);
+        final ReadOps existingDaoInstance = daoPool.putIfAbsent(daoCacheKey, daoInstance);
 
         if (existingDaoInstance != null) {
             if (daoLogger.isDebugEnabled()) {
@@ -6515,14 +6514,14 @@ final class DaoImpl {
      *         {@code defaultDao} if no matching DAO has been registered
      */
     @SuppressWarnings("rawtypes")
-    static ReadableDao getApplicableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final ReadableDao defaultDao) {
+    static ReadOps getApplicableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final ReadOps defaultDao) {
         final String key = ClassUtil.getCanonicalClassName(referencedEntityClass) + "_" + System.identityHashCode(ds);
-        final ReadableDao joinEntityDao = joinEntityDaoPool.get(key);
+        final ReadOps joinEntityDao = joinEntityDaoPool.get(key);
 
         if (joinEntityDao != null && joinEntityDao.dataSource().equals(ds)) {
             return joinEntityDao;
         } else {
-            for (final ReadableDao dao : daoPool.values()) {
+            for (final ReadOps dao : daoPool.values()) {
                 if (dao.targetEntityClass().equals(referencedEntityClass) && dao.dataSource().equals(ds)) {
                     joinEntityDaoPool.put(key, dao);
                     return dao;

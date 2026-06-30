@@ -70,6 +70,6 @@ import com.landawn.abacus.annotation.Beta;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>> extends UncheckedInsertableDao<T, TD>, NoUpdateDao<T, TD> {
+public non-sealed interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>> extends UncheckedInsertOps<T, TD>, NoUpdateDao<T, TD> {
 
 }

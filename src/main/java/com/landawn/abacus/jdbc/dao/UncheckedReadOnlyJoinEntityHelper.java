@@ -21,8 +21,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * A read-only interface for managing join entity relationships without checked exceptions.
  *
  * <p>This interface mixes in only the read side of unchecked join-entity support
- * ({@link UncheckedReadableJoinEntityHelper}) together with {@link ReadOnlyJoinEntityHelper};
- * it does <b>not</b> extend {@link UncheckedDeletableJoinEntityHelper}, so the
+ * ({@link UncheckedJoinEntityReadOps}) together with {@link ReadOnlyJoinEntityHelper};
+ * it does <b>not</b> extend {@link UncheckedJoinEntityDeleteOps}, so the
  * {@code deleteJoinEntities} and {@code deleteAllJoinEntities} families are simply absent from the
  * type. Attempting to call them fails at <b>compile time</b> rather than throwing
  * {@link UnsupportedOperationException} at runtime.</p>
@@ -50,10 +50,10 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @param <T> the entity type that this helper manages
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedDao}
  *
- * @see UncheckedReadableJoinEntityHelper
+ * @see UncheckedJoinEntityReadOps
  * @see ReadOnlyJoinEntityHelper
  * @see UncheckedSQLException
  */
 public non-sealed interface UncheckedReadOnlyJoinEntityHelper<T, TD extends UncheckedDao<T, TD>>
-        extends UncheckedReadableJoinEntityHelper<T, TD>, ReadOnlyJoinEntityHelper<T, TD> {
+        extends UncheckedJoinEntityReadOps<T, TD>, ReadOnlyJoinEntityHelper<T, TD> {
 }

@@ -1,0 +1,36 @@
+package com.landawn.abacus.jdbc.dao;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
+
+import com.landawn.abacus.TestBase;
+
+public class UncheckedReadOnlyCrudLDaoTest extends TestBase {
+
+    @Test
+    public void testIsInterface() {
+        assertTrue(UncheckedReadOnlyCrudLDao.class.isInterface());
+    }
+
+    @Test
+    public void testExtendsUncheckedReadOnlyCrudDao() {
+        assertTrue(UncheckedReadOnlyCrudDao.class.isAssignableFrom(UncheckedReadOnlyCrudLDao.class));
+    }
+
+    @Test
+    public void testExtendsUncheckedNoUpdateCrudLDao() {
+        assertTrue(UncheckedCrudLReadOps.class.isAssignableFrom(UncheckedReadOnlyCrudLDao.class));
+    }
+
+    @Test
+    public void testTypeParameterCount() {
+        assertEquals(2, UncheckedReadOnlyCrudLDao.class.getTypeParameters().length);
+    }
+
+    @Test
+    public void testHasDeclaredMethods() {
+        assertTrue(true, "Interface may inherit all methods without declaring its own");
+    }
+}

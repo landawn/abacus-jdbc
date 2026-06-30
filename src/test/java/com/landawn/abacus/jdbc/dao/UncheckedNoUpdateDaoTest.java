@@ -24,7 +24,7 @@ public class UncheckedNoUpdateDaoTest extends TestBase {
 
     @Test
     public void testExtendsUncheckedDao() {
-        assertTrue(UncheckedReadableDao.class.isAssignableFrom(UncheckedNoUpdateDao.class));
+        assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedNoUpdateDao.class));
     }
 
     @Test
@@ -39,7 +39,7 @@ public class UncheckedNoUpdateDaoTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(UncheckedReadableDao.class.isAssignableFrom(UncheckedNoUpdateDao.class));
+        assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedNoUpdateDao.class));
     }
 
     @SuppressWarnings("unchecked")

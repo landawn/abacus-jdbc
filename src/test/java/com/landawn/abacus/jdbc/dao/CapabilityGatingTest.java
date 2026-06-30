@@ -158,29 +158,29 @@ public class CapabilityGatingTest extends TestBase {
 
     @Test
     public void testConditionLevelComposition() {
-        // Dao = Readable + Insertable + Updatable + Deletable; restricted variants drop capabilities.
-        assertTrue(InsertableDao.class.isAssignableFrom(Dao.class));
-        assertTrue(UpdatableDao.class.isAssignableFrom(Dao.class));
-        assertTrue(DeletableDao.class.isAssignableFrom(Dao.class));
-        assertTrue(ReadableDao.class.isAssignableFrom(InsertableDao.class));
-        assertTrue(ReadableDao.class.isAssignableFrom(UpdatableDao.class));
-        assertTrue(ReadableDao.class.isAssignableFrom(DeletableDao.class));
+        // Dao = ReadOps + InsertOps + UpdateOps + DeleteOps; restricted variants drop capabilities.
+        assertTrue(InsertOps.class.isAssignableFrom(Dao.class));
+        assertTrue(UpdateOps.class.isAssignableFrom(Dao.class));
+        assertTrue(DeleteOps.class.isAssignableFrom(Dao.class));
+        assertTrue(ReadOps.class.isAssignableFrom(InsertOps.class));
+        assertTrue(ReadOps.class.isAssignableFrom(UpdateOps.class));
+        assertTrue(ReadOps.class.isAssignableFrom(DeleteOps.class));
     }
 
     @Test
     public void testCrudLevelComposition() {
         assertTrue(Dao.class.isAssignableFrom(CrudDao.class));
-        assertTrue(ReadableCrudDao.class.isAssignableFrom(CrudDao.class));
-        assertTrue(InsertableCrudDao.class.isAssignableFrom(CrudDao.class));
-        assertTrue(UpdatableCrudDao.class.isAssignableFrom(CrudDao.class));
-        assertTrue(DeletableCrudDao.class.isAssignableFrom(CrudDao.class));
+        assertTrue(CrudReadOps.class.isAssignableFrom(CrudDao.class));
+        assertTrue(CrudInsertOps.class.isAssignableFrom(CrudDao.class));
+        assertTrue(CrudUpdateOps.class.isAssignableFrom(CrudDao.class));
+        assertTrue(CrudDeleteOps.class.isAssignableFrom(CrudDao.class));
         // NoUpdateCrudDao keeps read + insert (crud), not update/delete (crud).
-        assertTrue(ReadableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
-        assertTrue(InsertableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
-        assertFalse(UpdatableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
-        assertFalse(DeletableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
+        assertTrue(CrudReadOps.class.isAssignableFrom(NoUpdateCrudDao.class));
+        assertTrue(CrudInsertOps.class.isAssignableFrom(NoUpdateCrudDao.class));
+        assertFalse(CrudUpdateOps.class.isAssignableFrom(NoUpdateCrudDao.class));
+        assertFalse(CrudDeleteOps.class.isAssignableFrom(NoUpdateCrudDao.class));
         // ReadOnlyCrudDao keeps read (crud) only.
-        assertTrue(ReadableCrudDao.class.isAssignableFrom(ReadOnlyCrudDao.class));
-        assertFalse(InsertableCrudDao.class.isAssignableFrom(ReadOnlyCrudDao.class));
+        assertTrue(CrudReadOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
+        assertFalse(CrudInsertOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
     }
 }

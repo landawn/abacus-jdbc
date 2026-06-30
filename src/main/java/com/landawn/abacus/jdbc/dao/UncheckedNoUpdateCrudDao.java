@@ -27,8 +27,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * unchecked parents throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}.
  * Inherited methods that are not redeclared keep their checked-exception contract.</p>
  *
- * <p>This interface extends {@link UncheckedNoUpdateDao}, {@link NoUpdateCrudDao}, {@link UncheckedReadableCrudDao}
- * and {@link UncheckedInsertableCrudDao} to provide comprehensive read/insert functionality while blocking update
+ * <p>This interface extends {@link UncheckedNoUpdateDao}, {@link NoUpdateCrudDao}, {@link UncheckedCrudReadOps}
+ * and {@link UncheckedCrudInsertOps} to provide comprehensive read/insert functionality while blocking update
  * and delete operations. It's particularly useful in audit systems, append-only data stores, or scenarios where
  * historical data must remain immutable.</p>
  *
@@ -78,12 +78,12 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateDao
  * @see NoUpdateCrudDao
- * @see UncheckedReadableCrudDao
- * @see UncheckedInsertableCrudDao
+ * @see UncheckedCrudReadOps
+ * @see UncheckedCrudInsertOps
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
 public non-sealed interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCrudDao<T, ID, TD>>
-        extends UncheckedNoUpdateDao<T, TD>, NoUpdateCrudDao<T, ID, TD>, UncheckedReadableCrudDao<T, ID, TD>, UncheckedInsertableCrudDao<T, ID, TD> {
+        extends UncheckedNoUpdateDao<T, TD>, NoUpdateCrudDao<T, ID, TD>, UncheckedCrudReadOps<T, ID, TD>, UncheckedCrudInsertOps<T, ID, TD> {
 
 }

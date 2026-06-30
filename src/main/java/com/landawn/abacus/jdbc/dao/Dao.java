@@ -109,7 +109,7 @@ import com.landawn.abacus.util.Throwables;
  * @see Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends InsertableDao<T, TD>, UpdatableDao<T, TD>, DeletableDao<T, TD> {
+public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends InsertOps<T, TD>, UpdateOps<T, TD>, DeleteOps<T, TD> {
     /**
      * Creates a PreparedQuery using a custom statement creator function.
      * This provides maximum flexibility for creating prepared statements with custom options.

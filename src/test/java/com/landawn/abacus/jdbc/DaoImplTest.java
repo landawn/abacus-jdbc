@@ -40,7 +40,7 @@ import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.jdbc.dao.ReadableDao;
+import com.landawn.abacus.jdbc.dao.ReadOps;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
@@ -1022,7 +1022,7 @@ public class DaoImplTest extends TestBase {
         pool.put(poisonedKey, daoForDs1);
 
         try {
-            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, ReadableDao.class);
+            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, ReadOps.class);
             m.setAccessible(true);
 
             // Create a real DAO bound to ds2 so the fall-through scan can find it.

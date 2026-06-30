@@ -21,9 +21,9 @@ import com.landawn.abacus.annotation.Beta;
  * DAO that allows read and insert operations but disables update and delete. Useful for audit trails,
  * append-only/event-sourcing stores, and CQRS-style write models where existing rows must never change.
  *
- * <p>It is a pure capability composite of {@link InsertableDao} (reads + inserts, via its
- * {@link ReadableDao} super-interface) plus the {@link Cacheable} marker. It does <b>not</b> mix in
- * {@code UpdatableDao}/{@code DeletableDao}, so {@code update}/{@code upsert}/{@code delete}/
+ * <p>It is a pure capability composite of {@link InsertOps} (reads + inserts, via its
+ * {@link ReadOps} super-interface) plus the {@link Cacheable} marker. It does <b>not</b> mix in
+ * {@code UpdateOps}/{@code DeleteOps}, so {@code update}/{@code upsert}/{@code delete}/
  * {@code batchUpdate}/{@code batchUpsert} (and {@code prepareCallableQuery}) are <b>absent from the
  * type</b> — calling them is a compile error rather than a runtime {@link UnsupportedOperationException}.</p>
  *
@@ -52,10 +52,10 @@ import com.landawn.abacus.annotation.Beta;
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
- * @see InsertableDao
- * @see ReadableDao
+ * @see InsertOps
+ * @see ReadOps
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends InsertableDao<T, TD>, Cacheable {
+public non-sealed interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends InsertOps<T, TD>, Cacheable {
 }

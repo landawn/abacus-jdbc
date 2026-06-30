@@ -29,7 +29,7 @@ public class NoUpdateCrudDaoTest extends TestBase {
 
     @Test
     public void testExtendsCrudDao() {
-        assertTrue(ReadableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
+        assertTrue(CrudReadOps.class.isAssignableFrom(NoUpdateCrudDao.class));
     }
 
     @Test
@@ -39,7 +39,7 @@ public class NoUpdateCrudDaoTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(ReadableCrudDao.class.isAssignableFrom(NoUpdateCrudDao.class));
+        assertTrue(CrudReadOps.class.isAssignableFrom(NoUpdateCrudDao.class));
     }
 
     @SuppressWarnings("unchecked")

@@ -19,7 +19,7 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * A read-only DAO interface that provides only query operations without any write capabilities.
- * It is a pure capability composite of {@link UncheckedReadableDao} (reads only) and {@link ReadOnlyDao}.
+ * It is a pure capability composite of {@link UncheckedReadOps} (reads only) and {@link ReadOnlyDao}.
  * Save, update, delete, upsert, and batch-write operations are <b>absent from the type</b> — calling them is a
  * compile error rather than a runtime {@link UnsupportedOperationException} — so no modification of any kind is permitted.
  * It is ideal for scenarios where data should only be read, never modified.
@@ -30,7 +30,7 @@ import com.landawn.abacus.annotation.Beta;
  * Inherited methods that are not redeclared here keep their checked-exception contract. Write operations
  * (save/update/delete/upsert/batch-write) are absent from the type (a compile error if called).</p>
  *
- * <p>This interface extends {@link UncheckedReadableDao} and {@link ReadOnlyDao} to ensure complete
+ * <p>This interface extends {@link UncheckedReadOps} and {@link ReadOnlyDao} to ensure complete
  * read-only access to the database. (The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery}
  * overloads reject any non-{@code SELECT} statement at runtime with an {@link UnsupportedOperationException},
  * enforced centrally by the DAO proxy.)</p>
@@ -71,10 +71,10 @@ import com.landawn.abacus.annotation.Beta;
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
- * @see UncheckedReadableDao
+ * @see UncheckedReadOps
  * @see ReadOnlyDao
  */
 @Beta
-public non-sealed interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>> extends UncheckedReadableDao<T, TD>, ReadOnlyDao<T, TD> {
+public non-sealed interface UncheckedReadOnlyDao<T, TD extends UncheckedReadOnlyDao<T, TD>> extends UncheckedReadOps<T, TD>, ReadOnlyDao<T, TD> {
 
 }

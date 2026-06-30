@@ -20,18 +20,18 @@ package com.landawn.abacus.jdbc.dao;
  * (throwing {@link com.landawn.abacus.exception.UncheckedSQLException}) plus the full unchecked
  * join capability (load + delete).
  *
- * <p>Composed of the read side ({@link UncheckedReadableCrudJoinEntityHelper}) and the base
+ * <p>Composed of the read side ({@link UncheckedCrudJoinEntityReadOps}) and the base
  * {@link UncheckedJoinEntityHelper}. Read-only unchecked CRUD DAOs mix in only
- * {@link UncheckedReadableCrudJoinEntityHelper} (via {@link UncheckedReadOnlyCrudJoinEntityHelper}).</p>
+ * {@link UncheckedCrudJoinEntityReadOps} (via {@link UncheckedReadOnlyCrudJoinEntityHelper}).</p>
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
  * @param <TD> the concrete DAO type, bounded by {@link UncheckedCrudDao}, that owns this helper
- * @see UncheckedReadableCrudJoinEntityHelper
+ * @see UncheckedCrudJoinEntityReadOps
  * @see UncheckedJoinEntityHelper
  * @see CrudJoinEntityHelper
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 public non-sealed interface UncheckedCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
-        extends UncheckedReadableCrudJoinEntityHelper<T, ID, TD>, UncheckedJoinEntityHelper<T, TD>, CrudJoinEntityHelper<T, ID, TD> {
+        extends UncheckedCrudJoinEntityReadOps<T, ID, TD>, UncheckedJoinEntityHelper<T, TD>, CrudJoinEntityHelper<T, ID, TD> {
 }

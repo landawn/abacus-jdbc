@@ -80,11 +80,11 @@ public class NoUpdateDaoTest extends TestBase {
         assertTrue(NoUpdateDao.class.isInterface());
         assertEquals(2, NoUpdateDao.class.getTypeParameters().length);
         // read + insert capabilities, but not update/delete.
-        assertTrue(InsertableDao.class.isAssignableFrom(NoUpdateDao.class));
-        assertTrue(ReadableDao.class.isAssignableFrom(NoUpdateDao.class));
+        assertTrue(InsertOps.class.isAssignableFrom(NoUpdateDao.class));
+        assertTrue(ReadOps.class.isAssignableFrom(NoUpdateDao.class));
         assertTrue(Cacheable.class.isAssignableFrom(NoUpdateDao.class));
-        assertFalse(UpdatableDao.class.isAssignableFrom(NoUpdateDao.class));
-        assertFalse(DeletableDao.class.isAssignableFrom(NoUpdateDao.class));
+        assertFalse(UpdateOps.class.isAssignableFrom(NoUpdateDao.class));
+        assertFalse(DeleteOps.class.isAssignableFrom(NoUpdateDao.class));
     }
 
     @Test
