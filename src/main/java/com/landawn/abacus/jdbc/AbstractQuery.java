@@ -3150,7 +3150,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    // Rename to setQueryParameters/setParametersOnQuery?
     public This settParameters(final Jdbc.ParametersSetter<? super This> parametersSetter) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
@@ -3198,7 +3197,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    // Rename to setQueryParameters/setParametersOnQuery?
     public <T> This settParameters(final T parameters, final Jdbc.BiParametersSetter<? super This, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);

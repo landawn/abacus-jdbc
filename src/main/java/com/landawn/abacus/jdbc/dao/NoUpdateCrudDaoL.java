@@ -84,6 +84,6 @@ import com.landawn.abacus.annotation.Beta;
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public non-sealed interface NoUpdateCrudDaoL<T, TD extends NoUpdateCrudDaoL<T, TD>> extends NoUpdateCrudDao<T, Long, TD>, ReadableCrudDaoL<T, TD> {
+public non-sealed interface NoUpdateCrudDaoL<T, TD extends NoUpdateCrudDaoL<T, TD>> extends NoUpdateCrudDao<T, Long, TD>, ReadableLongIdCrudDao<T, TD> {
 
 }

@@ -555,7 +555,6 @@ sealed interface ReadableCrudDao<T, ID, TD extends ReadableDao<T, TD>> extends R
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    // Rename to getOrNull?
     T gett(final ID id) throws DuplicateResultException, SQLException;
 
     /**

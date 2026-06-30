@@ -1590,4 +1590,62 @@ public class AbstractQueryTest extends TestBase {
         query.close();
         verify(preparedStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
     }
+
+    // Consuming stream(RowFilter, RowMapper) forces the flatMap lambda (L7686) to run:
+    // map(Supplier::get) executes the query, flatMap builds JdbcUtil.stream(rs, filter, mapper).
+    @Test
+    public void testStream_WithRowFilter_Consumed() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        try (Stream<String> s = query.stream((r) -> true, r -> r.getString(1))) {
+            final List<String> result = s.toList();
+            assertEquals(0, result.size());
+        }
+    }
+
+    // Consuming stream(BiRowFilter, BiRowMapper) forces the flatMap lambda (L7734) to run;
+    // the BiRowFilter iterate path reads column labels first, so metadata must be stubbed.
+    @Test
+    public void testStream_WithBiRowFilter_Consumed() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(false);
+
+        try (Stream<String> s = query.stream((r, labels) -> true, (r, labels) -> "val")) {
+            final List<String> result = s.toList();
+            assertEquals(0, result.size());
+        }
+    }
+
+    // Fully consuming streamAllResultSets(BiResultExtractor) over two result sets drives the
+    // iterateAllResultSets flatMap + mapE + onClose path (L7874-7884). The BiResultExtractor
+    // receives column labels via getColumnLabels(rs), so each ResultSet needs metadata.
+    @Test
+    public void testStreamAllResultSets_WithBiResultExtractor_MultipleResultSets() throws SQLException {
+        final ResultSet first = Mockito.mock(ResultSet.class);
+        final ResultSet second = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(first, second);
+        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, false);
+        // -1 update count signals "no more results" so the fully-drained iterator terminates.
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+        when(first.getMetaData()).thenReturn(meta);
+        when(second.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+
+        try (Stream<String> stream = query.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")) {
+            final List<String> result = stream.toList();
+            assertEquals(List.of("value", "value"), result);
+        }
+
+        verify(first).close();
+        verify(second).close();
+    }
 }

@@ -1,0 +1,47 @@
+Method-surface comparison: type extending UncheckedCrudDao
+==========================================================
+Scope        : public methods inherited by a DAO type that extends UncheckedCrudDao.
+Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
+Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
+               compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
+Totals       : 7beb529f = 202 methods ; current = 202 methods.
+
+RESULT
+------
+The two method sets are IDENTICAL. No method exists in one version but not the other.
+A column value of "Y" = present, "-" = absent.
+
+┌──────────────────────────────────────────────────────────────┬──────────┬─────────┐
+│ method signature                                             │ 7beb529f │ current │
+├──────────────────────────────────────────────────────────────┼──────────┼─────────┤
+│ (none -- the 202-method sets are identical in both versions) │ -        │ -       │
+└──────────────────────────────────────────────────────────────┴──────────┴─────────┘
+
+NOTE
+----
+For this full-capability DAO the capability-split refactor (commit 8a3d8246) is transparent
+at the method level: nothing was added, removed, renamed or re-signatured. Only WHERE each
+method is declared changed -- the same methods were regrouped across the new capability
+interfaces, as the declaring-interface counts below show.
+
+  declaring interface counts
+  --------------------------
+  ┌──────────────────┬───────┬────────────────────────────┬───────┐
+  │ 7beb529f         │ count │ current                    │ count │
+  ├──────────────────┼───────┼────────────────────────────┼───────┤
+  │ UncheckedDao     │    77 │ UncheckedReadableDao       │    63 │
+  │ UncheckedCrudDao │    67 │ ReadableDao                │    43 │
+  │ Dao              │    57 │ UncheckedReadableCrudDao   │    37 │
+  │ CrudDao          │     1 │ InsertableDao              │     9 │
+  │                  │       │ UncheckedInsertableCrudDao │     9 │
+  │                  │       │ UncheckedInsertableDao     │     9 │
+  │                  │       │ UncheckedUpdatableCrudDao  │     8 │
+  │                  │       │ UncheckedCrudDao           │     7 │
+  │                  │       │ UncheckedDeletableCrudDao  │     6 │
+  │                  │       │ Dao                        │     5 │
+  │                  │       │ UncheckedUpdatableDao      │     4 │
+  │                  │       │ ReadableCrudDao            │     1 │
+  │                  │       │ UncheckedDeletableDao      │     1 │
+  └──────────────────┴───────┴────────────────────────────┴───────┘
+

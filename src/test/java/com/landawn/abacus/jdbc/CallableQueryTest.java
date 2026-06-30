@@ -2052,4 +2052,165 @@ public class CallableQueryTest extends TestBase {
         callableQuery.close();
         verify(callableStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
     }
+
+    // ============================================================================
+    // setObject(String, Object, SQLType) — L1552, L1554
+    // ============================================================================
+
+    @Test
+    public void testSetObject_ByName_SQLType() throws SQLException {
+        CallableQuery result = callableQuery.setObject("amount", 123.45, JDBCType.DECIMAL);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setObject("amount", 123.45, JDBCType.DECIMAL);
+    }
+
+    // setObject(String, Object, SQLType, int) — L1576, L1578
+    @Test
+    public void testSetObject_ByName_SQLTypeAndScale() throws SQLException {
+        BigDecimal val = new BigDecimal("99.999");
+        CallableQuery result = callableQuery.setObject("price", val, JDBCType.DECIMAL, 2);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setObject("price", val, JDBCType.DECIMAL, 2);
+    }
+
+    // setObject(String, T, Type<T>) happy path — delegates to type.set(cstmt, name, value) — L1601, L1603, L1605
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSetObject_ByName_WithType() throws SQLException {
+        com.landawn.abacus.type.Type<String> type = Mockito.mock(com.landawn.abacus.type.Type.class);
+        CallableQuery result = callableQuery.setObject("preferences", "json-value", type);
+        assertSame(callableQuery, result);
+        verify(type).set(callableStatement, "preferences", "json-value");
+    }
+
+    // setObject(String, T, Type<T>) null-type validation — checkArgNotNull(type, cs.type) — L1601
+    @Test
+    public void testSetObject_ByName_WithType_NullType() throws SQLException {
+        // checkArgNotNull may close the query before throwing IAE, so use a fresh instance.
+        CallableStatement cs = Mockito.mock(CallableStatement.class);
+        Connection conn = Mockito.mock(Connection.class);
+        when(cs.getConnection()).thenReturn(conn);
+        CallableQuery cq = new CallableQuery(cs);
+        assertThrows(IllegalArgumentException.class, () -> cq.setObject("p", "v", (com.landawn.abacus.type.Type<String>) null));
+    }
+
+    // ============================================================================
+    // setParameters(Object) name-based binding dispatch — L1736-1747
+    // ============================================================================
+
+    // bean → setParameters(parameters, Beans.getPropNameList(cls)) — L1740, L1741
+    @Test
+    public void testSetParameters_ByObject_Bean() throws SQLException {
+        SimpleTestBean bean = new SimpleTestBean();
+        bean.setName("Alice");
+        CallableQuery result = callableQuery.setParameters((Object) bean);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("name", "Alice");
+    }
+
+    // Map → setParameters((Map) parameters) — L1742, L1743
+    @Test
+    public void testSetParameters_ByObject_Map() throws SQLException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("dept", "Sales");
+        CallableQuery result = callableQuery.setParameters((Object) params);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("dept", "Sales");
+    }
+
+    // null parameters → IllegalArgumentException — L1736 (fresh instance; checkArgNotNull may close)
+    @Test
+    public void testSetParameters_ByObject_NullParameters() throws SQLException {
+        CallableStatement cs = Mockito.mock(CallableStatement.class);
+        Connection conn = Mockito.mock(Connection.class);
+        when(cs.getConnection()).thenReturn(conn);
+        CallableQuery cq = new CallableQuery(cs);
+        assertThrows(IllegalArgumentException.class, () -> cq.setParameters((Object) null));
+    }
+
+    // neither bean nor Map → close() + IllegalArgumentException with message substring — L1744-1747
+    @Test
+    public void testSetParameters_ByObject_UnsupportedType() throws SQLException {
+        CallableStatement cs = Mockito.mock(CallableStatement.class);
+        Connection conn = Mockito.mock(Connection.class);
+        when(cs.getConnection()).thenReturn(conn);
+        CallableQuery cq = new CallableQuery(cs);
+        // Integer is neither a bean (Number subclass) nor a Map → unsupported path.
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> cq.setParameters(Integer.valueOf(42)));
+        assertTrue(ex.getMessage().contains("Unsupported parameter type for name-based binding"));
+        verify(cs).close();
+    }
+
+    // ============================================================================
+    // emptyResultSet() / defaultResultSetReturnValue() proxies — L2346-2424
+    // Reached via executeQuery() when the procedure produces no result set.
+    // ============================================================================
+
+    private ResultSet emptyResultSetProxy() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        return callableQuery.executeQuery();
+    }
+
+    // ResultSet proxy: close/isClosed/wasNull + primitive & void defaults — L2371-2379, L2392, L2404-2419
+    @Test
+    public void testEmptyResultSetProxy_DefaultReturns() throws SQLException {
+        ResultSet rs = emptyResultSetProxy();
+        assertFalse(rs.next());
+        assertFalse(rs.wasNull());
+        assertFalse(rs.getBoolean(1)); // boolean → false
+        assertEquals(0, (int) rs.getByte(1)); // byte → (byte) 0
+        assertEquals(0, (int) rs.getShort(1)); // short → (short) 0
+        assertEquals(0, rs.getInt(1)); // int → 0
+        assertEquals(0L, rs.getLong(1)); // long → 0L
+        assertEquals(0F, rs.getFloat(1)); // float → 0F
+        assertEquals(0D, rs.getDouble(1)); // double → 0D
+        rs.clearWarnings(); // void return → null, no exception
+        assertFalse(rs.isClosed());
+        rs.close();
+        assertTrue(rs.isClosed());
+        // TODO: the Character.TYPE branch (L2420-2421) is unreachable here — neither ResultSet
+        // nor ResultSetMetaData declares a method that returns primitive char.
+    }
+
+    // ResultSet proxy: unwrap / isWrapperFor — L2380-2389
+    @Test
+    public void testEmptyResultSetProxy_UnwrapAndWrapper() throws SQLException {
+        ResultSet rs = emptyResultSetProxy();
+        assertTrue(rs.isWrapperFor(ResultSet.class));
+        assertFalse(rs.isWrapperFor(String.class));
+        assertSame(rs, rs.unwrap(ResultSet.class));
+        assertThrows(SQLException.class, () -> rs.unwrap(String.class));
+    }
+
+    // ResultSet proxy: unhandled object-returning method falls through to SQLException — L2392, L2424
+    @Test
+    public void testEmptyResultSetProxy_UnhandledMethodThrows() throws SQLException {
+        ResultSet rs = emptyResultSetProxy();
+        SQLException ex = assertThrows(SQLException.class, () -> rs.getString(1));
+        assertTrue(ex.getMessage().contains("did not return a ResultSet"));
+    }
+
+    // ResultSetMetaData proxy: getColumnCount/unwrap/isWrapperFor + identity & unhandled — L2346-2362, L2398-2424
+    @Test
+    public void testEmptyResultSetMetaDataProxy() throws SQLException {
+        ResultSet rs = emptyResultSetProxy();
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(0, md.getColumnCount()); // L2348-2349
+        assertTrue(md.isWrapperFor(ResultSetMetaData.class)); // L2358-2359
+        assertFalse(md.isWrapperFor(String.class));
+        assertSame(md, md.unwrap(ResultSetMetaData.class)); // L2350-2355
+        assertThrows(SQLException.class, () -> md.unwrap(String.class)); // L2357
+        // defaultResultSetReturnValue primitive branches reached via metadata methods
+        assertFalse(md.isAutoIncrement(1)); // boolean → false
+        assertEquals(0, md.getColumnType(1)); // int → 0
+        // toString/hashCode/equals identity branches — L2398-2403
+        assertTrue(md.toString().contains("Empty ResultSet metadata"));
+        assertEquals(System.identityHashCode(md), md.hashCode());
+        assertTrue(md.equals(md));
+        // object-returning method (String) falls through → SQLException — L2424
+        SQLException ex = assertThrows(SQLException.class, () -> md.getColumnName(1));
+        assertTrue(ex.getMessage().contains("Empty ResultSet metadata has no columns"));
+    }
 }

@@ -748,7 +748,7 @@ public final class JdbcCodeGenerationUtil {
             }
 
             if (configToUse.isGenerateCopyMethod()) {
-                // TODO extract fields from additionalFieldsOrLines?
+                // Supported additional field declarations parsed above are copied with generated fields.
 
                 //
                 sb.append(LINE_SEPARATOR)

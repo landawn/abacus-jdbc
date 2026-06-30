@@ -1706,6 +1706,97 @@ public class JoinInfoTest extends TestBase {
         final Object res = m.invoke(null, Arrays.asList("alpha", "   ", "\t"), 0);
         assertNull(res);
     }
+
+    // ---- setNullParamSetterForUpdate lambdas (JoinInfo L366-369 for M2M, L593-609 for direct joins).
+    // These are stored in the private setNullSqlAndParamSetterPool, which has no public accessor, so
+    // they are reached here by reflecting the field and invoking the cached BiParametersSetter. Each
+    // setter first resets every referenced prop to its DB default, then binds the source join values. ----
+
+    @SuppressWarnings("unchecked")
+    private static com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object> setNullParamSetter(final JoinInfo joinInfo)
+            throws Exception {
+        final java.lang.reflect.Field field = JoinInfo.class.getDeclaredField("setNullSqlAndParamSetterPool");
+        field.setAccessible(true);
+        final Map<Object, Tuple2<String, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>>> pool = (Map<Object, Tuple2<String, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>>>) field
+                .get(joinInfo);
+        return pool.get(PSC)._2;
+    }
+
+    // M2M single-referenced-prop setNull setter (JoinInfo L366-369): referenced prop (roleId) -> default, then source (userId).
+    @Test
+    public void testSetNullParamSetter_ManyToMany() throws Exception {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_setnull_m2m", "roles");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final UserRoleUserEntity entity = new UserRoleUserEntity();
+        entity.setUserId(55L);
+
+        setNullParamSetter(joinInfo).accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 0L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 55L);
+    }
+
+    // Single-key direct-join setNull setter (JoinInfo L593-595).
+    @Test
+    public void testSetNullParamSetter_SingleKeyDirectJoin() throws Exception {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_setnull_1", "orders");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final UserEntity entity = new UserEntity();
+        entity.setUserId(91L);
+
+        setNullParamSetter(joinInfo).accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 0L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 91L);
+    }
+
+    // Two-key composite setNull setter (JoinInfo L596-600): two referenced defaults, then two source values.
+    @Test
+    public void testSetNullParamSetter_TwoKeyCompositeJoin() throws Exception {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item_setnull_2", "details");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final OrderItemEntity entity = new OrderItemEntity();
+        entity.setOrderId(70L);
+        entity.setProductId(80L);
+
+        setNullParamSetter(joinInfo).accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 0L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 0L);
+        org.mockito.Mockito.verify(stmt).setLong(3, 70L);
+        org.mockito.Mockito.verify(stmt).setLong(4, 80L);
+    }
+
+    // Multi-key (3-col) composite setNull setter (JoinInfo L601-609 loop branch): three referenced defaults, then three source values.
+    @Test
+    public void testSetNullParamSetter_MultiKeyCompositeJoin() throws Exception {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(ThreeColDao.class, ThreeColEntity.class, "three_col_setnull", "refs");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final ThreeColEntity entity = new ThreeColEntity();
+        entity.setAId(11L);
+        entity.setBId(22L);
+        entity.setCId(33L);
+
+        setNullParamSetter(joinInfo).accept(stmt, entity);
+
+        // First loop: every referenced prop reset to default (indices 1..3).
+        org.mockito.Mockito.verify(stmt).setLong(1, 0L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 0L);
+        org.mockito.Mockito.verify(stmt).setLong(3, 0L);
+        // Second loop: source join values (indices 4..6).
+        org.mockito.Mockito.verify(stmt).setLong(4, 11L);
+        org.mockito.Mockito.verify(stmt).setLong(5, 22L);
+        org.mockito.Mockito.verify(stmt).setLong(6, 33L);
+    }
+
+    // TODO: JoinInfo L315-317 ("intermediate entity class is required but not found" when forName returns
+    // null) is defensive dead code: ClassUtil.forName throws on a missing class, so the preceding catch at
+    // L310-313 fires first (already covered by testConstructor_ManyToManyJoin_MiddleClassNotFound) and the
+    // null check at L315 is never true. Unreachable in isolation.
+    // TODO: JoinInfo L507-513 (batchMiddleDeleteSqlBuilder, returning middleDeleteSql at L509 / the
+    // Strings.repeat(...) batch branch at L511) is unreachable: cascadeDeleteDefinedInDB is a hardcoded
+    // `true` (L241), so the `? null : batchMiddleDeleteSqlBuilder` ternary at L516 always stores null and
+    // the lambda is never invoked. It is a local var, not stored in any field, so reflection cannot reach it.
 }
 
 final class UserPermEntity {

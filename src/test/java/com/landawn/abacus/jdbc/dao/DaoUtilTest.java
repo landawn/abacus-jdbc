@@ -762,4 +762,15 @@ public class DaoUtilTest extends TestBase {
     public void testIsInsertQuery_CteWithDoubledQuoteEscape() {
         assertTrue(SqlParser.isInsertQuery("WITH cte AS (SELECT 'it''s' AS name) INSERT INTO t SELECT * FROM cte"));
     }
+
+    // generateId delegates to ReadableCrudDao#generateId() (DaoUtil line 198). The default generateId()
+    // throws UnsupportedOperationException, so a DAO that overrides it (here a stub) is required to reach
+    // the cast-and-invoke line.
+    @Test
+    public void testGenerateId_DelegatesToReadableCrudDao() throws SQLException {
+        final TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class);
+        Mockito.when(dao.generateId()).thenReturn(777L);
+
+        assertEquals(777L, DaoUtil.generateId(dao));
+    }
 }

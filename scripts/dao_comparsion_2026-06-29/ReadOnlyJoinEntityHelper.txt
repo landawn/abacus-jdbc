@@ -1,0 +1,51 @@
+Method-surface comparison: type extending ReadOnlyJoinEntityHelper
+==================================================================
+Scope        : public methods inherited by a join-entity-helper type that mixes in ReadOnlyJoinEntityHelper.
+Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
+Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
+               compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
+Totals       : 7beb529f = 72 methods ; current = 56 methods.
+
+RESULT
+------
+16 method(s) present only in 7beb529f; 0 present only in current.
+Methods absent from the current type are a compile error to call (previously a runtime
+UnsupportedOperationException). "Y" = present, "-" = absent.
+
+┌─────────────────────────────────────────────────────────────────┬──────────┬─────────┐
+│ method signature                                                │ 7beb529f │ current │
+├─────────────────────────────────────────────────────────────────┼──────────┼─────────┤
+│ deleteAllJoinEntities(Collection<T>)                            │ Y        │ -       │
+│ deleteAllJoinEntities(Collection<T>, Executor)                  │ Y        │ -       │
+│ deleteAllJoinEntities(Collection<T>, boolean)                   │ Y        │ -       │
+│ deleteAllJoinEntities(T)                                        │ Y        │ -       │
+│ deleteAllJoinEntities(T, Executor)                              │ Y        │ -       │
+│ deleteAllJoinEntities(T, boolean)                               │ Y        │ -       │
+│ deleteJoinEntities(Collection<T>, Class<?>)                     │ Y        │ -       │
+│ deleteJoinEntities(Collection<T>, Collection<String>)           │ Y        │ -       │
+│ deleteJoinEntities(Collection<T>, Collection<String>, Executor) │ Y        │ -       │
+│ deleteJoinEntities(Collection<T>, Collection<String>, boolean)  │ Y        │ -       │
+│ deleteJoinEntities(Collection<T>, String)                       │ Y        │ -       │
+│ deleteJoinEntities(T, Class<?>)                                 │ Y        │ -       │
+│ deleteJoinEntities(T, Collection<String>)                       │ Y        │ -       │
+│ deleteJoinEntities(T, Collection<String>, Executor)             │ Y        │ -       │
+│ deleteJoinEntities(T, Collection<String>, boolean)              │ Y        │ -       │
+│ deleteJoinEntities(T, String)                                   │ Y        │ -       │
+└─────────────────────────────────────────────────────────────────┴──────────┴─────────┘
+
+NOTE
+----
+The 16 method(s) absent in current are removed from the TYPE (compile error if called)
+rather than the former runtime UnsupportedOperationException stubs. Surviving methods -- including
+any that merely moved to a different declaring interface -- are shown by the counts below.
+
+  declaring interface counts
+  --------------------------
+  ┌──────────────────────────┬───────┬──────────────────────────┬───────┐
+  │ 7beb529f                 │ count │ current                  │ count │
+  ├──────────────────────────┼───────┼──────────────────────────┼───────┤
+  │ JoinEntityHelper         │    56 │ ReadableJoinEntityHelper │    56 │
+  │ ReadOnlyJoinEntityHelper │    16 │                          │       │
+  └──────────────────────────┴───────┴──────────────────────────┴───────┘
+

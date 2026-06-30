@@ -30,5 +30,5 @@ import com.landawn.abacus.annotation.Beta;
  */
 @Beta
 sealed interface UncheckedReadableCrudDaoL<T, TD extends UncheckedReadableDao<T, TD>> extends ReadableCrudDaoL<T, TD>, UncheckedReadableCrudDao<T, Long, TD>
-        permits UncheckedCrudDaoL, UncheckedNoUpdateCrudDaoL, UncheckedReadOnlyCrudDaoL {
+        permits UncheckedReadableLongIdCrudDao {
 }

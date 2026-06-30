@@ -1,0 +1,72 @@
+Method-surface comparison: type extending UncheckedNoUpdateDao
+==============================================================
+Scope        : public methods inherited by a DAO type that extends UncheckedNoUpdateDao.
+Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
+Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
+               compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
+Totals       : 7beb529f = 136 methods ; current = 124 methods.
+
+RESULT
+------
+12 method(s) present only in 7beb529f; 0 present only in current.
+Methods absent from the current type are a compile error to call (previously a runtime
+UnsupportedOperationException). "Y" = present, "-" = absent.
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────┬──────────┬─────────┐
+│ method signature                                                                              │ 7beb529f │ current │
+├───────────────────────────────────────────────────────────────────────────────────────────────┼──────────┼─────────┤
+│ delete(Condition)                                                                             │ Y        │ -       │
+│ prepareCallableQuery(String)                                                                  │ Y        │ -       │
+│ prepareCallableQuery(String, BiFunction<Connection, String, CallableStatement, SQLException>) │ Y        │ -       │
+│ prepareNamedQuery(ParsedSql, BiFunction<Connection, String, PreparedStatement, SQLException>) │ Y        │ -       │
+│ prepareNamedQuery(String, BiFunction<Connection, String, PreparedStatement, SQLException>)    │ Y        │ -       │
+│ prepareQuery(String, BiFunction<Connection, String, PreparedStatement, SQLException>)         │ Y        │ -       │
+│ update(Map<String, Object>, Condition)                                                        │ Y        │ -       │
+│ update(String, Object, Condition)                                                             │ Y        │ -       │
+│ update(T, Collection<String>, Condition)                                                      │ Y        │ -       │
+│ update(T, Condition)                                                                          │ Y        │ -       │
+│ upsert(T, Condition)                                                                          │ Y        │ -       │
+│ upsert(T, List<String>)                                                                       │ Y        │ -       │
+└───────────────────────────────────────────────────────────────────────────────────────────────┴──────────┴─────────┘
+
+15 method(s) present in BOTH versions but with a NARROWED throws clause
+(the SQL-kind / restriction check moved into the DaoImpl proxy):
+
+┌────────────────────────────────────────────┬─────────────────────────────────────────────┬────────────────┐
+│ method signature                           │ 7beb529f throws                             │ current throws │
+├────────────────────────────────────────────┼─────────────────────────────────────────────┼────────────────┤
+│ prepareNamedQuery(ParsedSql)               │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQuery(ParsedSql, String[])     │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQuery(ParsedSql, boolean)      │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQuery(ParsedSql, int[])        │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQuery(String)                  │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQuery(String, String[])        │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQuery(String, boolean)         │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQuery(String, int[])           │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQueryForLargeResult(ParsedSql) │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareNamedQueryForLargeResult(String)    │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareQuery(String)                       │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareQuery(String, String[])             │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareQuery(String, boolean)              │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareQuery(String, int[])                │ SQLException, UnsupportedOperationException │ SQLException   │
+│ prepareQueryForLargeResult(String)         │ SQLException, UnsupportedOperationException │ SQLException   │
+└────────────────────────────────────────────┴─────────────────────────────────────────────┴────────────────┘
+
+NOTE
+----
+The 12 method(s) absent in current are removed from the TYPE (compile error if called)
+rather than the former runtime UnsupportedOperationException stubs. Surviving methods -- including
+any that merely moved to a different declaring interface -- are shown by the counts below.
+
+  declaring interface counts
+  --------------------------
+  ┌──────────────────────┬───────┬────────────────────────┬───────┐
+  │ 7beb529f             │ count │ current                │ count │
+  ├──────────────────────┼───────┼────────────────────────┼───────┤
+  │ UncheckedDao         │    72 │ UncheckedReadableDao   │    63 │
+  │ Dao                  │    37 │ ReadableDao            │    43 │
+  │ NoUpdateDao          │    20 │ InsertableDao          │     9 │
+  │ UncheckedNoUpdateDao │     7 │ UncheckedInsertableDao │     9 │
+  └──────────────────────┴───────┴────────────────────────┴───────┘
+

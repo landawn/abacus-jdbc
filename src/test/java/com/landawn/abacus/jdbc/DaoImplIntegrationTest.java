@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
@@ -29,7 +32,12 @@ import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.jdbc.dao.NoUpdateCrudDao;
 import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.ImmutableList;
+import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -711,6 +719,382 @@ public class DaoImplIntegrationTest extends TestBase {
         final int[] daCount = { 0 };
         dao.foreach(Filters.eq("lastName", "Each"), arr -> daCount[0]++);
         assertEquals(2, daCount[0]);
+    }
+
+    // =====================================================================================
+    // Annotation-driven custom @Query methods: diverse return types, named params, BindList,
+    // SqlFragment template substitution. These drive the large getResultConverter /
+    // setParameters dispatch blocks in DaoImpl that the plain-CrudDao tests never reach.
+    // =====================================================================================
+    public interface AnnotatedQueryDao extends CrudDao<UserAccount, Long, AnnotatedQueryDao> {
+
+        // DEFAULT op + Optional return type -> "find first" semantics.
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        Optional<UserAccount> findOptByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        // DEFAULT op + List<Entity> with TWO named (@Bind) parameters (multi-bind named-SQL path).
+        @Query("SELECT * FROM user_account WHERE age >= :minAge AND last_name = :ln ORDER BY id")
+        List<UserAccount> findListByAgeAndLastName(@com.landawn.abacus.jdbc.annotation.Bind("minAge") int minAge,
+                @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        // DEFAULT op + single-column List<String>.
+        @Query("SELECT first_name FROM user_account WHERE last_name = :ln ORDER BY id")
+        List<String> firstNamesByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        // DEFAULT op + com.landawn.abacus.util.Dataset return type.
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        Dataset datasetByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        // DEFAULT op + Stream return type -> lazy streaming. A lazily-evaluated Stream return
+        // must NOT declare a checked throws clause (DaoImpl rejects it at creation time).
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        Stream<UserAccount> streamByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln);
+
+        // @BindList expands the collection into the IN-clause placeholders.
+        @Query("SELECT * FROM user_account WHERE id IN ({ids}) ORDER BY id")
+        List<UserAccount> byIds(@com.landawn.abacus.jdbc.annotation.BindList("ids") Collection<Long> ids) throws SQLException;
+
+        // @SqlFragment rewrites the {sortCol} token in the SQL text before the statement is prepared.
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY {sortCol}")
+        List<UserAccount> findSortedByFragment(@com.landawn.abacus.jdbc.annotation.SqlFragment("sortCol") String sortCol,
+                @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testCustomSelect_VariousReturnTypes() throws SQLException {
+        final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);
+        dao.insert(newUser("Sel1", "Sel", 30));
+        dao.insert(newUser("Sel2", "Sel", 40));
+        dao.insert(newUser("Sel3", "Sel", 50));
+
+        final Optional<UserAccount> opt = aqDao.findOptByLastName("Sel");
+        assertTrue(opt.isPresent());
+        assertEquals("Sel1", opt.get().getFirstName());
+
+        // two @Bind params (age >= 40) -> Sel2, Sel3
+        assertEquals(2, aqDao.findListByAgeAndLastName(40, "Sel").size());
+
+        // single-column List<String>
+        assertEquals(List.of("Sel1", "Sel2", "Sel3"), aqDao.firstNamesByLastName("Sel"));
+    }
+
+    @Test
+    public void testCustomSelect_DatasetReturn() throws SQLException {
+        final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);
+        dao.insert(newUser("Ds1", "Ds", 11));
+        dao.insert(newUser("Ds2", "Ds", 12));
+
+        final Dataset dataset = aqDao.datasetByLastName("Ds");
+        assertEquals(2, dataset.size());
+    }
+
+    @Test
+    public void testCustomSelect_StreamReturn() throws SQLException {
+        final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);
+        dao.insert(newUser("St1", "St", 1));
+        dao.insert(newUser("St2", "St", 2));
+        dao.insert(newUser("St3", "St", 3));
+
+        try (Stream<UserAccount> s = aqDao.streamByLastName("St")) {
+            assertEquals(3L, s.count());
+        }
+    }
+
+    @Test
+    public void testCustomSelect_BindList() throws SQLException {
+        final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);
+        final Long id1 = dao.insert(newUser("B1", "BL", 1));
+        final Long id2 = dao.insert(newUser("B2", "BL", 2));
+        dao.insert(newUser("B3", "BL", 3));
+
+        final List<UserAccount> result = aqDao.byIds(List.of(id1, id2));
+        assertEquals(2, result.size());
+        assertEquals(id1, result.get(0).getId());
+        assertEquals(id2, result.get(1).getId());
+    }
+
+    @Test
+    public void testCustomSelect_SqlFragment() throws SQLException {
+        final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);
+        dao.insert(newUser("F1", "Frag", 30));
+        dao.insert(newUser("F2", "Frag", 10));
+        dao.insert(newUser("F3", "Frag", 20));
+
+        final List<UserAccount> sorted = aqDao.findSortedByFragment("age", "Frag");
+        assertEquals(3, sorted.size());
+        assertEquals(10, sorted.get(0).getAge());
+        assertEquals(30, sorted.get(2).getAge());
+    }
+
+    // =====================================================================================
+    // Explicit @Query op() modes: exists / queryForSingle / findOnlyOne / findFirst / list.
+    // Each drives a distinct result-converter branch in DaoImpl.
+    // =====================================================================================
+    public interface OpQueryDao extends CrudDao<UserAccount, Long, OpQueryDao> {
+
+        @Query(value = "SELECT 1 FROM user_account WHERE last_name = :ln", op = OP.exists)
+        boolean existsByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query(value = "SELECT COUNT(*) FROM user_account WHERE last_name = :ln", op = OP.queryForSingle)
+        long countByLastNameSingle(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query(value = "SELECT first_name FROM user_account WHERE id = :id", op = OP.queryForSingle)
+        String firstNameViaSingle(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
+
+        @Query(value = "SELECT * FROM user_account WHERE id = :id", op = OP.findOnlyOne)
+        UserAccount onlyOneById(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
+
+        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY age", op = OP.findFirst)
+        Optional<UserAccount> firstByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY id", op = OP.list)
+        List<UserAccount> listByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testExplicitOp_Variants() throws SQLException {
+        final OpQueryDao opDao = JdbcUtil.createDao(OpQueryDao.class, ds);
+        final Long id = dao.insert(newUser("Op1", "Op", 25));
+        dao.insert(newUser("Op2", "Op", 35));
+
+        assertTrue(opDao.existsByLastName("Op"));
+        assertFalse(opDao.existsByLastName("Nope"));
+        assertEquals(2L, opDao.countByLastNameSingle("Op"));
+        assertEquals("Op1", opDao.firstNameViaSingle(id));
+        assertEquals(25, opDao.onlyOneById(id).getAge());
+
+        final Optional<UserAccount> first = opDao.firstByLastName("Op");
+        assertTrue(first.isPresent());
+        assertEquals(25, first.get().getAge());
+
+        assertEquals(2, opDao.listByLastName("Op").size());
+    }
+
+    // =====================================================================================
+    // Named INSERT / UPDATE / DELETE custom-SQL methods (:named params): single-bean auto-bind,
+    // multi-@Bind, and single-@Bind dispatch into the update-path converters.
+    // =====================================================================================
+    public interface NamedDmlDao extends CrudDao<UserAccount, Long, NamedDmlDao> {
+
+        // single bean parameter -> named placeholders auto-bound to its properties.
+        @Query("INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)")
+        void insertNamed(UserAccount entity) throws SQLException;
+
+        // multi @Bind UPDATE returning affected-row count.
+        @Query("UPDATE user_account SET age = :age WHERE id = :id")
+        int updateAgeNamed(@com.landawn.abacus.jdbc.annotation.Bind("age") int age, @com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
+
+        // single @Bind DELETE returning affected-row count.
+        @Query("DELETE FROM user_account WHERE last_name = :ln")
+        int deleteNamed(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testNamedDml() throws SQLException {
+        final NamedDmlDao nDao = JdbcUtil.createDao(NamedDmlDao.class, ds);
+
+        nDao.insertNamed(newUser("N1", "Dml", 21));
+        assertEquals(1, dao.count(Filters.eq("lastName", "Dml")));
+
+        final Long id = dao.findFirst(Filters.eq("firstName", "N1")).get().getId();
+        assertEquals(1, nDao.updateAgeNamed(99, id));
+        assertEquals(99, dao.gett(id).getAge());
+
+        assertEquals(1, nDao.deleteNamed("Dml"));
+        assertEquals(0, dao.count(Filters.eq("lastName", "Dml")));
+    }
+
+    // =====================================================================================
+    // @Handler: a recording handler wired via @Handler(type=...) must have its beforeInvoke /
+    // afterInvoke run around the annotated DAO method (drives the handler wrapper in DaoImpl).
+    // =====================================================================================
+    public static final class RecordingHandler implements Jdbc.Handler<HandlerDao> {
+        static final AtomicInteger BEFORE = new AtomicInteger();
+        static final AtomicInteger AFTER = new AtomicInteger();
+
+        @Override
+        public void beforeInvoke(final HandlerDao proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            if ("handledCount".equals(methodSignature._1.getName())) {
+                BEFORE.incrementAndGet();
+            }
+        }
+
+        @Override
+        public void afterInvoke(final Object result, final HandlerDao proxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            if ("handledCount".equals(methodSignature._1.getName())) {
+                AFTER.incrementAndGet();
+            }
+        }
+    }
+
+    @com.landawn.abacus.jdbc.annotation.Handler(type = RecordingHandler.class)
+    public interface HandlerDao extends CrudDao<UserAccount, Long, HandlerDao> {
+        @Query("SELECT COUNT(*) FROM user_account")
+        long handledCount() throws SQLException;
+    }
+
+    @Test
+    public void testHandler_BeforeAfterInvoked() throws SQLException {
+        final HandlerDao handlerDao = JdbcUtil.createDao(HandlerDao.class, ds);
+        RecordingHandler.BEFORE.set(0);
+        RecordingHandler.AFTER.set(0);
+
+        dao.insert(newUser("H1", "Hand", 30));
+        assertEquals(1L, handlerDao.handledCount());
+
+        assertEquals(1, RecordingHandler.BEFORE.get());
+        assertEquals(1, RecordingHandler.AFTER.get());
+    }
+
+    // =====================================================================================
+    // @PerfLog + @SqlLogEnabled: thresholds of 0 force both the SQL-perf and DAO-op-perf log
+    // branches to run on a successful call (the happy-path counterpart to the existing
+    // begin-transaction-failure restoration test).
+    // =====================================================================================
+    @com.landawn.abacus.jdbc.annotation.PerfLog(minExecutionTimeForSql = 0, minExecutionTimeForOperation = 0)
+    @com.landawn.abacus.jdbc.annotation.SqlLogEnabled
+    public interface PerfLogDao extends CrudDao<UserAccount, Long, PerfLogDao> {
+        @Query("SELECT COUNT(*) FROM user_account")
+        long perfCount() throws SQLException;
+    }
+
+    @Test
+    public void testPerfLogAndSqlLogEnabled() throws SQLException {
+        final PerfLogDao perfDao = JdbcUtil.createDao(PerfLogDao.class, ds);
+        dao.insert(newUser("P1", "Perf", 30));
+        assertEquals(1L, perfDao.perfCount());
+    }
+
+    // =====================================================================================
+    // @Transactional default methods (commit + rollback-on-exception) and a plain default
+    // method composing other DAO methods (DaoImpl special-cases interface default methods).
+    // =====================================================================================
+    public interface TxDao extends CrudDao<UserAccount, Long, TxDao> {
+
+        @com.landawn.abacus.jdbc.annotation.Transactional
+        default void insertTwoInTx(final UserAccount a, final UserAccount b) throws SQLException {
+            insert(a);
+            insert(b);
+        }
+
+        @com.landawn.abacus.jdbc.annotation.Transactional
+        default void insertThenFail(final UserAccount a) throws SQLException {
+            insert(a);
+            throw new RuntimeException("intentional rollback");
+        }
+
+        // plain (non-transactional) default method that delegates to inherited DAO methods.
+        default Optional<UserAccount> findByFullName(final String first, final String last) throws SQLException {
+            return findFirst(Filters.eq("firstName", first).and(Filters.eq("lastName", last)));
+        }
+    }
+
+    @Test
+    public void testTransactional_Commit() throws SQLException {
+        final TxDao txDao = JdbcUtil.createDao(TxDao.class, ds);
+        txDao.insertTwoInTx(newUser("Tx1", "Commit", 1), newUser("Tx2", "Commit", 2));
+        assertEquals(2, dao.count(Filters.eq("lastName", "Commit")));
+    }
+
+    @Test
+    public void testTransactional_Rollback() throws SQLException {
+        final TxDao txDao = JdbcUtil.createDao(TxDao.class, ds);
+        assertThrows(RuntimeException.class, () -> txDao.insertThenFail(newUser("Tx3", "Rolled", 3)));
+        // the insert inside the failed transaction must have been rolled back.
+        assertEquals(0, dao.count(Filters.eq("lastName", "Rolled")));
+    }
+
+    @Test
+    public void testDefaultMethod_Dispatch() throws SQLException {
+        final TxDao txDao = JdbcUtil.createDao(TxDao.class, ds);
+        dao.insert(newUser("Def", "Method", 44));
+
+        final Optional<UserAccount> found = txDao.findByFullName("Def", "Method");
+        assertTrue(found.isPresent());
+        assertEquals(44, found.get().getAge());
+    }
+
+    // =====================================================================================
+    // @Cache + @CacheResult on a NoUpdate DAO: the second call with identical args is served
+    // from cache, so data inserted after the first call is NOT reflected (proves cache hit).
+    // =====================================================================================
+    @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelay = 60000)
+    public interface CachedUserDao extends NoUpdateCrudDao<UserAccount, Long, CachedUserDao> {
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true)
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        List<UserAccount> findCachedByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testCachedQuery_Cached() throws SQLException {
+        final CachedUserDao cachedDao = JdbcUtil.createDao(CachedUserDao.class, ds);
+
+        dao.insert(newUser("C1", "CacheGrp", 10));
+        // first call populates the cache for arg "CacheGrp".
+        assertEquals(1, cachedDao.findCachedByLastName("CacheGrp").size());
+
+        // mutate the underlying table via a different DAO -> the cache is NOT invalidated.
+        dao.insert(newUser("C2", "CacheGrp", 11));
+        dao.insert(newUser("C3", "CacheGrp", 12));
+
+        // second call with the same arg returns the cached (now stale) result of size 1.
+        assertEquals(1, cachedDao.findCachedByLastName("CacheGrp").size());
+
+        // a different arg is a cache miss -> fresh query against the (empty for this name) table.
+        assertEquals(0, cachedDao.findCachedByLastName("CacheOther").size());
+    }
+
+    // =====================================================================================
+    // @MappedByKey (Map-returning query keyed by a column) and @MergedById (row merge by id).
+    // =====================================================================================
+    public interface MappedUserDao extends CrudDao<UserAccount, Long, MappedUserDao> {
+        @Query("SELECT id, first_name, last_name, age, active FROM user_account ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MappedByKey("id")
+        Map<Long, UserAccount> findAllMapped() throws SQLException;
+
+        @Query("SELECT id, first_name, last_name, age, active FROM user_account WHERE id = :id")
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        Optional<UserAccount> findMergedById(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
+
+        @Query("SELECT id, first_name, last_name, age, active FROM user_account ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        List<UserAccount> listMerged() throws SQLException;
+    }
+
+    // @MappedByKey returns a Map keyed by the named column value.
+    @Test
+    public void testMappedByKey() throws SQLException {
+        final long id1 = dao.insert(newUser("Map1", "Grp", 10));
+        final long id2 = dao.insert(newUser("Map2", "Grp", 20));
+        final MappedUserDao mDao = JdbcUtil.createDao(MappedUserDao.class, ds);
+
+        final Map<Long, UserAccount> map = mDao.findAllMapped();
+        assertEquals(2, map.size());
+        assertEquals("Map1", map.get(id1).getFirstName());
+        assertEquals("Map2", map.get(id2).getFirstName());
+    }
+
+    // @MergedById collapses rows sharing an id into a single entity (Optional return).
+    @Test
+    public void testMergedById_Optional() throws SQLException {
+        final long id = dao.insert(newUser("Merge", "One", 33));
+        final MappedUserDao mDao = JdbcUtil.createDao(MappedUserDao.class, ds);
+
+        final Optional<UserAccount> found = mDao.findMergedById(id);
+        assertTrue(found.isPresent());
+        assertEquals(33, found.get().getAge());
+    }
+
+    // @MergedById over a multi-row list result (one entity per distinct id).
+    @Test
+    public void testMergedById_List() throws SQLException {
+        dao.insert(newUser("ML1", "G", 1));
+        dao.insert(newUser("ML2", "G", 2));
+        final MappedUserDao mDao = JdbcUtil.createDao(MappedUserDao.class, ds);
+
+        final List<UserAccount> list = mDao.listMerged();
+        assertEquals(2, list.size());
     }
 
 }

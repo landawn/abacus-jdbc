@@ -1,0 +1,38 @@
+Method-surface comparison: type extending CrudJoinEntityHelperL
+===============================================================
+Scope        : public methods inherited by a join-entity-helper type that mixes in CrudJoinEntityHelperL.
+Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
+Current      : working tree (post refactor 8a3d8246 + primitive-long read restore)
+Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
+               compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
+Totals       : 7beb529f = 100 methods ; current = 100 methods.
+
+RESULT
+------
+The two method sets are IDENTICAL. No method exists in one version but not the other.
+A column value of "Y" = present, "-" = absent.
+
+┌──────────────────────────────────────────────────────────────┬──────────┬─────────┐
+│ method signature                                             │ 7beb529f │ current │
+├──────────────────────────────────────────────────────────────┼──────────┼─────────┤
+│ (none -- the 100-method sets are identical in both versions) │ -        │ -       │
+└──────────────────────────────────────────────────────────────┴──────────┴─────────┘
+
+NOTE
+----
+For this full-capability join-entity-helper the capability-split refactor (commit 8a3d8246) is transparent
+at the method level: nothing was added, removed, renamed or re-signatured. Only WHERE each
+method is declared changed -- the same methods were regrouped across the new capability
+interfaces, as the declaring-interface counts below show.
+
+  declaring interface counts
+  --------------------------
+  ┌───────────────────────┬───────┬──────────────────────────────┬───────┐
+  │ 7beb529f              │ count │ current                      │ count │
+  ├───────────────────────┼───────┼──────────────────────────────┼───────┤
+  │ JoinEntityHelper      │    72 │ ReadableJoinEntityHelper     │    56 │
+  │ CrudJoinEntityHelper  │    18 │ ReadableCrudJoinEntityHelper │    18 │
+  │ CrudJoinEntityHelperL │    10 │ DeletableJoinEntityHelper    │    16 │
+  │                       │       │ CrudJoinEntityHelperL        │    10 │
+  └───────────────────────┴───────┴──────────────────────────────┴───────┘
+

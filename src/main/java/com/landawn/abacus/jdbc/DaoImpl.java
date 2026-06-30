@@ -5826,7 +5826,7 @@ final class DaoImpl {
                 nonDBOperationSet.add(method);
 
                 if (daoLogger.isDebugEnabled()) {
-                    daoLogger.debug("Non-DB operation method: " + simpleClassMethodName);
+                    daoLogger.debug("Non-DB operation method: {}", simpleClassMethodName);
                 }
 
                 // ignore
@@ -6126,9 +6126,9 @@ final class DaoImpl {
                 if (isAnnotatedCacheResult || isAnnotatedRefreshResult || (isQueryMethod || isUpdateMethod)) {
                     if (daoLogger.isDebugEnabled()) {
                         if (isAnnotatedCacheResult) {
-                            daoLogger.debug("Add CacheResult method: " + method);
+                            daoLogger.debug("Add CacheResult method: {}", method);
                         } else if (isAnnotatedRefreshResult) {
-                            daoLogger.debug("Add RefreshCache method: " + method);
+                            daoLogger.debug("Add RefreshCache method: {}", method);
                         }
                     }
 

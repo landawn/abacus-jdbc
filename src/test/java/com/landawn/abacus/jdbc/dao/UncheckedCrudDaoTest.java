@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,14 +10,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
+import javax.sql.DataSource;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
+import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
@@ -713,5 +726,102 @@ public class UncheckedCrudDaoTest extends TestBase {
 
         assertSame(sentinel, thrown);
         verify(dao).dataSource();
+    }
+
+    // ----- H2-backed entity/DAO for the real batchUpsert transaction-commit path -----
+    @Table("ucd_batch_upsert_user")
+    public static class BatchUpsertUser {
+        @Id
+        private Long id;
+        private String name;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    public interface BatchUpsertUserDao extends UncheckedCrudDao<BatchUpsertUser, Long, BatchUpsertUserDao> {
+    }
+
+    /**
+     * Real in-memory H2 coverage for {@link UncheckedCrudDao#batchUpsert(java.util.Collection, java.util.List, int)}'s
+     * transactional branch ({@code tran.commit()} / {@code finally tran.rollbackIfNotCommitted()}). The mock-based
+     * tests above stub {@code dataSource()} to throw a sentinel, so the actual commit / rollback statements never run;
+     * here a genuine upsert mixing an insert and an update forces the {@code tran != null} branch and commits it.
+     */
+    @Nested
+    @TestInstance(Lifecycle.PER_CLASS)
+    class BatchUpsertIntegration {
+
+        private DataSource ds;
+        private BatchUpsertUserDao dao;
+
+        @BeforeAll
+        public void initDb() throws SQLException {
+            ds = JdbcUtil.createHikariDataSource("jdbc:h2:mem:ucd_batch_upsert_it;DB_CLOSE_DELAY=-1", "sa", "");
+
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("CREATE TABLE IF NOT EXISTS ucd_batch_upsert_user (id BIGINT PRIMARY KEY, name VARCHAR(64))");
+            }
+
+            dao = JdbcUtil.createDao(BatchUpsertUserDao.class, ds);
+        }
+
+        @AfterAll
+        public void dropDb() throws SQLException {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS ucd_batch_upsert_user");
+            }
+        }
+
+        @BeforeEach
+        public void cleanTable() throws SQLException {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("TRUNCATE TABLE ucd_batch_upsert_user");
+            }
+        }
+
+        // A batchUpsert mixing an update (existing row) and an insert (new row) takes the transactional
+        // branch and commits it; both rows must reflect the upserted values afterward.
+        @Test
+        public void testBatchUpsert_InsertAndUpdate_CommitsTransaction() {
+            final BatchUpsertUser existing = new BatchUpsertUser();
+            existing.setId(1L);
+            existing.setName("old");
+            dao.insert(existing);
+
+            final BatchUpsertUser toUpdate = new BatchUpsertUser();
+            toUpdate.setId(1L);
+            toUpdate.setName("updated");
+            final BatchUpsertUser toInsert = new BatchUpsertUser();
+            toInsert.setId(2L);
+            toInsert.setName("inserted");
+
+            final List<BatchUpsertUser> result = dao.batchUpsert(List.of(toUpdate, toInsert));
+
+            assertEquals(2, result.size());
+
+            final BatchUpsertUser reloaded1 = dao.gett(1L);
+            final BatchUpsertUser reloaded2 = dao.gett(2L);
+            assertNotNull(reloaded1);
+            assertNotNull(reloaded2);
+            assertEquals("updated", reloaded1.getName());
+            assertEquals("inserted", reloaded2.getName());
+        }
     }
 }

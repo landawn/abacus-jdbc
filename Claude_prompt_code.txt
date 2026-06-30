@@ -10,7 +10,7 @@ Review all public methods in the classes located under foler: ./src/main/java/ f
 
 
 ------
-Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.
+Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java for javadoc improvements, bug fixes, and add unit tests for the fixes to existing test classes.
 
 ------
 Use multiple agents to perform a thorough deep line by line review for all the classes in packages: com.landawn.abacus.jdbc under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes.

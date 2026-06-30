@@ -3728,4 +3728,93 @@ public class NamedQueryTest extends TestBase {
         assertThrows(RuntimeException.class, () -> namedQuery.setParameters(params));
         verify(mockPreparedStatement).close();
     }
+
+    // --- addBatchParameters(Iterator) null-element handling branches (paramCount==1) ---
+
+    // null first then a non-null follower hits the else branch L4286-4288:
+    // clearParameters(); setObject(1, params); addBatch().
+    @Test
+    public void testAddBatchParameters_Iterator_NullFirst_NonNullSubsequent() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        NamedQuery result = q.addBatchParameters(Arrays.asList(null, 42).iterator());
+
+        assertSame(q, result);
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement).setObject(1, 42);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // bean first then null follower hits the bean-branch null-continue L4324-4325.
+    @Test
+    public void testAddBatchParameters_Iterator_BeanThenNull() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        TestEntity e1 = new TestEntity();
+        e1.setParam1("v1");
+
+        NamedQuery result = q.addBatchParameters(Arrays.asList(e1, null).iterator());
+
+        assertSame(q, result);
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // Collection first then null follower hits the collection-branch null-continue L4365-4366.
+    @Test
+    public void testAddBatchParameters_Iterator_CollectionThenNull() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        List<Object> batch = new ArrayList<>();
+        batch.add(Arrays.asList(7));
+        batch.add(null);
+
+        NamedQuery result = q.addBatchParameters(batch.iterator());
+
+        assertSame(q, result);
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // Object[] first then null follower hits the array-branch null-continue L4382-4383.
+    @Test
+    public void testAddBatchParameters_Iterator_ArrayThenNull() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        List<Object> batch = new ArrayList<>();
+        batch.add(new Object[] { 7 });
+        batch.add(null);
+
+        NamedQuery result = q.addBatchParameters(batch.iterator());
+
+        assertSame(q, result);
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // EntityId first then null follower hits the EntityId-branch null-continue L4399-4400.
+    @Test
+    public void testAddBatchParameters_Iterator_EntityIdThenNull() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        List<Object> batch = new ArrayList<>();
+        batch.add(com.landawn.abacus.util.EntityId.of("param1", "v1"));
+        batch.add(null);
+
+        NamedQuery result = q.addBatchParameters(batch.iterator());
+
+        assertSame(q, result);
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
 }

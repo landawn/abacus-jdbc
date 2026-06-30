@@ -301,12 +301,6 @@ public final class JdbcUtil {
 
     static final char CHAR_ZERO = 0;
 
-    // static final int MAX_BATCH_SIZE = 1000;
-
-    // TODO is it right to do it?
-    // static final KeyedObjectPool<Statement, PoolableAdapter<String>> stmtPoolForSql = PoolFactory.createKeyedObjectPool(1000, 3000);
-
-    // ...
     static final String CURRENT_DIR_PATH = "./";
 
     static final AsyncExecutor asyncExecutor = new AsyncExecutor(//
@@ -8599,15 +8593,6 @@ public final class JdbcUtil {
 
         return false;
     }
-
-    // TODO is it right to do it?
-    //    static <ST extends Statement> ST checkStatement(ST stmt, String sql) {
-    //        if (isSqlPerfLogAllowed && N.notEmpty(sql)) {
-    //            stmtPoolForSql.put(stmt, Poolable.wrap(sql, 3000, 3000));
-    //        }
-    //
-    //        return stmt;
-    //    }
 
     static final com.landawn.abacus.util.function.Predicate<Object> defaultIdTester = JdbcUtil::isDefaultIdPropValue;
 

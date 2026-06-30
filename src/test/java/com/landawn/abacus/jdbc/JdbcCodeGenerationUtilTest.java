@@ -1882,4 +1882,209 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("@Id"), "Expected @Id annotation from catalog/schema-qualified PK lookup; got:\n" + result);
         Mockito.verify(md).getPrimaryKeys("mycatalog", "myschema", "users");
     }
+
+    // ----------------------------------------------------------------------------------------------------
+    // Additional coverage for previously-uncovered lines in JdbcCodeGenerationUtil.
+    // ----------------------------------------------------------------------------------------------------
+
+    // additionalFieldsOrLines with a multi-variable declaration ("int a, b") must be split on the
+    // first top-level comma; only the first variable ("a") is parsed (L494-496: commaIdx assignment + break).
+    @Test
+    public void testGenerateEntityClass_AdditionalFieldMultiVariableDeclaration() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalFieldsOrLines("    private int a, b;")
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        // The raw declaration is emitted verbatim ...
+        assertTrue(result.contains("private int a, b;"), result);
+        // ... but only the first variable ("a") is parsed for the copy method (top-level comma split).
+        assertTrue(result.contains("copy.a = this.a;"), result);
+        assertFalse(result.contains("copy.b"), result);
+    }
+
+    // entityName that is not a parseable SQL identifier (4-part "a.b.c.d") makes
+    // JdbcUtil.splitQualifiedSqlIdentifier throw; the PK-lookup falls back to best-effort
+    // (L566: catch (RuntimeException ignore)).
+    @Test
+    public void testGenerateEntityClass_UnparseableEntityName_FallsBackToBestEffort() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(databaseMetaData.getPrimaryKeys(null, null, "a.b.c.d")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("MyEntity").build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "a.b.c.d", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("MyEntity"), result);
+        // PK lookup used the verbatim entityName as the table after the parse failure fell through.
+        Mockito.verify(databaseMetaData).getPrimaryKeys(null, null, "a.b.c.d");
+    }
+
+    // srcDir set but the on-disk write fails (target path pre-created as a directory) ->
+    // IOException is wrapped as UncheckedIOException (L876-878).
+    @Test
+    public void testGenerateEntityClass_SrcDirWriteFails_ThrowsUncheckedIOException() throws Exception {
+        setupFullGenerateEntityClassMock();
+        final Path tempDir = Files.createTempDirectory("jdbcCodeGenIoFail");
+        try {
+            // Pre-create the destination .java path as a DIRECTORY so writing the generated file fails.
+            final Path blockingDir = tempDir.resolve("pkg").resolve("OrderHistory.java");
+            Files.createDirectories(blockingDir);
+
+            final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                    .srcDir(tempDir.toString())
+                    .packageName("pkg")
+                    .className("OrderHistory")
+                    .build();
+
+            final UncheckedIOException ex = assertThrows(UncheckedIOException.class,
+                    () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+            assertNotNull(ex);
+        } finally {
+            deleteRecursively(tempDir.toFile());
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------
+    // convertInsertSqlToUpdateSql — parse-error edge cases and the SQL tokenizer / parenthesis matcher.
+    // ----------------------------------------------------------------------------------------------------
+
+    private DataSource dataSourceReturningConnection() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenReturn(connection); // setUp() makes `connection` report MySQL 8.0
+        return ds;
+    }
+
+    // No '(' after the table name -> "Missing column list in SQL" (L1932).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_MissingColumnList() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t"));
+        assertTrue(ex.getMessage().contains("Missing column list in SQL"), ex.getMessage());
+    }
+
+    // Column list present but no VALUES keyword -> "Missing VALUES clause in SQL" (L1942);
+    // also exercises indexOfIgnoreCase returning -1 (L1992).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_MissingValuesClause() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a)"));
+        assertTrue(ex.getMessage().contains("Missing VALUES clause in SQL"), ex.getMessage());
+    }
+
+    // VALUES keyword present but no '(' after it -> "Missing VALUES list in SQL" (L1948).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_MissingValuesList() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a) VALUES 1"));
+        assertTrue(ex.getMessage().contains("Missing VALUES list in SQL"), ex.getMessage());
+    }
+
+    // An opening parenthesis with no matching close -> findClosingParenthesis scans to the end and
+    // throws "Unclosed parenthesis in SQL" (L2000-2034).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_UnclosedParenthesis() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a"));
+        assertTrue(ex.getMessage().contains("Unclosed parenthesis in SQL"), ex.getMessage());
+    }
+
+    // An empty token in the column list -> "Empty item in SQL list" (L2107).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_EmptyColumn() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t() VALUES (1)"));
+        assertTrue(ex.getMessage().contains("Empty item in SQL list"), ex.getMessage());
+    }
+
+    // A double-quote-delimited identifier with an escaped (doubled) quote exercises the quote-doubling
+    // branches in findClosingParenthesis (L2005-2006) and splitSqlList (L2052-2053), and the
+    // doubled-quote unescape in stripIdentifierDelimiters (L2122).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_DoubledQuoteIdentifier() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(\"a\"\"b\") VALUES (1)");
+        // MySQL re-quotes with backticks; the embedded double-quote in the identifier is preserved.
+        assertEquals("UPDATE t SET `a\"b` = 1", updateSql);
+    }
+
+    // A bracket-delimited identifier with an escaped (doubled) bracket exercises the bracket-identifier
+    // branches in findClosingParenthesis (L2011-2017) and splitSqlList (L2058-2066), and the
+    // "]]" -> "]" unescape in stripIdentifierDelimiters (L2124).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_BracketIdentifier() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t([a]]b]) VALUES (1)");
+        // [a]]b] decodes to identifier a]b, then MySQL re-quotes with backticks.
+        assertEquals("UPDATE t SET `a]b` = 1", updateSql);
+    }
+
+    // An escaped single quote inside a string VALUE is copied verbatim; exercises the quote-doubling
+    // branches for the single-quote literal path (L2005-2006 / L2052-2053).
+    @Test
+    public void testConvertInsertSqlToUpdateSql_EscapedSingleQuoteInValue() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a) VALUES ('it''s')");
+        assertEquals("UPDATE t SET a = 'it''s'", updateSql);
+    }
+
+    // The defensive "Unmatched closing parenthesis" branch in splitSqlList (L2079) cannot be reached
+    // through convertInsertSqlToUpdateSql (findClosingParenthesis only ever hands splitSqlList a
+    // balanced substring), so it is exercised directly via reflection.
+    @Test
+    public void testSplitSqlList_UnmatchedClosingParenthesis_Reflection() throws Exception {
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class);
+        m.setAccessible(true);
+
+        final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> m.invoke(null, "a)", "INSERT INTO t(a)) VALUES (1)"));
+        assertTrue(ex.getCause() instanceof IllegalArgumentException);
+        assertTrue(ex.getCause().getMessage().contains("Unmatched closing parenthesis in SQL"), ex.getCause().getMessage());
+    }
+
+    // The defensive "Unclosed SQL token" branch in splitSqlList (L2091-2092) likewise cannot be reached
+    // through the public method (findClosingParenthesis rejects unbalanced quotes first), so it is
+    // exercised directly via reflection (an unterminated single-quote literal).
+    @Test
+    public void testSplitSqlList_UnclosedToken_Reflection() throws Exception {
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class);
+        m.setAccessible(true);
+
+        final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> m.invoke(null, "'abc", "INSERT INTO t('abc) VALUES (1)"));
+        assertTrue(ex.getCause() instanceof IllegalArgumentException);
+        assertTrue(ex.getCause().getMessage().contains("Unclosed SQL token in SQL"), ex.getCause().getMessage());
+    }
+
+    // isSimpleSqlIdentifier returns false for empty/null input (L2161-2162). Every public caller guards
+    // against empty identifiers, so this branch is exercised directly via reflection.
+    @Test
+    public void testIsSimpleSqlIdentifier_EmptyAndNull_Reflection() throws Exception {
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("isSimpleSqlIdentifier", String.class);
+        m.setAccessible(true);
+
+        assertEquals(Boolean.FALSE, m.invoke(null, "")); // L2162 (empty)
+        assertEquals(Boolean.FALSE, m.invoke(null, (Object) null)); // L2162 (null)
+        assertEquals(Boolean.FALSE, m.invoke(null, "1bad")); // first char not alpha/underscore
+        assertEquals(Boolean.TRUE, m.invoke(null, "valid_name1")); // happy path
+    }
+
+    // TODO: L1978-1979 (catch (Exception) -> IllegalArgumentException "Failed to convert insert SQL to
+    // update SQL") is left UNCOVERED. It is unreachable via the public convertInsertSqlToUpdateSql with
+    // String inputs: getDBProductInfo(ds) runs outside the try, and every failure mode inside the try
+    // (findClosingParenthesis / splitSqlList / addSqlListToken / checkColumnName) throws
+    // IllegalArgumentException, which is swallowed by the preceding catch (IllegalArgumentException).
+    // The defensive generic catch cannot be triggered without instrumentation/mock injection.
 }

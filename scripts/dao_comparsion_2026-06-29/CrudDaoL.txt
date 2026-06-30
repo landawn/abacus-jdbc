@@ -1,0 +1,53 @@
+DAO method-surface comparison: interface extending CrudDaoL
+============================================================
+Scope        : public methods inherited by a user DAO declared as
+               `interface FooDao extends CrudDaoL<Foo, FooDao>`
+Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
+Current      : working tree @ b806fd15 (post refactor 8a3d8246)
+Method       : reflection via Class.getMethods(), bridge/synthetic/Object methods excluded.
+               Signatures compared at FULL GENERIC fidelity (type params, generic return &
+               parameter types, wildcards, throws clauses) -- not just erasure.
+Totals       : 7beb529f = 230 methods ; current = 230 methods.
+
+RESULT
+------
+The two method sets are IDENTICAL. No method exists in one version but not the other
+(symmetric difference is empty). A column value of "Y" = present, "-" = absent.
+
+┌──────────────────────────────────────────────────────────────┬──────────┬─────────┐
+│ method signature                                             │ 7beb529f │ current │
+├──────────────────────────────────────────────────────────────┼──────────┼─────────┤
+│ (none -- the 230-method sets are identical in both versions) │ -        │ -       │
+└──────────────────────────────────────────────────────────────┴──────────┴─────────┘
+
+NOTE
+----
+For a FULL-capability CrudDaoL DAO the capability-split refactor (commit 8a3d8246) is
+completely transparent at the method level: nothing was added, removed, renamed, or had
+its signature changed. What the refactor changed is only WHERE each method is *declared*
+(the same 230 methods were redistributed across new capability interfaces), not the
+callable surface:
+
+  declaring interface counts (same 230 methods, regrouped)
+  ----------------------------------------------------------------
+  ┌──────────┬───────┬───────────────────────┬───────┐
+  │ 7beb529f │ count │ current               │ count │
+  ├──────────┼───────┼───────────────────────┼───────┤
+  │ Dao      │   135 │ ReadableDao           │   106 │
+  │ CrudDao  │    67 │ ReadableCrudDao       │    38 │
+  │ CrudDaoL │    28 │ ReadableLongIdCrudDao │    25 │
+  │          │       │ InsertableDao         │    18 │
+  │          │       │ InsertableCrudDao     │     9 │
+  │          │       │ UpdatableCrudDao      │     8 │
+  │          │       │ CrudDao               │     6 │
+  │          │       │ Dao                   │     6 │
+  │          │       │ DeletableCrudDao      │     6 │
+  │          │       │ UpdatableDao          │     4 │
+  │          │       │ CrudDaoL              │     3 │
+  │          │       │ DeletableDao          │     1 │
+  └──────────┴───────┴───────────────────────┴───────┘
+
+The surface-changing effect of the refactor appears only on the RESTRICTED variants
+(ReadOnlyCrudDaoL: 230 -> 169; NoUpdateCrudDaoL: 230 -> 196) -- see their reports. The 25
+primitive-`long` read overloads now live in ReadableLongIdCrudDao (shared by all three checked
+Long CRUD variants), which is why CrudDaoL's own declared count drops from 28 to 3.

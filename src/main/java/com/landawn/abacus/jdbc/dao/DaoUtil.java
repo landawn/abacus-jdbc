@@ -45,10 +45,21 @@ import com.landawn.abacus.util.function.Function;
  * This class contains static utility methods used internally by the DAO framework to support
  * various operations including:
  * <ul>
- *   <li>ID extraction from entities (single and composite IDs)</li>
- *   <li>DAO type casting and validation</li>
- *   <li>Asynchronous operation completion and result aggregation</li>
- *   <li>Join entity information retrieval</li>
+ *   <li>Capability detection — determining which optional DAO interfaces (for example
+ *       {@link Cacheable}, {@link ReadableCrudDao}, {@link ReadableJoinEntityHelper}) a given DAO
+ *       interface extends</li>
+ *   <li>Method classification — recognizing whether a method's declaring class belongs to the base
+ *       DAO, CRUD DAO, or join-entity-helper families, used to drive proxy-based dispatch</li>
+ *   <li>ID handling — extraction of single and composite IDs from entities (see
+ *       {@link #extractId(Object, List, BeanInfo)} and {@link #createIdExtractor(List, BeanInfo)})
+ *       and client-side ID generation (see {@link #generateId(ReadableDao)})</li>
+ *   <li>Refresh support — computing the set of properties to select so that ID columns are always
+ *       included (see {@link #getRefreshSelectPropNames(Collection, List)})</li>
+ *   <li>DAO type casting and validation — narrowing join-entity helpers to their backing
+ *       {@link Dao}/{@link CrudDao} (and unchecked) types</li>
+ *   <li>Asynchronous operation completion and result aggregation — joining batches of futures and
+ *       surfacing the first failure as a checked or unchecked SQL exception</li>
+ *   <li>Join metadata retrieval — looking up {@link JoinInfo} for an entity's join properties</li>
  * </ul>
  *
  * <p>
@@ -68,30 +79,72 @@ public final class DaoUtil {
         // utility class - prevent instantiation.
     }
 
+    /**
+     * Returns whether the specified DAO interface supports DAO result caching.
+     *
+     * @param daoInterface the DAO interface to inspect.
+     * @return {@code true} if {@code daoInterface} extends {@link Cacheable}; otherwise {@code false}.
+     */
     public static boolean isCacheable(final Class<?> daoInterface) {
         return Cacheable.class.isAssignableFrom(daoInterface);
     }
 
+    /**
+     * Returns whether the specified DAO interface exposes readable CRUD operations.
+     *
+     * @param daoInterface the DAO interface to inspect.
+     * @return {@code true} if {@code daoInterface} extends {@link ReadableCrudDao}; otherwise {@code false}.
+     */
     public static boolean isReadableCrudDao(final Class<?> daoInterface) {
         return ReadableCrudDao.class.isAssignableFrom(daoInterface);
     }
 
+    /**
+     * Returns whether the specified DAO interface exposes readable CRUD operations with a {@code long} ID type.
+     *
+     * @param daoInterface the DAO interface to inspect.
+     * @return {@code true} if {@code daoInterface} extends {@link ReadableCrudDaoL}; otherwise {@code false}.
+     */
     public static boolean isReadableCrudDaoL(final Class<?> daoInterface) {
         return ReadableCrudDaoL.class.isAssignableFrom(daoInterface);
     }
 
+    /**
+     * Returns whether the specified DAO interface exposes readable CRUD join-entity helper operations.
+     *
+     * @param daoInterface the DAO interface to inspect.
+     * @return {@code true} if {@code daoInterface} extends {@link ReadableCrudJoinEntityHelper}; otherwise {@code false}.
+     */
     public static boolean isReadableCrudJoinEntityHelper(final Class<?> daoInterface) {
         return ReadableCrudJoinEntityHelper.class.isAssignableFrom(daoInterface);
     }
 
+    /**
+     * Returns whether the specified DAO interface exposes readable join-entity helper operations.
+     *
+     * @param daoInterface the DAO interface to inspect.
+     * @return {@code true} if {@code daoInterface} extends {@link ReadableJoinEntityHelper}; otherwise {@code false}.
+     */
     public static boolean isReadableJoinEntityHelper(final Class<?> daoInterface) {
         return ReadableJoinEntityHelper.class.isAssignableFrom(daoInterface);
     }
 
+    /**
+     * Returns whether the specified DAO interface exposes unchecked readable operations.
+     *
+     * @param daoInterface the DAO interface to inspect.
+     * @return {@code true} if {@code daoInterface} extends {@link UncheckedReadableDao}; otherwise {@code false}.
+     */
     public static boolean isUncheckedReadableDao(final Class<?> daoInterface) {
         return UncheckedReadableDao.class.isAssignableFrom(daoInterface);
     }
 
+    /**
+     * Returns whether methods declared by the specified class are handled as base DAO operations.
+     *
+     * @param declaringClass the declaring class of a DAO method.
+     * @return {@code true} if methods declared by {@code declaringClass} are base DAO operations; otherwise {@code false}.
+     */
     public static boolean isDaoOperationDeclaringClass(final Class<?> declaringClass) {
         return declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class) || declaringClass.equals(ReadableDao.class)
                 || declaringClass.equals(InsertableDao.class) || declaringClass.equals(UpdatableDao.class) || declaringClass.equals(DeletableDao.class)
@@ -99,6 +152,12 @@ public final class DaoUtil {
                 || declaringClass.equals(UncheckedUpdatableDao.class) || declaringClass.equals(UncheckedDeletableDao.class);
     }
 
+    /**
+     * Returns whether methods declared by the specified class are handled as CRUD DAO operations.
+     *
+     * @param declaringClass the declaring class of a DAO method.
+     * @return {@code true} if methods declared by {@code declaringClass} are CRUD DAO operations; otherwise {@code false}.
+     */
     public static boolean isCrudDaoOperationDeclaringClass(final Class<?> declaringClass) {
         return declaringClass.equals(CrudDao.class) || declaringClass.equals(UncheckedCrudDao.class) || declaringClass.equals(ReadableCrudDao.class)
                 || declaringClass.equals(InsertableCrudDao.class) || declaringClass.equals(UpdatableCrudDao.class)
@@ -107,12 +166,33 @@ public final class DaoUtil {
                 || declaringClass.equals(UncheckedDeletableCrudDao.class);
     }
 
+    /**
+     * Returns whether methods declared by the specified class are handled as join-entity helper operations.
+     *
+     * @param declaringClass the declaring class of a DAO method.
+     * @return {@code true} if methods declared by {@code declaringClass} are join-entity helper operations; otherwise {@code false}.
+     */
     public static boolean isJoinEntityHelperDeclaringClass(final Class<?> declaringClass) {
         return declaringClass.equals(ReadableJoinEntityHelper.class) || declaringClass.equals(DeletableJoinEntityHelper.class)
                 || declaringClass.equals(UncheckedReadableJoinEntityHelper.class) || declaringClass.equals(UncheckedDeletableJoinEntityHelper.class)
                 || declaringClass.equals(JoinEntityHelper.class) || declaringClass.equals(UncheckedJoinEntityHelper.class);
     }
 
+    /**
+     * Generates a new ID for entity insertion by delegating to {@link ReadableCrudDao#generateId()}.
+     * <p>
+     * The default {@code generateId()} implementation throws {@link UnsupportedOperationException};
+     * a value is only produced when the DAO overrides it with a client-side ID generation strategy
+     * (for example a UUID or sequence). ID generation is normally handled by the database, so this
+     * path is rarely used.
+     * </p>
+     *
+     * @param dao the DAO used to generate the identifier; must implement {@link ReadableCrudDao}.
+     * @return the generated identifier.
+     * @throws SQLException if a database access error occurs while generating the identifier.
+     * @throws UnsupportedOperationException if {@code dao} does not override {@link ReadableCrudDao#generateId()}.
+     * @throws ClassCastException if {@code dao} does not implement {@link ReadableCrudDao}.
+     */
     @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
     public static Object generateId(final ReadableDao dao) throws SQLException {
         return ((ReadableCrudDao) dao).generateId();

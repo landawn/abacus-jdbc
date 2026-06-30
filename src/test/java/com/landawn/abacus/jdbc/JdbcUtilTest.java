@@ -3398,4 +3398,291 @@ public class JdbcUtilTest extends TestBase {
         // Punctuation also counts as a boundary.
         assertEquals(com.landawn.abacus.query.SqlOperation.DROP, m.invoke(null, "DROP(TABLE foo)"));
     }
+
+    // ------------------------------------------------------------------------
+    // Coverage additions (2026-06-29): package-private pure-logic helpers.
+    // ------------------------------------------------------------------------
+
+    // Nested-bean fixtures for getSubPropInfo dotted-path resolution.
+    public static class SubOrder {
+        private Long id;
+        private double total;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public double getTotal() {
+            return total;
+        }
+
+        public void setTotal(final double total) {
+            this.total = total;
+        }
+    }
+
+    public static class SubAddress {
+        private String city;
+        private String zip;
+
+        public String getCity() {
+            return city;
+        }
+
+        public void setCity(final String city) {
+            this.city = city;
+        }
+
+        public String getZip() {
+            return zip;
+        }
+
+        public void setZip(final String zip) {
+            this.zip = zip;
+        }
+    }
+
+    public static class SubPerson {
+        private Long id;
+        private String name;
+        private SubAddress address;
+        private List<SubOrder> orders;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+
+        public SubAddress getAddress() {
+            return address;
+        }
+
+        public void setAddress(final SubAddress address) {
+            this.address = address;
+        }
+
+        public List<SubOrder> getOrders() {
+            return orders;
+        }
+
+        public void setOrders(final List<SubOrder> orders) {
+            this.orders = orders;
+        }
+    }
+
+    // getSubPropInfo resolves a dotted path through a nested bean property.
+    @Test
+    public void testGetSubPropInfo_NestedBean() {
+        final com.landawn.abacus.parser.ParserUtil.PropInfo pi = JdbcUtil.getSubPropInfo(SubPerson.class, "address.city");
+        assertNotNull(pi);
+        assertEquals("city", pi.name);
+    }
+
+    // getSubPropInfo follows a collection property to its element-type prop.
+    @Test
+    public void testGetSubPropInfo_CollectionElementProp() {
+        final com.landawn.abacus.parser.ParserUtil.PropInfo pi = JdbcUtil.getSubPropInfo(SubPerson.class, "orders.total");
+        assertNotNull(pi);
+        assertEquals("total", pi.name);
+    }
+
+    // A single-segment (non-dotted) name is not a sub-property -> null.
+    @Test
+    public void testGetSubPropInfo_SingleSegment_ReturnsNull() {
+        assertNull(JdbcUtil.getSubPropInfo(SubPerson.class, "name"));
+    }
+
+    // First segment not a valid property -> null (short-circuit at i==0).
+    @Test
+    public void testGetSubPropInfo_InvalidFirstSegment_ReturnsNull() {
+        assertNull(JdbcUtil.getSubPropInfo(SubPerson.class, "bogus.city"));
+    }
+
+    // Valid first segment but invalid leaf -> null.
+    @Test
+    public void testGetSubPropInfo_InvalidLeafSegment_ReturnsNull() {
+        assertNull(JdbcUtil.getSubPropInfo(SubPerson.class, "address.bogus"));
+    }
+
+    // Second lookup of the same path hits the cached-Optional branch and returns the same prop.
+    @Test
+    public void testGetSubPropInfo_CachedLookup() {
+        final com.landawn.abacus.parser.ParserUtil.PropInfo first = JdbcUtil.getSubPropInfo(SubPerson.class, "address.zip");
+        final com.landawn.abacus.parser.ParserUtil.PropInfo second = JdbcUtil.getSubPropInfo(SubPerson.class, "address.zip");
+        assertNotNull(first);
+        assertEquals(first.name, second.name);
+        // cached-empty branch: an unresolved path stays null on the second call too.
+        assertNull(JdbcUtil.getSubPropInfo(SubPerson.class, "address.nope"));
+        assertNull(JdbcUtil.getSubPropInfo(SubPerson.class, "address.nope"));
+    }
+
+    // isNotEmptyResult: null and every empty/non-empty container branch.
+    @Test
+    public void testIsNotEmptyResult_NullAndCollections() {
+        assertFalse(JdbcUtil.isNotEmptyResult(null));
+
+        assertFalse(JdbcUtil.isNotEmptyResult(new java.util.ArrayList<>()));
+        assertTrue(JdbcUtil.isNotEmptyResult(List.of("a")));
+
+        assertFalse(JdbcUtil.isNotEmptyResult(new java.util.HashMap<>()));
+        assertTrue(JdbcUtil.isNotEmptyResult(Map.of("k", "v")));
+    }
+
+    // isNotEmptyResult: Dataset, Iterable (non-Collection) and Iterator branches, plus the fall-through.
+    @Test
+    public void testIsNotEmptyResult_DatasetIterableIterator() {
+        final com.landawn.abacus.util.Dataset empty = com.landawn.abacus.util.Dataset.rows(List.of("id"), new Object[][] {});
+        final com.landawn.abacus.util.Dataset nonEmpty = com.landawn.abacus.util.Dataset.rows(List.of("id"), new Object[][] { { 1L } });
+        assertFalse(JdbcUtil.isNotEmptyResult(empty));
+        assertTrue(JdbcUtil.isNotEmptyResult(nonEmpty));
+
+        // a bare Iterable (lambda) that is not a Collection/Map/Dataset
+        final Iterable<String> emptyIterable = () -> java.util.Collections.<String> emptyIterator();
+        final Iterable<String> nonEmptyIterable = () -> List.of("x").iterator();
+        assertFalse(JdbcUtil.isNotEmptyResult(emptyIterable));
+        assertTrue(JdbcUtil.isNotEmptyResult(nonEmptyIterable));
+
+        // an Iterator (not an Iterable)
+        assertFalse(JdbcUtil.isNotEmptyResult(java.util.Collections.emptyIterator()));
+        assertTrue(JdbcUtil.isNotEmptyResult(List.of("x").iterator()));
+
+        // any other object type -> treated as a non-empty result.
+        assertTrue(JdbcUtil.isNotEmptyResult("scalar"));
+    }
+
+    // splitQualifiedSqlIdentifier: 1/2/3 unquoted segments.
+    @Test
+    public void testSplitQualifiedSqlIdentifier_PlainSegments() {
+        assertArrayEquals(new String[] { "col" }, JdbcUtil.splitQualifiedSqlIdentifier("col", "name"));
+        assertArrayEquals(new String[] { "tbl", "col" }, JdbcUtil.splitQualifiedSqlIdentifier("tbl.col", "name"));
+        assertArrayEquals(new String[] { "sch", "tbl", "col" }, JdbcUtil.splitQualifiedSqlIdentifier("sch.tbl.col", "name"));
+    }
+
+    // splitQualifiedSqlIdentifier: quoted / bracketed / back-ticked segments protect embedded dots.
+    @Test
+    public void testSplitQualifiedSqlIdentifier_QuotedSegments() {
+        // double-quoted segment with an embedded dot stays a single (delimiter-stripped) part
+        final String[] dq = JdbcUtil.splitQualifiedSqlIdentifier("\"a.b\".c", "name");
+        assertEquals(2, dq.length);
+        assertEquals("a.b", dq[0]);
+        assertEquals("c", dq[1]);
+
+        // bracketed identifier
+        final String[] br = JdbcUtil.splitQualifiedSqlIdentifier("[tab].col", "name");
+        assertEquals(2, br.length);
+        assertEquals("tab", br[0]);
+
+        // back-ticked identifier
+        final String[] bt = JdbcUtil.splitQualifiedSqlIdentifier("`tab`.col", "name");
+        assertEquals(2, bt.length);
+        assertEquals("tab", bt[0]);
+
+        // a doubled quote inside a quoted identifier is an escaped quote -> still one segment
+        final String[] esc = JdbcUtil.splitQualifiedSqlIdentifier("\"a\"\"b\"", "name");
+        assertEquals(1, esc.length);
+    }
+
+    // splitQualifiedSqlIdentifier: malformed inputs throw IllegalArgumentException.
+    @Test
+    public void testSplitQualifiedSqlIdentifier_Invalid() {
+        // unclosed quote
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("\"abc", "name"));
+        // more than 3 segments
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("a.b.c.d", "name"));
+        // empty segment between dots
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("a..b", "name"));
+        // blank input
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("   ", "name"));
+    }
+
+    // isDefaultIdPropValue: plain numeric zero vs non-zero (doubleValue path).
+    @Test
+    public void testIsDefaultIdPropValue_PlainNumbers() {
+        assertTrue(JdbcUtil.isDefaultIdPropValue(0));
+        assertTrue(JdbcUtil.isDefaultIdPropValue(0L));
+        assertTrue(JdbcUtil.isDefaultIdPropValue(0.0d));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(5));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(3.5d));
+        // a non-number, non-bean object is not a default id value.
+        assertFalse(JdbcUtil.isDefaultIdPropValue("x"));
+    }
+
+    // isDefaultIdPropValue: EntityId entries are all-default or not.
+    @Test
+    public void testIsDefaultIdPropValue_EntityId() {
+        assertTrue(JdbcUtil.isDefaultIdPropValue(com.landawn.abacus.util.EntityId.of("id", 0)));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(com.landawn.abacus.util.EntityId.of("id", 7)));
+    }
+
+    public static class IdedEntity {
+        @com.landawn.abacus.annotation.Id
+        private Long id;
+        private String name;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    // isDefaultIdPropValue: bean with an @Id whose value is default vs set.
+    @Test
+    public void testIsDefaultIdPropValue_Bean() {
+        final IdedEntity withDefault = new IdedEntity();
+        assertTrue(JdbcUtil.isDefaultIdPropValue(withDefault));
+
+        final IdedEntity withId = new IdedEntity();
+        withId.setId(42L);
+        assertFalse(JdbcUtil.isDefaultIdPropValue(withId));
+    }
+
+    // isDefaultIdPropValue: a bean with no id property is treated as default.
+    @Test
+    public void testIsDefaultIdPropValue_Bean_NoIdProp() {
+        assertTrue(JdbcUtil.isDefaultIdPropValue(new SubAddress()));
+    }
+
+    // createCacheKey builds a non-null key embedding the method name and table.
+    @Test
+    public void testCreateCacheKey() {
+        final com.landawn.abacus.logging.Logger logger = com.landawn.abacus.logging.LoggerFactory.getLogger(JdbcUtilTest.class);
+        final String key = JdbcUtil.createCacheKey("user_account", "UserDao.list", new Object[] { "Alice", 1, List.of(1, 2) }, logger);
+        assertNotNull(key);
+        assertTrue(key.startsWith("UserDao.list#user_account#"));
+    }
+
+    // createCacheKey tolerates null args (treated as an empty argument array).
+    @Test
+    public void testCreateCacheKey_NullArgs() {
+        final com.landawn.abacus.logging.Logger logger = com.landawn.abacus.logging.LoggerFactory.getLogger(JdbcUtilTest.class);
+        final String key = JdbcUtil.createCacheKey("t", "Dao.m", null, logger);
+        assertNotNull(key);
+        assertTrue(key.startsWith("Dao.m#t#"));
+    }
 }
