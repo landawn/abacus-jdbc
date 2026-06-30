@@ -41,8 +41,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * DAO interface type to enable caching for every method whose name matches {@link #filter()}.</p>
  *
  * <p><strong>Restriction:</strong> {@code @CacheResult} (together with {@link Cache @Cache} and
- * {@link RefreshCache @RefreshCache}) is only honored on {@code NoUpdateDao}/{@code UncheckedNoUpdateDao}
- * subtypes. Applying it to a DAO that supports update/delete operations fails with
+ * {@link RefreshCache @RefreshCache}) is only honored on cacheable DAOs &mdash; {@code NoUpdateDao} or
+ * {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying it to a DAO that supports
+ * update/delete operations fails with
  * {@code UnsupportedOperationException} at DAO initialization time. Use {@link Cache @Cache} on the same
  * DAO interface to configure the shared cache pool (capacity, eviction sweep interval, and
  * implementation), and {@link RefreshCache @RefreshCache} on selected methods to invalidate cached
@@ -163,8 +164,8 @@ public @interface CacheResult {
     /**
      * Specifies the minimum size requirement for caching results.
      * Results with fewer elements than this value will not be cached.
-     * The size is the element count for a {@code Collection} or {@code Dataset} result;
-     * any other (scalar) result is treated as a single element of size {@code 1}.
+     * The size bound applies only to {@code Collection} and {@code Dataset} results (compared against
+     * their element count); any other (scalar) result is cached regardless of {@code minSize}.
      *
      * <p>This is useful to avoid caching overhead for very small result sets
      * that are cheap to query.</p>
@@ -184,8 +185,8 @@ public @interface CacheResult {
     /**
      * Specifies the maximum size limit for caching results.
      * Results with more elements than this value will not be cached.
-     * The size is the element count for a {@code Collection} or {@code Dataset} result;
-     * any other (scalar) result is treated as a single element of size {@code 1}.
+     * The size bound applies only to {@code Collection} and {@code Dataset} results (compared against
+     * their element count); any other (scalar) result is cached regardless of {@code maxSize}.
      *
      * <p>This prevents memory issues from caching very large result sets
      * and ensures predictable memory usage.</p>

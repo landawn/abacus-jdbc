@@ -655,6 +655,18 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(date, JdbcUtil.getColumnValue(mockResultSet, 1));
     }
 
+    @Test
+    public void testGetColumnValue_SqlDateUsesTimestampWhenMetadataSaysTimestamp() throws SQLException {
+        final java.sql.Date date = java.sql.Date.valueOf("2026-06-29");
+        final java.sql.Timestamp timestamp = java.sql.Timestamp.valueOf("2026-06-29 10:15:30");
+
+        when(mockResultSet.getObject(1)).thenReturn(date);
+        when(mockResultSetMetaData.getColumnClassName(1)).thenReturn("java.sql.Timestamp");
+        when(mockResultSet.getTimestamp(1)).thenReturn(timestamp);
+
+        assertEquals(timestamp, JdbcUtil.getColumnValue(mockResultSet, 1));
+    }
+
     // getColumnValue(rs, columnLabel) label-path: simple value short-circuits (JdbcUtil L2321/L2330).
     @Test
     public void testGetColumnValueByLabel() throws SQLException {
@@ -693,6 +705,32 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSet.getObject("created")).thenReturn(date);
 
         assertEquals(date, JdbcUtil.getColumnValue(mockResultSet, "created"));
+    }
+
+    @Test
+    public void testGetColumnValueByLabel_SqlDateUsesTimestampWhenMetadataSaysTimestamp() throws SQLException {
+        final java.sql.Date date = java.sql.Date.valueOf("2026-06-29");
+        final java.sql.Timestamp timestamp = java.sql.Timestamp.valueOf("2026-06-29 10:15:30");
+
+        when(mockResultSet.getObject("created")).thenReturn(date);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created");
+        when(mockResultSetMetaData.getColumnClassName(1)).thenReturn("java.sql.Timestamp");
+        when(mockResultSet.getTimestamp(1)).thenReturn(timestamp);
+
+        assertEquals(timestamp, JdbcUtil.getColumnValue(mockResultSet, "created"));
+    }
+
+    @Test
+    public void testGetColumnValueByLabel_SqlDateReturnsOriginalWhenLabelNotFoundInMetadata() throws SQLException {
+        final java.sql.Date date = java.sql.Date.valueOf("2026-06-29");
+
+        when(mockResultSet.getObject("created")).thenReturn(date);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("other");
+
+        assertEquals(date, JdbcUtil.getColumnValue(mockResultSet, "created"));
+        verify(mockResultSet, never()).getTimestamp(anyInt());
     }
 
     @Test
@@ -1302,6 +1340,66 @@ public class JdbcUtilTest extends TestBase {
         verify(mockCallableStatement).getDouble(1);
         verify(mockCallableStatement).getFloat(2);
         verify(mockCallableStatement, never()).getFloat(1);
+    }
+
+    @Test
+    public void testGetOutParameters_NamedBlobAndClobAreMaterialized() throws SQLException {
+        final byte[] blobData = "blob out".getBytes(StandardCharsets.UTF_8);
+        final String clobData = "clob out";
+
+        final OutParam blobParam = new OutParam();
+        blobParam.setParameterName("blob_out");
+        blobParam.setSqlType(Types.BLOB);
+
+        final OutParam clobParam = new OutParam();
+        clobParam.setParameterName("clob_out");
+        clobParam.setSqlType(Types.CLOB);
+
+        when(mockCallableStatement.getBlob("blob_out")).thenReturn(mockBlob);
+        when(mockBlob.length()).thenReturn((long) blobData.length);
+        when(mockBlob.getBytes(1, blobData.length)).thenReturn(blobData);
+        when(mockCallableStatement.getClob("clob_out")).thenReturn(mockClob);
+        when(mockClob.length()).thenReturn((long) clobData.length());
+        when(mockClob.getSubString(1, clobData.length())).thenReturn(clobData);
+
+        final OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, List.of(blobParam, clobParam));
+
+        assertArrayEquals(blobData, (byte[]) result.getOutParamValue("blob_out"));
+        assertEquals(clobData, result.getOutParamValue("clob_out"));
+        verify(mockBlob).free();
+        verify(mockClob).free();
+    }
+
+    @Test
+    public void testGetOutParameters_BlobSizeOverflowThrowsAndFreesBlob() throws SQLException {
+        final OutParam blobParam = new OutParam();
+        blobParam.setParameterName("blob_out");
+        blobParam.setSqlType(Types.BLOB);
+
+        when(mockCallableStatement.getBlob("blob_out")).thenReturn(mockBlob);
+        when(mockBlob.length()).thenReturn(Integer.MAX_VALUE + 1L);
+
+        assertThrows(SQLException.class, () -> JdbcUtil.getOutParameters(mockCallableStatement, List.of(blobParam)));
+        verify(mockBlob).free();
+    }
+
+    @Test
+    public void testGetOutParameters_ResultSetValueExtractedAndClosed() throws SQLException {
+        final OutParam rowsParam = new OutParam();
+        rowsParam.setParameterName("rows");
+        rowsParam.setSqlType(Types.OTHER);
+
+        when(mockCallableStatement.getObject("rows")).thenReturn(mockResultSet);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(7);
+
+        final OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, List.of(rowsParam));
+        final Dataset rows = result.getOutParamValue("rows");
+
+        assertEquals(1, rows.size());
+        verify(mockResultSet).close();
     }
 
     @Test

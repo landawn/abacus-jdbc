@@ -41,6 +41,10 @@ import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.ReadOps;
+import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.condition.Criteria;
+import com.landawn.abacus.query.condition.Limit;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
@@ -944,6 +948,13 @@ public class DaoImplTest extends TestBase {
         return ds;
     }
 
+    private static Condition invokeHandleLimit(final Condition cond, final int count, final DBVersion dbVersion) throws Exception {
+        final Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", Condition.class, int.class, DBVersion.class);
+        handleLimit.setAccessible(true);
+
+        return (Condition) handleLimit.invoke(null, cond, count, dbVersion);
+    }
+
     // Regression: handleLimit's Expression-already-has-limit check used to omit " FETCH FIRST ", so an
     // Expression containing FETCH FIRST (which DaoImpl itself emits for Oracle/SQLServer/DB2 and which
     // users may write inline) would fall through to the count>0 branch and get wrapped in a Criteria
@@ -963,6 +974,47 @@ public class DaoImplTest extends TestBase {
         com.landawn.abacus.query.condition.Expression limitExpr = com.landawn.abacus.query.Filters.expr("id > 0 LIMIT 10");
         Object out2 = handleLimit.invoke(null, limitExpr, 5, DBVersion.MySQL_5_5);
         assertSame(limitExpr, out2, "Expression already containing LIMIT must not be re-wrapped");
+    }
+
+    @Test
+    public void testHandleLimit_StandaloneLimitRetainedForLimitDialect() throws Exception {
+        final Limit original = Filters.limit(20, 5);
+
+        assertSame(original, invokeHandleLimit(original, -1, DBVersion.MySQL_8));
+    }
+
+    @Test
+    public void testHandleLimit_CriteriaLimitRetainedAndAppendedForLimitDialect() throws Exception {
+        final Criteria withLimit = Criteria.builder().where(Filters.eq("id", 1)).limit(20, 5).build();
+        final Criteria retained = (Criteria) invokeHandleLimit(withLimit, -1, DBVersion.MySQL_8);
+
+        assertEquals(20, retained.getLimit().getCount());
+        assertEquals(5, retained.getLimit().getOffset());
+        assertNotNull(retained.getWhere());
+
+        final Criteria withoutLimit = Criteria.builder().where(Filters.eq("id", 1)).build();
+        final Criteria mysqlLimited = (Criteria) invokeHandleLimit(withoutLimit, 3, DBVersion.MySQL_8);
+        assertEquals(3, mysqlLimited.getLimit().getCount());
+        assertEquals(0, mysqlLimited.getLimit().getOffset());
+    }
+
+    @Test
+    public void testHandleLimit_BuildsCriteriaForBareConditions() throws Exception {
+        final Criteria whereLimited = (Criteria) invokeHandleLimit(Filters.eq("id", 1), 2, DBVersion.MySQL_8);
+        assertNotNull(whereLimited.getWhere());
+        assertEquals(2, whereLimited.getLimit().getCount());
+
+        final Criteria orderLimited = (Criteria) invokeHandleLimit(Filters.orderBy("id"), 2, DBVersion.Oracle);
+        assertNotNull(orderLimited.getOrderBy());
+        assertEquals("FETCH FIRST 2 ROWS ONLY", orderLimited.getLimit().getLiteral());
+
+        final Criteria groupLimited = (Criteria) invokeHandleLimit(Filters.groupBy("status"), 2, DBVersion.MySQL_8);
+        assertNotNull(groupLimited.getGroupBy());
+        assertEquals(2, groupLimited.getLimit().getCount());
+
+        final Criteria noConditionLimited = (Criteria) invokeHandleLimit(null, 2, DBVersion.MySQL_8);
+        assertNull(noConditionLimited.getWhere());
+        assertEquals(2, noConditionLimited.getLimit().getCount());
     }
 
     // Bug fix: handleLimit grouped SQL Server with Oracle/DB2 and emitted a bare "FETCH FIRST n ROWS ONLY" for a
@@ -1035,5 +1087,24 @@ public class DaoImplTest extends TestBase {
         } finally {
             pool.remove(poisonedKey);
         }
+    }
+
+    @Test
+    public void testHandleLimit_StandaloneLimitRewrittenForFetchDialect() throws Exception {
+        final Limit original = Filters.limit(20, 5);
+
+        final Limit rewritten = (Limit) invokeHandleLimit(original, -1, DBVersion.SQLServer);
+
+        assertEquals("OFFSET 5 ROWS FETCH NEXT 20 ROWS ONLY", rewritten.getLiteral());
+    }
+
+    @Test
+    public void testHandleLimit_BareUnionConditionDoesNotClassCast() throws Exception {
+        final Condition union = Filters.union(Filters.subQuery("select 1"));
+
+        final Criteria limited = (Criteria) invokeHandleLimit(union, 2, DBVersion.MySQL_8);
+
+        assertEquals(1, limited.getSetOperations().size());
+        assertEquals(2, limited.getLimit().getCount());
     }
 }

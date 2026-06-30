@@ -42,9 +42,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * {@link RefreshCache @RefreshCache}.</p>
  *
  * <p><strong>Restriction:</strong> {@code @Cache}, {@code @CacheResult}, and {@code @RefreshCache}
- * (whether declared at the type or method level) are only honored on
- * {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Applying any of them to a DAO that supports
- * update/delete operations fails with {@code UnsupportedOperationException} at initialization time.</p>
+ * (whether declared at the type or method level) are only honored on cacheable DAOs &mdash; that is,
+ * {@code NoUpdateDao} or {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying
+ * any of them to a DAO that supports update/delete operations fails with
+ * {@code UnsupportedOperationException} at initialization time.</p>
  *
  * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} and
  * {@code enabled = true} (or eligible methods when {@code @CacheResult(enabled = true)} is applied

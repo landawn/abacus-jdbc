@@ -826,7 +826,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedReadOps<T, TD>> extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset activeUsers = userDao.query(Filters.eq("status", "ACTIVE"));
-     * activeUsers.forEach(row -> System.out.println(row.getString("email")));
+     * // Each row is exposed as a reusable DisposableObjArray; access column values by index.
+     * activeUsers.forEach(row -> System.out.println(row.get(0)));
      * }</pre>
      *
      * @param cond the condition to match

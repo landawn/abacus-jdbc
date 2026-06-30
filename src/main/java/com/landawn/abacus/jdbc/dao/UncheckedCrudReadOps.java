@@ -406,7 +406,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedReadOps<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return an {@code Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -430,7 +430,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedReadOps<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the non-null mapped value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the non-null mapped value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Object, Class)
      */
@@ -479,7 +479,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedReadOps<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -505,7 +505,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedReadOps<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the unique non-null mapped value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the unique non-null mapped value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Object, Class)

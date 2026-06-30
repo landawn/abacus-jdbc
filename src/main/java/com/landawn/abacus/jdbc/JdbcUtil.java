@@ -5191,6 +5191,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @return The total number of rows affected by the batch update across all batches.
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
+     * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      */
@@ -5237,6 +5238,7 @@ public final class JdbcUtil {
      *                  but may be slower; larger batches are faster but use more memory.
      * @return The total number of rows affected by the batch update across all batches
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      * @see #executeBatchUpdate(javax.sql.DataSource, String, List)
@@ -5307,6 +5309,7 @@ public final class JdbcUtil {
      * @param listOfParameters a list of parameter sets for the batch update; may be empty (no-op returning {@code 0})
      * @return the total number of rows affected by the batch update across all batches
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
+     * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a database access error occurs while executing the batch
      * @see PreparedStatement#executeBatch()
      * @see #executeBatchUpdate(Connection, String, List, int)
@@ -5348,6 +5351,7 @@ public final class JdbcUtil {
      * @param batchSize The size of each batch
      * @return The total number of rows affected by the batch update across all batches
      * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      */

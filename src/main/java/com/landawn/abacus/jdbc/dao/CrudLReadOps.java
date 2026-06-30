@@ -374,7 +374,7 @@ sealed interface CrudLReadOps<T, TD extends ReadOps<T, TD>> extends CrudReadOps<
      * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
-     * Returns an empty {@link Optional} only if no record is found.
+     * Returns an empty {@link Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -386,7 +386,7 @@ sealed interface CrudLReadOps<T, TD extends ReadOps<T, TD>> extends CrudReadOps<
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@link Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@link Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
@@ -410,7 +410,7 @@ sealed interface CrudLReadOps<T, TD extends ReadOps<T, TD>> extends CrudReadOps<
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
-     * @return an {@link Optional} containing the mapped non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@link Optional} containing the mapped non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -451,7 +451,7 @@ sealed interface CrudLReadOps<T, TD extends ReadOps<T, TD>> extends CrudReadOps<
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
-     * Returns an empty {@link Optional} only if no record is found.
+     * Returns an empty {@link Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -463,7 +463,7 @@ sealed interface CrudLReadOps<T, TD extends ReadOps<T, TD>> extends CrudReadOps<
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@link Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@link Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -488,7 +488,7 @@ sealed interface CrudLReadOps<T, TD extends ReadOps<T, TD>> extends CrudReadOps<
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
-     * @return an {@link Optional} containing the mapped unique non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@link Optional} containing the mapped unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */

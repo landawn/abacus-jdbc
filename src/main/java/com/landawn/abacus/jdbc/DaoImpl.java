@@ -99,9 +99,14 @@ import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
+import com.landawn.abacus.query.condition.Except;
 import com.landawn.abacus.query.condition.Expression;
+import com.landawn.abacus.query.condition.Intersect;
 import com.landawn.abacus.query.condition.Limit;
+import com.landawn.abacus.query.condition.Minus;
 import com.landawn.abacus.query.condition.SubQuery;
+import com.landawn.abacus.query.condition.Union;
+import com.landawn.abacus.query.condition.UnionAll;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
@@ -1608,7 +1613,7 @@ final class DaoImpl {
         if (cond instanceof final Limit limit) {
             final String limitClause = toFetchOffsetLimitClause(limit.getCount(), limit.getOffset(), dbVersion);
 
-            return limitClause == null ? limit : Filters.limit(limitClause);
+            return limitClause == null ? limit : rawLimit(limitClause, limit.getCount(), limit.getOffset());
         } else if (cond instanceof final Criteria criteria) {
             final Criteria.Builder criteriaBuilder = criteria.toBuilder();
             final Limit limit = criteria.getLimit();
@@ -1617,13 +1622,13 @@ final class DaoImpl {
                 final String limitClause = toFetchOffsetLimitClause(limit.getCount(), limit.getOffset(), dbVersion);
 
                 if (limitClause != null) {
-                    criteriaBuilder.limit(limitClause);
+                    criteriaBuilder.limit(rawLimit(limitClause, limit.getCount(), limit.getOffset()));
                 }
             } else if (count > 0) {
                 final String limitClause = toFetchOffsetLimitClause(count, 0, dbVersion);
 
                 if (limitClause != null) {
-                    criteriaBuilder.limit(limitClause);
+                    criteriaBuilder.limit(rawLimit(limitClause, count, 0));
                 } else {
                     criteriaBuilder.limit(count);
                 }
@@ -1651,23 +1656,23 @@ final class DaoImpl {
                         break;
 
                     case UNION:
-                        criteriaBuilder.union((SubQuery) cond);
+                        criteriaBuilder.union(((Union) cond).getSubQuery());
                         break;
 
                     case UNION_ALL:
-                        criteriaBuilder.unionAll((SubQuery) cond);
+                        criteriaBuilder.unionAll(((UnionAll) cond).getSubQuery());
                         break;
 
                     case INTERSECT:
-                        criteriaBuilder.intersect((SubQuery) cond);
+                        criteriaBuilder.intersect(((Intersect) cond).getSubQuery());
                         break;
 
                     case EXCEPT:
-                        criteriaBuilder.except((SubQuery) cond);
+                        criteriaBuilder.except(((Except) cond).getSubQuery());
                         break;
 
                     case MINUS:
-                        criteriaBuilder.minus((SubQuery) cond);
+                        criteriaBuilder.minus(((Minus) cond).getSubQuery());
                         break;
 
                     default:
@@ -1678,7 +1683,7 @@ final class DaoImpl {
             final String limitClause = toFetchOffsetLimitClause(count, 0, dbVersion);
 
             if (limitClause != null) {
-                criteriaBuilder.limit(limitClause);
+                criteriaBuilder.limit(rawLimit(limitClause, count, 0));
             } else {
                 criteriaBuilder.limit(count);
             }
@@ -1687,6 +1692,30 @@ final class DaoImpl {
         }
 
         return cond;
+    }
+
+    private static Limit rawLimit(final String limitClause, final int count, final int offset) {
+        return new Limit(Math.max(count, 0), Math.max(offset, 0)) {
+            @Override
+            public String getLiteral() {
+                return limitClause;
+            }
+
+            @Override
+            public int getCount() {
+                return count;
+            }
+
+            @Override
+            public int getOffset() {
+                return offset;
+            }
+
+            @Override
+            public String toString(final NamingPolicy namingPolicy) {
+                return limitClause;
+            }
+        };
     }
 
     /**
@@ -1863,9 +1892,10 @@ final class DaoImpl {
      *        and {@code evictDelay()}) if present, otherwise a {@link Jdbc.DefaultDaoCache} with
      *        {@link JdbcUtil#DEFAULT_CACHE_CAPACITY default capacity} and
      *        {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY default evict delay} is used. Note: result caching is
-     *        currently only supported for {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes — supplying a
-     *        non-{@code null} {@code inputDaoCache} (or declaring {@code @Cache}) on a DAO that supports
-     *        update/delete operations will fail with {@link UnsupportedOperationException}
+     *        currently only supported for cacheable DAOs — {@code NoUpdateDao}/{@code ReadOnlyDao} and their
+     *        {@code Unchecked} variants — supplying a non-{@code null} {@code inputDaoCache} (or declaring
+     *        {@code @Cache}) on a DAO that supports update/delete operations will fail with
+     *        {@link UnsupportedOperationException}
      * @param executor an optional {@link Executor} for asynchronous operations; if {@code null}, the default async executor is used
      * @return a proxy instance implementing the specified DAO interface
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}
@@ -1873,7 +1903,7 @@ final class DaoImpl {
      *         DAO interface has invalid annotation configurations or generic type arguments
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
      *         incompatible return type for the declared {@link OP}, or a feature not yet enabled (e.g., cache on a
-     *         non-{@code NoUpdateDao} interface, or a {@code RowMapper}/{@code ResultExtractor} parameter that is not the last method parameter)
+     *         non-cacheable interface that supports update/delete operations, or a {@code RowMapper}/{@code ResultExtractor} parameter that is not the last method parameter)
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })

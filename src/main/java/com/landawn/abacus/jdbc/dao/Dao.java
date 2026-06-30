@@ -208,7 +208,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends InsertOps<T, T
      *
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery property names that uniquely identify the record
-     * @return the saved entity (newly inserted or updated)
+     * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws DuplicateResultException if more than one record matches
@@ -243,7 +243,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends InsertOps<T, T
      *
      * @param entity the entity to insert or update
      * @param cond condition to check for existence
-     * @return the saved entity (newly inserted or updated)
+     * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws DuplicateResultException if more than one record matches the specified condition

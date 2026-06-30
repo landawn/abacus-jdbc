@@ -385,7 +385,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
-     * Returns an empty {@code Optional} only if no record is found.
+     * Returns an empty {@code Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -397,7 +397,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -417,7 +417,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
-     * @return an {@link Optional} containing the mapped non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@link Optional} containing the mapped non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -451,7 +451,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
     /**
      * Queries for a unique non-null result of the specified type.
      * Throws {@link DuplicateResultException} if more than one record is found.
-     * Returns an empty {@code Optional} only if no record is found.
+     * Returns an empty {@code Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -464,7 +464,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -487,7 +487,7 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
-     * @return an {@link Optional} containing the mapped unique non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@link Optional} containing the mapped unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)

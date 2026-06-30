@@ -183,7 +183,7 @@ sealed interface InsertOps<T, TD extends ReadOps<T, TD>> extends ReadOps<T, TD> 
 
     /**
      * Saves (inserts) the specified entity to the database.
-     * All insertable properties of the entity (i.e., excluding {@code @ReadOnly}, {@code @NonInsertable}, etc.)
+     * All insertable properties of the entity (i.e., excluding {@code @ReadOnly}, {@code @Transient}, etc.)
      * are included in the INSERT statement. The ID property is included only when it has been set
      * (i.e., is not the default value), allowing the database to generate it otherwise.
      *

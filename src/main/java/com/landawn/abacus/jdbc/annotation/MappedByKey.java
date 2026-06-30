@@ -116,6 +116,10 @@ public @interface MappedByKey {
      *   <li>A result-map key or column label when the result value is a {@code Map}</li>
      * </ul>
      *
+     * <p>If both {@code keyName} and the deprecated {@link #value()} are left empty, the framework falls
+     * back to the target entity's single id property name; a DAO whose entity has no id property then
+     * fails initialization with {@code IllegalArgumentException}.</p>
+     *
      * <p>Examples:</p>
      * <pre>{@code
      * // Using a row-map key/column label

@@ -392,7 +392,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedReadOps<T, TD>> ex
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -420,7 +420,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedReadOps<T, TD>> ex
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the mapped non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the mapped non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -472,7 +472,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedReadOps<T, TD>> ex
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -501,7 +501,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedReadOps<T, TD>> ex
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the mapped unique non-null value if a record matches the {@code id}, otherwise empty
+     * @return an {@code Optional} containing the mapped unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */

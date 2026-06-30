@@ -72,6 +72,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches
+     * @see #upsert(Object, Condition)
      */
     @Override
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {

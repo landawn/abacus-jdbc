@@ -7269,8 +7269,10 @@ public final class Jdbc {
 
         /**
          * Implements cache invalidation. If the table name can be determined from the cache key,
-         * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache.
-         * No action is taken for update operations that affect zero rows.
+         * it removes all cache entries whose key references that table (matched case-insensitively).
+         * Otherwise, it clears the entire cache.
+         * No action is taken for built-in update operations that report zero affected rows (an
+         * {@code int}/{@code long} result of {@code 0}).
          */
         @Override
         @SuppressWarnings("unused")
