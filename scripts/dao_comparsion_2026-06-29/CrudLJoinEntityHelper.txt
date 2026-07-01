@@ -2,7 +2,7 @@ Method-surface comparison: type extending CrudLJoinEntityHelper
 ===============================================================
 Scope        : public methods inherited by a join-entity-helper type that mixes in CrudLJoinEntityHelper.
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
+Current      : working tree @ 79a10b84 + uncommitted (DaoBase/UncheckedDaoBase infra root extracted from ReadOps — accessors + plain/condition/large-result prepare* builders + asyncCall/asyncRun; generated-keys prepare* live on Dao, so absent from ReadOnly*/NoUpdate*; asyncExecutor() accessor removed; batchGet/count now default)
 Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
                compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
 Totals       : 7beb529f = 100 methods ; current = 100 methods.
@@ -30,9 +30,10 @@ interfaces, as the declaring-interface counts below show.
   ┌───────────────────────┬───────┬───────────────────────┬───────┐
   │ 7beb529f              │ count │ current               │ count │
   ├───────────────────────┼───────┼───────────────────────┼───────┤
-  │ JoinEntityHelper      │    72 │ JoinEntityReadOps     │    56 │
+  │ JoinEntityHelper      │    72 │ JoinEntityReadOps     │    52 │
   │ CrudJoinEntityHelper  │    18 │ CrudJoinEntityReadOps │    18 │
   │ CrudJoinEntityHelperL │    10 │ JoinEntityDeleteOps   │    16 │
   │                       │       │ CrudLJoinEntityHelper │    10 │
+  │                       │       │ JoinEntityBase        │     4 │
   └───────────────────────┴───────┴───────────────────────┴───────┘
 

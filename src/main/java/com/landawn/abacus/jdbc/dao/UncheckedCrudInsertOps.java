@@ -33,7 +33,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
-sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedReadOps<T, TD>> extends CrudInsertOps<T, ID, TD>, UncheckedInsertOps<T, TD>
+sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudInsertOps<T, ID, TD>, UncheckedInsertOps<T, TD>
         permits UncheckedCrudDao, UncheckedNoUpdateCrudDao {
     /**
      * Inserts the specified entity into the database and returns its ID.

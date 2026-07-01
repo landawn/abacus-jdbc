@@ -27,7 +27,7 @@ import com.landawn.abacus.query.condition.Condition;
  * @see Dao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface DeleteOps<T, TD extends ReadOps<T, TD>> extends ReadOps<T, TD> permits Dao, CrudDeleteOps, UncheckedDeleteOps {
+sealed interface DeleteOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> permits Dao, CrudDeleteOps, UncheckedDeleteOps {
     /**
      * Deletes all records matching the specified condition.
      * Returns the count of deleted records.

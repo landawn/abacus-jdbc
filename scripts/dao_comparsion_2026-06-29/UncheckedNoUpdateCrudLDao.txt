@@ -2,20 +2,21 @@ Method-surface comparison: type extending UncheckedNoUpdateCrudLDao
 ===================================================================
 Scope        : public methods inherited by a DAO type that extends UncheckedNoUpdateCrudLDao.
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
+Current      : working tree @ 79a10b84 + uncommitted (DaoBase/UncheckedDaoBase infra root extracted from ReadOps — accessors + plain/condition/large-result prepare* builders + asyncCall/asyncRun; generated-keys prepare* live on Dao, so absent from ReadOnly*/NoUpdate*; asyncExecutor() accessor removed; batchGet/count now default)
 Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
                compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
-Totals       : 7beb529f = 230 methods ; current = 196 methods.
+Totals       : 7beb529f = 230 methods ; current = 186 methods.
 
 RESULT
 ------
-34 method(s) present only in 7beb529f; 0 present only in current.
+44 method(s) present only in 7beb529f; 0 present only in current.
 Methods absent from the current type are a compile error to call (previously a runtime
 UnsupportedOperationException). "Y" = present, "-" = absent.
 
 ┌───────────────────────────────────────────────────────────────────────────────────────────────┬──────────┬─────────┐
 │ method signature                                                                              │ 7beb529f │ current │
 ├───────────────────────────────────────────────────────────────────────────────────────────────┼──────────┼─────────┤
+│ asyncExecutor()                                                                               │ Y        │ -       │
 │ batchDelete(Collection<? extends T>)                                                          │ Y        │ -       │
 │ batchDelete(Collection<? extends T>, int)                                                     │ Y        │ -       │
 │ batchDeleteByIds(Collection<? extends ID>)                                                    │ Y        │ -       │
@@ -35,8 +36,17 @@ UnsupportedOperationException). "Y" = present, "-" = absent.
 │ prepareCallableQuery(String)                                                                  │ Y        │ -       │
 │ prepareCallableQuery(String, BiFunction<Connection, String, CallableStatement, SQLException>) │ Y        │ -       │
 │ prepareNamedQuery(ParsedSql, BiFunction<Connection, String, PreparedStatement, SQLException>) │ Y        │ -       │
+│ prepareNamedQuery(ParsedSql, String[])                                                        │ Y        │ -       │
+│ prepareNamedQuery(ParsedSql, boolean)                                                         │ Y        │ -       │
+│ prepareNamedQuery(ParsedSql, int[])                                                           │ Y        │ -       │
 │ prepareNamedQuery(String, BiFunction<Connection, String, PreparedStatement, SQLException>)    │ Y        │ -       │
+│ prepareNamedQuery(String, String[])                                                           │ Y        │ -       │
+│ prepareNamedQuery(String, boolean)                                                            │ Y        │ -       │
+│ prepareNamedQuery(String, int[])                                                              │ Y        │ -       │
 │ prepareQuery(String, BiFunction<Connection, String, PreparedStatement, SQLException>)         │ Y        │ -       │
+│ prepareQuery(String, String[])                                                                │ Y        │ -       │
+│ prepareQuery(String, boolean)                                                                 │ Y        │ -       │
+│ prepareQuery(String, int[])                                                                   │ Y        │ -       │
 │ update(Map<String, Object>, Condition)                                                        │ Y        │ -       │
 │ update(Map<String, Object>, ID)                                                               │ Y        │ -       │
 │ update(Map<String, Object>, long)                                                             │ Y        │ -       │
@@ -52,32 +62,23 @@ UnsupportedOperationException). "Y" = present, "-" = absent.
 │ upsert(T, List<String>)                                                                       │ Y        │ -       │
 └───────────────────────────────────────────────────────────────────────────────────────────────┴──────────┴─────────┘
 
-15 method(s) present in BOTH versions but with a NARROWED throws clause
+6 method(s) present in BOTH versions but with a NARROWED throws clause
 (the SQL-kind / restriction check moved into the DaoImpl proxy):
 
 ┌────────────────────────────────────────────┬─────────────────────────────────────────────┬────────────────┐
 │ method signature                           │ 7beb529f throws                             │ current throws │
 ├────────────────────────────────────────────┼─────────────────────────────────────────────┼────────────────┤
 │ prepareNamedQuery(ParsedSql)               │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareNamedQuery(ParsedSql, String[])     │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareNamedQuery(ParsedSql, boolean)      │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareNamedQuery(ParsedSql, int[])        │ SQLException, UnsupportedOperationException │ SQLException   │
 │ prepareNamedQuery(String)                  │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareNamedQuery(String, String[])        │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareNamedQuery(String, boolean)         │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareNamedQuery(String, int[])           │ SQLException, UnsupportedOperationException │ SQLException   │
 │ prepareNamedQueryForLargeResult(ParsedSql) │ SQLException, UnsupportedOperationException │ SQLException   │
 │ prepareNamedQueryForLargeResult(String)    │ SQLException, UnsupportedOperationException │ SQLException   │
 │ prepareQuery(String)                       │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareQuery(String, String[])             │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareQuery(String, boolean)              │ SQLException, UnsupportedOperationException │ SQLException   │
-│ prepareQuery(String, int[])                │ SQLException, UnsupportedOperationException │ SQLException   │
 │ prepareQueryForLargeResult(String)         │ SQLException, UnsupportedOperationException │ SQLException   │
 └────────────────────────────────────────────┴─────────────────────────────────────────────┴────────────────┘
 
 NOTE
 ----
-The 34 method(s) absent in current are removed from the TYPE (compile error if called)
+The 44 method(s) absent in current are removed from the TYPE (compile error if called)
 rather than the former runtime UnsupportedOperationException stubs. Surviving methods -- including
 any that merely moved to a different declaring interface -- are shown by the counts below.
 
@@ -87,12 +88,12 @@ any that merely moved to a different declaring interface -- are shown by the cou
   │ 7beb529f                  │ count │ current                │ count │
   ├───────────────────────────┼───────┼────────────────────────┼───────┤
   │ UncheckedDao              │    72 │ UncheckedReadOps       │    63 │
-  │ UncheckedCrudDao          │    46 │ ReadOps                │    43 │
-  │ Dao                       │    37 │ UncheckedCrudReadOps   │    37 │
-  │ UncheckedCrudDaoL         │    25 │ UncheckedCrudLReadOps  │    25 │
-  │ UncheckedNoUpdateCrudDao  │    21 │ InsertOps              │     9 │
-  │ NoUpdateDao               │    20 │ UncheckedCrudInsertOps │     9 │
-  │ UncheckedNoUpdateDao      │     5 │ UncheckedInsertOps     │     9 │
+  │ UncheckedCrudDao          │    46 │ UncheckedCrudReadOps   │    37 │
+  │ Dao                       │    37 │ UncheckedCrudLReadOps  │    25 │
+  │ UncheckedCrudDaoL         │    25 │ DaoBase                │    23 │
+  │ UncheckedNoUpdateCrudDao  │    21 │ ReadOps                │    19 │
+  │ NoUpdateDao               │    20 │ UncheckedInsertOps     │     9 │
+  │ UncheckedNoUpdateDao      │     5 │ UncheckedCrudInsertOps │     9 │
   │ UncheckedNoUpdateCrudDaoL │     3 │ CrudReadOps            │     1 │
   │ CrudDao                   │     1 │                        │       │
   └───────────────────────────┴───────┴────────────────────────┴───────┘

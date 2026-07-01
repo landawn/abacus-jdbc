@@ -51,7 +51,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @see CrudLDao
  */
 @Beta
-sealed interface CrudLReadOps<T, TD extends ReadOps<T, TD>> extends CrudReadOps<T, Long, TD>
+sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<T, Long, TD>
         permits CrudLDao, NoUpdateCrudLDao, ReadOnlyCrudLDao, UncheckedCrudLReadOps {
 
     /**

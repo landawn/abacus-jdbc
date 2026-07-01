@@ -2,37 +2,39 @@ Method-surface comparison: type extending Dao
 =============================================
 Scope        : public methods inherited by a DAO type that extends Dao.
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
+Current      : working tree @ 79a10b84 + uncommitted (DaoBase/UncheckedDaoBase infra root extracted from ReadOps — accessors + plain/condition/large-result prepare* builders + asyncCall/asyncRun; generated-keys prepare* live on Dao, so absent from ReadOnly*/NoUpdate*; asyncExecutor() accessor removed; batchGet/count now default)
 Method       : reflection via Class.getMethods(); bridge/synthetic/Object excluded;
                compared at FULL GENERIC fidelity (type params, generics, wildcards, throws).
-Totals       : 7beb529f = 136 methods ; current = 136 methods.
+Totals       : 7beb529f = 136 methods ; current = 135 methods.
 
 RESULT
 ------
-The two method sets are IDENTICAL. No method exists in one version but not the other.
-A column value of "Y" = present, "-" = absent.
+1 method(s) present only in 7beb529f; 0 present only in current.
+asyncExecutor() was deleted outright (method + proxy branch removed) -- it existed in
+7beb529f on the monolithic Dao. "Y" = present, "-" = absent.
 
-┌──────────────────────────────────────────────────────────────┬──────────┬─────────┐
-│ method signature                                             │ 7beb529f │ current │
-├──────────────────────────────────────────────────────────────┼──────────┼─────────┤
-│ (none -- the 136-method sets are identical in both versions) │ -        │ -       │
-└──────────────────────────────────────────────────────────────┴──────────┴─────────┘
+┌──────────────────┬──────────┬─────────┐
+│ method signature │ 7beb529f │ current │
+├──────────────────┼──────────┼─────────┤
+│ asyncExecutor()  │ Y        │ -       │
+└──────────────────┴──────────┴─────────┘
 
 NOTE
 ----
-For this full-capability DAO the capability-split refactor (commit 8a3d8246) is transparent
-at the method level: nothing was added, removed, renamed or re-signatured. Only WHERE each
-method is declared changed -- the same methods were regrouped across the new capability
-interfaces, as the declaring-interface counts below show.
+Aside from the single removed accessor asyncExecutor(), the capability-split refactor is
+transparent at the method level: nothing else was added, removed, renamed or re-signatured.
+Only WHERE each surviving method is declared changed -- the same methods were regrouped
+across the new capability interfaces, as the declaring-interface counts below show.
 
   declaring interface counts
   --------------------------
   ┌──────────┬───────┬───────────┬───────┐
   │ 7beb529f │ count │ current   │ count │
   ├──────────┼───────┼───────────┼───────┤
-  │ Dao      │   136 │ ReadOps   │   106 │
-  │          │       │ InsertOps │    18 │
-  │          │       │ Dao       │     7 │
+  │ Dao      │   136 │ ReadOps   │    82 │
+  │          │       │ DaoBase   │    23 │
+  │          │       │ Dao       │    16 │
+  │          │       │ InsertOps │     9 │
   │          │       │ UpdateOps │     4 │
   │          │       │ DeleteOps │     1 │
   └──────────┴───────┴───────────┴───────┘

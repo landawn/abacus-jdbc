@@ -30,7 +30,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface CrudDeleteOps<T, ID, TD extends ReadOps<T, TD>> extends DeleteOps<T, TD> permits CrudDao, UncheckedCrudDeleteOps {
+sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteOps<T, TD> permits CrudDao, UncheckedCrudDeleteOps {
     /**
      * Deletes an entity from the database, identifying it by its ID property(ies).
      * The entity must have its ID field(s) populated.

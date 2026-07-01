@@ -32,5 +32,5 @@ package com.landawn.abacus.jdbc.dao;
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
-public non-sealed interface JoinEntityHelper<T, TD extends Dao<T, TD>> extends JoinEntityDeleteOps<T, TD> {
+public non-sealed interface JoinEntityHelper<T, TD extends Dao<T, TD>> extends JoinEntityReadOps<T, TD>, JoinEntityDeleteOps<T, TD> {
 }

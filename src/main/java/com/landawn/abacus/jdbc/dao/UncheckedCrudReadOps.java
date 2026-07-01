@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +57,7 @@ import com.landawn.abacus.util.stream.Stream;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
-sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedReadOps<T, TD>> extends CrudReadOps<T, ID, TD>, UncheckedReadOps<T, TD>
+sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudReadOps<T, ID, TD>, UncheckedReadOps<T, TD>
         permits UncheckedCrudDao, UncheckedCrudLReadOps, UncheckedNoUpdateCrudDao, UncheckedReadOnlyCrudDao {
     /**
      * Generates a new ID for entity insertion.
@@ -677,8 +678,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedReadOps<T, TD>>
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
-            throws DuplicateResultException, UncheckedSQLException;
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
+            throws DuplicateResultException, UncheckedSQLException {
+        try {
+            return CrudReadOps.super.batchGet(ids, selectPropNames, batchSize);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
 
     /**
      * Checks if an entity with the specified ID exists in the database.
@@ -744,7 +751,13 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedReadOps<T, TD>>
      */
     @Beta
     @Override
-    int count(final Collection<? extends ID> ids) throws UncheckedSQLException;
+    default int count(final Collection<? extends ID> ids) throws UncheckedSQLException {
+        try {
+            return CrudReadOps.super.count(ids);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
 
     /**
      * Refreshes the specified entity by reloading all its properties from the database.

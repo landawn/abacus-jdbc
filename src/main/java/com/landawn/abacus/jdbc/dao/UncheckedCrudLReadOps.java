@@ -46,7 +46,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @see UncheckedCrudLDao
  */
 @Beta
-sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedReadOps<T, TD>> extends CrudLReadOps<T, TD>, UncheckedCrudReadOps<T, Long, TD>
+sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends CrudLReadOps<T, TD>, UncheckedCrudReadOps<T, Long, TD>
         permits UncheckedCrudLDao, UncheckedNoUpdateCrudLDao, UncheckedReadOnlyCrudLDao {
 
     /**

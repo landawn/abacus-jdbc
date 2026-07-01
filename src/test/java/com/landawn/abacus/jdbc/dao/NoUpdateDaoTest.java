@@ -102,16 +102,12 @@ public class NoUpdateDaoTest extends TestBase {
     }
 
     @Test
-    public void testPrepareQuery_KeyOverloads() throws SQLException {
+    public void testPrepareQueryForLargeResult_SelectAllowed_DeleteRejected() throws SQLException {
         final TestNoUpdateDao dao = createDao();
 
-        assertNotNull(dao.prepareQuery("INSERT INTO test(id) VALUES (?)", true));
-        assertNotNull(dao.prepareQuery("INSERT INTO test(id) VALUES (?)", new int[] { 1 }));
-        assertNotNull(dao.prepareQuery("INSERT INTO test(id) VALUES (?)", new String[] { "id" }));
+        // The generated-keys prepareQuery overloads (boolean / int[] / String[]) now live on the full
+        // Dao only, so they are absent from a NoUpdateDao (calling them would be a compile error).
         assertNotNull(dao.prepareQueryForLargeResult("SELECT * FROM test"));
-
-        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("UPDATE test SET id = 1", true));
-        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("DELETE FROM test", new int[] { 1 }));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQueryForLargeResult("DELETE FROM test"));
     }
 
@@ -120,7 +116,6 @@ public class NoUpdateDaoTest extends TestBase {
         final TestNoUpdateDao dao = createDao();
 
         assertNotNull(dao.prepareNamedQuery("INSERT INTO test(id) VALUES (:id)"));
-        assertNotNull(dao.prepareNamedQuery("INSERT INTO test(id) VALUES (:id)", true));
         assertNotNull(dao.prepareNamedQuery(ParsedSql.parse("SELECT * FROM test WHERE id = :id")));
         assertNotNull(dao.prepareNamedQueryForLargeResult("SELECT * FROM test"));
 

@@ -21,11 +21,9 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.condition.Condition;
@@ -54,56 +52,8 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface JoinEntityReadOps<T, TD extends Dao<T, TD>>
-        permits JoinEntityDeleteOps, CrudJoinEntityReadOps, ReadOnlyJoinEntityHelper, UncheckedJoinEntityReadOps {
-    /**
-     * Retrieves the class type of the target DAO interface.
-     * Internal use only.
-     *
-     * @return the class type of the target DAO interface
-     * @deprecated Internal use only.
-     */
-    @Deprecated
-    @NonDBOperation
-    @Internal
-    Class<TD> targetDaoInterface();
-
-    /**
-     * Retrieves the class type of the target entity.
-     * Internal use only.
-     *
-     * @return the class type of the target entity
-     * @deprecated Internal use only.
-     */
-    @Deprecated
-    @NonDBOperation
-    @Internal
-    Class<T> targetEntityClass();
-
-    /**
-     * Retrieves the name of the target table.
-     * Internal use only.
-     *
-     * @return the name of the target table
-     * @deprecated Internal use only.
-     */
-    @Deprecated
-    @NonDBOperation
-    @Internal
-    String targetTableName();
-
-    /**
-     * Retrieves the executor for executing tasks in parallel.
-     * Internal use only.
-     *
-     * @return the executor for executing parallel tasks
-     * @deprecated Internal use only.
-     */
-    @Deprecated
-    @NonDBOperation
-    @Internal
-    Executor executor();
-
+sealed interface JoinEntityReadOps<T, TD extends Dao<T, TD>> extends JoinEntityBase<T, TD>
+        permits CrudJoinEntityReadOps, UncheckedJoinEntityReadOps, JoinEntityHelper, ReadOnlyJoinEntityHelper {
     /**
      * Finds the first entity that matches the specified condition and loads the specified type of join entities.
      *

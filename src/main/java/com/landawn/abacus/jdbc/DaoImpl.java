@@ -73,10 +73,10 @@ import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.jdbc.dao.DaoBase;
 import com.landawn.abacus.jdbc.dao.DaoUtil;
 import com.landawn.abacus.jdbc.dao.NoUpdateDao;
 import com.landawn.abacus.jdbc.dao.ReadOnlyDao;
-import com.landawn.abacus.jdbc.dao.ReadOps;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.JsonParser;
@@ -99,14 +99,8 @@ import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
-import com.landawn.abacus.query.condition.Except;
 import com.landawn.abacus.query.condition.Expression;
-import com.landawn.abacus.query.condition.Intersect;
 import com.landawn.abacus.query.condition.Limit;
-import com.landawn.abacus.query.condition.Minus;
-import com.landawn.abacus.query.condition.SubQuery;
-import com.landawn.abacus.query.condition.Union;
-import com.landawn.abacus.query.condition.UnionAll;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
@@ -121,7 +115,6 @@ import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.ImmutableSet;
 import com.landawn.abacus.util.IntFunctions;
-import com.landawn.abacus.util.Joiner;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Numbers;
@@ -222,7 +215,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see CacheResult
  */
 @Internal
-@SuppressWarnings({ "deprecation", "java:S1192", "resource" })
+@SuppressWarnings({ "deprecation", "java:S1192", "resource", "unused" })
 final class DaoImpl {
 
     private DaoImpl() {
@@ -241,7 +234,7 @@ final class DaoImpl {
     static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
     @SuppressWarnings("rawtypes")
-    private static final Map<String, ReadOps> daoPool = new ConcurrentHashMap<>();
+    private static final Map<String, DaoBase> daoPool = new ConcurrentHashMap<>();
 
     private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SqlMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
@@ -1500,7 +1493,7 @@ final class DaoImpl {
     }
 
     @SuppressWarnings({ "rawtypes", "unused" })
-    private static AbstractQuery prepareQuery(final ReadOps proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final String fullClassMethodName,
+    private static AbstractQuery prepareQuery(final DaoBase proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final String fullClassMethodName,
             final Method method, final Class<?> returnType, final Object[] args, final int[] fragmentParamIndexes,
             final Tuple2<Annotation, String>[] fragmentAnnos, final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys,
             final String[] returnColumnNames, final List<OutParameter> outParameterList,
@@ -1610,88 +1603,35 @@ final class DaoImpl {
         // A negative {@code count} is intentionally NOT short-circuited: an existing Limit (standalone or inside a
         // Criteria) must still be rewritten into the vendor-specific OFFSET/FETCH syntax regardless of {@code count}.
 
-        if (cond instanceof final Limit limit) {
-            final String limitClause = toFetchOffsetLimitClause(limit.getCount(), limit.getOffset(), dbVersion);
-
-            return limitClause == null ? limit : rawLimit(limitClause, limit.getCount(), limit.getOffset());
+        if (count <= 0) {
+            return cond;
+        } else if (cond == null) {
+            return Filters.limit(count);
+        } else if (cond instanceof final Limit limit) {
+            return limit;
         } else if (cond instanceof final Criteria criteria) {
-            final Criteria.Builder criteriaBuilder = criteria.toBuilder();
             final Limit limit = criteria.getLimit();
 
             if (limit != null) {
-                final String limitClause = toFetchOffsetLimitClause(limit.getCount(), limit.getOffset(), dbVersion);
-
-                if (limitClause != null) {
-                    criteriaBuilder.limit(rawLimit(limitClause, limit.getCount(), limit.getOffset()));
-                }
-            } else if (count > 0) {
-                final String limitClause = toFetchOffsetLimitClause(count, 0, dbVersion);
-
-                if (limitClause != null) {
-                    criteriaBuilder.limit(rawLimit(limitClause, count, 0));
-                } else {
-                    criteriaBuilder.limit(count);
-                }
+                return cond;
             }
 
-            return criteriaBuilder.build();
-        } else if (cond instanceof final Expression expr //
-                && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ", " FETCH FIRST ")) {
-            // The raw SQL already carries its own row-limiting clause; leave it untouched.
-        } else if (count > 0) {
-            final Criteria.Builder criteriaBuilder = Criteria.builder();
-
-            if (cond != null) {
-                switch (cond.operator()) {
-                    case LIMIT: // should never happen
-                        criteriaBuilder.limit((Limit) cond);
-                        break;
-
-                    case ORDER_BY:
-                        criteriaBuilder.orderBy(cond);
-                        break;
-
-                    case GROUP_BY:
-                        criteriaBuilder.groupBy(cond);
-                        break;
-
-                    case UNION:
-                        criteriaBuilder.union(((Union) cond).getSubQuery());
-                        break;
-
-                    case UNION_ALL:
-                        criteriaBuilder.unionAll(((UnionAll) cond).getSubQuery());
-                        break;
-
-                    case INTERSECT:
-                        criteriaBuilder.intersect(((Intersect) cond).getSubQuery());
-                        break;
-
-                    case EXCEPT:
-                        criteriaBuilder.except(((Except) cond).getSubQuery());
-                        break;
-
-                    case MINUS:
-                        criteriaBuilder.minus(((Minus) cond).getSubQuery());
-                        break;
-
-                    default:
-                        criteriaBuilder.where(cond);
+            return criteria.toBuilder().limit(count).build();
+        } else {
+            if (cond instanceof final Expression expr //
+                    && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ", " FETCH FIRST ")) {
+                try {
+                    return Filters.limit(expr.getLiteral());
+                } catch (Exception e) {
+                    // The literal carries a limit clause but isn't a parseable standalone Limit
+                    // (e.g. "id > 0 FETCH FIRST 10 ROWS ONLY"); return it as-is rather than appending
+                    // a second limit, which would produce invalid SQL.
+                    return cond;
                 }
             }
 
-            final String limitClause = toFetchOffsetLimitClause(count, 0, dbVersion);
-
-            if (limitClause != null) {
-                criteriaBuilder.limit(rawLimit(limitClause, count, 0));
-            } else {
-                criteriaBuilder.limit(count);
-            }
-
-            return criteriaBuilder.build();
+            return Criteria.builder().limit(count).add(cond).build();
         }
-
-        return cond;
     }
 
     private static Limit rawLimit(final String limitClause, final int count, final int offset) {
@@ -1718,44 +1658,9 @@ final class DaoImpl {
         };
     }
 
-    /**
-     * Builds the vendor-specific row-limiting clause for the databases that use the ANSI {@code OFFSET ... FETCH}
-     * syntax instead of {@code LIMIT} (Oracle, DB2 and SQL Server), or returns {@code null} for every other database
-     * (which should use the standard {@code LIMIT}/{@code LIMIT ... OFFSET} clause). {@code null} is also returned when
-     * neither a positive {@code count} nor a positive {@code offset} is supplied (i.e. there is nothing to limit).
-     *
-     * <p>SQL Server is special-cased: it rejects a bare {@code FETCH FIRST n ROWS ONLY} because {@code FETCH} must be
-     * preceded by {@code OFFSET ... ROWS}, so a count-only limit is emitted as {@code OFFSET 0 ROWS FETCH NEXT n ROWS ONLY}.
-     * (On SQL Server the {@code OFFSET/FETCH} clause is in turn only valid in the presence of an {@code ORDER BY}.)</p>
-     *
-     * @param count the maximum number of rows to return, or a non-positive value for "no count limit"
-     * @param offset the number of leading rows to skip, or a non-positive value for "no offset"
-     * @param dbVersion the target database
-     * @return the raw {@code OFFSET/FETCH} clause, or {@code null} if the standard {@code LIMIT} clause should be used
-     */
-    private static String toFetchOffsetLimitClause(final int count, final int offset, final DBVersion dbVersion) {
-        switch (dbVersion) { //NOSONAR
-            case Oracle, SQLServer, DB2:
-                break;
-
-            default:
-                return null;
-        }
-
-        if (count > 0 && offset > 0) {
-            return "OFFSET " + offset + " ROWS FETCH NEXT " + count + " ROWS ONLY";
-        } else if (count > 0) {
-            return dbVersion == DBVersion.SQLServer ? "OFFSET 0 ROWS FETCH NEXT " + count + " ROWS ONLY" : "FETCH FIRST " + count + " ROWS ONLY";
-        } else if (offset > 0) {
-            return "OFFSET " + offset + " ROWS";
-        } else {
-            return null;
-        }
-    }
-
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiRowMapper<Object> getIdExtractor(final Holder<Jdbc.BiRowMapper<Object>> idExtractorHolder,
-            final Jdbc.BiRowMapper<Object> defaultIdExtractor, final ReadOps dao) {
+            final Jdbc.BiRowMapper<Object> defaultIdExtractor, final DaoBase dao) {
         Jdbc.BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
 
         if (keyExtractor == null) {
@@ -1856,7 +1761,7 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Map<String, ReadOps> joinEntityDaoPool = new ConcurrentHashMap<>();
+    private static final Map<String, DaoBase> joinEntityDaoPool = new ConcurrentHashMap<>();
 
     /**
      * Creates a dynamic proxy implementation of the specified DAO interface backed by the given {@link javax.sql.DataSource}.
@@ -1907,7 +1812,7 @@ final class DaoImpl {
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
-    static <TD extends ReadOps> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
+    static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
             final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(ds, cs.dataSource);
@@ -2051,7 +1956,7 @@ final class DaoImpl {
                         return false;
                     }
 
-                    return ReadOps.class.isAssignableFrom(rawType);
+                    return DaoBase.class.isAssignableFrom(rawType);
                 })
                 .map(ParameterizedType::getActualTypeArguments)
                 .filter(it -> N.notEmpty(it) && it[0] instanceof Class)
@@ -2097,7 +2002,7 @@ final class DaoImpl {
             }
         }
 
-        final Map<Method, Throwables.BiFunction<ReadOps, Object[], ?, Throwable>> methodInvokerMap = new ConcurrentHashMap<>();
+        final Map<Method, Throwables.BiFunction<DaoBase, Object[], ?, Throwable>> methodInvokerMap = new ConcurrentHashMap<>();
 
         final List<Method> sqlMethods = Stream.of(allInterfaces)
                 .reversed()
@@ -2343,7 +2248,7 @@ final class DaoImpl {
                             + ClassUtil.getCanonicalClassName(daoInterface) + " which extends JoinEntityHelper interface");
         }
 
-        if ((DaoUtil.isJoinEntityReadOps(daoInterface) && !ReadOps.class.isAssignableFrom(daoInterface))
+        if ((DaoUtil.isJoinEntityReadOps(daoInterface) && !DaoBase.class.isAssignableFrom(daoInterface))
                 || (DaoUtil.isCrudJoinEntityReadOps(daoInterface) && !CrudDao.class.isAssignableFrom(daoInterface))) {
             throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(daoInterface)
                     + " extending JoinEntityHelper/CrudJoinEntityHelper must extend the corresponding Dao interface:Dao/CrudDao");
@@ -2424,7 +2329,7 @@ final class DaoImpl {
                 }
             }
 
-            Throwables.BiFunction<ReadOps, Object[], ?, Throwable> call = null;
+            Throwables.BiFunction<DaoBase, Object[], ?, Throwable> call = null;
 
             // Centralized SQL-kind gate for read-only / no-update DAOs: the prepareQuery/prepareNamedQuery (and
             // *ForLargeResult) overloads whose first argument is a raw SQL String or ParsedSql must be restricted to
@@ -2474,8 +2379,6 @@ final class DaoImpl {
                 };
             } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> asyncExecutor.getExecutor();
-            } else if (methodName.equals("asyncExecutor") && AsyncExecutor.class.isAssignableFrom(returnType) && paramLen == 0) {
-                call = (proxy, args) -> asyncExecutor;
             } else if (method.getName().equals("targetEntityClass") && Class.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> entityClass;
             } else if (method.getName().equals("targetTableName") && String.class.isAssignableFrom(returnType) && paramLen == 0) {
@@ -4581,211 +4484,12 @@ final class DaoImpl {
                                 }
                             };
                         }
-                    } else if (methodName.equals("batchGet") && paramLen == 3 && Collection.class.equals(paramTypes[0])
-                            && Collection.class.equals(paramTypes[1]) && int.class.equals(paramTypes[2])) {
-                        call = (proxy, args) -> {
-                            final Collection<Object> ids = (Collection<Object>) args[0];
-                            final Collection<String> selectPropNames = (Collection<String>) args[1];
-                            final int batchSize = (Integer) args[2];
-
-                            N.checkArgPositive(batchSize, cs.batchSize);
-
-                            if (N.isEmpty(ids)) {
-                                return new ArrayList<>();
-                            }
-
-                            final Object firstId = N.firstElement(ids).get();
-                            final boolean isMap = firstId instanceof Map;
-                            final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());
-
-                            N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
-                                    "Input 'ids' can not be EntityIds/Maps or entities for single id ");
-
-                            final List idList = ids instanceof List ? (List) ids : new ArrayList(ids);
-                            final List<Object> resultList = new ArrayList<>(idList.size());
-                            List<Object> entities = null;
-
-                            if (idPropNameList.size() == 1) {
-                                String sql_selectPart = selectSqlBuilderFunc.apply(selectPropNames, idCond).build().query();
-                                final int eqIndex = sql_selectPart.lastIndexOf('=');
-                                N.checkArgument(eqIndex >= 0, "SQL query does not contain '=' character: %s", sql_selectPart);
-                                sql_selectPart = sql_selectPart.substring(0, eqIndex) + "IN ";
-
-                                if (idList.size() >= batchSize) {
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
-
-                                    for (int i = 0; i < batchSize; i++) {
-                                        joiner.append('?');
-                                    }
-
-                                    final String query = sql_selectPart + joiner.toString();
-
-                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(query)
-                                            .setFetchDirection(FetchDirection.FORWARD)
-                                            .setFetchSize(batchSize)
-                                            .closeAfterExecution(false)) {
-                                        for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
-                                            resultList.addAll(batchGetById(preparedQuery, idList.subList(i, i + batchSize), entityClass));
-                                        }
-                                    }
-                                }
-
-                                if (idList.size() % batchSize != 0) {
-                                    final int remaining = idList.size() % batchSize;
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
-
-                                    for (int i = 0; i < remaining; i++) {
-                                        joiner.append('?');
-                                    }
-
-                                    final String query = sql_selectPart + joiner.toString();
-
-                                    entities = batchGetById(proxy.prepareQuery(query).setFetchDirection(FetchDirection.FORWARD).setFetchSize(remaining),
-                                            idList.subList(idList.size() - remaining, idList.size()), entityClass);
-
-                                    resultList.addAll(entities);
-                                }
-                            } else {
-                                if (idList.size() >= batchSize) {
-                                    for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
-                                        if (isEntityId) {
-                                            entities = proxy.list(selectPropNames, Filters.id2Cond(idList.subList(i, i + batchSize)));
-                                        } else if (isMap) {
-                                            entities = proxy.list(selectPropNames, Filters.anyOfAllEqual(idList.subList(i, i + batchSize)));
-                                        } else {
-                                            entities = proxy.list(selectPropNames, Filters.anyOfAllEqual(idList.subList(i, i + batchSize), idPropNameList));
-                                        }
-
-                                        if (entities.size() > batchSize) {
-                                            throw new DuplicateResultException(
-                                                    "The size of result: " + entities.size() + " is bigger than the size of input ids: " + batchSize);
-                                        }
-
-                                        resultList.addAll(entities);
-                                    }
-                                }
-
-                                if (idList.size() % batchSize != 0) {
-                                    final int remaining = idList.size() % batchSize;
-
-                                    if (isEntityId) {
-                                        entities = proxy.list(selectPropNames, Filters.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
-                                    } else if (isMap) {
-                                        entities = proxy.list(selectPropNames, Filters.anyOfAllEqual(idList.subList(idList.size() - remaining, idList.size())));
-                                    } else {
-                                        entities = proxy.list(selectPropNames,
-                                                Filters.anyOfAllEqual(idList.subList(idList.size() - remaining, idList.size()), idPropNameList));
-                                    }
-
-                                    if (entities.size() > remaining) {
-                                        throw new DuplicateResultException(
-                                                "The size of result: " + entities.size() + " is bigger than the size of input ids: " + remaining);
-                                    }
-
-                                    resultList.addAll(entities);
-                                }
-                            }
-
-                            if (resultList.size() > idList.size()) {
-                                throw new DuplicateResultException(
-                                        "The size of result: " + resultList.size() + " is bigger than the size of input ids: " + idList.size());
-                            }
-
-                            return resultList;
-                        };
                     } else if (methodName.equals("exists") && paramLen == 1 && !Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final Object id = args[0];
                             N.checkArgNotNull(id, cs.id);
 
                             return proxy.prepareNamedQuery(namedExistsByIdSQL).setFetchSize(1).settParameters(id, idParamSetter).exists();
-                        };
-                    } else if (methodName.equals("count") && paramLen == 1 && Collection.class.equals(paramTypes[0])) {
-                        final Collection<String> selectPropNames = N.asList(AbstractQueryBuilder.COUNT_ALL);
-                        final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
-                        final String sql_selectPart = selectSqlBuilderFunc.apply(selectPropNames, idCond).build().query();
-                        final int eqIndex = sql_selectPart.lastIndexOf('=');
-                        N.checkArgument(eqIndex >= 0, "SQL query does not contain '=' character: %s", sql_selectPart);
-                        final String sql_in_query = sql_selectPart.substring(0, eqIndex) + "IN ";
-
-                        call = (proxy, args) -> {
-                            final Collection<Object> ids = (Collection<Object>) args[0];
-
-                            if (N.isEmpty(ids)) {
-                                return 0;
-                            }
-
-                            final Object firstId = N.firstElement(ids).get();
-                            final boolean isMap = firstId instanceof Map;
-                            final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());
-
-                            N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
-                                    "Input 'ids' can not be EntityIds/Maps or entities for single id ");
-
-                            final List idList = ids instanceof Set ? new ArrayList(ids) : N.distinct(ids);
-                            int result = 0;
-
-                            if (idPropNameList.size() == 1) {
-                                if (idList.size() >= batchSize) {
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
-
-                                    for (int i = 0; i < batchSize; i++) {
-                                        joiner.append('?');
-                                    }
-
-                                    final String query = sql_in_query + joiner.toString();
-
-                                    try (PreparedQuery preparedQuery = proxy.prepareQuery(query).closeAfterExecution(false)) {
-                                        for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
-                                            result += preparedQuery.settParameters(idList.subList(i, i + batchSize), collParamsSetter)
-                                                    .queryForInt()
-                                                    .orElseZero();
-                                        }
-                                    }
-                                }
-
-                                if (idList.size() % batchSize != 0) {
-                                    final int remaining = idList.size() % batchSize;
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
-
-                                    for (int i = 0; i < remaining; i++) {
-                                        joiner.append('?');
-                                    }
-
-                                    final String query = sql_in_query + joiner.toString();
-                                    result += proxy.prepareQuery(query)
-                                            .setFetchDirection(FetchDirection.FORWARD)
-                                            .settParameters(idList.subList(idList.size() - remaining, idList.size()), collParamsSetter)
-                                            .queryForInt()
-                                            .orElseZero();
-                                }
-                            } else {
-                                if (idList.size() >= batchSize) {
-                                    for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
-                                        if (isEntityId) {
-                                            result += proxy.count(Filters.id2Cond(idList.subList(i, i + batchSize)));
-                                        } else if (isMap) {
-                                            result += proxy.count(Filters.anyOfAllEqual(idList.subList(i, i + batchSize)));
-                                        } else {
-                                            result += proxy.count(Filters.anyOfAllEqual(idList.subList(i, i + batchSize), idPropNameList));
-                                        }
-                                    }
-                                }
-
-                                if (idList.size() % batchSize != 0) {
-                                    final int remaining = idList.size() % batchSize;
-
-                                    if (isEntityId) {
-                                        result += proxy.count(Filters.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
-                                    } else if (isMap) {
-                                        result += proxy.count(Filters.anyOfAllEqual(idList.subList(idList.size() - remaining, idList.size())));
-                                    } else {
-                                        result += proxy.count(Filters.anyOfAllEqual(idList.subList(idList.size() - remaining, idList.size()), idPropNameList));
-                                    }
-                                }
-                            }
-
-                            return result;
                         };
                     } else if (methodName.equals("update") && paramLen == 1) {
                         call = (proxy, args) -> {
@@ -4961,7 +4665,7 @@ final class DaoImpl {
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getSelectSqlPlan(parameterizedDsl);
 
-                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
@@ -5004,7 +4708,7 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (N.isEmpty(entities)) {
                                 // Do nothing.
@@ -5094,7 +4798,7 @@ final class DaoImpl {
                             final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .getDeleteSqlPlan(parameterizedDsl);
 
-                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (Strings.isEmpty(tp._2)) {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
@@ -5124,7 +4828,7 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final ReadOps<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
                             if (N.isEmpty(entities)) {
                                 return 0;
@@ -5839,7 +5543,7 @@ final class DaoImpl {
                 }
 
                 if (!throwsSQLException) {
-                    final Throwables.BiFunction<ReadOps, Object[], ?, SQLException> tmp = (Throwables.BiFunction) call;
+                    final Throwables.BiFunction<DaoBase, Object[], ?, SQLException> tmp = (Throwables.BiFunction) call;
 
                     call = (proxy, args) -> {
                         try {
@@ -5892,7 +5596,7 @@ final class DaoImpl {
                 //    final boolean isSqlPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isSqlPerfLogAllowed;
                 //    final boolean isDaoPerfLogEnabled = hasPerfLogAnno && JdbcUtil.isDaoMethodPerfLogAllowed;
 
-                final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> tmp = call;
+                final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> tmp = call;
 
                 if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                     if (hasSqlLogAnno || hasPerfLogAnno) {
@@ -6207,7 +5911,7 @@ final class DaoImpl {
                         }
                     };
 
-                    final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
                         final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
@@ -6287,7 +5991,7 @@ final class DaoImpl {
                         .toList();
 
                 if (N.notEmpty(handlerList)) {
-                    final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
                         final boolean isInDaoMethod = isInDaoMethod_TL.get();
@@ -6466,7 +6170,7 @@ final class DaoImpl {
                     + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
         }
 
-        final Throwables.TriFunction<ReadOps, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> {
+        final Throwables.TriFunction<DaoBase, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> {
             if (method.getDeclaringClass() == Object.class) {
                 final String methodName = method.getName();
 
@@ -6479,7 +6183,7 @@ final class DaoImpl {
                 }
             }
 
-            final Throwables.BiFunction<ReadOps, Object[], ?, Throwable> invoker = methodInvokerMap.get(method);
+            final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> invoker = methodInvokerMap.get(method);
 
             if (invoker == null) {
                 throw new UnsupportedOperationException(
@@ -6498,7 +6202,7 @@ final class DaoImpl {
             }
 
             try {
-                return proxyInvoker.apply((ReadOps) proxy, method, args);
+                return proxyInvoker.apply((DaoBase) proxy, method, args);
             } catch (final Throwable t) {
                 if (shouldLogInvocation) {
                     daoLogger.debug(t, "Dao method invocation failed(method={})", method.getName());
@@ -6510,7 +6214,7 @@ final class DaoImpl {
 
         daoInstance = N.newProxyInstance(interfaceClasses, h);
 
-        final ReadOps existingDaoInstance = daoPool.putIfAbsent(daoCacheKey, daoInstance);
+        final DaoBase existingDaoInstance = daoPool.putIfAbsent(daoCacheKey, daoInstance);
 
         if (existingDaoInstance != null) {
             if (daoLogger.isDebugEnabled()) {
@@ -6544,14 +6248,14 @@ final class DaoImpl {
      *         {@code defaultDao} if no matching DAO has been registered
      */
     @SuppressWarnings("rawtypes")
-    static ReadOps getApplicableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final ReadOps defaultDao) {
+    static DaoBase getApplicableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final DaoBase defaultDao) {
         final String key = ClassUtil.getCanonicalClassName(referencedEntityClass) + "_" + System.identityHashCode(ds);
-        final ReadOps joinEntityDao = joinEntityDaoPool.get(key);
+        final DaoBase joinEntityDao = joinEntityDaoPool.get(key);
 
         if (joinEntityDao != null && joinEntityDao.dataSource().equals(ds)) {
             return joinEntityDao;
         } else {
-            for (final ReadOps dao : daoPool.values()) {
+            for (final DaoBase dao : daoPool.values()) {
                 if (dao.targetEntityClass().equals(referencedEntityClass) && dao.dataSource().equals(ds)) {
                     joinEntityDaoPool.put(key, dao);
                     return dao;

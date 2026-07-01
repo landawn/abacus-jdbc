@@ -30,8 +30,11 @@ import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Result;
@@ -151,7 +154,8 @@ public final class DaoUtil {
         return declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class) || declaringClass.equals(ReadOps.class)
                 || declaringClass.equals(InsertOps.class) || declaringClass.equals(UpdateOps.class) || declaringClass.equals(DeleteOps.class)
                 || declaringClass.equals(UncheckedReadOps.class) || declaringClass.equals(UncheckedInsertOps.class)
-                || declaringClass.equals(UncheckedUpdateOps.class) || declaringClass.equals(UncheckedDeleteOps.class);
+                || declaringClass.equals(UncheckedUpdateOps.class) || declaringClass.equals(UncheckedDeleteOps.class) || declaringClass.equals(DaoBase.class)
+                || declaringClass.equals(UncheckedDaoBase.class);
     }
 
     /**
@@ -195,19 +199,9 @@ public final class DaoUtil {
      * @throws ClassCastException if {@code dao} does not implement {@link CrudReadOps}.
      */
     @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
-    public static Object generateId(final ReadOps dao) throws SQLException {
+    public static Object generateId(final DaoBase dao) throws SQLException {
         return ((CrudReadOps) dao).generateId();
     }
-
-    /**
-     * A consumer that configures a {@link PreparedStatement} for handling large query results efficiently.
-     * Sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and the fetch size to
-     * {@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_BIG_RESULT}.
-     */
-    static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
-        stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-        stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
-    };
 
     /**
      * Extracts the ID value(s) from an entity instance.
@@ -310,6 +304,41 @@ public final class DaoUtil {
             };
         }
     }
+
+    /**
+     * Builds the {@code WHERE} condition selecting the rows whose IDs are contained in the given (sub-)collection,
+     * dispatching on the shape of the IDs: {@link EntityId}s, {@link Map}s, a single-column id (rendered as an
+     * {@code IN} clause), or multi-column ids. Shared by {@link #batchGet(Collection, Collection, int)} and
+     * {@link #count(Collection)}; declared {@code static} so it is not treated as a DAO operation by the proxy.
+     *
+     * @param ids the (batch of) IDs to match
+     * @param idPropNameList the id property names of the entity
+     * @param isEntityId whether the IDs are {@link EntityId} instances
+     * @param isMap whether the IDs are {@link Map} instances
+     * @return a condition matching any row whose id is in {@code ids}
+     */
+    @SuppressWarnings("unchecked")
+    static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap) {
+        if (isEntityId) {
+            return Filters.idToCond((Collection<? extends EntityId>) ids);
+        } else if (isMap) {
+            return Filters.anyOfAllEqual(ids);
+        } else if (idPropNameList.size() == 1) {
+            return Filters.in(idPropNameList.get(0), ids);
+        } else {
+            return Filters.anyOfAllEqual(ids, idPropNameList);
+        }
+    }
+
+    /**
+     * A consumer that configures a {@link PreparedStatement} for handling large query results efficiently.
+     * Sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and the fetch size to
+     * {@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_BIG_RESULT}.
+     */
+    static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
+        stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+        stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    };
 
     /**
      * Ensures that ID properties are included in the set of properties to be selected for refresh operations.
@@ -417,7 +446,7 @@ public final class DaoUtil {
      * @return the DAO instance cast to Dao
      * @throws UnsupportedOperationException if the DAO does not implement Dao interface
      */
-    static <T, TD extends Dao<T, TD>> TD getDao(final JoinEntityReadOps<T, TD> dao) {
+    static <T, TD extends Dao<T, TD>> TD getDao(final JoinEntityBase<T, TD> dao) {
         if (dao instanceof Dao) {
             return (TD) dao;
         } else {

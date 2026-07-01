@@ -3,44 +3,45 @@ DAO method-surface comparison: interface extending CrudLDao
 Scope        : public methods inherited by a user DAO declared as
                `interface FooDao extends CrudLDao<Foo, FooDao>`
 Old version  : 7beb529f90a315d1a514f38a2e4a778609f0a792  (pre capability-split refactor)
-Current      : working tree @ 9039c1dc + uncommitted (capability ifaces renamed to *Ops; *CrudLDao naming; Cacheable removed; LongId read-ops merged into CrudLReadOps)
+Current      : working tree @ 79a10b84 + uncommitted (DaoBase/UncheckedDaoBase infra root extracted from ReadOps — accessors + plain/condition/large-result prepare* builders + asyncCall/asyncRun; generated-keys prepare* live on Dao, so absent from ReadOnly*/NoUpdate*; asyncExecutor() accessor removed; batchGet/count now default)
 Method       : reflection via Class.getMethods(), bridge/synthetic/Object methods excluded.
                Signatures compared at FULL GENERIC fidelity (type params, generic return &
                parameter types, wildcards, throws clauses) -- not just erasure.
-Totals       : 7beb529f = 230 methods ; current = 230 methods.
+Totals       : 7beb529f = 230 methods ; current = 229 methods.
 
 RESULT
 ------
-The two method sets are IDENTICAL. No method exists in one version but not the other
-(symmetric difference is empty). A column value of "Y" = present, "-" = absent.
+1 method present in 7beb529f is ABSENT in current; 0 methods were added.
+asyncExecutor() was deleted from DaoBase (method + proxy branch removed); in 7beb529f it
+lived on the monolithic Dao. A column value of "Y" = present, "-" = absent.
 
-┌──────────────────────────────────────────────────────────────┬──────────┬─────────┐
-│ method signature                                             │ 7beb529f │ current │
-├──────────────────────────────────────────────────────────────┼──────────┼─────────┤
-│ (none -- the 230-method sets are identical in both versions) │ -        │ -       │
-└──────────────────────────────────────────────────────────────┴──────────┴─────────┘
+┌──────────────────┬──────────┬─────────┐
+│ method signature │ 7beb529f │ current │
+├──────────────────┼──────────┼─────────┤
+│ asyncExecutor()  │ Y        │ -       │
+└──────────────────┴──────────┴─────────┘
 
 NOTE
 ----
-For a FULL-capability CrudLDao DAO the capability-split refactor (commit 8a3d8246) is
-completely transparent at the method level: nothing was added, removed, renamed, or had
-its signature changed. What the refactor changed is only WHERE each method is *declared*
-(the same 230 methods were redistributed across new capability interfaces), not the
-callable surface:
+Aside from the single deleted accessor asyncExecutor(), the refactor is transparent at the
+method level for CrudLDao: nothing else was added, removed, renamed, or had its signature
+changed. What it changed is only WHERE each surviving method is *declared* (the remaining
+229 methods were redistributed across new capability interfaces), not the callable surface:
 
-  declaring interface counts (same 230 methods, regrouped)
-  ----------------------------------------------------------------
+  declaring interface counts (229 surviving methods, regrouped)
+  -------------------------------------------------------------
   ┌──────────┬───────┬───────────────┬───────┐
   │ 7beb529f │ count │ current       │ count │
   ├──────────┼───────┼───────────────┼───────┤
-  │ Dao      │   135 │ ReadOps       │   106 │
+  │ Dao      │   135 │ ReadOps       │    82 │
   │ CrudDao  │    67 │ CrudReadOps   │    38 │
   │ CrudDaoL │    28 │ CrudLReadOps  │    25 │
-  │          │       │ InsertOps     │    18 │
+  │          │       │ DaoBase       │    23 │
+  │          │       │ Dao           │    15 │
+  │          │       │ InsertOps     │     9 │
   │          │       │ CrudInsertOps │     9 │
   │          │       │ CrudUpdateOps │     8 │
   │          │       │ CrudDao       │     6 │
-  │          │       │ Dao           │     6 │
   │          │       │ CrudDeleteOps │     6 │
   │          │       │ UpdateOps     │     4 │
   │          │       │ CrudLDao      │     3 │
@@ -48,6 +49,6 @@ callable surface:
   └──────────┴───────┴───────────────┴───────┘
 
 The surface-changing effect of the refactor appears only on the RESTRICTED variants
-(ReadOnlyCrudLDao: 230 -> 169; NoUpdateCrudLDao: 230 -> 196) -- see their reports. The 25
+(ReadOnlyCrudLDao: 230 -> 168; NoUpdateCrudLDao: 230 -> 186) -- see their reports. The 25
 primitive-`long` read overloads now live in CrudLReadOps (shared by all three checked
 Long CRUD variants), which is why CrudLDao's own declared count drops from 28 to 3.

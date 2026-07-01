@@ -68,7 +68,7 @@ public class CrudJoinEntityHelperTest extends TestBase {
         List<Long> ids = List.of(1L, 2L);
         List<TestEntity> entities = List.of(new TestEntity());
 
-        when(dao.batchGet(ids, null, String.class, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, null, String.class, JdbcUtil.DEFAULT_BATCH_SIZE);
 
         assertEquals(entities, dao.batchGet(ids, String.class));
     }
@@ -131,10 +131,10 @@ public class CrudJoinEntityHelperTest extends TestBase {
         List<String> selectPropNames = List.of("name");
         List<TestEntity> entities = List.of(new TestEntity());
 
-        when(dao.batchGet(ids, null, true, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
-        when(dao.batchGet(ids, selectPropNames, String.class, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
-        when(dao.batchGet(ids, selectPropNames, List.of(String.class, Integer.class), JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
-        when(dao.batchGet(ids, selectPropNames, true, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, null, true, JdbcUtil.DEFAULT_BATCH_SIZE);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, selectPropNames, String.class, JdbcUtil.DEFAULT_BATCH_SIZE);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, selectPropNames, List.of(String.class, Integer.class), JdbcUtil.DEFAULT_BATCH_SIZE);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, selectPropNames, true, JdbcUtil.DEFAULT_BATCH_SIZE);
 
         assertEquals(entities, dao.batchGet(ids, true));
         assertEquals(entities, dao.batchGet(ids, selectPropNames, String.class));
@@ -149,7 +149,7 @@ public class CrudJoinEntityHelperTest extends TestBase {
         List<String> selectPropNames = List.of("name");
         List<TestEntity> entities = List.of(new TestEntity(), new TestEntity());
 
-        when(dao.batchGet(ids, selectPropNames, 2)).thenReturn(entities);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, selectPropNames, 2);
         doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
         doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
         doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
@@ -222,7 +222,7 @@ public class CrudJoinEntityHelperTest extends TestBase {
         List<String> selectPropNames = List.of("name");
         List<TestEntity> entities = List.of(new TestEntity(), new TestEntity(), new TestEntity());
 
-        when(dao.batchGet(ids, selectPropNames, 2)).thenReturn(entities);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, selectPropNames, 2);
         doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));
         doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
         doNothing().when(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());

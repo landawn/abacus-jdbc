@@ -16,9 +16,11 @@
 package com.landawn.abacus.jdbc.dao;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
@@ -31,6 +33,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Nullable;
@@ -56,7 +59,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T, TD>
+sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T, TD>
         permits CrudDao, CrudLReadOps, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
     /**
      * Returns a {@link Jdbc.BiRowMapper} that extracts the ID from a database row.
@@ -665,8 +668,44 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
-    List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
-            throws DuplicateResultException, SQLException;
+    @SuppressWarnings("deprecation")
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
+            throws DuplicateResultException, SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
+        if (N.isEmpty(ids)) {
+            return new ArrayList<>();
+        }
+
+        final Class<T> entityClass = targetEntityClass();
+        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdPropNames(entityClass);
+        final Object firstId = N.firstElement(ids).get();
+        final boolean isEntityId = firstId instanceof EntityId;
+        final boolean isMap = firstId instanceof Map;
+        final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());
+
+        N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId), "Input 'ids' can not be EntityIds/Maps or entities for single id");
+
+        final List<ID> idList = new ArrayList<>(ids);
+        final List<T> resultList = new ArrayList<>(idList.size());
+
+        for (int i = 0, size = idList.size(); i < size; i += batchSize) {
+            final List<ID> batch = idList.subList(i, Math.min(i + batchSize, size));
+            final List<T> entities = list(selectPropNames, DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap));
+
+            if (entities.size() > batch.size()) {
+                throw new DuplicateResultException("The size of result: " + entities.size() + " is bigger than the size of input ids: " + batch.size());
+            }
+
+            resultList.addAll(entities);
+        }
+
+        if (resultList.size() > idList.size()) {
+            throw new DuplicateResultException("The size of result: " + resultList.size() + " is bigger than the size of input ids: " + idList.size());
+        }
+
+        return resultList;
+    }
 
     /**
      * Checks if an entity with the specified ID exists in the database.
@@ -723,8 +762,33 @@ sealed interface CrudReadOps<T, ID, TD extends ReadOps<T, TD>> extends ReadOps<T
      * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
-    int count(final Collection<? extends ID> ids) throws SQLException;
+    default int count(final Collection<? extends ID> ids) throws SQLException {
+        if (N.isEmpty(ids)) {
+            return 0;
+        }
+
+        final Class<T> entityClass = targetEntityClass();
+        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdPropNames(entityClass);
+        final Object firstId = N.firstElement(ids).get();
+        final boolean isEntityId = firstId instanceof EntityId;
+        final boolean isMap = firstId instanceof Map;
+        final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());
+
+        N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId), "Input 'ids' can not be EntityIds/Maps or entities for single id");
+
+        final List<ID> idList = ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
+        final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        int result = 0;
+
+        for (int i = 0, size = idList.size(); i < size; i += batchSize) {
+            final List<ID> batch = idList.subList(i, Math.min(i + batchSize, size));
+            result += count(DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap));
+        }
+
+        return result;
+    }
 
     /**
      * Refreshes the given entity by reloading all of its (non-join) properties from the database

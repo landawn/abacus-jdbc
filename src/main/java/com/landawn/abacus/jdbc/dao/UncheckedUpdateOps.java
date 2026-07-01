@@ -35,7 +35,7 @@ import com.landawn.abacus.query.condition.Condition;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
-sealed interface UncheckedUpdateOps<T, TD extends UncheckedReadOps<T, TD>> extends UpdateOps<T, TD>, UncheckedReadOps<T, TD>
+sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> extends UpdateOps<T, TD>, UncheckedDaoBase<T, TD>
         permits UncheckedDao, UncheckedCrudUpdateOps {
     /**
      * Updates a single property value for all records matching the condition.

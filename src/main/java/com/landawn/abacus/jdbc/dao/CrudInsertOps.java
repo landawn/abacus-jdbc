@@ -32,7 +32,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface CrudInsertOps<T, ID, TD extends ReadOps<T, TD>> extends InsertOps<T, TD> permits CrudDao, NoUpdateCrudDao, UncheckedCrudInsertOps {
+sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertOps<T, TD> permits CrudDao, NoUpdateCrudDao, UncheckedCrudInsertOps {
     /**
      * Inserts the specified entity into the database and returns its ID.
      * All insertable properties of the entity will be included in the INSERT statement.

@@ -24,8 +24,10 @@ import com.landawn.abacus.annotation.Beta;
  * <p>It is a pure capability composite of {@link InsertOps} (reads + inserts, via its
  * {@link ReadOps} super-interface). It does <b>not</b> mix in
  * {@code UpdateOps}/{@code DeleteOps}, so {@code update}/{@code upsert}/{@code delete}/
- * {@code batchUpdate}/{@code batchUpsert} (and {@code prepareCallableQuery}) are <b>absent from the
- * type</b> — calling them is a compile error rather than a runtime {@link UnsupportedOperationException}.</p>
+ * {@code batchUpdate}/{@code batchUpsert} (along with {@code prepareCallableQuery} and the generated-keys
+ * {@code prepareQuery}/{@code prepareNamedQuery} overloads that take a {@code boolean}/{@code int[]}/
+ * {@code String[]}, which are full-{@link Dao}-only) are <b>absent from the type</b> — calling them is a
+ * compile error rather than a runtime {@link UnsupportedOperationException}.</p>
  *
  * <p>The inherited {@code prepareQuery}/{@code prepareNamedQuery} (and {@code *ForLargeResult})
  * overloads that take a raw SQL {@code String}/{@link com.landawn.abacus.query.ParsedSql} are
@@ -57,5 +59,5 @@ import com.landawn.abacus.annotation.Beta;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends InsertOps<T, TD> {
+public non-sealed interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends ReadOps<T, TD>, InsertOps<T, TD> {
 }

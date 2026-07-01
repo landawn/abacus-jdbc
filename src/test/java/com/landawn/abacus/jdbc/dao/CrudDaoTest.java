@@ -126,8 +126,8 @@ public class CrudDaoTest extends TestBase {
         List<Long> ids = List.of(1L, 2L);
         List<TestEntity> entities = List.of(new TestEntity());
 
-        when(dao.batchGet(ids, (java.util.Collection<String>) null)).thenReturn(entities);
-        when(dao.batchGet(ids, (java.util.Collection<String>) null, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, (java.util.Collection<String>) null);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, (java.util.Collection<String>) null, JdbcUtil.DEFAULT_BATCH_SIZE);
 
         assertEquals(entities, dao.batchGet(ids));
         assertEquals(entities, dao.batchGet(ids, (java.util.Collection<String>) null));
@@ -219,7 +219,7 @@ public class CrudDaoTest extends TestBase {
         List<Long> ids = List.of(1L, 2L);
         List<TestEntity> entities = List.of(new TestEntity());
 
-        when(dao.batchGet(ids, (java.util.Collection<String>) null, 500)).thenReturn(entities);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, (java.util.Collection<String>) null, 500);
 
         assertEquals(entities, dao.batchGet(ids, 500));
         verify(dao).batchGet(ids, (java.util.Collection<String>) null, 500);
@@ -232,7 +232,7 @@ public class CrudDaoTest extends TestBase {
         List<TestEntity> entities = List.of(new TestEntity());
         List<String> props = List.of("id", "name");
 
-        when(dao.batchGet(ids, props, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
+        Mockito.doReturn(entities).when(dao).batchGet(ids, props, JdbcUtil.DEFAULT_BATCH_SIZE);
 
         assertEquals(entities, dao.batchGet(ids, props));
         verify(dao).batchGet(ids, props, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -544,7 +544,7 @@ public class CrudDaoTest extends TestBase {
         dbEntity.setId(7L);
         dbEntity.setName("fresh");
 
-        when(dao.batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2))).thenReturn(List.of(dbEntity));
+        Mockito.doReturn(List.of(dbEntity)).when(dao).batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(2));
 
         int count = dao.batchRefresh(entities, List.of("name"), 2);
 
@@ -568,7 +568,7 @@ public class CrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
 
-        when(dao.batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5))).thenReturn(List.of());
+        Mockito.doReturn(List.of()).when(dao).batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5));
 
         assertEquals(0, dao.batchRefresh(List.of(entity), List.of("name"), 5));
     }

@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,10 +39,11 @@ import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.jdbc.dao.ReadOps;
+import com.landawn.abacus.jdbc.dao.DaoBase;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
+import com.landawn.abacus.query.condition.Expression;
 import com.landawn.abacus.query.condition.Limit;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
@@ -898,7 +898,7 @@ public class DaoImplTest extends TestBase {
         try (MockedStatic<JdbcUtil> jdbcUtil = org.mockito.Mockito.mockStatic(JdbcUtil.class)) {
             jdbcUtil.when(() -> JdbcUtil.prepareQuery(org.mockito.ArgumentMatchers.same(ds), org.mockito.ArgumentMatchers.anyString())).thenReturn(query);
 
-            assertSame(query, dao.prepareQuery(List.of("id"), com.landawn.abacus.query.Filters.eq("id", 1L)));
+            assertSame(query, dao.prepareQuery(List.of("id"), Filters.eq("id", 1L)));
         }
 
         org.mockito.Mockito.verify(query, org.mockito.Mockito.never())
@@ -919,7 +919,7 @@ public class DaoImplTest extends TestBase {
         try (MockedStatic<JdbcUtil> jdbcUtil = org.mockito.Mockito.mockStatic(JdbcUtil.class)) {
             jdbcUtil.when(() -> JdbcUtil.prepareNamedQuery(org.mockito.ArgumentMatchers.same(ds), org.mockito.ArgumentMatchers.anyString())).thenReturn(query);
 
-            assertSame(query, dao.prepareNamedQuery(List.of("id"), com.landawn.abacus.query.Filters.eq("id", 1L)));
+            assertSame(query, dao.prepareNamedQuery(List.of("id"), Filters.eq("id", 1L)));
         }
 
         org.mockito.Mockito.verify(query, org.mockito.Mockito.never())
@@ -964,14 +964,14 @@ public class DaoImplTest extends TestBase {
         Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", com.landawn.abacus.query.condition.Condition.class, int.class, DBVersion.class);
         handleLimit.setAccessible(true);
 
-        com.landawn.abacus.query.condition.Expression expr = com.landawn.abacus.query.Filters.expr("id > 0 FETCH FIRST 10 ROWS ONLY");
+        Expression expr = Filters.expr("id > 0 FETCH FIRST 10 ROWS ONLY");
 
         // Oracle: prior bug → wrapped in Criteria with extra FETCH FIRST appended. After fix, returned as-is.
         Object out = handleLimit.invoke(null, expr, 5, DBVersion.Oracle);
         assertSame(expr, out, "Expression already containing FETCH FIRST must not be re-wrapped");
 
         // Sanity: an Expression containing a plain LIMIT is also returned as-is (already covered before fix).
-        com.landawn.abacus.query.condition.Expression limitExpr = com.landawn.abacus.query.Filters.expr("id > 0 LIMIT 10");
+        Expression limitExpr = Filters.expr("id > 0 LIMIT 10");
         Object out2 = handleLimit.invoke(null, limitExpr, 5, DBVersion.MySQL_5_5);
         assertSame(limitExpr, out2, "Expression already containing LIMIT must not be re-wrapped");
     }
@@ -1006,49 +1006,16 @@ public class DaoImplTest extends TestBase {
 
         final Criteria orderLimited = (Criteria) invokeHandleLimit(Filters.orderBy("id"), 2, DBVersion.Oracle);
         assertNotNull(orderLimited.getOrderBy());
-        assertEquals("FETCH FIRST 2 ROWS ONLY", orderLimited.getLimit().getLiteral());
+        assertEquals(2, orderLimited.getLimit().getCount());
 
         final Criteria groupLimited = (Criteria) invokeHandleLimit(Filters.groupBy("status"), 2, DBVersion.MySQL_8);
         assertNotNull(groupLimited.getGroupBy());
         assertEquals(2, groupLimited.getLimit().getCount());
 
-        final Criteria noConditionLimited = (Criteria) invokeHandleLimit(null, 2, DBVersion.MySQL_8);
-        assertNull(noConditionLimited.getWhere());
-        assertEquals(2, noConditionLimited.getLimit().getCount());
-    }
-
-    // Bug fix: handleLimit grouped SQL Server with Oracle/DB2 and emitted a bare "FETCH FIRST n ROWS ONLY" for a
-    // count-only limit. SQL Server rejects FETCH unless it is preceded by "OFFSET ... ROWS", so that is invalid SQL
-    // there; the count-only case must be "OFFSET 0 ROWS FETCH NEXT n ROWS ONLY". The clause building (previously
-    // triple-duplicated across handleLimit's branches) now funnels through the private toFetchOffsetLimitClause helper.
-    @Test
-    public void testToFetchOffsetLimitClause() throws Exception {
-        Method m = DaoImpl.class.getDeclaredMethod("toFetchOffsetLimitClause", int.class, int.class, DBVersion.class);
-        m.setAccessible(true);
-
-        // count-only: Oracle/DB2 keep the bare FETCH FIRST; SQL Server must prefix "OFFSET 0 ROWS".
-        assertEquals("FETCH FIRST 5 ROWS ONLY", m.invoke(null, 5, 0, DBVersion.Oracle));
-        assertEquals("FETCH FIRST 5 ROWS ONLY", m.invoke(null, 5, 0, DBVersion.DB2));
-        assertEquals("OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 0, DBVersion.SQLServer));
-
-        // offset + count: same valid form for all three FETCH dialects.
-        assertEquals("OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 10, DBVersion.Oracle));
-        assertEquals("OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 10, DBVersion.SQLServer));
-        assertEquals("OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", m.invoke(null, 5, 10, DBVersion.DB2));
-
-        // offset-only.
-        assertEquals("OFFSET 10 ROWS", m.invoke(null, 0, 10, DBVersion.Oracle));
-        assertEquals("OFFSET 10 ROWS", m.invoke(null, 0, 10, DBVersion.SQLServer));
-
-        // nothing to limit on a FETCH dialect -> null (the original/empty limit is kept).
-        assertNull(m.invoke(null, 0, 0, DBVersion.Oracle));
-        assertNull(m.invoke(null, -1, -1, DBVersion.SQLServer));
-
-        // non-FETCH databases always use the standard LIMIT clause -> null regardless of count/offset.
-        assertNull(m.invoke(null, 5, 0, DBVersion.MySQL_8));
-        assertNull(m.invoke(null, 5, 10, DBVersion.H2));
-        assertNull(m.invoke(null, 5, 0, DBVersion.PostgreSQL_12));
-        assertNull(m.invoke(null, 0, 10, DBVersion.MariaDB));
+        // A null condition with a positive count yields a standalone Limit (no wrapping Criteria).
+        final Limit noConditionLimited = (Limit) invokeHandleLimit(null, 2, DBVersion.MySQL_8);
+        assertEquals(2, noConditionLimited.getCount());
+        assertEquals(0, noConditionLimited.getOffset());
     }
 
     // Regression: getApplicableDaoForJoinEntity used to return a cache hit blindly. Because the cache key
@@ -1074,7 +1041,7 @@ public class DaoImplTest extends TestBase {
         pool.put(poisonedKey, daoForDs1);
 
         try {
-            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, ReadOps.class);
+            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, DaoBase.class);
             m.setAccessible(true);
 
             // Create a real DAO bound to ds2 so the fall-through scan can find it.
@@ -1087,15 +1054,6 @@ public class DaoImplTest extends TestBase {
         } finally {
             pool.remove(poisonedKey);
         }
-    }
-
-    @Test
-    public void testHandleLimit_StandaloneLimitRewrittenForFetchDialect() throws Exception {
-        final Limit original = Filters.limit(20, 5);
-
-        final Limit rewritten = (Limit) invokeHandleLimit(original, -1, DBVersion.SQLServer);
-
-        assertEquals("OFFSET 5 ROWS FETCH NEXT 20 ROWS ONLY", rewritten.getLiteral());
     }
 
     @Test

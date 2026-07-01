@@ -72,7 +72,7 @@ import com.landawn.abacus.jdbc.SqlTransaction.CreatedBy;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.jdbc.dao.ReadOps;
+import com.landawn.abacus.jdbc.dao.DaoBase;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.parser.JsonParser;
@@ -11499,7 +11499,7 @@ public final class JdbcUtil {
 
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
-            final Class<? extends ReadOps> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
+            final Class<? extends DaoBase> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (!Beans.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
@@ -12005,9 +12005,9 @@ public final class JdbcUtil {
      *       {@code DataSource} requires a separate {@code createDao} call.</li>
      * </ul>
      *
-     * @param <TD> the DAO interface type, must extend {@link ReadOps}
+     * @param <TD> the DAO interface type, must extend {@link DaoBase}
      * @param daoInterface the DAO interface class to implement, must not be {@code null}. The interface should
-     *                     extend {@link Dao}, {@link CrudDao}, or another {@link ReadOps}-based DAO facade and define
+     *                     extend {@link Dao}, {@link CrudDao}, or another {@link DaoBase}-based DAO facade and define
      *                     the entity type and ID type when applicable
      * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
      * @return a dynamically generated DAO instance implementing the specified interface.
@@ -12019,7 +12019,7 @@ public final class JdbcUtil {
      * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends ReadOps> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
+    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
         return DaoImpl.createDao(daoInterface, null, ds, Dsl.PSC, null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
@@ -12060,7 +12060,7 @@ public final class JdbcUtil {
      *                 .build());
      * }</pre>
      *
-     * @param <TD> the DAO interface type, must extend {@link ReadOps}
+     * @param <TD> the DAO interface type, must extend {@link DaoBase}
      * @param daoInterface the DAO interface class to implement, must not be {@code null} and must be an interface
      * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
      * @param daoCreationOptions the creation options; when {@code null}, all defaults are applied (equivalent
@@ -12077,7 +12077,7 @@ public final class JdbcUtil {
      * @see DaoCreationOptions
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends ReadOps> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions) {
+    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions) {
         final DaoCreationOptions options = daoCreationOptions == null ? DaoCreationOptions.builder().build() : daoCreationOptions;
         final Dsl dsl = options.dsl() == null ? Dsl.PSC : options.dsl();
         final Executor executor = options.executor() == null ? JdbcUtil.asyncExecutor.getExecutor() : options.executor();

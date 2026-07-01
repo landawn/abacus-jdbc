@@ -30,10 +30,12 @@ import com.landawn.abacus.annotation.Beta;
  *   <li>Enforcing data integrity by preventing updates at the DAO level</li>
  * </ul>
  *
- * <p>Update, upsert, and delete operations are <b>absent from the type</b> — calling them is a compile error
- * rather than a runtime {@link UnsupportedOperationException}. Read operations (find, exists, query) and insert
- * operations remain functional. (The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads
- * accept only {@code SELECT} and {@code INSERT} statements at runtime, enforced centrally by the DAO proxy.)</p>
+ * <p>Update, upsert, and delete operations — along with the generated-keys {@code prepareQuery}/
+ * {@code prepareNamedQuery} overloads (which are full-{@link CrudDao}-only) — are <b>absent from the type</b>
+ * — calling them is a compile error rather than a runtime {@link UnsupportedOperationException}. Read operations
+ * (find, exists, query) and insert operations remain functional. (The inherited raw-SQL
+ * {@code prepareQuery}/{@code prepareNamedQuery} overloads accept only {@code SELECT} and {@code INSERT}
+ * statements at runtime, enforced centrally by the DAO proxy.)</p>
  *
  * <p><b>Supported Operations:</b></p>
  * <ul>

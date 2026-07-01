@@ -109,7 +109,67 @@ import com.landawn.abacus.util.Throwables;
  * @see Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends InsertOps<T, TD>, UpdateOps<T, TD>, DeleteOps<T, TD> {
+public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>, InsertOps<T, TD>, UpdateOps<T, TD>, DeleteOps<T, TD> {
+
+    /**
+     * Creates a PreparedQuery with the option to generate keys for INSERT statements.
+     * When generateKeys is {@code true}, auto-generated keys can be retrieved after execution.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * PreparedQuery query = dao.prepareQuery("INSERT INTO users (name) VALUES (?)", true);
+     * Optional<Long> generatedId = query.setString(1, "John").insert();
+     * }</pre>
+     *
+     * @param sql the SQL query string
+     * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, generateKeys);
+    }
+
+    /**
+     * Creates a PreparedQuery that will return specific columns as generated keys.
+     * This is useful when you need to retrieve specific auto-generated column values.
+     *
+     * @param sql the SQL query string
+     * @param returnColumnIndexes array of column indexes to return as generated keys
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final String sql, final int[] returnColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, returnColumnIndexes);
+    }
+
+    /**
+     * Creates a PreparedQuery that will return specific named columns as generated keys.
+     * This allows retrieval of auto-generated values from specific columns by name.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * PreparedQuery query = dao.prepareQuery(
+     *     "INSERT INTO users (name) VALUES (?)",
+     *     new String[] {"id", "created_at"}
+     * );
+     * }</pre>
+     *
+     * @param sql the SQL query string
+     * @param returnColumnNames array of column names to return as generated keys
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final String sql, final String[] returnColumnNames) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, returnColumnNames);
+    }
+
     /**
      * Creates a PreparedQuery using a custom statement creator function.
      * This provides maximum flexibility for creating prepared statements with custom options.
@@ -124,6 +184,93 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends InsertOps<T, T
     default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql, stmtCreator);
+    }
+
+    /**
+     * Creates a NamedQuery with the option to generate keys for INSERT statements.
+     * Combines named parameters with auto-generated key retrieval.
+     *
+     * @param namedSql the named SQL query string
+     * @param generateKeys {@code true} to return generated keys
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
+    }
+
+    /**
+     * Creates a NamedQuery that will return specific columns as generated keys.
+     * Useful for INSERT statements with named parameters that need to retrieve auto-generated values.
+     *
+     * @param namedSql the named SQL query string
+     * @param returnColumnIndexes array of column indexes to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final String namedSql, final int[] returnColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnIndexes);
+    }
+
+    /**
+     * Creates a NamedQuery that will return specific named columns as generated keys.
+     * Provides the most readable way to retrieve auto-generated values with named queries.
+     *
+     * @param namedSql the named SQL query string
+     * @param returnColumnNames array of column names to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final String namedSql, final String[] returnColumnNames) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnNames);
+    }
+
+    /**
+     * Creates a NamedQuery from a pre-parsed SQL object with key generation option.
+     *
+     * @param namedSql the pre-parsed named query
+     * @param generateKeys {@code true} to return generated keys
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
+    }
+
+    /**
+     * Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.
+     *
+     * @param namedSql the pre-parsed named query
+     * @param returnColumnIndexes array of column indexes to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] returnColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnIndexes);
+    }
+
+    /**
+     * Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.
+     *
+     * @param namedSql the pre-parsed named query
+     * @param returnColumnNames array of column names to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
+     */
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] returnColumnNames) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnNames);
     }
 
     /**

@@ -46,7 +46,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntityReadOps<T, TD> permits JoinEntityHelper, UncheckedJoinEntityDeleteOps {
+sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntityBase<T, TD> permits JoinEntityHelper, UncheckedJoinEntityDeleteOps {
     /**
      * Deletes all join entities of the specified type for a single entity.
      * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.

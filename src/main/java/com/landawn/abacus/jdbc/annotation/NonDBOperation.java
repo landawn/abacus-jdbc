@@ -40,7 +40,6 @@ import java.lang.annotation.Target;
  *   <li>{@code dataSource()} - Returns the data source used by the DAO</li>
  *   <li>{@code sqlMapper()} - Returns the SQL mapper instance</li>
  *   <li>{@code executor()} - Returns the query executor</li>
- *   <li>{@code asyncExecutor()} - Returns the async query executor</li>
  *   <li>{@code prepareQuery(...)} - Creates a query builder</li>
  *   <li>{@code prepareNamedQuery(...)} - Creates a named query builder</li>
  *   <li>{@code prepareCallableQuery(...)} - Creates a callable query builder</li>

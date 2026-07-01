@@ -159,12 +159,19 @@ public class CapabilityGatingTest extends TestBase {
     @Test
     public void testConditionLevelComposition() {
         // Dao = ReadOps + InsertOps + UpdateOps + DeleteOps; restricted variants drop capabilities.
+        assertTrue(ReadOps.class.isAssignableFrom(Dao.class));
         assertTrue(InsertOps.class.isAssignableFrom(Dao.class));
         assertTrue(UpdateOps.class.isAssignableFrom(Dao.class));
         assertTrue(DeleteOps.class.isAssignableFrom(Dao.class));
-        assertTrue(ReadOps.class.isAssignableFrom(InsertOps.class));
-        assertTrue(ReadOps.class.isAssignableFrom(UpdateOps.class));
-        assertTrue(ReadOps.class.isAssignableFrom(DeleteOps.class));
+        // All capability interfaces share the infrastructure root DaoBase (accessors + prepare* builders).
+        assertTrue(DaoBase.class.isAssignableFrom(ReadOps.class));
+        assertTrue(DaoBase.class.isAssignableFrom(InsertOps.class));
+        assertTrue(DaoBase.class.isAssignableFrom(UpdateOps.class));
+        assertTrue(DaoBase.class.isAssignableFrom(DeleteOps.class));
+        // Read capability is decoupled from the write capabilities: write ops no longer extend ReadOps.
+        assertFalse(ReadOps.class.isAssignableFrom(InsertOps.class));
+        assertFalse(ReadOps.class.isAssignableFrom(UpdateOps.class));
+        assertFalse(ReadOps.class.isAssignableFrom(DeleteOps.class));
     }
 
     @Test

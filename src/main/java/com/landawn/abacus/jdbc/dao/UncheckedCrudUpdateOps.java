@@ -34,7 +34,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
-sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedReadOps<T, TD>> extends CrudUpdateOps<T, ID, TD>, UncheckedUpdateOps<T, TD>
+sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudUpdateOps<T, ID, TD>, UncheckedUpdateOps<T, TD>
         permits UncheckedCrudDao {
     /**
      * Updates the specified entity in the database. The entity must have its ID set.
