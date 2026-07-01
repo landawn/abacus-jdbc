@@ -2377,7 +2377,7 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column
              * @param type the target class type to convert the column value to
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnIndex} is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive, or {@code type} is {@code null}
              */
             public RowMapperBuilder getObject(final int columnIndex, final Class<?> type) {
                 return get(columnIndex, ColumnGetter.forType(type));
@@ -6149,6 +6149,7 @@ public final class Jdbc {
              * @param <T> target type
              * @param targetType the class to deserialize the JSON string into.
              * @return a {@code RowMapper} that performs JSON deserialization.
+             * @throws IllegalArgumentException if {@code targetType} is {@code null}
              */
             public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
                 N.checkArgNotNull(targetType, cs.targetType);
@@ -6170,6 +6171,7 @@ public final class Jdbc {
              * @param <T> target type
              * @param targetType the class to deserialize the XML string into.
              * @return a {@code RowMapper} that performs XML deserialization.
+             * @throws IllegalArgumentException if {@code targetType} is {@code null}
              */
             public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) {
                 N.checkArgNotNull(targetType, cs.targetType);

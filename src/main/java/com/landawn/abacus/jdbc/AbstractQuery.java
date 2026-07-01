@@ -3598,9 +3598,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArg(N.notEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
 
         for (final int parameterIndex : parameterIndices) {
-            if (parameterIndex <= 0) {
-                checkArg(parameterIndex > 0, "'parameterIndices' must all be positive. It can't be: " + N.toString(parameterIndices));
-            }
+            checkArg(parameterIndex > 0, "'parameterIndices' must all be positive. It can't be: " + N.toString(parameterIndices));
         }
     }
 
@@ -5850,7 +5848,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * // Process User entities and save to file
      * preparedQuery.queryThenAccept(User.class, dataset -> {
      *     try (Writer writer = new FileWriter("users.csv")) {
-     *         dataset.writeCsv(writer);
+     *         dataset.toCsv(writer);
      *     }
      * });
      * }</pre>
@@ -7276,6 +7274,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
+     * @throws IllegalArgumentException if {@code targetType} or {@code func} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      * @see #list(Class)
@@ -7318,6 +7317,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the row mapper to use. Must not be {@code null}.
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
+     * @throws IllegalArgumentException if {@code func} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      */
@@ -7358,6 +7358,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the BiRowMapper to use. Must not be {@code null}.
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
+     * @throws IllegalArgumentException if {@code func} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      */
@@ -7401,6 +7402,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
+     * @throws IllegalArgumentException if {@code targetType} or {@code consumer} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer throws an exception
      * @see #list(Class)
@@ -7435,6 +7437,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param rowMapper the RowMapper to use. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
+     * @throws IllegalArgumentException if {@code consumer} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer throws an exception
      */
@@ -7470,6 +7473,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param rowMapper the BiRowMapper to use. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
+     * @throws IllegalArgumentException if {@code consumer} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer throws an exception
      */

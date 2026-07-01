@@ -103,7 +103,6 @@ import com.landawn.abacus.annotation.Beta;
  * @see CrudReadOps
  * @see com.landawn.abacus.query.Filters
  */
-@SuppressWarnings("RedundantThrows")
 @Beta
 public non-sealed interface ReadOnlyCrudDao<T, ID, TD extends ReadOnlyCrudDao<T, ID, TD>> extends ReadOnlyDao<T, TD>, CrudReadOps<T, ID, TD> {
 

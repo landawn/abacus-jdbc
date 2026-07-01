@@ -381,7 +381,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
-     * Returns an empty {@code Optional} only if no record is found.
+     * Returns an empty {@code Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -461,7 +461,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
      * to {@link Long} and delegated to the corresponding {@code UncheckedCrudDao} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
-     * Returns an empty {@code Optional} only if no record is found.
+     * Returns an empty {@code Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

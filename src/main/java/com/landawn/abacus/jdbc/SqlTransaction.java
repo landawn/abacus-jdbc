@@ -134,7 +134,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param creator the originator type (see {@link CreatedBy}) used to compute the transaction ID
      * @param closeConnection if {@code true}, the connection will be released back to {@code ds} when the transaction completes
      * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails
-     * @throws IllegalArgumentException if {@code conn} or {@code isolationLevel} is {@code null}
+     * @throws IllegalArgumentException if {@code conn} or {@code isolationLevel} is {@code null}, or if {@code ds} is {@code null} while {@code closeConnection} is {@code true}
      */
     SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
@@ -362,6 +362,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * will be rolled back instead of committed, and {@code actionAfterCommit} is not run.</p>
      *
      * @param actionAfterCommit the action to be executed after the current transaction is committed successfully, must not be {@code null}
+     * @throws IllegalArgumentException if {@code actionAfterCommit} is {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
      *         automatic rollback is also attempted
      * @throws IllegalStateException if the outermost commit is attempted while the transaction is
@@ -484,6 +485,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * occurs when the outermost transaction completes (reference count reaches 0).</p>
      *
      * @param actionAfterRollback the action to be executed after the rollback completes in this (outermost) scope; for a nested scope the rollback is deferred to the outermost scope and this action is <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
+     * @throws IllegalArgumentException if {@code actionAfterRollback} is {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE},
      *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. If this transaction

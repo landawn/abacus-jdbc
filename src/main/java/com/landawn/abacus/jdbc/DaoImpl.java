@@ -501,9 +501,8 @@ final class DaoImpl {
                         return false;
                     } else if (paramClassInReturnType != null && paramClassInRowMapper != null) {
                         return paramClassInReturnType.isAssignableFrom(paramClassInRowMapper);
-                    } else if (returnTypeArg.equals(mapperTypeArg)) {
-                        return true;
                     } else {
+                        // Element types can't be resolved to concrete classes; default to treating it as a list query.
                         return true;
                     }
                 }
@@ -1600,8 +1599,8 @@ final class DaoImpl {
     }
 
     private static Condition handleLimit(final Condition cond, final int count, final DBVersion dbVersion) {
-        // A negative {@code count} is intentionally NOT short-circuited: an existing Limit (standalone or inside a
-        // Criteria) must still be rewritten into the vendor-specific OFFSET/FETCH syntax regardless of {@code count}.
+        // A non-positive count means "no framework-added limit": return the condition unchanged. Any existing Limit
+        // (standalone or inside a Criteria) is preserved as-is and rendered per dialect later by the SQL builder.
 
         if (count <= 0) {
             return cond;
@@ -1632,30 +1631,6 @@ final class DaoImpl {
 
             return Criteria.builder().limit(count).add(cond).build();
         }
-    }
-
-    private static Limit rawLimit(final String limitClause, final int count, final int offset) {
-        return new Limit(Math.max(count, 0), Math.max(offset, 0)) {
-            @Override
-            public String getLiteral() {
-                return limitClause;
-            }
-
-            @Override
-            public int getCount() {
-                return count;
-            }
-
-            @Override
-            public int getOffset() {
-                return offset;
-            }
-
-            @Override
-            public String toString(final NamingPolicy namingPolicy) {
-                return limitClause;
-            }
-        };
     }
 
     @SuppressWarnings("rawtypes")
@@ -1704,17 +1679,6 @@ final class DaoImpl {
         }
 
         return cond;
-    }
-
-    private static <T> List<T> batchGetById(final PreparedQuery preparedQuery, final Collection<?> ids, final Class<T> entityClass)
-            throws DuplicateResultException, SQLException {
-        final List<T> entities = preparedQuery.settParameters(ids, collParamsSetter).list(entityClass);
-
-        if (entities.size() > ids.size()) {
-            throw new DuplicateResultException("The size of result: " + entities.size() + " is bigger than the size of input ids: " + ids.size());
-        }
-
-        return entities;
     }
 
     private static Tuple2<Annotation, String> resolveFragmentAnnoAndPlaceholder(final Method method, final int paramIndex, final String fullClassMethodName) {
@@ -1785,7 +1749,7 @@ final class DaoImpl {
      *   <li>{@code @SqlLogEnabled} for SQL statement logging control</li>
      * </ul>
      *
-     * @param <TD> the DAO interface type, must extend {@link Dao}
+     * @param <TD> the DAO interface type, must extend {@link DaoBase}
      * @param daoInterface the DAO interface class to create a proxy for; must be an interface
      * @param targetTableName the database table name to use, or {@code null}/{@code ""} to derive from the entity class
      * @param ds the {@link javax.sql.DataSource} providing database connections
@@ -2350,7 +2314,7 @@ final class DaoImpl {
                         final String sqlToCheck;
 
                         if (prepareSqlIsParsed) {
-                            N.checkArgNotNull(args[0], "namedQuery");
+                            N.checkArgNotNull(args[0], "namedSql");
                             sqlToCheck = ((ParsedSql) args[0]).originalSql();
                         } else {
                             sqlToCheck = (String) args[0];

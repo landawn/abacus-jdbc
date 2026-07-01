@@ -31,8 +31,8 @@ import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Delete-side view of {@link JoinEntityHelper}: declares the join-entity <i>delete</i> operations
- * ({@code deleteJoinEntities} and {@code deleteAllJoinEntities} families) together with the internal
- * accessor methods they rely on.
+ * ({@code deleteJoinEntities} and {@code deleteAllJoinEntities} families); the internal accessor
+ * methods it relies on are inherited from {@link JoinEntityBase}.
  *
  * <p>Mixed together with {@link JoinEntityReadOps} it forms the full {@link JoinEntityHelper}.
  * It is intentionally omitted from read-only DAOs so that join-entity deletion is unavailable at

@@ -55,7 +55,7 @@ import com.landawn.abacus.util.function.Function;
  *       DAO, CRUD DAO, or join-entity-helper families, used to drive proxy-based dispatch</li>
  *   <li>ID handling — extraction of single and composite IDs from entities (see
  *       {@link #extractId(Object, List, BeanInfo)} and {@link #createIdExtractor(List, BeanInfo)})
- *       and client-side ID generation (see {@link #generateId(ReadOps)})</li>
+ *       and client-side ID generation (see {@link #generateId(DaoBase)})</li>
  *   <li>Refresh support — computing the set of properties to select so that ID columns are always
  *       included (see {@link #getRefreshSelectPropNames(Collection, List)})</li>
  *   <li>DAO type casting and validation — narrowing join-entity helpers to their backing
@@ -308,8 +308,8 @@ public final class DaoUtil {
     /**
      * Builds the {@code WHERE} condition selecting the rows whose IDs are contained in the given (sub-)collection,
      * dispatching on the shape of the IDs: {@link EntityId}s, {@link Map}s, a single-column id (rendered as an
-     * {@code IN} clause), or multi-column ids. Shared by {@link #batchGet(Collection, Collection, int)} and
-     * {@link #count(Collection)}; declared {@code static} so it is not treated as a DAO operation by the proxy.
+     * {@code IN} clause), or multi-column ids. Shared by {@link CrudReadOps#batchGet(Collection, Collection, int)} and
+     * {@link CrudReadOps#count(Collection)}; declared {@code static} so it is not treated as a DAO operation by the proxy.
      *
      * @param ids the (batch of) IDs to match
      * @param idPropNameList the id property names of the entity

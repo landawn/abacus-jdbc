@@ -627,6 +627,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param ids the collection of entity IDs
      * @param batchSize the size of each batch
      * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -674,6 +675,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @param batchSize the size of each batch
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -747,6 +749,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param ids the collection of IDs to count
      * @return the number of records in the database whose IDs are contained in {@code ids}
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta

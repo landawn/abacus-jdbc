@@ -21,22 +21,19 @@ import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 
 /**
- * Read-side view of {@link JoinEntityHelper}: declares the join-entity <i>load</i> operations
- * ({@code findFirst}/{@code findOnlyOne}/{@code list}/{@code stream} with join loading, and the
- * {@code loadJoinEntities}/{@code loadAllJoinEntities}/{@code loadJoinEntitiesIfAbsent} families)
- * together with the internal accessor methods they rely on.
- *
- * <p>This interface contains no operation that modifies the database, so it can be mixed into
- * read-only DAOs (see {@link ReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
+ * Sealed accessor root shared by the join-entity read and delete capabilities
+ * ({@link JoinEntityReadOps} and {@link JoinEntityDeleteOps}). It declares only the internal accessor
+ * methods ({@code targetDaoInterface()}, {@code targetEntityClass()}, {@code targetTableName()},
+ * {@code executor()}) that those op-interfaces rely on; it contains no join-load or join-delete
+ * operation itself.
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
- * @see JoinEntityHelper
+ * @see JoinEntityReadOps
  * @see JoinEntityDeleteOps
- * @see com.landawn.abacus.annotation.JoinedBy
+ * @see JoinEntityHelper
  */
-@SuppressWarnings({ "RedundantThrows", "resource" })
 public sealed interface JoinEntityBase<T, TD extends Dao<T, TD>> permits JoinEntityReadOps, JoinEntityDeleteOps {
     /**
      * Retrieves the class type of the target DAO interface.

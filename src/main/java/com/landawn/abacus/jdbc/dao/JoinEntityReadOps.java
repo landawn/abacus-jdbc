@@ -39,7 +39,7 @@ import com.landawn.abacus.util.stream.Stream;
  * Read-side view of {@link JoinEntityHelper}: declares the join-entity <i>load</i> operations
  * ({@code findFirst}/{@code findOnlyOne}/{@code list}/{@code stream} with join loading, and the
  * {@code loadJoinEntities}/{@code loadAllJoinEntities}/{@code loadJoinEntitiesIfAbsent} families)
- * together with the internal accessor methods they rely on.
+ * together with the internal accessor methods (inherited from {@link JoinEntityBase}) they rely on.
  *
  * <p>This interface contains no operation that modifies the database, so it can be mixed into
  * read-only DAOs (see {@link ReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>

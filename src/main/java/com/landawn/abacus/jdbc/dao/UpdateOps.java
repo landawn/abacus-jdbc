@@ -24,7 +24,7 @@ import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
- * Update capability of {@link Dao}: condition-based {@code update} operations. Extends {@link ReadOps}.
+ * Update capability of {@link Dao}: condition-based {@code update} operations. Extends {@link DaoBase}.
  * 
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type

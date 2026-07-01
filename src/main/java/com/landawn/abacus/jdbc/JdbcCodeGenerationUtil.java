@@ -84,8 +84,9 @@ import lombok.experimental.Accessors;
  * {@link UncheckedSQLException} declared on each method, every {@code generateSelectSql} /
  * {@code generateInsertSql} / {@code generateNamedInsertSql} / {@code generateUpdateSql} /
  * {@code generateNamedUpdateSql} overload throws {@link IllegalArgumentException} when a supplied
- * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank, or when no columns remain to build
- * the statement (e.g. all columns were excluded).</p>
+ * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank; the column-excluding and update
+ * overloads additionally throw {@link IllegalArgumentException} when no columns remain to build the
+ * statement (e.g. all columns were excluded).</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -525,9 +526,9 @@ public final class JdbcCodeGenerationUtil {
                 }
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
-                        ? mapColumClassName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
+                        ? mapColumnClassName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
                                 : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
-                        : mapColumClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
+                        : mapColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
                 if (!Strings.isValidJavaIdentifier(fieldName)) {
                     logger.warn(
@@ -901,7 +902,8 @@ public final class JdbcCodeGenerationUtil {
         }
 
         if ("oracle.sql.TIMESTAMP".equals(columnClassName) || "oracle.sql.TIMESTAMPTZ".equals(columnClassName)
-                || Strings.endsWithIgnoreCase(columnClassName, ".Timestamp") || Strings.endsWithIgnoreCase(columnClassName, ".DateTime")) {
+                || "oracle.sql.TIMESTAMPLTZ".equals(columnClassName) || Strings.endsWithIgnoreCase(columnClassName, ".Timestamp")
+                || Strings.endsWithIgnoreCase(columnClassName, ".DateTime")) {
             columnClassName = ClassUtil.getCanonicalClassName(java.sql.Timestamp.class);
         } else if ("oracle.sql.DATE".equals(columnClassName) || Strings.endsWithIgnoreCase(columnClassName, ".Date")) {
             columnClassName = ClassUtil.getCanonicalClassName(java.sql.Date.class);
@@ -914,7 +916,7 @@ public final class JdbcCodeGenerationUtil {
         return eccClassNameMap.getOrDefault(columnClassName, columnClassName);
     }
 
-    private static String mapColumClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
+    private static String mapColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         if (Strings.isEmpty(columnClassName)) {
             return ClassUtil.getCanonicalClassName(Object.class);
         }

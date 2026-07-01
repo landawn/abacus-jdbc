@@ -76,16 +76,6 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @NonDBOperation
     SqlMapper sqlMapper();
 
-    //    /**
-    //     * Retrieves the SQL builder DSL configured for this DAO.
-    //     *
-    //     * @return the SQL builder DSL used to generate framework SQL for this DAO
-    //     * @deprecated for internal framework use only; not intended to be called by application code.
-    //     */
-    //    @Deprecated
-    //    @NonDBOperation
-    //    Dsl dsl();
-
     /**
      * Retrieves the class object representing the entity type managed by this DAO.
      * This is used internally for reflection-based operations.

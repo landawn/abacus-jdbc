@@ -20,7 +20,7 @@ import java.sql.SQLException;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
- * Delete capability of {@link Dao}: condition-based {@code delete}. Extends {@link ReadOps}.
+ * Delete capability of {@link Dao}: condition-based {@code delete}. Extends {@link DaoBase}.
  * 
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type

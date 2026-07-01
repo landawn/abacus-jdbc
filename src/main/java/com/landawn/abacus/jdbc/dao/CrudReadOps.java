@@ -618,6 +618,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param batchSize the number of IDs to query for in each batch. The operation will split
      *                  large collections into chunks of this size.
      * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
@@ -665,6 +666,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
@@ -760,6 +762,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *
      * @param ids the collection of IDs to count
      * @return the number of records in the database whose IDs are contained in {@code ids}
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1002,28 +1005,5 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
             }).sum();
         }
     }
-
-    //    /**
-    //     *
-    //     * @param entities
-    //     * @param onDeleteAction It should be defined and done in DB server side.
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    default int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction) throws SQLException {
-    //        return batchDelete(entities, onDeleteAction, DEFAULT_BATCH_SIZE);
-    //    }
-    //
-    //    /**
-    //     *
-    //     * @param entities
-    //     * @param onDeleteAction It should be defined and done in DB server side.
-    //     * @param batchSize
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws SQLException;
 
 }

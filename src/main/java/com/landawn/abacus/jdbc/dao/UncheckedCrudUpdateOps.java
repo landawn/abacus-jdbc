@@ -24,7 +24,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Unchecked-exception update capability of {@link CrudDao}.
+ * Unchecked-exception update capability of {@link UncheckedCrudDao}.
  * 
  * @param <T> entity type
  * @param <ID> id type

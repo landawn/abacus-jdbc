@@ -168,11 +168,7 @@ public final class DataTransferUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(DataTransferUtil.class);
 
-    static final char[] ELEMENT_SEPARATOR_CHAR_ARRAY = Strings.ELEMENT_SEPARATOR.toCharArray();
-
     static final char[] NULL_CHAR_ARRAY = Strings.NULL.toCharArray();
-
-    static final int DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER = 1024;
 
     private DataTransferUtil() {
         // Utility class - prevent instantiation.

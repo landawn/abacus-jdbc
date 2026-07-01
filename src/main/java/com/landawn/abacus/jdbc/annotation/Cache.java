@@ -144,16 +144,31 @@ public @interface Cache {
      *
      * <p>Example custom cache implementation:</p>
      * <pre>{@code
-     * public class MyCustomDaoCache extends Jdbc.DefaultDaoCache {
+     * public class MyCustomDaoCache implements Jdbc.DaoCache {
+     *     // Jdbc.DefaultDaoCache is final, so compose one via the Jdbc.DaoCache.create(...) factory.
+     *     private final Jdbc.DaoCache delegate;
+     *
      *     public MyCustomDaoCache(int capacity, long evictDelay) {
-     *         super(capacity, evictDelay);
+     *         this.delegate = Jdbc.DaoCache.create(capacity, evictDelay);
      *     }
      *
      *     @Override
      *     public Object get(String defaultCacheKey, Object daoProxy, Object[] args,
      *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Custom cache retrieval logic
-     *         return super.get(defaultCacheKey, daoProxy, args, methodSignature);
+     *         return delegate.get(defaultCacheKey, daoProxy, args, methodSignature);
+     *     }
+     *
+     *     @Override
+     *     public boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+     *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *         return delegate.put(defaultCacheKey, result, daoProxy, args, methodSignature);
+     *     }
+     *
+     *     @Override
+     *     public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime,
+     *             Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *         return delegate.put(defaultCacheKey, result, liveTime, maxIdleTime, daoProxy, args, methodSignature);
      *     }
      * }
      *

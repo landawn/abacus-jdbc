@@ -85,6 +85,7 @@ import com.landawn.abacus.query.AbstractQueryBuilder.SP;
 import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
+import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.SqlOperation;
 import com.landawn.abacus.type.Type;
@@ -850,6 +851,7 @@ public final class JdbcUtil {
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
      * @throws IllegalArgumentException if {@code driverClass} is {@code null} or {@code url} is {@code null} or empty.
+     * @throws RuntimeException if the specified {@code driverClass} cannot be instantiated (e.g., it has no accessible no-arg constructor).
      * @throws UncheckedSQLException if a database access error occurs during connection creation.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#registerDriver(Driver)
@@ -2150,11 +2152,6 @@ public final class JdbcUtil {
     interface ColumnConverterByLabel {
         Object apply(ResultSet rs, String columnLabel, Object columnValue) throws SQLException;
     }
-
-    static final Throwables.Function<Object, java.sql.Timestamp, SQLException> oracleTimestampToJavaTimestamp = obj -> ((oracle.sql.Datum) obj)
-            .timestampValue();
-
-    static final Throwables.Function<Object, java.sql.Date, SQLException> oracleTimestampToJavaDate = obj -> ((oracle.sql.Datum) obj).dateValue();
 
     private static final ConcurrentHashMap<Class<?>, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterPool = new ConcurrentHashMap<>();
 
@@ -5335,9 +5332,9 @@ public final class JdbcUtil {
      * for (int i = 0; i < 10_000; i++) {
      *     data.add(Arrays.asList("User" + i, i % 100));
      * }
+     * final String sql = "INSERT INTO users (name, age) VALUES (?, ?)";
      * try (Connection conn = dataSource.getConnection()) {
-     *     int total = JdbcUtil.executeBatchUpdate(conn,
-     *             "INSERT INTO users (name, age) VALUES (?, ?)", data, 500);   // returns 10000
+     *     int total = JdbcUtil.executeBatchUpdate(conn, sql, data, 500);   // returns 10000
      *
      *     // An empty list is a no-op; a non-positive batchSize is rejected.
      *     int zero = JdbcUtil.executeBatchUpdate(conn, sql, Collections.emptyList(), 500);   // returns 0
@@ -5467,9 +5464,9 @@ public final class JdbcUtil {
      * for (int i = 0; i < 1_000_000; i++) {
      *     data.add(Arrays.asList("User" + i, i % 100));
      * }
+     * final String sql = "INSERT INTO users (name, age) VALUES (?, ?)";
      * // When data.size() > batchSize, a transaction is started automatically for atomicity.
-     * long total = JdbcUtil.executeLargeBatchUpdate(dataSource,
-     *         "INSERT INTO users (name, age) VALUES (?, ?)", data, 1000);
+     * long total = JdbcUtil.executeLargeBatchUpdate(dataSource, sql, data, 1000);
      *
      * // An empty list returns 0L; a non-positive batchSize is rejected.
      * long zero = JdbcUtil.executeLargeBatchUpdate(dataSource, sql, Collections.emptyList(), 1000);   // returns 0L
@@ -9350,34 +9347,6 @@ public final class JdbcUtil {
     //        }
     //    }
 
-    //    /**
-    //     *
-    //     * @param ds
-    //     * @param targetEntityOrDaoClass
-    //     */
-    //    public static void removeCachedDao(final javax.sql.DataSource ds, final Class<?> targetEntityOrDaoClass) {
-    //        N.checkArgNotNull(ds, "dataSource");
-    //        N.checkArgNotNull(targetEntityOrDaoClass, "targetEntityOrDaoClass");
-    //
-    //        @SuppressWarnings("rawtypes")
-    //        final Class<?> targetEntityClass = Dao.class.isAssignableFrom(targetEntityOrDaoClass)
-    //                ? getTargetEntityClass((Class<? extends Dao>) targetEntityOrDaoClass)
-    //                : targetEntityOrDaoClass;
-    //
-    //        synchronized (dsEntityDaoPool) {
-    //            @SuppressWarnings("rawtypes")
-    //            Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
-    //
-    //            if (entityDaoPool != null) {
-    //                entityDaoPool.remove(targetEntityClass);
-    //
-    //                if (N.isEmpty(entityDaoPool)) {
-    //                    dsEntityDaoPool.remove(ds);
-    //                }
-    //            }
-    //        }
-    //    }
-
     /**
      * Retrieves the output parameters from the given CallableStatement.
      * This method extracts the values of output parameters after executing a stored procedure.
@@ -12016,11 +11985,52 @@ public final class JdbcUtil {
      *         {@code daoInterface} is not an interface
      * @see Dao
      * @see CrudDao
+     * @see #createDao(Class, javax.sql.DataSource, SqlDialect)
      * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
         return DaoImpl.createDao(daoInterface, null, ds, Dsl.PSC, null, null, JdbcUtil.asyncExecutor.getExecutor());
+    }
+
+    /**
+     * Creates a dynamic DAO implementation for the specified interface and {@link javax.sql.DataSource},
+     * generating its CRUD SQL for the given {@link SqlDialect}.
+     *
+     * <p>This behaves exactly like {@link #createDao(Class, javax.sql.DataSource)} except that the SQL
+     * builder used to generate the DAO's CRUD statements is derived from {@code sqlDialect} (via
+     * {@link Dsl#forDialect(SqlDialect)}) instead of the default {@link Dsl#PSC}. Use it when the target
+     * database needs dialect-specific SQL generation. The supplied dialect must use a parameterized
+     * (positional {@code ?}) SQL policy; named-SQL dialects are rejected.</p>
+     *
+     * <p>All behavior, performance characteristics, and best practices documented on
+     * {@link #createDao(Class, javax.sql.DataSource)} apply equally here.</p>
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * // 'sqlDialect' is a com.landawn.abacus.query.SqlDialect selected for the target database
+     * UserDao dao = JdbcUtil.createDao(UserDao.class, dataSource, sqlDialect);
+     * }</pre>
+     *
+     * @param <TD> the DAO interface type, must extend {@link DaoBase}
+     * @param daoInterface the DAO interface class to implement, must not be {@code null} and must be an interface
+     * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
+     * @param sqlDialect the SQL dialect used to generate the DAO's CRUD SQL, must not be {@code null}; its SQL
+     *                   policy must be {@code null} or
+     *                   {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}
+     * @return a dynamically generated DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, if
+     *         {@code daoInterface} is not an interface, or if {@code sqlDialect} resolves to a named-SQL policy
+     *         (neither {@code null} nor
+     *         {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL})
+     * @see #createDao(Class, javax.sql.DataSource)
+     * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
+     * @see Dsl#forDialect(SqlDialect)
+     */
+    @SuppressWarnings("rawtypes")
+    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlDialect sqlDialect) {
+        return DaoImpl.createDao(daoInterface, null, ds, Dsl.forDialect(sqlDialect), null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
@@ -12074,6 +12084,7 @@ public final class JdbcUtil {
      *         interface that supports update/delete operations (only cacheable read-only/no-update interfaces,
      *         such as {@code ReadOnlyDao}, {@code NoUpdateCrudDao}, and the unchecked variants, may be cached)
      * @see #createDao(Class, javax.sql.DataSource)
+     * @see #createDao(Class, javax.sql.DataSource, SqlDialect)
      * @see DaoCreationOptions
      */
     @SuppressWarnings("rawtypes")
@@ -12130,9 +12141,9 @@ public final class JdbcUtil {
 
         /**
          * An optional {@link Jdbc.DaoCache} for caching results of methods annotated with {@code @CacheResult}.
-         * May be {@code null}. Supplying a non-{@code null} cache is only permitted for interfaces extending
-         * {@code NoUpdateDao} (such as {@code NoUpdateCrudDao} and the unchecked variants); otherwise DAO
-         * creation fails with {@link UnsupportedOperationException}.
+         * May be {@code null}. Supplying a non-{@code null} cache is only permitted for cacheable read-only /
+         * no-update DAO interfaces (such as {@code ReadOnlyDao}, {@code NoUpdateCrudDao}, and the unchecked
+         * variants); otherwise DAO creation fails with {@link UnsupportedOperationException}.
          */
         private Jdbc.DaoCache cache;
 
