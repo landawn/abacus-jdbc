@@ -24,6 +24,9 @@ public class SpringApplicationContextTest extends TestBase {
     public void setUp() throws Exception {
         target = new SpringApplicationContext();
         appContext = mock(ApplicationContext.class);
+        // The ApplicationContext is now held in a process-wide (static) holder, so reset it before each
+        // test to keep tests isolated from one another.
+        setApplicationContext(null);
     }
 
     // Verifies bean lookup by name delegates to the injected ApplicationContext.

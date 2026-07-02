@@ -1463,11 +1463,11 @@ public class AbstractQueryTest extends TestBase {
         assertEquals(OptionalDouble.of(2.718), query.queryForDouble());
     }
 
-    // ---- addBatchParameters(Iterator) must clear parameters between rows ----
+    // ---- addBatchParameters(Iterator) must clear parameters before every row ----
     // Regression: AbstractQuery.addBatchParameters(Iterator) iterated setParameters(Collection)/setParameters(Object[])
     // without calling stmt.clearParameters() first — so when a follow-up row was shorter than the first, positions
-    // beyond the new row's length retained values from the earlier row. NamedQuery already had the defensive
-    // clearParameters; AbstractQuery now matches that pattern.
+    // beyond the new row's length retained values from the earlier row. AbstractQuery now clears before every row
+    // (including the first, to also drop any positions pre-bound via setXxx), matching NamedQuery's pattern.
 
     @Test
     public void testAddBatchParameters_Iterator_Collection_ClearsBetweenRows() throws SQLException {
@@ -1477,8 +1477,8 @@ public class AbstractQueryTest extends TestBase {
 
         query.addBatchParameters(rows.iterator());
 
-        // clearParameters() must be called exactly once — before the SECOND row, not the first.
-        verify(preparedStatement, times(1)).clearParameters();
+        // clearParameters() is called before every row (including the first) — twice for two rows.
+        verify(preparedStatement, times(2)).clearParameters();
         // Both rows reached addBatch.
         verify(preparedStatement, times(2)).addBatch();
     }
@@ -1491,7 +1491,7 @@ public class AbstractQueryTest extends TestBase {
 
         query.addBatchParameters(rows.iterator());
 
-        verify(preparedStatement, times(1)).clearParameters();
+        verify(preparedStatement, times(2)).clearParameters();
         verify(preparedStatement, times(2)).addBatch();
     }
 

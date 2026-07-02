@@ -3745,7 +3745,8 @@ public class NamedQueryTest extends TestBase {
 
         assertSame(q, result);
         verify(mockPreparedStatement).setObject(1, null);
-        verify(mockPreparedStatement).setObject(1, 42);
+        // The non-null follower binds through the Abacus type system, so an Integer is dispatched to setInt(1, 42).
+        verify(mockPreparedStatement).setInt(1, 42);
         verify(mockPreparedStatement, times(2)).addBatch();
     }
 

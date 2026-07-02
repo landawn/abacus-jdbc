@@ -169,7 +169,10 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement("SELECT * FROM `sales`.`order-history` WHERE 1 > 2")).thenReturn(stmt);
+        // Per-part conditional quoting: the simple schema part `sales` is left unquoted (quoting it would
+        // force case-exact resolution and break on case-folding databases); only the special table part
+        // `order-history` is quoted.
+        when(conn.prepareStatement("SELECT * FROM sales.`order-history` WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
         when(rs.getMetaData()).thenReturn(rsMetaData);
         when(rsMetaData.getColumnCount()).thenReturn(2);
@@ -178,7 +181,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "sales.order-history");
 
-        assertEquals("SELECT id, created_at FROM `sales`.`order-history`", sql);
+        assertEquals("SELECT id, created_at FROM sales.`order-history`", sql);
     }
 
     @Test
