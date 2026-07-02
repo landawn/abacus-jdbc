@@ -222,10 +222,14 @@ public final class DBLock {
                 throw new IllegalStateException("Lock table does not exist after creation attempt: " + tableName);
             }
 
-            final String removeDeadLockSQL = "DELETE FROM " + sqlTableName + " WHERE host_name = ? and create_time < ?";
+            // Only reap rows that are BOTH older than this JVM's start AND no longer refreshed (stale
+            // update_time): another JVM on the same host may be actively holding locks under the same
+            // host_name, and its live (refreshed) rows must not be deleted.
+            final String removeDeadLockSQL = "DELETE FROM " + sqlTableName + " WHERE host_name = ? AND create_time < ? AND update_time < ?";
 
             final int removedDeadLocks = JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(),
-                    Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
+                    Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()),
+                    Dates.createTimestamp(System.currentTimeMillis() - MAX_IDLE_TIME));
 
             logger.info("Initialized DBLock(tableName={}, removedDeadLocks={})", tableName, removedDeadLocks);
         } catch (final SQLException e) {
@@ -514,10 +518,23 @@ public final class DBLock {
                 if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0) {
                     targetCodePool.put(target, new LockInfo(code, liveTime));
 
+                    // close() may have completed between the entry assertNotClosed() and the INSERT above;
+                    // an orphaned row would never be refreshed or releasable through this instance, blocking
+                    // the target for other contenders until the idle-expiry cleanup reaps it.
+                    if (isClosed) {
+                        targetCodePool.remove(target);
+                        JdbcUtil.executeUpdate(ds, unlockSQL, target, code);
+
+                        throw new IllegalStateException("This DBLock has been closed");
+                    }
+
                     logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
 
                     return code;
                 }
+            } catch (final IllegalStateException e) {
+                // The closed-instance check above must not be swallowed by the retry loop.
+                throw e;
             } catch (final Exception e) {
                 if (logger.isDebugEnabled()) {
                     logger.debug(e, "Failed to acquire DB lock(target={}, attempt={})", target, attempts + 1);

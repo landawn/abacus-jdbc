@@ -292,11 +292,12 @@ final class DaoImpl {
                 }
             }
 
+            // SqlParser handles parenthesized queries and CTEs (WITH ... SELECT / WITH ... INSERT),
+            // which naive prefix checks misclassified (a CTE SELECT would fail DAO init, or worse,
+            // silently execute via update() when the return type looked like an update count).
             final String trimmedSql = Strings.trim(sql);
-            final boolean isSelect = Strings.startsWithIgnoreCase(sql, "SELECT ") || Strings.startsWithIgnoreCase(trimmedSql, "SELECT ");
-            final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT ") || Strings.startsWithIgnoreCase(trimmedSql, "INSERT ")
-                    || ((Strings.startsWithIgnoreCase(sql, "WITH ") || Strings.startsWithIgnoreCase(trimmedSql, "WITH "))
-                            && Strings.containsIgnoreCase(sql, " INSERT ") && Strings.containsIgnoreCase(sql, " INTO "));
+            final boolean isSelect = SqlParser.isSelectQuery(trimmedSql);
+            final boolean isInsert = SqlParser.isInsertQuery(trimmedSql);
 
             return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.autoSetSysTimeParam(), isSelect,
                     isInsert, isProcedure, tmp.fragmentsContainNamedParameters());
@@ -1218,27 +1219,17 @@ final class DaoImpl {
 
         Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter = null;
 
-        boolean hasParameterSetter = true;
-
-        if (paramLen - fragmentParamLen > 0 && Jdbc.ParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen])) {
-            parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters((Jdbc.ParametersSetter) args[fragmentParamLen]);
-        } else if (paramLen - fragmentParamLen > 1 && Jdbc.BiParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])) {
-            parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters(args[fragmentParamLen],
-                    (Jdbc.BiParametersSetter) args[fragmentParamLen + 1]);
-        } else if (paramLen - fragmentParamLen > 1 && Jdbc.TriParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])) {
-            parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[fragmentParamLen],
-                    (Jdbc.TriParametersSetter) args[fragmentParamLen + 1]);
-        } else {
-            hasParameterSetter = false;
-        }
-
-        if (hasParameterSetter) {
+        // ParametersSetter/BiParametersSetter/TriParametersSetter method parameters are detected but the
+        // feature is not enabled at present: reject at DAO creation instead of building setters that are never used.
+        if ((paramLen - fragmentParamLen > 0 && Jdbc.ParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen]))
+                || (paramLen - fragmentParamLen > 1 && (Jdbc.BiParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])
+                        || Jdbc.TriParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])))) {
             throw new UnsupportedOperationException(
                     "Setting parameters by 'ParametersSetter/BiParametersSetter/TriParametersSetter' is not enabled at present. Can't use it in method: "
                             + fullClassMethodName);
         }
 
-        if (parametersSetter != null || stmtParamLen == 0 || queryInfo.isBatch) { //NOSONAR
+        if (stmtParamLen == 0 || queryInfo.isBatch) { //NOSONAR
             // ignore
         } else if (stmtParamLen == 1) {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
@@ -1598,7 +1589,7 @@ final class DaoImpl {
         return preparedQuery;
     }
 
-    private static Condition handleLimit(final Condition cond, final int count, final DBVersion dbVersion) {
+    private static Condition handleLimit(final Condition cond, final int count) {
         // A non-positive count means "no framework-added limit": return the condition unchanged. Any existing Limit
         // (standalone or inside a Criteria) is preserved as-is and rendered per dialect later by the SQL builder.
 
@@ -2049,8 +2040,8 @@ final class DaoImpl {
         String sql_updateById = null;
         String sql_deleteById = null;
 
-        final boolean noOtherInsertPropNameExceptIdPropNames = idPropNameSet.containsAll(Beans.getPropNameList(entityClass))
-                || N.isEmpty(QueryUtil.getInsertPropNames(entityClass, idPropNameSet));
+        final boolean noOtherInsertPropNameExceptIdPropNames = entityClass != null
+                && (idPropNameSet.containsAll(Beans.getPropNameList(entityClass)) || N.isEmpty(QueryUtil.getInsertPropNames(entityClass, idPropNameSet)));
         final Collection<String> propNamesToUpdateById = entityClass == null ? N.emptyList() : QueryUtil.getUpdatePropNames(entityClass, idPropNameSet);
         final boolean noPropNameToUpdateById = N.isEmpty(propNamesToUpdateById);
 
@@ -2142,17 +2133,6 @@ final class DaoImpl {
         final CacheResult daoClassCacheResultAnno = tmpDaoClassCacheResultAnno;
         final RefreshCache daoClassRefreshCacheAnno = tmpDaoClassRefreshCacheAnno;
 
-        if (DaoUtil.isCacheable(daoInterface)) {
-            // OK
-        } else {
-            // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
-            if (daoClassCacheResultAnno != null || daoClassRefreshCacheAnno != null) {
-                throw new UnsupportedOperationException(
-                        "Cache is only supported for Cacheable DAOs (NoUpdate/ReadOnly and their Unchecked variants), not supported for Dao interface: "
-                                + daoClassName);
-            }
-        }
-
         final AtomicBoolean hasCacheResult = new AtomicBoolean(false);
         final AtomicBoolean hasRefreshCache = new AtomicBoolean(false);
 
@@ -2177,15 +2157,12 @@ final class DaoImpl {
 
         final com.landawn.abacus.jdbc.annotation.Cache daoClassCacheAnno = tmpDaoClassCacheAnno;
 
-        if (DaoUtil.isCacheable(daoInterface)) {
-            // OK
-        } else {
-            // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
-            if (inputDaoCache != null || daoClassCacheAnno != null) {
-                throw new UnsupportedOperationException(
-                        "Cache is only supported for Cacheable DAOs (NoUpdate/ReadOnly and their Unchecked variants), not supported for Dao interface: "
-                                + daoClassName);
-            }
+        // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
+        if (!DaoUtil.isCacheable(daoInterface)
+                && (daoClassCacheResultAnno != null || daoClassRefreshCacheAnno != null || inputDaoCache != null || daoClassCacheAnno != null)) {
+            throw new UnsupportedOperationException(
+                    "Cache is only supported for Cacheable DAOs (NoUpdate/ReadOnly and their Unchecked variants), not supported for Dao interface: "
+                            + daoClassName);
         }
 
         final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
@@ -2196,9 +2173,9 @@ final class DaoImpl {
                     + ") (both must be >= 0) in annotation 'Cache' on Dao interface: " + daoClassName);
         }
 
-        final Jdbc.DaoCache daoCache = inputDaoCache == null
-                ? (daoClassCacheAnno == null || daoClassCacheAnno.impl() == null) ? Jdbc.DaoCache.create(capacity, evictDelay)
-                        : ClassUtil.invokeConstructor(ClassUtil.getDeclaredConstructor(daoClassCacheAnno.impl(), int.class, long.class), capacity, evictDelay)
+        final Jdbc.DaoCache daoCache = inputDaoCache == null //
+                ? (daoClassCacheAnno == null ? Jdbc.DaoCache.create(capacity, evictDelay) // annotation members can't be null: impl() defaults to DefaultDaoCache
+                        : ClassUtil.invokeConstructor(ClassUtil.getDeclaredConstructor(daoClassCacheAnno.impl(), int.class, long.class), capacity, evictDelay))
                 : inputDaoCache;
 
         final Set<Method> nonDBOperationSet = N.newConcurrentHashSet();
@@ -2213,9 +2190,10 @@ final class DaoImpl {
         }
 
         if ((DaoUtil.isJoinEntityReadOps(daoInterface) && !DaoBase.class.isAssignableFrom(daoInterface))
-                || (DaoUtil.isCrudJoinEntityReadOps(daoInterface) && !CrudDao.class.isAssignableFrom(daoInterface))) {
+                || (DaoUtil.isCrudJoinEntityReadOps(daoInterface) && !DaoUtil.isCrudReadOps(daoInterface))) {
             throw new IllegalArgumentException("Dao interface: " + ClassUtil.getCanonicalClassName(daoInterface)
-                    + " extending JoinEntityHelper/CrudJoinEntityHelper must extend the corresponding Dao interface:Dao/CrudDao");
+                    + " extending JoinEntityHelper/CrudJoinEntityHelper must also extend a corresponding read Dao interface"
+                    + " (e.g. Dao/CrudDao or ReadOnlyDao/ReadOnlyCrudDao)");
         }
 
         final Predicate<Object> isNotEmptyResult = ret -> {
@@ -2289,7 +2267,7 @@ final class DaoImpl {
                 if (paramLen == 0 || !paramTypes[paramLen - 1].equals(String[].class)) {
                     throw new UnsupportedOperationException(
                             "To support multiple values or ids binding by @Query, the type of last parameter must be: String... sqls. It can't be : "
-                                    + paramTypes[paramLen - 1] + " in method: " + fullClassMethodName);
+                                    + (paramLen == 0 ? "<no parameter>" : paramTypes[paramLen - 1]) + " in method: " + fullClassMethodName);
                 }
             }
 
@@ -2359,8 +2337,8 @@ final class DaoImpl {
                     && Condition.class.isAssignableFrom(paramTypes[1])) {
                 call = (proxy, args) -> {
                     final Collection<String> selectPropNames = (Collection<String>) args[0];
-                    final Condition cond = (Condition) args[1];
-                    final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                    final Condition cond = N.checkArgNotNull((Condition) args[1], cs.cond);
+                    final Condition limitedCond = handleLimit(cond, -1);
                     final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                     return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter);
@@ -2369,8 +2347,8 @@ final class DaoImpl {
                     && Condition.class.isAssignableFrom(paramTypes[1])) {
                 call = (proxy, args) -> {
                     final Collection<String> selectPropNames = (Collection<String>) args[0];
-                    final Condition cond = (Condition) args[1];
-                    final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                    final Condition cond = N.checkArgNotNull((Condition) args[1], cs.cond);
+                    final Condition limitedCond = handleLimit(cond, -1);
                     final SP sp = namedSelectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                     return proxy.prepareNamedQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter);
@@ -2533,7 +2511,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(_1, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).exists();
                         };
@@ -2542,7 +2520,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(AbstractQueryBuilder.COUNT_ALL, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForInt().orElseZero();
                         };
@@ -2551,7 +2529,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).findFirst(entityClass);
                         };
@@ -2563,7 +2541,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).findFirst(rowMapper);
                         };
@@ -2575,7 +2553,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).findFirst(rowMapper);
                         };
@@ -2586,7 +2564,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[1];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).findFirst(entityClass);
                         };
@@ -2599,7 +2577,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).findFirst(rowMapper);
                         };
@@ -2612,7 +2590,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).findFirst(rowMapper);
                         };
@@ -2621,7 +2599,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(2).settParameters(sp.parameters(), collParamsSetter).findOnlyOne(entityClass);
                         };
@@ -2633,7 +2611,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(2).settParameters(sp.parameters(), collParamsSetter).findOnlyOne(rowMapper);
                         };
@@ -2645,7 +2623,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(2).settParameters(sp.parameters(), collParamsSetter).findOnlyOne(rowMapper);
                         };
@@ -2656,7 +2634,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[1];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query()).setFetchSize(2).settParameters(sp.parameters(), collParamsSetter).findOnlyOne(entityClass);
                         };
@@ -2669,7 +2647,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query()).setFetchSize(2).settParameters(sp.parameters(), collParamsSetter).findOnlyOne(rowMapper);
                         };
@@ -2682,7 +2660,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query()).setFetchSize(2).settParameters(sp.parameters(), collParamsSetter).findOnlyOne(rowMapper);
                         };
@@ -2694,7 +2672,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForBoolean();
                         };
@@ -2706,7 +2684,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForChar();
                         };
@@ -2718,7 +2696,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForByte();
                         };
@@ -2730,7 +2708,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForShort();
                         };
@@ -2742,7 +2720,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForInt();
                         };
@@ -2754,7 +2732,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForLong();
                         };
@@ -2766,7 +2744,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForFloat();
                         };
@@ -2778,7 +2756,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForDouble();
                         };
@@ -2790,7 +2768,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForString();
                         };
@@ -2802,7 +2780,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForDate();
                         };
@@ -2814,7 +2792,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForTime();
                         };
@@ -2826,7 +2804,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForTimestamp();
                         };
@@ -2838,7 +2816,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForBytes();
                         };
@@ -2852,7 +2830,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .setFetchSize(1)
@@ -2869,7 +2847,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .setFetchSize(1)
@@ -2886,7 +2864,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .setFetchSize(1)
@@ -2903,7 +2881,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .setFetchSize(2)
@@ -2920,7 +2898,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .setFetchSize(2)
@@ -2937,7 +2915,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = singleQuerySqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .setFetchSize(2)
@@ -2961,7 +2939,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             if (fetchColumnByEntityClass) {
@@ -2981,7 +2959,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[1];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply((Collection<String>) args[0], limitedCond).build();
 
                             if (fetchColumnByEntityClass) {
@@ -3004,7 +2982,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3020,7 +2998,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3035,7 +3013,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3051,7 +3029,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3070,7 +3048,7 @@ final class DaoImpl {
                             final Jdbc.ResultExtractor<Dataset> resultExtractor = fetchColumnByEntityClass ? Jdbc.ResultExtractor.toDataset(entityClass)
                                     : Jdbc.ResultExtractor.TO_DATASET;
 
-                            final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, pageSize);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             return Stream.just(Holder.of((Dataset) null)) //
@@ -3105,7 +3083,7 @@ final class DaoImpl {
                                     "paramSetter");
                             final Jdbc.ResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.ResultExtractor) args[3], "resultExtractor");
 
-                            final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, pageSize);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             return Stream.just(Holder.of(null)) //
@@ -3140,7 +3118,7 @@ final class DaoImpl {
                                     "paramSetter");
                             final Jdbc.BiResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.BiResultExtractor) args[3], "resultExtractor");
 
-                            final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, pageSize);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             return Stream.just(Holder.of(null)) //
@@ -3177,7 +3155,7 @@ final class DaoImpl {
                             final Jdbc.ResultExtractor<Dataset> resultExtractor = fetchColumnByEntityClass ? Jdbc.ResultExtractor.toDataset(entityClass)
                                     : Jdbc.ResultExtractor.TO_DATASET;
 
-                            final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, pageSize);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             return Stream.just(Holder.of((Dataset) null)) //
@@ -3214,7 +3192,7 @@ final class DaoImpl {
                                     "paramSetter");
                             final Jdbc.ResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.ResultExtractor) args[4], "resultExtractor");
 
-                            final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, pageSize);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             return Stream.just(Holder.of(null)) //
@@ -3251,7 +3229,7 @@ final class DaoImpl {
                                     "paramSetter");
                             final Jdbc.BiResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.BiResultExtractor) args[4], "resultExtractor");
 
-                            final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, pageSize);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             return Stream.just(Holder.of(null)) //
@@ -3279,7 +3257,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3294,7 +3272,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3309,7 +3287,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3326,7 +3304,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3343,7 +3321,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3356,7 +3334,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[1];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3372,7 +3350,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3388,7 +3366,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3406,7 +3384,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3424,7 +3402,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             return proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3436,7 +3414,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             final Supplier<Stream> supplier = () -> {
@@ -3460,7 +3438,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             final Supplier<Stream> supplier = () -> {
@@ -3484,7 +3462,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             final Supplier<Stream> supplier = () -> {
@@ -3510,7 +3488,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             final Supplier<Stream> supplier = () -> {
@@ -3536,7 +3514,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
 
                             final Supplier<Stream> supplier = () -> {
@@ -3559,7 +3537,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[1];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             final Supplier<Stream> supplier = () -> {
@@ -3584,7 +3562,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             final Supplier<Stream> supplier = () -> {
@@ -3609,7 +3587,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             final Supplier<Stream> supplier = () -> {
@@ -3636,7 +3614,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             final Supplier<Stream> supplier = () -> {
@@ -3663,7 +3641,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             final Supplier<Stream> supplier = () -> {
@@ -3687,7 +3665,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3703,7 +3681,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3721,7 +3699,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3739,7 +3717,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
                             proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3756,7 +3734,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3773,7 +3751,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3793,7 +3771,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
                             proxy.prepareQuery(sp.query())
                                     .configureStatement(JdbcUtil.stmtSetterForBigQueryResult)
@@ -3813,7 +3791,7 @@ final class DaoImpl {
                             N.checkArgNotNull(rowFilter, cs.rowFilter);
                             N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                             proxy.prepareQuery(sp.query())
@@ -4166,7 +4144,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForBoolean();
                         };
@@ -4178,7 +4156,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForChar();
                         };
@@ -4190,7 +4168,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForByte();
                         };
@@ -4202,7 +4180,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForShort();
                         };
@@ -4214,7 +4192,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForInt();
                         };
@@ -4226,7 +4204,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForLong();
                         };
@@ -4238,7 +4216,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForFloat();
                         };
@@ -4250,7 +4228,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForDouble();
                         };
@@ -4262,7 +4240,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForString();
                         };
@@ -4274,7 +4252,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForDate();
                         };
@@ -4286,7 +4264,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForTime();
                         };
@@ -4298,7 +4276,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForTimestamp();
                         };
@@ -4310,7 +4288,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(selectPropName, cs.selectPropName);
                             N.checkArgNotNull(id, cs.id);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForBytes();
                         };
@@ -4324,7 +4302,7 @@ final class DaoImpl {
                             N.checkArgNotNull(id, cs.id);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleValue(targetValueType);
                         };
@@ -4338,7 +4316,7 @@ final class DaoImpl {
                             N.checkArgNotNull(id, cs.id);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleNonNull(targetValueType);
                         };
@@ -4352,7 +4330,7 @@ final class DaoImpl {
                             N.checkArgNotNull(id, cs.id);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query())
                                     .setFetchSize(1)
@@ -4369,7 +4347,7 @@ final class DaoImpl {
                             N.checkArgNotNull(id, cs.id);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueValue(targetValueType);
                         };
@@ -4383,7 +4361,7 @@ final class DaoImpl {
                             N.checkArgNotNull(id, cs.id);
                             N.checkArgNotNull(targetValueType, cs.targetValueType);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query()).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueNonNull(targetValueType);
                         };
@@ -4397,7 +4375,7 @@ final class DaoImpl {
                             N.checkArgNotNull(id, cs.id);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1);
                             final SP sp = singleQueryByIdSqlBuilderFunc.apply(selectPropName, limitedCond);
                             return proxy.prepareNamedQuery(sp.query())
                                     .setFetchSize(2)
@@ -4907,6 +4885,16 @@ final class DaoImpl {
 
                     final boolean isNamedQuery = queryInfo.isNamedQuery;
 
+                    // Custom annotated methods execute through JdbcUtil.prepareQuery/prepareNamedQuery directly,
+                    // bypassing the proxy's prepareSqlGate, so enforce the read-only/no-update SQL-kind
+                    // restriction here at DAO-creation time with the same SqlParser checks the gate uses.
+                    if (isReadOnlyDao && !SqlParser.isReadOnlyQuery(query)) {
+                        throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO. Method: " + fullClassMethodName);
+                    } else if (isNoUpdateDao && !SqlParser.isNoUpdateQuery(query)) {
+                        throw new UnsupportedOperationException(
+                                "Only SELECT and INSERT queries are supported in a no-update DAO. Method: " + fullClassMethodName);
+                    }
+
                     if (parsedSql.parameterCount() == 0 && !isNamedQuery) {
                         daoLogger.debug("Non-named query without parameters will be created for method {}", fullClassMethodName);
                     }
@@ -5026,7 +5014,7 @@ final class DaoImpl {
                             if ((paramTypes[fragmentParamIndexes[i]].isArray() || Collection.class.isAssignableFrom(paramTypes[fragmentParamIndexes[i]]))
                                     && N.noneMatch(method.getParameterAnnotations()[fragmentParamIndexes[i]],
                                             it -> it.annotationType().equals(SqlFragmentList.class) || it.annotationType().equals(BindList.class))) {
-                                throw new UnsupportedOperationException("Array/Collection type of parameter[" + i
+                                throw new UnsupportedOperationException("Array/Collection type of parameter[" + fragmentParamIndexes[i]
                                         + "] must be annotated with @SqlFragmentList or @BindList, not @SqlFragment, in method: " + fullClassMethodName);
                             }
                         }
@@ -5109,7 +5097,8 @@ final class DaoImpl {
                                     || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || Beans.isRecordClass(paramTypes[stmtParamIndexes[0]]))
                             && !isNamedQuery) {
                         throw new UnsupportedOperationException(
-                                "Using @Query with named parameters when parameter type is Entity/Map/EntityId in method: " + fullClassMethodName);
+                                "A parameter of type Entity/Map/EntityId requires @Query with named parameters (:name syntax) in method: "
+                                        + fullClassMethodName);
                     }
 
                     if (isSingleParameter && stmtParamLen != 1) {

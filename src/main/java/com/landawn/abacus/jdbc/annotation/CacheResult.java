@@ -49,23 +49,28 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * implementation), and {@link RefreshCache @RefreshCache} on selected methods to invalidate cached
  * entries; {@code @CacheResult} only controls whether and how an individual result is cached.</p>
  *
+ * <p><strong>Init-time validation:</strong> applying {@code @CacheResult} to a method whose return
+ * type is not cacheable ({@code void}, {@code Iterator}, {@code Stream}, {@code Seq}) causes DAO
+ * initialization to fail with {@code UnsupportedOperationException}. In addition, {@link #liveTime()}
+ * and {@link #maxIdleTime()} must be {@code >= 0}, and {@code 0 <= minSize() <= maxSize()} must hold.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
  *     // Cache individual user lookups for 30 minutes
  *     @CacheResult(enabled = true, liveTime = 1800000, maxIdleTime = 600000)
  *     @Query("SELECT * FROM users WHERE id = :id")
- *     User findById(@Bind("id") Long id);
+ *     User findById(@Bind("id") Long id) throws SQLException;
  *
  *     // Cache list results with size restrictions
  *     @CacheResult(enabled = true, liveTime = 300000, minSize = 1, maxSize = 100)
  *     @Query("SELECT * FROM users WHERE status = :status")
- *     List<User> findByStatus(@Bind("status") String status);
+ *     List<User> findByStatus(@Bind("status") String status) throws SQLException;
  *
  *     // Use Kryo serialization for complex objects
  *     @CacheResult(enabled = true, liveTime = 3600000, transfer = "kryo")
  *     @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
- *     UserProfile getProfile(@Bind("userId") Long userId);
+ *     UserProfile getProfile(@Bind("userId") Long userId) throws SQLException;
  * }
  *
  * // Apply caching to all matching methods at type level
@@ -103,7 +108,7 @@ public @interface CacheResult {
      * <pre>{@code
      * @CacheResult(enabled = false)  // Temporarily disable for debugging
      * @Query("SELECT * FROM users WHERE id = :id")
-     * User findById(@Bind("id") Long id);
+     * User findById(@Bind("id") Long id) throws SQLException;
      * }</pre>
      *
      * @return {@code true} to enable caching, {@code false} (default) to leave it disabled
@@ -130,7 +135,7 @@ public @interface CacheResult {
      * // Cache for 15 minutes
      * @CacheResult(enabled = true, liveTime = 900000)
      * @Query("SELECT * FROM configurations WHERE key = :key")
-     * Config getConfig(@Bind("key") String key);
+     * Config getConfig(@Bind("key") String key) throws SQLException;
      * }</pre>
      *
      * @return the maximum cache entry lifetime in milliseconds; defaults to
@@ -153,7 +158,7 @@ public @interface CacheResult {
      * // Expire if not accessed for 10 minutes
      * @CacheResult(enabled = true, liveTime = 3600000, maxIdleTime = 600000)
      * @Query("SELECT * FROM user_sessions WHERE token = :token")
-     * UserSession getSession(@Bind("token") String token);
+     * UserSession getSession(@Bind("token") String token) throws SQLException;
      * }</pre>
      *
      * @return the maximum idle time in milliseconds; defaults to
@@ -175,7 +180,7 @@ public @interface CacheResult {
      * // Only cache if result has at least 10 items
      * @CacheResult(enabled = true, minSize = 10)
      * @Query("SELECT * FROM products WHERE category = :category")
-     * List<Product> findByCategory(@Bind("category") String category);
+     * List<Product> findByCategory(@Bind("category") String category) throws SQLException;
      * }</pre>
      *
      * @return the minimum result size to cache; the default {@code 0} means no minimum
@@ -196,7 +201,7 @@ public @interface CacheResult {
      * // Don't cache if result has more than 1000 items
      * @CacheResult(enabled = true, maxSize = 1000)
      * @Query("SELECT * FROM orders WHERE date >= :startDate")
-     * List<Order> findOrdersSince(@Bind("startDate") Date date);
+     * List<Order> findOrdersSince(@Bind("startDate") Date date) throws SQLException;
      * }</pre>
      *
      * @return the maximum result size to cache; the default {@link Integer#MAX_VALUE} means no maximum
@@ -222,12 +227,12 @@ public @interface CacheResult {
      * // Use Kryo for deep copying complex objects
      * @CacheResult(enabled = true, transfer = "kryo")
      * @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
-     * UserProfile getComplexProfile(@Bind("userId") Long userId);
+     * UserProfile getComplexProfile(@Bind("userId") Long userId) throws SQLException;
      *
      * // Use JSON for debugging/logging friendly format
      * @CacheResult(enabled = true, transfer = "json")
      * @Query("SELECT * FROM audit_logs WHERE id = :id")
-     * AuditLog getAuditLog(@Bind("id") Long id);
+     * AuditLog getAuditLog(@Bind("id") Long id) throws SQLException;
      * }</pre>
      *
      * @return the serialization strategy name
@@ -245,21 +250,27 @@ public @interface CacheResult {
      *
      * <p>This filter is ignored when the annotation is applied at the method level.</p>
      *
+     * <p>When the annotation is applied at the type level, methods whose names contain
+     * {@code "page"} or {@code "paginate"} (case-insensitive) are always skipped from caching,
+     * regardless of this filter.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @CacheResult(enabled = true,
      *              liveTime = 600000,
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})
      * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
-     *     // These methods will be cached
-     *     User findById(Long id);
-     *     List<User> findByStatus(String status);
-     *     User getByEmail(String email);
+     *     // Matched by the filter - results are cached:
+     *     @Query("SELECT * FROM users WHERE status = :status")
+     *     List<User> findByStatus(@Bind("status") String status) throws SQLException;
      *
-     *     // These methods will NOT be cached
-     *     void updateUser(User user);
-     *     int deleteById(Long id);
+     *     @Query("SELECT * FROM users WHERE email = :email")
+     *     User getByEmail(@Bind("email") String email) throws SQLException;
      * }
+     *
+     * // Inherited built-in reads also match the filter and are cached, for example:
+     * //     User user = userDao.gett(userId);                      // matches "get.*"
+     * //     Optional<User> first = userDao.findFirst(cond);        // matches "find.*"
      * }</pre>
      *
      * @return array of method name patterns to cache; the default targets common read methods:

@@ -114,7 +114,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
 
     /**
      * Creates a PreparedQuery for the specified SQL query string.
-     * The query can be any valid SQL statement (SELECT, INSERT, UPDATE, DELETE, etc.).
+     * The query can be any valid SQL statement (SELECT, INSERT, UPDATE, DELETE, etc.),
+     * unless this DAO is read-only (SELECT only) or no-update (SELECT/INSERT only).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -125,6 +126,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param sql the SQL query string
      * @return a PreparedQuery instance for the specified query
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
+     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -170,6 +173,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery instance
+     * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -183,6 +187,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param sql the SQL query string
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
+     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
@@ -240,6 +246,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param namedSql the named SQL query string with :paramName placeholders
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
+     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -254,6 +262,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param namedSql the pre-parsed named query
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
+     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -284,6 +294,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -297,6 +308,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param namedSql the named SQL query string
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
+     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -310,6 +323,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param namedSql the pre-parsed named query
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
+     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation

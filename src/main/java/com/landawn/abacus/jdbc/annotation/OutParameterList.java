@@ -31,8 +31,9 @@ import java.lang.annotation.Target;
  *
  * <p>The DAO proxy registers each contained {@code @OutParameter} on the underlying
  * {@link java.sql.CallableStatement} in declaration order; the registered values are then
- * exposed to the caller through the method's return value (typically a
- * {@code Jdbc.OutParamResult}, a single scalar, or a result holder).</p>
+ * exposed to the caller only through a {@code Jdbc.OutParamResult} return value (with
+ * {@code op = OP.executeAndGetOutParameters}) or a {@code Tuple2<T, Jdbc.OutParamResult>}
+ * return value.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -43,7 +44,7 @@ import java.lang.annotation.Target;
  * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
  * Jdbc.OutParamResult calculateDiscount(
  *         @Bind("price")      BigDecimal price,
- *         @Bind("customerId") long       customerId);
+ *         @Bind("customerId") long       customerId) throws SQLException;
  *
  * // Explicit form — equivalent to the above.
  * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
@@ -54,7 +55,7 @@ import java.lang.annotation.Target;
  * })
  * Jdbc.OutParamResult calculateDiscountExplicit(
  *         @Bind("price")      BigDecimal price,
- *         @Bind("customerId") long       customerId);
+ *         @Bind("customerId") long       customerId) throws SQLException;
  * }</pre>
  *
  * @see OutParameter

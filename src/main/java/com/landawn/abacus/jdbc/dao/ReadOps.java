@@ -643,7 +643,10 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowMapper the function to map the selected value
      * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
-     *         matches the condition or the mapped value is {@code null}
+     *         matches the condition
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -728,7 +731,10 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowMapper the function to map the selected value
      * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
-     *         matches the condition or the mapped value is {@code null}
+     *         matches the condition
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record matches the condition
      * @throws SQLException if a database access error occurs
      */
@@ -743,9 +749,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset ds = dao.query(Filters.gt("age", 18));
-     * for (int i = 0; i < ds.size(); i++) {
-     *     System.out.println(ds.getString(i, "name"));
-     * }
+     * ds.getColumn("name").forEach(System.out::println);
      * }</pre>
      *
      * @param cond the search condition
@@ -1193,7 +1197,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return lazy stream of filtered and mapped results
      */
     @LazyEvaluation
-    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
+            final Jdbc.RowMapper<? extends R> rowMapper);
 
     /**
      * Returns a filtered lazy Stream with maximum flexibility.
@@ -1296,7 +1301,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages
-     * @throws IllegalArgumentException if {@code cond} or {@code paramSetter} is {@code null}, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code cond} or {@code paramSetter} is {@code null}, {@code pageSize} is not positive,
+     *                                  or {@code cond} does not include an {@code orderBy} clause
      */
     @Beta
     @LazyEvaluation
@@ -1313,7 +1319,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page's ResultSet
      * @return stream of processed page results
-     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code pageSize} is not positive,
+     *                                  or {@code cond} does not include an {@code orderBy} clause
      */
     @Beta
     @LazyEvaluation
@@ -1331,7 +1338,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page
      * @return stream of processed page results
-     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code pageSize} is not positive,
+     *                                  or {@code cond} does not include an {@code orderBy} clause
      */
     @Beta
     @LazyEvaluation
@@ -1348,7 +1356,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages with selected properties
-     * @throws IllegalArgumentException if {@code cond} or {@code paramSetter} is {@code null}, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code cond} or {@code paramSetter} is {@code null}, {@code pageSize} is not positive,
+     *                                  or {@code cond} does not include an {@code orderBy} clause
      */
     @Beta
     @LazyEvaluation
@@ -1367,7 +1376,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page
      * @return stream of processed page results
-     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code pageSize} is not positive,
+     *                                  or {@code cond} does not include an {@code orderBy} clause
      */
     @Beta
     @LazyEvaluation
@@ -1386,7 +1396,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page
      * @return stream of processed page results
-     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code cond}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code pageSize} is not positive,
+     *                                  or {@code cond} does not include an {@code orderBy} clause
      */
     @Beta
     @LazyEvaluation

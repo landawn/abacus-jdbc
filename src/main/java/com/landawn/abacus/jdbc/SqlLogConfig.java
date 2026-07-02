@@ -43,18 +43,21 @@ package com.landawn.abacus.jdbc;
  * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long)
  */
 final class SqlLogConfig {
+    // Note: instances are strictly thread-confined (held in ThreadLocals in JdbcUtil and only read/written
+    // by the owning thread), so the fields deliberately are NOT volatile.
+
     /** {@code true} if general SQL logging (logging every executed statement) is enabled. */
-    volatile boolean isEnabled;
+    boolean isEnabled;
 
     /** The maximum length, in characters, of a SQL statement that will be logged; longer statements are truncated. */
-    volatile int maxSqlLogLength;
+    int maxSqlLogLength;
 
     /**
      * The minimum execution time, in milliseconds, for performance logging. A statement is logged only when its
      * elapsed execution time is greater than or equal to this value. {@code Long.MAX_VALUE} effectively disables
      * performance logging, and a negative value also disables it.
      */
-    volatile long minExecutionTimeForSqlPerfLog;
+    long minExecutionTimeForSqlPerfLog;
 
     /**
      * Constructs a SqlLogConfig for general SQL logging.

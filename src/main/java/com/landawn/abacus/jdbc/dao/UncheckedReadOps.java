@@ -729,7 +729,10 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
-     *         matches the condition or the mapped value is {@code null}
+     *         matches the condition
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Condition, Class)
      */
@@ -811,7 +814,10 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
-     *         matches the condition or the mapped value is {@code null}
+     *         matches the condition
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Condition, Class)

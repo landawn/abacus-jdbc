@@ -57,10 +57,11 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateCrudDao
  * @see UncheckedCrudLReadOps
+ * @see NoUpdateCrudLDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
 public non-sealed interface UncheckedNoUpdateCrudLDao<T, TD extends UncheckedNoUpdateCrudLDao<T, TD>>
-        extends UncheckedNoUpdateCrudDao<T, Long, TD>, UncheckedCrudLReadOps<T, TD> {
+        extends UncheckedNoUpdateCrudDao<T, Long, TD>, UncheckedCrudLReadOps<T, TD>, NoUpdateCrudLDao<T, TD> {
 
 }

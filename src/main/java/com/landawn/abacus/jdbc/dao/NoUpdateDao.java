@@ -21,8 +21,8 @@ import com.landawn.abacus.annotation.Beta;
  * DAO that allows read and insert operations but disables update and delete. Useful for audit trails,
  * append-only/event-sourcing stores, and CQRS-style write models where existing rows must never change.
  *
- * <p>It is a pure capability composite of {@link InsertOps} (reads + inserts, via its
- * {@link ReadOps} super-interface). It does <b>not</b> mix in
+ * <p>It is a pure capability composite of {@link ReadOps} and {@link InsertOps}
+ * (reads + inserts). It does <b>not</b> mix in
  * {@code UpdateOps}/{@code DeleteOps}, so {@code update}/{@code upsert}/{@code delete}/
  * {@code batchUpdate}/{@code batchUpsert} (along with {@code prepareCallableQuery} and the generated-keys
  * {@code prepareQuery}/{@code prepareNamedQuery} overloads that take a {@code boolean}/{@code int[]}/

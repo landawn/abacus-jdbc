@@ -15,19 +15,16 @@ public class FetchDirectionTest extends TestBase {
     @Test
     public void testIntValue() {
         assertEquals(ResultSet.FETCH_FORWARD, FetchDirection.FORWARD.intValue());
-        assertEquals(ResultSet.FETCH_FORWARD, FetchDirection.FORWARD.intValue);
     }
 
     @Test
     public void testIntValue_Reverse() {
         assertEquals(ResultSet.FETCH_REVERSE, FetchDirection.REVERSE.intValue());
-        assertEquals(ResultSet.FETCH_REVERSE, FetchDirection.REVERSE.intValue);
     }
 
     @Test
     public void testIntValue_Unknown() {
         assertEquals(ResultSet.FETCH_UNKNOWN, FetchDirection.UNKNOWN.intValue());
-        assertEquals(ResultSet.FETCH_UNKNOWN, FetchDirection.UNKNOWN.intValue);
     }
 
     @Test

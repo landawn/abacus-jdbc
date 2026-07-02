@@ -103,7 +103,7 @@ public enum FetchDirection {
     /**
      * The integer value representing this fetch direction, as defined in {@link ResultSet}.
      */
-    final int intValue;
+    private final int intValue;
 
     /**
      * Constructs a {@code FetchDirection} with the specified JDBC integer constant value.

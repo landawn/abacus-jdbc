@@ -77,7 +77,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
             return deleteJoinEntities(entity, joinEntityPropNames.get(0));
         } else {
             int result = 0;
-            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {
@@ -127,7 +127,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
             return deleteJoinEntities(entities, joinEntityPropNames.get(0));
         } else {
             int result = 0;
-            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {
@@ -152,7 +152,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * constructs and executes a DELETE statement targeting the join entity table with a WHERE
      * clause matching the foreign key value(s) from the parent entity.</p>
      *
-     * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * <p>Unlike the checked version in {@link JoinEntityDeleteOps}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
      * and lambda expressions without requiring explicit exception handling.</p>
      *
@@ -197,7 +197,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * statements, avoiding the N+1 delete problem. For large collections, the deletion may be
      * automatically batched to prevent SQL statement size limits from being exceeded.</p>
      *
-     * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * <p>Unlike the checked version in {@link JoinEntityDeleteOps}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
      * such as Stream operations and lambda expressions without requiring explicit exception handling.</p>
      *
@@ -274,7 +274,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
             return deleteJoinEntities(entity, N.firstOrNullIfEmpty(joinEntityPropNames));
         } else {
             int result = 0;
-            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {
@@ -395,7 +395,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
             return deleteJoinEntities(entities, N.firstOrNullIfEmpty(joinEntityPropNames));
         } else {
             int result = 0;
-            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {

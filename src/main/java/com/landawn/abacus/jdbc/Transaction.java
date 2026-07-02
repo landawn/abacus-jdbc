@@ -132,8 +132,9 @@ public interface Transaction {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the commit
-     * @throws IllegalStateException if the transaction is not in a valid state for committing
-     *         (e.g., already committed or rolled back)
+     * @throws IllegalStateException if the transaction is not in a valid state for committing.
+     *         Note: {@link SqlTransaction} (the built-in implementation) does not throw for a scope
+     *         that has already completed — the call is logged and ignored
      */
     void commit() throws UncheckedSQLException;
 
@@ -159,8 +160,9 @@ public interface Transaction {
      * in favor of {@link #rollbackIfNotCommitted()}.</p>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
-     * @throws IllegalStateException if the transaction is not in a valid state for rollback
-     *         (e.g., already committed or rolled back)
+     * @throws IllegalStateException if the transaction is not in a valid state for rollback.
+     *         Note: {@link SqlTransaction} (the built-in implementation) does not throw for a scope
+     *         that has already completed — the call is logged and ignored
      */
     void rollback() throws UncheckedSQLException;
 

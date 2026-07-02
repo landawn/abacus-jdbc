@@ -1780,7 +1780,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, null, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(parameterIndex, null, sqlType, null, -1));
 
         return this;
     }
@@ -1818,7 +1818,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, null, scale));
+        addOrReplaceOutParam(new Jdbc.OutParam(parameterIndex, null, sqlType, null, scale));
 
         return this;
     }
@@ -1856,7 +1856,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, sqlType, typeName, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(parameterIndex, null, sqlType, typeName, -1));
 
         return this;
     }
@@ -1887,7 +1887,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, null, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(-1, parameterName, sqlType, null, -1));
 
         return this;
     }
@@ -1920,7 +1920,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, scale);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, null, scale));
+        addOrReplaceOutParam(new Jdbc.OutParam(-1, parameterName, sqlType, null, scale));
 
         return this;
     }
@@ -1950,7 +1950,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, sqlType, typeName, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(-1, parameterName, sqlType, typeName, -1));
 
         return this;
     }
@@ -1985,7 +1985,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, null, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, null, -1));
 
         return this;
     }
@@ -2019,7 +2019,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, null, scale));
+        addOrReplaceOutParam(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, null, scale));
 
         return this;
     }
@@ -2054,7 +2054,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
-        addOutParameters(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, typeName, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(parameterIndex, null, vendorTypeNumber, typeName, -1));
 
         return this;
     }
@@ -2085,7 +2085,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterName, sqlType);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, null, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, null, -1));
 
         return this;
     }
@@ -2118,7 +2118,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterName, sqlType, scale);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, null, scale));
+        addOrReplaceOutParam(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, null, scale));
 
         return this;
     }
@@ -2152,7 +2152,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
 
-        addOutParameters(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, typeName, -1));
+        addOrReplaceOutParam(new Jdbc.OutParam(-1, parameterName, vendorTypeNumber, typeName, -1));
 
         return this;
     }
@@ -2268,7 +2268,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param outParameter the OUT parameter metadata to track
      */
-    private void addOutParameters(final Jdbc.OutParam outParameter) {
+    private void addOrReplaceOutParam(final Jdbc.OutParam outParameter) {
         if (outParams == null) {
             outParams = new ArrayList<>();
         }
@@ -2572,13 +2572,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     // Log execution details
      *     logger.info("Warnings: " + stmt.getWarnings());
      *
-     *     // Process multiple result sets
-     *     boolean hasResults = true;
-     *     while (hasResults) {
-     *         if (stmt.getResultSet() != null) {
-     *             // Process result set
+     *     // Process multiple result sets. Note: getMoreResults() returning false only means the next
+     *     // result is not a ResultSet — keep going until getUpdateCount() is also -1, so ResultSets
+     *     // interleaved with update counts are not skipped.
+     *     boolean isResultSet = stmt.getResultSet() != null;
+     *     int updateCount;
+     *
+     *     while (isResultSet || (updateCount = stmt.getUpdateCount()) != -1) {
+     *         if (isResultSet) {
+     *             // Process stmt.getResultSet()
      *         }
-     *         hasResults = stmt.getMoreResults();
+     *         isResultSet = stmt.getMoreResults();
      *     }
      * });
      * }</pre>
@@ -2941,7 +2945,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see Jdbc.ResultExtractor
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
-            throws SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
@@ -3014,7 +3018,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #listAllResultSetsAndGetOutParameters(Class)
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
-            throws SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
@@ -3275,6 +3279,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #listAndGetOutParameters(BiRowMapper)
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws IllegalArgumentException, SQLException {
+        assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 
         return listAndGetOutParameters(Jdbc.BiRowMapper.to(targetType));
@@ -3392,7 +3397,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #listAndGetOutParameters(BiRowFilter, BiRowMapper)
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
-            throws SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
@@ -3541,7 +3546,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #listAndGetOutParameters(RowFilter, RowMapper)
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
-            throws SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);

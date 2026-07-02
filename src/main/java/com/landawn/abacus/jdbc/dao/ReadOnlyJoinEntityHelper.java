@@ -55,12 +55,12 @@ package com.landawn.abacus.jdbc.dao;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <TD> the companion {@link Dao} type that owns this helper (used for fluent
+ * @param <TD> the companion {@link ReadOnlyDao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
  * @see JoinEntityReadOps
  * @see JoinEntityHelper
  * @see Dao
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-public non-sealed interface ReadOnlyJoinEntityHelper<T, TD extends Dao<T, TD>> extends JoinEntityReadOps<T, TD> {
+public non-sealed interface ReadOnlyJoinEntityHelper<T, TD extends ReadOnlyDao<T, TD>> extends JoinEntityReadOps<T, TD> {
 }

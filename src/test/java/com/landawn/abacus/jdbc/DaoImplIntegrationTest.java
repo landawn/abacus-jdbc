@@ -30,14 +30,17 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.Query;
+import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.NoUpdateCrudDao;
 import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.SqlDialect;
+import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -46,6 +49,7 @@ import com.landawn.abacus.util.u.OptionalChar;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
+import com.landawn.abacus.util.stream.Stream;
 
 /**
  * End-to-end integration coverage for the dynamically generated DAO implementation
@@ -658,9 +662,20 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     // @Query with a named parameter bound via @Bind drives the named-SQL custom-method dispatch.
+    @SqlLogEnabled(true)
+    @DaoConfig(addLimitForSingleQuery = true)
     public interface BindDao extends CrudDao<UserAccount, Long, BindDao> {
         @Query("SELECT first_name FROM user_account WHERE age = :age")
         String firstNameByAge(@com.landawn.abacus.jdbc.annotation.Bind("age") int age) throws SQLException;
+    }
+
+    @Test
+    public void testCreateDao() throws SQLException {
+        SqlDialect sqlDialect = SqlDialect.builder().productInfo(ProductInfo.of("SQL Server", "10")).build();
+        final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds, sqlDialect);
+        dao.insert(newUser("Bind", "Me", 77));
+
+        bindDao.findFirst(Filters.eq("firstName", "me"));
     }
 
     @Test

@@ -420,7 +420,10 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
-     * @return an {@link Optional} containing the mapped non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@link Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -490,7 +493,10 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
-     * @return an {@link Optional} containing the mapped unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@link Optional} containing the mapped unique value if a record matches the {@code id}, otherwise empty
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -595,6 +601,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *
      * @param ids the collection of IDs to retrieve
      * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
@@ -640,6 +647,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if {@code null}
      * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
@@ -663,8 +671,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if {@code null}
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
+     * @param batchSize the number of IDs to query for in each batch. The operation will split
+     *                  large collections into chunks of this size.
      * @return a list of found entities (order is not guaranteed to match the input IDs)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
@@ -700,10 +708,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
             }
 
             resultList.addAll(entities);
-        }
-
-        if (resultList.size() > idList.size()) {
-            throw new DuplicateResultException("The size of result: " + resultList.size() + " is bigger than the size of input ids: " + idList.size());
         }
 
         return resultList;
@@ -907,10 +911,13 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     @Beta
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException {
+        N.checkArgPositive(batchSize, cs.batchSize);
+
         if (N.isEmpty(entities)) {
             return 0;
         }

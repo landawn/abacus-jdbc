@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.EmptyHandler;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.jdbc.dao.DaoBase;
 
 /**
  * Defines an interceptor handler for DAO methods or entire DAO interfaces.
@@ -69,7 +69,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
  *     @Handler(type = PerformanceHandler.class)
  *     @Query("SELECT * FROM orders WHERE total > :amount")
- *     List<Order> findLargeOrders(@Bind("amount") BigDecimal amount);
+ *     List<Order> findLargeOrders(@Bind("amount") BigDecimal amount) throws SQLException;
  * }
  *
  * // Multiple handlers with filtering
@@ -146,7 +146,7 @@ public @interface Handler {
      * @return the handler class, defaults to {@link EmptyHandler} (no-op)
      */
     @SuppressWarnings("rawtypes")
-    Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class; //NOSONAR
+    Class<? extends Jdbc.Handler<? extends DaoBase>> type() default EmptyHandler.class; //NOSONAR
 
     /**
      * Specifies filter patterns for methods when the annotation is applied at the class level.
@@ -183,7 +183,7 @@ public @interface Handler {
      * @Handler(type = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     @Query("SELECT * FROM users WHERE id = :id")
-     *     User findById(@Bind("id") Long id);
+     *     User findById(@Bind("id") Long id) throws SQLException;
      *
      *     default User findActiveById(Long id) {
      *         User user = findById(id);   // TransactionHandler NOT applied here

@@ -46,10 +46,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * public interface PaymentDao extends CrudDao<Payment, Long, PaymentDao> {
  *     @SqlLogEnabled(false)
  *     @Query("SELECT * FROM payment_card WHERE id = :id")
- *     Payment findById(@Bind("id") Long id);
+ *     Payment findById(@Bind("id") Long id) throws SQLException;
  *
  *     @Query("UPDATE payment_card SET status = :status WHERE id = :id")
- *     int updateStatus(@Bind("id") Long id, @Bind("status") String status);
+ *     int updateStatus(@Bind("id") Long id, @Bind("status") String status) throws SQLException;
  * }
  *
  * // Type-level: log only the write methods, truncated to 2 KB.

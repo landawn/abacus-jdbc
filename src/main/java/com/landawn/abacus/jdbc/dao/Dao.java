@@ -77,7 +77,7 @@ import com.landawn.abacus.util.Throwables;
  *     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
  *
  *     @Query("SELECT id, first_name, last_name, email FROM user")
- *     Stream<User> allUsers() throws SQLException;
+ *     Stream<User> allUsers(); // Stream-returning methods must not declare 'throws SQLException'
  * }
  *
  * // Usage

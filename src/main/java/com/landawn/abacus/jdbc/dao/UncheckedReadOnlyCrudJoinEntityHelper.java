@@ -63,11 +63,11 @@ package com.landawn.abacus.jdbc.dao;
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDao}
+ * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedReadOnlyCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityReadOps
  * @see UncheckedCrudDao
  */
-public non-sealed interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedCrudDao<T, ID, TD>>
+public non-sealed interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedReadOnlyCrudDao<T, ID, TD>>
         extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedCrudJoinEntityReadOps<T, ID, TD> {
 }

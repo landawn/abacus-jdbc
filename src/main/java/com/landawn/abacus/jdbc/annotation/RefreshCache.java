@@ -48,16 +48,16 @@ import com.landawn.abacus.annotation.Beta;
  *
  *     @CacheResult(enabled = true, liveTime = 600_000)
  *     @Query("SELECT * FROM product WHERE id = :id")
- *     Product findById(@Bind("id") Long id);
+ *     Product findById(@Bind("id") Long id) throws SQLException;
  *
  *     @Query("UPDATE product SET price = :price WHERE id = :id")
- *     int updatePrice(@Bind("id") Long id, @Bind("price") BigDecimal price);
+ *     int updatePrice(@Bind("id") Long id, @Bind("price") BigDecimal price) throws SQLException;
  *     // ← falls under the type-level filter; cache is invalidated after each call.
  *
  *     // High-frequency update that is intentionally exempt from cache invalidation.
  *     @RefreshCache(enabled = false)
  *     @Query("UPDATE product SET view_count = view_count + 1 WHERE id = :id")
- *     int incrementViews(@Bind("id") Long id);
+ *     int incrementViews(@Bind("id") Long id) throws SQLException;
  * }
  * }</pre>
  *
@@ -88,10 +88,10 @@ public @interface RefreshCache {
      * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
      *     @Query("UPDATE users SET last_seen = NOW() WHERE id = :id")
      *     @RefreshCache(enabled = false) // Don't refresh cache for this frequent update
-     *     void updateLastSeen(long userId);
+     *     void updateLastSeen(@Bind("id") long id) throws SQLException;
      *
      *     @Query("UPDATE users SET email = :email WHERE id = :id")
-     *     void updateEmail(long userId, String email);   // Will refresh cache
+     *     void updateEmail(@Bind("id") long id, @Bind("email") String email) throws SQLException;   // Will refresh cache
      * }
      * }</pre>
      *

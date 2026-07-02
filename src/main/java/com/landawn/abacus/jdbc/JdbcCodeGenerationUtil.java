@@ -458,11 +458,10 @@ public final class JdbcCodeGenerationUtil {
         final String idAnnotationClassName = ClassUtil.getCanonicalClassName(idAnnotationClass);
 
         final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(tableAnnotationClassName)
-                || "jakarta.persistence.Table".equals(ClassUtil.getCanonicalClassName(tableAnnotationClass));
+                || "jakarta.persistence.Table".equals(tableAnnotationClassName);
         final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(columnAnnotationClassName)
-                || "jakarta.persistence.Column".equals(ClassUtil.getCanonicalClassName(columnAnnotationClass));
-        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(idAnnotationClassName)
-                || "jakarta.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
+                || "jakarta.persistence.Column".equals(columnAnnotationClassName);
+        final boolean isJavaPersistenceId = "javax.persistence.Id".equals(idAnnotationClassName) || "jakarta.persistence.Id".equals(idAnnotationClassName);
 
         final String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
 
@@ -473,7 +472,9 @@ public final class JdbcCodeGenerationUtil {
 
         final List<Tuple2<String, String>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
                 : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
-                        .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
+                        // Only whole-line comments are skipped; stripping any trailing "//" would corrupt
+                        // declarations whose string initializers contain "//" (e.g. "https://...").
+                        .map(it -> Strings.strip(it).startsWith("//") ? "" : it)
                         .map(Strings::strip)
                         // .peek(Fn.println())
                         .filter(Fn.notEmpty())
@@ -541,7 +542,10 @@ public final class JdbcCodeGenerationUtil {
                 columnClassNameList.add(columnClassName);
             }
 
-            if (N.isEmpty(idFields) || N.intersection(idFields, fieldNameList).isEmpty()) {
+            // Skip PK auto-detection when id fields were configured by Java field name OR by raw DB
+            // column name (both forms are honored by the @Id emission below); checking only field
+            // names made column-name-form configs trigger auto-detection and merge unintended @Ids.
+            if (N.isEmpty(idFields) || (N.intersection(idFields, fieldNameList).isEmpty() && N.intersection(idFields, columnNameList).isEmpty())) {
                 final Statement stmt = rs.getStatement();
                 final Connection conn = stmt == null ? null : stmt.getConnection();
 
@@ -943,7 +947,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table.
      * The generated SQL includes all columns from the table.
-     * Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
@@ -1081,7 +1085,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table.
      * The generated SQL uses positional parameters (?) for all column values.
-     * Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
@@ -1107,7 +1111,7 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an INSERT SQL statement for the specified table using an existing connection.
-     * Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
@@ -1889,7 +1893,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * <ul>
      *   <li>Column and value counts must match or conversion fails.</li>
-     *   <li>Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     *   <li>Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
      *       (with backticks for MySQL/MariaDB, or double quotes for other databases) based on the
      *       {@link DBProductInfo} resolved from {@code ds}.</li>
      *   <li>Value tokens are copied verbatim from the parsed {@code VALUES} list; they are not re-quoted,
@@ -2145,18 +2149,20 @@ public final class JdbcCodeGenerationUtil {
                 sb.append('.');
             }
 
-            sb.append(quoteIdentifier(parts[i], quote));
+            // Same conditional quoting as the single-part path: unconditional quoting makes plain
+            // qualified names case-exact and breaks resolution on case-folding databases (Oracle/H2/...).
+            sb.append(isSimpleSqlIdentifier(parts[i]) ? parts[i] : quoteIdentifier(parts[i], quote));
         }
 
         return sb.toString();
     }
 
-    private static String checkColumnName(final String columnLabel, final DBProductInfo dbProductInfo) {
-        N.checkArgNotBlank(columnLabel, cs.columnName);
+    private static String checkColumnName(final String columnName, final DBProductInfo dbProductInfo) {
+        N.checkArgNotBlank(columnName, cs.columnName);
 
-        String quote = getTableColumnNameQuoteChar(dbProductInfo);
+        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
-        return isSimpleSqlIdentifier(columnLabel) ? columnLabel : quoteIdentifier(columnLabel, quote);
+        return isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quote);
     }
 
     private static boolean isSimpleSqlIdentifier(final String identifier) {
@@ -2222,7 +2228,7 @@ public final class JdbcCodeGenerationUtil {
      *        .columnAnnotationClass(jakarta.persistence.Column.class)
      *        .tableAnnotationClass(jakarta.persistence.Table.class)
      *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
-     *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "List<String>")))
+     *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "name = \"List<String>\"")))
      *        .generateBuilder(true)
      *        .generateCopyMethod(true)
      *        .build();
@@ -2281,8 +2287,10 @@ public final class JdbcCodeGenerationUtil {
         /**
          * List of customized database type annotations.
          * Each tuple contains: (field name, {@code @Type} annotation argument expression).
-         * The second element is emitted verbatim as the argument to {@code @Type(...)},
-         * e.g., {@code Tuple.of("tags", "List<String>")} produces {@code @Type(List<String>)}.
+         * The second element is emitted verbatim as the argument to {@code @Type(...)}, so it must be
+         * a valid annotation argument — {@code @Type} declares {@code String value()}, so use the quoted
+         * attribute form: e.g., {@code Tuple.of("tags", "name = \"List<String>\"")} produces
+         * {@code @Type(name = "List<String>")}.
          * Used to generate {@code @Type} annotations for fields whose database types
          * require explicit type mapping.
          */

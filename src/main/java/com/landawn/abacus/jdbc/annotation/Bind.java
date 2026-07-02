@@ -31,31 +31,30 @@ import java.lang.annotation.Target;
  * declared with {@link Query @Query} using named placeholders. The {@link #value() value} names the
  * {@code :token} that this argument supplies.</p>
  *
- * <p>The annotation can bind:</p>
- * <ul>
- *   <li>Simple types (String, Integer, Date, etc.)</li>
- *   <li>Entity objects (properties are accessible via dot notation)</li>
- *   <li>Complex nested objects</li>
- * </ul>
+ * <p>The annotation binds a single value (any type with a registered Abacus {@code Type}) to the
+ * named parameter whose token matches {@link #value()} <i>verbatim</i>. Property paths like
+ * {@code :a.b} are supported only through a single <b>unannotated</b> bean parameter (see below) —
+ * an {@code @Bind} value that does not literally appear as a named parameter in the SQL fails DAO
+ * initialization.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Simple parameter binding
  *     @Query("SELECT * FROM users WHERE email = :email")
- *     User findByEmail(@Bind("email") String email);
+ *     User findByEmail(@Bind("email") String email) throws SQLException;
  *
  *     // Multiple parameters
  *     @Query("SELECT * FROM users WHERE status = :status AND age >= :minAge")
- *     List<User> findActiveAdults(@Bind("status") String status, @Bind("minAge") int minAge);
+ *     List<User> findActiveAdults(@Bind("status") String status, @Bind("minAge") int minAge) throws SQLException;
  *
- *     // Binding entity properties
- *     @Query("SELECT * FROM users WHERE first_name = :user.firstName AND last_name = :user.lastName")
- *     List<User> findByName(@Bind("user") User user);
+ *     // Binding entity properties: single unannotated bean parameter, :tokens resolve to its properties
+ *     @Query("SELECT * FROM users WHERE first_name = :firstName AND last_name = :lastName")
+ *     List<User> findByName(User probe) throws SQLException;
  *
- *     // Nested property access
- *     @Query("UPDATE users SET address = :addr.street, city = :addr.city WHERE id = :userId")
- *     void updateAddress(@Bind("userId") Long userId, @Bind("addr") Address address);
+ *     // Nested property paths also work through the single-bean form (user.getAddress().getStreet(), ...)
+ *     @Query("UPDATE users SET street = :address.street, city = :address.city WHERE id = :id")
+ *     int updateAddress(User user) throws SQLException;
  * }
  * }</pre>
  *
@@ -65,11 +64,10 @@ import java.lang.annotation.Target;
  * <pre>{@code
  * // Single bean parameter: properties auto-bound, no @Bind required
  * @Query("INSERT INTO users (name, email, age) VALUES (:name, :email, :age)")
- * void insertUser(User user);
+ * void insertUser(User user) throws SQLException;
  *
- * // Explicit prefix binding when you need property paths in SQL
- * @Query("INSERT INTO users (name, email, age) VALUES (:u.name, :u.email, :u.age)")
- * void insertUser(@Bind("u") User user);
+ * // NOT supported: prefix-binding an entity with @Bind ("@Bind("u") User user" + ":u.name" fails
+ * // DAO initialization) — use the single unannotated bean parameter form above instead.
  * }</pre>
  *
  * <p>Best practices:</p>
@@ -95,9 +93,8 @@ public @interface Bind {
      *
      * <p>An explicit value is normally required: when a named-query method has more than one
      * statement parameter, every such parameter must carry an {@code @Bind} (or another binding
-     * annotation) with a non-empty {@code value}. The empty default is only useful for single-bean
-     * scenarios where the framework auto-binds by entity property names without inspecting
-     * {@code value}.</p>
+     * annotation) with a non-empty {@code value} that matches a named parameter in the SQL verbatim.
+     * (A single bean/record/Map parameter is auto-bound by property names without any {@code @Bind}.)</p>
      *
      * <p>The parameter is referenced in SQL using colon notation: {@code :paramName}</p>
      *
@@ -107,16 +104,17 @@ public @interface Bind {
      * @Query("SELECT * FROM users WHERE id = :userId")
      * User findById(@Bind("userId") Long id);
      *
-     * // Binding object with property access
-     * @Query("SELECT * FROM orders WHERE customer_id = :customer.id AND status = :orderStatus")
-     * List<Order> findOrders(@Bind("customer") Customer customer, @Bind("orderStatus") String status);
+     * // Multiple scalar parameters, each bound by an explicit name
+     * @Query("SELECT * FROM orders WHERE customer_id = :customerId AND status = :orderStatus")
+     * List<Order> findOrders(@Bind("customerId") Long customerId, @Bind("orderStatus") String status);
      * }</pre>
      *
-     * <p><b>Empty value:</b> when {@code value} is left empty (the default) on a single scalar parameter,
-     * the annotation has no name to bind by and the argument is bound <i>positionally</i> instead. (This
-     * differs from {@code @SqlFragment}/{@code @BindList}, where an empty value falls back to the method
-     * parameter name &mdash; which requires compiling with the {@code -parameters} flag &mdash; rather than
-     * binding positionally.)</p>
+     * <p><b>Empty value:</b> an empty {@code value} (the default) is effectively invalid outside stored
+     * procedures: for a named query it matches no named parameter and fails DAO initialization, and on a
+     * non-procedure positional query any {@code @Bind} is rejected outright. Only for stored procedures
+     * with {@code ?} placeholders is an empty-valued {@code @Bind} parameter bound <i>positionally</i>.
+     * (This differs from {@code @SqlFragment}/{@code @BindList}, where an empty value falls back to the
+     * method parameter name &mdash; which requires compiling with the {@code -parameters} flag.)</p>
      *
      * @return the named-parameter token to bind to (without the leading colon); empty by default
      */

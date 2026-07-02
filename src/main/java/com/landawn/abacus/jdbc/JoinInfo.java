@@ -414,9 +414,13 @@ public final class JoinInfo {
                 final String middleCondPropName = middleTableName + "." + middleCondPropNameRaw;
 
                 final int fromIndex = leftSelectSql.lastIndexOf(" FROM ");
+                N.checkState(fromIndex >= 0, "Cannot locate FROM in left SELECT SQL: %s", leftSelectSql);
                 final List<String> leftSelectLastWords = SqlParser.parse(leftSelectSql.substring(fromIndex + 6));
                 final String leftTableName = leftSelectLastWords.get(0);
-                final String leftCondPropName = leftTableName + "." + leftSelectLastWords.get(4);
+                // Keyword-anchored like the middle-SELECT extraction above (fixed offsets break when AS aliases shift token positions).
+                final String leftCondPropNameRaw = nextNonBlankToken(leftSelectLastWords, indexOfKeyword(leftSelectLastWords, "WHERE"));
+                N.checkState(leftCondPropNameRaw != null, "Cannot locate WHERE in left SELECT SQL: %s", leftSelectSql);
+                final String leftCondPropName = leftTableName + "." + leftCondPropNameRaw;
 
                 final String batchSelectFromToJoinOn = " FROM " + leftTableName + " INNER JOIN " + middleTableName + " ON " + leftCondPropName + " = "
                         + middleSelectPropName + " WHERE " + middleCondPropName + " IN (";

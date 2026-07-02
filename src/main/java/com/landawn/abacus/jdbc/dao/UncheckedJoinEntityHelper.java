@@ -20,7 +20,7 @@ package com.landawn.abacus.jdbc.dao;
  *
  * <p>Full unchecked join-entity capability, composed of the read side
  * ({@link UncheckedJoinEntityReadOps}) and the delete side
- * ({@link UncheckedJoinEntityDeleteOps}). Load operations throw
+ * ({@link UncheckedJoinEntityDeleteOps}). All operations throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of {@link java.sql.SQLException}.</p>
  *
  * @param <T> the entity type that this helper manages

@@ -143,6 +143,10 @@ public final class cs { // NOSONAR
      */
     public static final String entityClass = "entityClass";
     /**
+     * Parameter name for Class objects used to create the entity-aware Dataset extractor.
+     */
+    public static final String entityClassForExtractor = "entityClassForExtractor";
+    /**
      * Parameter name for Executor objects used for asynchronous task execution.
      */
     public static final String executor = "executor";
@@ -154,10 +158,6 @@ public final class cs { // NOSONAR
      * Parameter name for function objects or functional interfaces.
      */
     public static final String func = "func";
-    /**
-     * Parameter name for getter functions that extract values from objects.
-     */
-    public static final String getter = "getter";
     /**
      * Parameter name for handler objects that process events or manage operations.
      */
@@ -210,6 +210,10 @@ public final class cs { // NOSONAR
      * Parameter name for collections of parameter names used in named SQL queries.
      */
     public static final String parameterNames = "parameterNames";
+    /**
+     * Parameter name for the subset of named parameters selected to be bound from an entity.
+     */
+    public static final String parameterNamesToSet = "parameterNamesToSet";
     /**
      * Parameter name for collections of parameter values used in SQL query execution.
      */

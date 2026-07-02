@@ -28,7 +28,9 @@ import com.landawn.abacus.annotation.Internal;
  * enabling the framework to retrieve Spring-managed beans such as DataSources, TransactionManagers, and custom
  * DAO implementations.</p>
  *
- * <p>The ApplicationContext is automatically injected by Spring when this class is registered as a Spring bean.
+ * <p>The ApplicationContext is automatically injected by Spring when this class is registered as a Spring bean,
+ * and is stored in a process-wide holder shared by all instances — so the instance the framework constructs
+ * internally (e.g. in {@code Jdbc.HandlerFactory}) can resolve beans once any instance has been registered.
  * Once injected, it provides methods to retrieve beans by name or type from the Spring container.</p>
  *
  * <p><b>Framework Integration:</b></p>
@@ -67,15 +69,30 @@ import com.landawn.abacus.annotation.Internal;
 @Internal
 public final class SpringApplicationContext {
 
+    // Held statically so that registering ANY SpringApplicationContext bean makes the context visible
+    // to the framework's internally constructed instance too: Jdbc.HandlerFactory builds its own
+    // instance in a static initializer, which Spring never injects. Spring ignores @Autowired on
+    // static fields, so injection is routed through the instance setter below into this holder.
+    private static volatile ApplicationContext appContext; // NOSONAR
+
+    /**
+     * Invoked by Spring to supply the {@link ApplicationContext} when an instance of this class is
+     * registered as a Spring bean. The context is stored in a process-wide holder shared by all
+     * instances (including the one the framework constructs internally).
+     *
+     * @param applicationContext the Spring application context
+     */
     @Autowired // NOSONAR
-    private ApplicationContext appContext;
+    public void setApplicationContext(final ApplicationContext applicationContext) {
+        appContext = applicationContext; // NOSONAR
+    }
 
     /**
      * Constructs a new {@code SpringApplicationContext}.
      *
-     * <p>The Spring {@link ApplicationContext} field is populated by Spring after construction
-     * via {@link Autowired}, so calling {@link #getBean(String)} or {@link #getBean(Class)} before
-     * Spring has finished injection will return {@code null}.</p>
+     * <p>The Spring {@link ApplicationContext} holder is populated by Spring after construction
+     * via the {@link Autowired} setter, so calling {@link #getBean(String)} or {@link #getBean(Class)}
+     * before Spring has finished injecting any registered instance will return {@code null}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

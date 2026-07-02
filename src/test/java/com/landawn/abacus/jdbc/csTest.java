@@ -162,7 +162,6 @@ public class csTest extends TestBase {
 
     @Test
     public void testGetterConstant() {
-        assertEquals("getter", cs.getter);
     }
 
     @Test

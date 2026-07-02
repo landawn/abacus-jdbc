@@ -117,6 +117,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         parameterCount = namedSql.parameterCount();
 
         if (N.size(parameterNames) != parameterCount) {
+            // Defense-in-depth: all production callers pre-validate the parsed SQL before preparing the
+            // statement, but if this ever fires, don't leak the freshly prepared statement.
+            JdbcUtil.closeQuietly(stmt);
+
             throw new IllegalArgumentException("Invalid named SQL: " + namedSql.originalSql());
         }
     }
@@ -2767,7 +2771,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Reader object containing the CLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setClob(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2833,8 +2837,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
-     *         or the length is less than zero
+     * @throws SQLException if a database access error occurs or the length is less than zero
      */
     public NamedQuery setClob(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2899,7 +2902,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the NClob object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setNClob(final String parameterName, final java.sql.NClob value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2965,7 +2968,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Reader object containing the NCLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setNClob(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3031,8 +3034,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
-     *         or the length is less than zero
+     * @throws SQLException if a database access error occurs or the length is less than zero
      */
     public NamedQuery setNClob(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3095,7 +3097,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the URL object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setURL(final String parameterName, final URL value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3162,7 +3164,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the SQLXML object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setSQLXML(final String parameterName, final java.sql.SQLXML value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3226,7 +3228,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the RowId object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setRowId(final String parameterName, final java.sql.RowId value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3290,7 +3292,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Ref object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setRef(final String parameterName, final java.sql.Ref value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3355,7 +3357,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Array object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setArray(final String parameterName, final java.sql.Array value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3431,8 +3433,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
-     *         or the given object cannot be converted to a SQL type
+     * @throws SQLException if a database access error occurs or the given object cannot be converted to a SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3500,8 +3501,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param sqlType the SQL type (from java.sql.Types) to be used
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
-     *         or the object cannot be converted to the specified SQL type
+     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object value, final int sqlType) throws IllegalArgumentException, SQLException {
@@ -3578,8 +3578,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
-     *         or the object cannot be converted to the specified SQL type
+     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object value, final int sqlType, final int scaleOrLength)
@@ -3648,8 +3647,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param sqlType the SQLType to be used
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
-     *         or the object cannot be converted to the specified SQL type
+     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3722,8 +3720,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
-     *         or the object cannot be converted to the specified SQL type
+     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength)
             throws IllegalArgumentException, SQLException {
@@ -3798,7 +3795,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param type the Type handler to use for setting the parameter. Must not be {@code null}.
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code type} is {@code null}, or the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      */
     public <T> NamedQuery setObject(final String parameterName, final T value, final Type<T> type) throws IllegalArgumentException, SQLException {
         checkArgNotNull(type, cs.type);
@@ -4009,10 +4006,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameters from an entity (bean/record) by reading the matching properties.
      *
-     * <p>For each name in {@code parameterNames}, the entity must expose a property of the same name
+     * <p>For each name in {@code parameterNamesToSet}, the entity must expose a property of the same name
      * (otherwise an {@link IllegalArgumentException} is thrown). The value of that property is bound
      * to every occurrence of the named parameter in the SQL. Named parameters in the SQL that are
-     * not listed in {@code parameterNames} are left unbound by this call — bind them separately
+     * not listed in {@code parameterNamesToSet} are left unbound by this call — bind them separately
      * before executing the query.
      *
      * <p><b>Usage Examples:</b></p>
@@ -4029,9 +4026,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }</pre>
      *
      * @param entity the bean or record whose properties supply the parameter values
-     * @param parameterNames the names of the parameters (and matching property names) to bind
+     * @param parameterNamesToSet the names of the parameters (and matching property names) to bind
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code entity} or {@code parameterNames} is {@code null}, if
+     * @throws IllegalArgumentException if {@code entity} or {@code parameterNamesToSet} is {@code null}, if
      *         {@code entity} is not a bean/record class, if a listed property does not exist on the
      *         entity, or if a listed name is not a parameter in the SQL query
      * @throws SQLException if a database access error occurs
@@ -4039,9 +4036,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#namedParameters(String)
      */
-    public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
+    public NamedQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
-        checkArgNotNull(parameterNames, cs.parameterNames);
+        checkArgNotNull(parameterNamesToSet, cs.parameterNamesToSet);
 
         if (paramNameIndexMap == null) {
             initParamNameIndexMap();
@@ -4056,7 +4053,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             IntList indexes = null;
 
             try {
-                for (final String parameterName : parameterNames) {
+                for (final String parameterName : parameterNamesToSet) {
                     propInfo = entityInfo.getPropInfo(parameterName);
 
                     if (propInfo == null) {
@@ -4194,7 +4191,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param batchParameters a collection of parameter objects for batch processing
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is {@code null} or contains invalid parameter objects
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      * @see #setParameters(Object)
      * @see #addBatch()
      */
@@ -4225,6 +4222,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * remaining elements are assumed to be of the same kind. If the iterator is empty, this is a no-op
      * and no batch is added. A {@code null} element is only supported when the SQL has exactly one named
      * parameter (it is bound as SQL {@code NULL}); otherwise an {@link IllegalArgumentException} is thrown.
+     * Note that when the <i>first</i> element is {@code null}, no type-based classification is possible:
+     * every remaining element is then bound as a plain single value (bean/Map/Collection/array
+     * interpretation is skipped), which also requires the SQL to have exactly one named parameter.
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *
@@ -4251,7 +4251,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param batchParameters an iterator providing parameter objects for batch processing
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is {@code null} or contains invalid parameter objects
-     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @throws SQLException if a database access error occurs
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)
      * @see #addBatch()
@@ -4284,7 +4284,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addNullBatchParameter();
                     } else {
                         stmt.clearParameters();
-                        stmt.setObject(1, params);
+                        setObject(1, params); // typed binding via the Abacus type system, like the non-batch path
                         addBatch();
                     }
                 }
@@ -4336,6 +4336,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else if (Map.class.isAssignableFrom(cls)) {
+                    // Clear before every row (including the first) so no row can inherit positions bound
+                    // earlier via setXxx. (The bean branch above deliberately never clears: pre-bound
+                    // non-property named parameters are expected to survive across bean rows.)
+                    stmt.clearParameters();
                     setParameters((Map<String, ?>) first);
                     addBatch();
 
@@ -4354,6 +4358,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else if (first instanceof Collection) {
+                    stmt.clearParameters();
                     setParameters((Collection) first);
                     addBatch();
 
@@ -4371,6 +4376,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else if (first instanceof Object[]) {
+                    stmt.clearParameters();
                     setParameters((Object[]) first);
                     addBatch();
 
@@ -4388,6 +4394,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else if (first instanceof EntityId) {
+                    stmt.clearParameters();
                     setParameters((EntityId) first);
                     addBatch();
 
@@ -4405,11 +4412,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else if (parameterCount == 1) {
-                    stmt.setObject(1, first);
+                    setObject(1, first); // typed binding via the Abacus type system, like the non-batch path
                     addBatch();
 
                     while (iter.hasNext()) {
-                        stmt.setObject(1, iter.next());
+                        setObject(1, iter.next());
                         addBatch();
                     }
                 } else {

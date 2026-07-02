@@ -18,7 +18,6 @@ package com.landawn.abacus.jdbc.dao;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
@@ -26,14 +25,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
-import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.BeanInfo;
-import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.util.Beans;
-import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -44,7 +36,6 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Unchecked-exception read capability of {@link CrudDao} (throws {@link com.landawn.abacus.exception.UncheckedSQLException}).
@@ -395,7 +386,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
-     * Unlike {@link #queryForSingleValue(String, Object, Class)}, this method rejects {@code null} values by the non-null result contract.
+     * Unlike {@link #queryForSingleValue(String, Object, Class)}, both "no record matched" and
+     * "the matched value is SQL {@code null}" result in an empty {@code Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -431,7 +423,10 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the non-null mapped value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@code Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Object, Class)
      */
@@ -506,7 +501,10 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the unique non-null mapped value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@code Optional} containing the unique mapped value if a record matches the {@code id}, otherwise empty
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Object, Class)
@@ -606,6 +604,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param ids the collection of entity IDs
      * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -650,6 +649,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs)
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -785,12 +785,11 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Override
     default boolean refresh(final T entity) throws UncheckedSQLException {
-        N.checkArgNotNull(entity, cs.entity);
-
-        final Class<?> cls = entity.getClass();
-        final Collection<String> propNamesToRefresh = JdbcUtil.getSelectPropNames(cls);
-
-        return refresh(entity, propNamesToRefresh);
+        try {
+            return CrudReadOps.super.refresh(entity);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
     /**
@@ -813,24 +812,10 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Override
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws UncheckedSQLException {
-        N.checkArgNotNull(entity, cs.entity);
-        N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
-
-        final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
-        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-
-        final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
-        final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
-
-        final T dbEntity = gett(id, selectPropNames);
-
-        if (dbEntity == null) {
-            return false;
-        } else {
-            Beans.mergeInto(dbEntity, entity, propNamesToRefresh);
-
-            return true;
+        try {
+            return CrudReadOps.super.refresh(entity, propNamesToRefresh);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
         }
     }
 
@@ -870,19 +855,16 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param batchSize the size of each batch
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException {
-        if (N.isEmpty(entities)) {
-            return 0;
+        try {
+            return CrudReadOps.super.batchRefresh(entities, batchSize);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
         }
-
-        final T first = N.firstOrNullIfEmpty(entities);
-        final Class<?> cls = first.getClass();
-        final Collection<String> propNamesToRefresh = JdbcUtil.getSelectPropNames(cls);
-
-        return batchRefresh(entities, propNamesToRefresh, batchSize);
     }
 
     /**
@@ -936,39 +918,10 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize)
             throws UncheckedSQLException {
-        N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
-        N.checkArgPositive(batchSize, cs.batchSize);
-
-        if (N.isEmpty(entities)) {
-            return 0;
-        }
-
-        final T first = N.firstOrNullIfEmpty(entities);
-        final Class<?> cls = first.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
-        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-
-        final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
-        final Map<ID, List<T>> idEntityMap = Stream.of(entities).groupTo(idExtractorFunc, Fn.identity());
-        final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
-
-        final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
-
-        if (N.isEmpty(dbEntities)) {
-            return 0;
-        } else {
-            return dbEntities.stream().mapToInt(dbEntity -> {
-                final ID id = idExtractorFunc.apply(dbEntity);
-                final List<T> matchingEntities = idEntityMap.get(id);
-
-                if (N.notEmpty(matchingEntities)) {
-                    for (final T entity : matchingEntities) {
-                        Beans.mergeInto(dbEntity, entity, propNamesToRefresh);
-                    }
-                }
-
-                return N.size(matchingEntities);
-            }).sum();
+        try {
+            return CrudReadOps.super.batchRefresh(entities, propNamesToRefresh, batchSize);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
         }
     }
 

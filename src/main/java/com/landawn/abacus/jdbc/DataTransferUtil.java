@@ -131,9 +131,8 @@ import com.landawn.abacus.util.stream.CharStream;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Import data from a Dataset to database table
- * Dataset dataset = Dataset.of("name", "age", "email")
- *     .addRow("John Doe", 30, "john@example.com")
- *     .addRow("Jane Smith", 25, "jane@example.com");
+ * Dataset dataset = Dataset.rows(List.of("name", "age", "email"),
+ *     new Object[][] {{"John Doe", 30, "john@example.com"}, {"Jane Smith", 25, "jane@example.com"}});
  * int importedRows = DataTransferUtil.importData(dataset, dataSource,
  *     "INSERT INTO users (name, age, email) VALUES (?, ?, ?)");
  *
@@ -180,7 +179,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
      * int rowsImported = DataTransferUtil.importData(dataset, dataSource, insertSql);
      * }</pre>
@@ -213,7 +212,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
      * int rowsImported = DataTransferUtil.importData(dataset, connection, insertSql);
      * }</pre>
@@ -241,7 +240,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("id", "name", "age", "email").addRow(1, "John", 25, "john@email.com");
+     * Dataset dataset = Dataset.rows(List.of("id", "name", "age", "email"), new Object[][] {{1, "John", 25, "john@email.com"}});
      * List<String> selectColumns = Arrays.asList("name", "age");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
      * int rowsImported = DataTransferUtil.importData(dataset, selectColumns, connection, insertSql);
@@ -272,7 +271,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * List<String> columns = Arrays.asList("name", "age");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
      * int rowsImported = DataTransferUtil.importData(dataset, columns, connection, insertSql, 1000, 100);
@@ -306,7 +305,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30).addRow("Bob", 15);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}, {"Bob", 15}});
      * List<String> columns = Arrays.asList("name", "age");
      * // Only import adults (age >= 18)
      * Predicate<Object[]> filter = row -> ((Integer) row[1]) >= 18;
@@ -346,7 +345,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "birthdate").addRow("John", "1990-01-15");
+     * Dataset dataset = Dataset.rows(List.of("name", "birthdate"), new Object[][] {{"John", "1990-01-15"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -381,9 +380,8 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "birthdate", "score")
-     *     .addRow("John", "1990-01-15", "95.5")
-     *     .addRow("Jane", "1992-03-20", "87.3");
+     * Dataset dataset = Dataset.rows(List.of("name", "birthdate", "score"),
+     *     new Object[][] {{"John", "1990-01-15", "95.5"}, {"Jane", "1992-03-20", "87.3"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -422,9 +420,8 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age", "status")
-     *     .addRow("John", "25", "active")
-     *     .addRow("Jane", "30", "inactive");
+     * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
+     *     new Object[][] {{"John", "25", "active"}, {"Jane", "30", "inactive"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("age", Type.of(Integer.class));
@@ -468,7 +465,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * String insertSql = "INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)";
      * Throwables.BiConsumer<PreparedQuery, Object[], SQLException> setter = (query, row) -> {
      *     query.setString(1, (String) row[0]);
@@ -496,7 +493,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * String insertSql = "INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)";
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (stmt, row) -> {
      *     stmt.setString(1, (String) row[0]);
@@ -527,9 +524,8 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age", "status")
-     *     .addRow("John", 25, "active")
-     *     .addRow("Jane", 30, "inactive");
+     * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
+     *     new Object[][] {{"John", 25, "active"}, {"Jane", 30, "inactive"}});
      * // Only import active users
      * Predicate<Object[]> filter = row -> "active".equals(row[2]);
      * String insertSql = "INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)";
@@ -566,7 +562,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
      * int rowsImported = DataTransferUtil.importData(dataset, stmt);
      * }</pre>
@@ -586,7 +582,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("id", "name", "age", "email").addRow(1, "John", 25, "john@email.com");
+     * Dataset dataset = Dataset.rows(List.of("id", "name", "age", "email"), new Object[][] {{1, "John", 25, "john@email.com"}});
      * List<String> selectColumns = Arrays.asList("name", "age");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
      * int rowsImported = DataTransferUtil.importData(dataset, selectColumns, stmt);
@@ -615,7 +611,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * List<String> columns = Arrays.asList("name", "age");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
      * int rowsImported = DataTransferUtil.importData(dataset, columns, stmt, 1000, 100);
@@ -649,9 +645,8 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age", "status")
-     *     .addRow("John", 25, "active")
-     *     .addRow("Jane", 30, "inactive");
+     * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
+     *     new Object[][] {{"John", 25, "active"}, {"Jane", 30, "inactive"}});
      * List<String> columns = Arrays.asList("name", "age");
      * // Only import active users
      * Predicate<Object[]> filter = row -> "active".equals(row[2]);
@@ -713,7 +708,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "birthdate").addRow("John", "1990-01-15");
+     * Dataset dataset = Dataset.rows(List.of("name", "birthdate"), new Object[][] {{"John", "1990-01-15"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -739,9 +734,8 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "birthdate", "score")
-     *     .addRow("John", "1990-01-15", "95.5")
-     *     .addRow("Jane", "1992-03-20", "87.3");
+     * Dataset dataset = Dataset.rows(List.of("name", "birthdate", "score"),
+     *     new Object[][] {{"John", "1990-01-15", "95.5"}, {"Jane", "1992-03-20", "87.3"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -772,9 +766,8 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age", "status")
-     *     .addRow("John", "25", "active")
-     *     .addRow("Jane", "30", "inactive");
+     * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
+     *     new Object[][] {{"John", "25", "active"}, {"Jane", "30", "inactive"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("age", Type.of(Integer.class));
@@ -848,7 +841,9 @@ public final class DataTransferUtil {
                 }
 
                 for (int i = 0; i < columnCount; i++) {
-                    columnTypes[i].set(stmt, i + 1, u[i]);
+                    // Bind through the passed query (not the captured outer stmt) so the setter stays
+                    // correct if it is ever reused against a different statement.
+                    t.setObject(i + 1, u[i], columnTypes[i]);
                 }
             }
         };
@@ -862,7 +857,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)");
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (query, row) -> {
      *     query.setString(1, (String) row[0]);
@@ -889,7 +884,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)");
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (query, row) -> {
      *     query.setString(1, (String) row[0]);
@@ -919,9 +914,8 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age", "status")
-     *     .addRow("John", 25, "active")
-     *     .addRow("Jane", 30, "inactive");
+     * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
+     *     new Object[][] {{"John", 25, "active"}, {"Jane", 30, "inactive"}});
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)");
      * // Only import active users
      * Predicate<Object[]> filter = row -> "active".equals(row[2]);
@@ -2692,7 +2686,11 @@ public final class DataTransferUtil {
      */
     private static String generateInsertSqlFromSelectColumns(final Connection sourceConn, final String selectSql, final Connection targetConn,
             final String targetTableName) throws SQLException {
-        try (PreparedStatement stmt = JdbcUtil.prepareStatement(sourceConn, selectSql);
+        // Zero-row probe: only column labels are needed. Executing the raw (unbounded) SELECT here
+        // would buffer the whole source table client-side on drivers like MySQL/PostgreSQL before
+        // the actual streaming copy even starts. Both callers pass the codegen-generated
+        // "SELECT c1, c2, ... FROM table" form (no WHERE clause), so appending a false predicate is safe.
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(sourceConn, selectSql + " WHERE 1 > 2");
              ResultSet rs = stmt.executeQuery()) {
             final java.util.List<String> sourceColumns = JdbcUtil.getColumnLabels(rs);
             return generateInsertSql(targetConn, targetTableName, sourceColumns);
@@ -3208,7 +3206,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
+     * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * List<String> cols = Arrays.asList("name", "age");
      *
      * // Equivalent to importData(dataset, cols, filter, dataSource, insertSql, 1000, 0)
@@ -3925,7 +3923,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyFromDataSource copyFrom(final javax.sql.DataSource sourceDataSource, final String selectSql) {
-        N.checkArgNotNull(sourceDataSource, cs.dataSource);
+        N.checkArgNotNull(sourceDataSource, "sourceDataSource");
+        N.checkArgNotNull(selectSql, "selectSql");
 
         return new CopyFromDataSource(sourceDataSource, selectSql);
     }
@@ -3950,7 +3949,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyFromConnection copyFrom(final Connection sourceConn, final String selectSql) {
-        N.checkArgNotNull(sourceConn, cs.conn);
+        N.checkArgNotNull(sourceConn, "sourceConn");
+        N.checkArgNotNull(selectSql, "selectSql");
 
         return new CopyFromConnection(sourceConn, selectSql);
     }
@@ -4009,7 +4009,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyTableFromDataSource copyTable(final javax.sql.DataSource sourceDataSource, final String sourceTableName) {
-        N.checkArgNotNull(sourceDataSource, cs.dataSource);
+        N.checkArgNotNull(sourceDataSource, "sourceDataSource");
+        N.checkArgNotBlank(sourceTableName, "sourceTableName");
 
         return new CopyTableFromDataSource(sourceDataSource, sourceTableName);
     }
@@ -4033,7 +4034,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyTableFromConnection copyTable(final Connection sourceConn, final String sourceTableName) {
-        N.checkArgNotNull(sourceConn, cs.conn);
+        N.checkArgNotNull(sourceConn, "sourceConn");
+        N.checkArgNotBlank(sourceTableName, "sourceTableName");
 
         return new CopyTableFromConnection(sourceConn, sourceTableName);
     }

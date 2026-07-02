@@ -268,7 +268,7 @@ public interface UncheckedCrudLJoinEntityHelper<T, TD extends UncheckedCrudLDao<
     @Override
     @Beta
     default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -306,7 +306,7 @@ public interface UncheckedCrudLJoinEntityHelper<T, TD extends UncheckedCrudLDao<
     @Override
     @Beta
     default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -345,7 +345,7 @@ public interface UncheckedCrudLJoinEntityHelper<T, TD extends UncheckedCrudLDao<
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -388,7 +388,7 @@ public interface UncheckedCrudLJoinEntityHelper<T, TD extends UncheckedCrudLDao<
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
 
         if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -437,7 +437,7 @@ public interface UncheckedCrudLJoinEntityHelper<T, TD extends UncheckedCrudLDao<
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);

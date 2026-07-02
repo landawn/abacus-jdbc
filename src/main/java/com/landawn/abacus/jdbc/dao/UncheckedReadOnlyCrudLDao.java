@@ -59,9 +59,10 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedReadOnlyCrudDao
  * @see UncheckedCrudLReadOps
+ * @see ReadOnlyCrudLDao
  * @see UncheckedSQLException
  */
 @Beta
 public non-sealed interface UncheckedReadOnlyCrudLDao<T, TD extends UncheckedReadOnlyCrudLDao<T, TD>>
-        extends UncheckedReadOnlyCrudDao<T, Long, TD>, UncheckedCrudLReadOps<T, TD> {
+        extends UncheckedReadOnlyCrudDao<T, Long, TD>, UncheckedCrudLReadOps<T, TD>, ReadOnlyCrudLDao<T, TD> {
 }

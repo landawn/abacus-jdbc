@@ -59,6 +59,8 @@ import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
 import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.logging.Logger;
+import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
@@ -2031,9 +2033,10 @@ public class JdbcUtilTest extends TestBase {
 
     //    @Test
     //    public void testCreateDao() {
-    //        interface TestDao extends Dao {}
+    //        interface TestDao extends Dao {
+    //        }
     //
-    //        TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource, PSC);
+    //        TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource);
     //        assertNotNull(dao);
     //    }
     //
@@ -3769,7 +3772,7 @@ public class JdbcUtilTest extends TestBase {
     // createCacheKey builds a non-null key embedding the method name and table.
     @Test
     public void testCreateCacheKey() {
-        final com.landawn.abacus.logging.Logger logger = com.landawn.abacus.logging.LoggerFactory.getLogger(JdbcUtilTest.class);
+        final Logger logger = LoggerFactory.getLogger(JdbcUtilTest.class);
         final String key = JdbcUtil.createCacheKey("user_account", "UserDao.list", new Object[] { "Alice", 1, List.of(1, 2) }, logger);
         assertNotNull(key);
         assertTrue(key.startsWith("UserDao.list#user_account#"));
@@ -3778,7 +3781,7 @@ public class JdbcUtilTest extends TestBase {
     // createCacheKey tolerates null args (treated as an empty argument array).
     @Test
     public void testCreateCacheKey_NullArgs() {
-        final com.landawn.abacus.logging.Logger logger = com.landawn.abacus.logging.LoggerFactory.getLogger(JdbcUtilTest.class);
+        final Logger logger = LoggerFactory.getLogger(JdbcUtilTest.class);
         final String key = JdbcUtil.createCacheKey("t", "Dao.m", null, logger);
         assertNotNull(key);
         assertTrue(key.startsWith("Dao.m#t#"));

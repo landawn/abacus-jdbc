@@ -780,7 +780,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     // Capture the level we failed to restore to before resetting the field below,
                     // otherwise the log would report the (rolled-back) inner level instead of the target.
                     final IsolationLevel failedTargetIsolationLevel = _isolationLevel;
-                    // Restore both stacks AND fields symmetrically.
+                    // Restore the stacks, the fields AND the ref count symmetrically, so the scope
+                    // depth stays consistent with the per-scope state after the failed exit.
                     if (isolationPoppedFromStack) {
                         _isolationLevelStack.push(_isolationLevel);
                     }
@@ -789,6 +790,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     }
                     _isolationLevel = preIsolationLevel;
                     _isForUpdateOnly = preIsForUpdateOnly;
+                    _refCount.incrementAndGet();
                     logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, failedTargetIsolationLevel);
                     throw new UncheckedSQLException(e);
                 }
@@ -1167,7 +1169,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         JDBC_UTIL,
 
         /**
-         * Formerly used by the now-removed SqlExecutor; retained only for ordinal stability.
+         * Formerly used by the now-archived (non-functional) SqlExecutor; retained only for ordinal stability.
          * @deprecated no longer used
          */
         @Deprecated

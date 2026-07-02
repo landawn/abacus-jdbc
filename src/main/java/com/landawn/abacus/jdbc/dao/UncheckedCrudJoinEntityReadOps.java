@@ -63,14 +63,14 @@ import com.landawn.abacus.util.u.Optional;
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <TD> the concrete DAO type, bounded by {@link UncheckedCrudDao}, that owns this helper
- *             (used for fluent method chaining and access to CRUD operations)
+ * @param <TD> the concrete DAO type, bounded by {@link UncheckedDaoBase}, that owns this helper;
+ *             the DAO must also implement {@link UncheckedCrudReadOps} (read-only CRUD DAOs qualify)
  * @see UncheckedJoinEntityHelper
  * @see UncheckedCrudDao
  * @see CrudJoinEntityHelper
  * @see com.landawn.abacus.annotation.JoinedBy
  */
-sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudDao<T, ID, TD>> extends UncheckedJoinEntityReadOps<T, TD>,
+sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends UncheckedJoinEntityReadOps<T, TD>,
         CrudJoinEntityReadOps<T, ID, TD> permits UncheckedCrudJoinEntityHelper, UncheckedReadOnlyCrudJoinEntityHelper {
 
     /**
@@ -246,7 +246,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
     @Beta
     @Override
     default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -280,7 +280,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
     @Beta
     @Override
     default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -317,7 +317,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
     @Override
     default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -355,7 +355,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
     @Override
     default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
 
         if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -395,7 +395,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
     @Override
     default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -586,7 +586,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
             final int batchSize) throws DuplicateResultException, UncheckedSQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result)) {
             if (result.size() <= batchSize) {
@@ -632,7 +632,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
             final int batchSize) throws DuplicateResultException, UncheckedSQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
             if (result.size() <= batchSize) {
@@ -685,7 +685,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedCrudD
             final int batchSize) throws DuplicateResultException, UncheckedSQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, selectPropNames, batchSize);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() <= batchSize) {

@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -1137,8 +1138,11 @@ public final class Jdbc {
          *
          * @param rowFilter a predicate to filter rows
          * @return a {@code ResultExtractor} that produces a filtered {@code Dataset}
+         * @throws IllegalArgumentException if {@code rowFilter} is {@code null}
          */
         static ResultExtractor<Dataset> toDataset(final RowFilter rowFilter) {
+            N.checkArgNotNull(rowFilter, cs.rowFilter);
+
             return rs -> JdbcUtil.extractData(rs, rowFilter);
         }
 
@@ -1148,8 +1152,11 @@ public final class Jdbc {
          *
          * @param rowExtractor the custom row extractor to process each row
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
+         * @throws IllegalArgumentException if {@code rowExtractor} is {@code null}
          */
         static ResultExtractor<Dataset> toDataset(final RowExtractor rowExtractor) {
+            N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+
             return rs -> JdbcUtil.extractData(rs, rowExtractor);
         }
 
@@ -1168,8 +1175,12 @@ public final class Jdbc {
          * @param rowFilter a predicate to filter rows
          * @param rowExtractor the custom row extractor to process each accepted row
          * @return a {@code ResultExtractor} that produces a filtered {@code Dataset}
+         * @throws IllegalArgumentException if {@code rowFilter} or {@code rowExtractor} is {@code null}
          */
         static ResultExtractor<Dataset> toDataset(final RowFilter rowFilter, final RowExtractor rowExtractor) {
+            N.checkArgNotNull(rowFilter, cs.rowFilter);
+            N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+
             return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, rowExtractor, false);
         }
 
@@ -1970,13 +1981,14 @@ public final class Jdbc {
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
          * @param supplier a function that takes the column count and returns a new {@code Collection} instance
          * @return a stateful {@code RowMapper} that maps a row to a {@code Collection}
-         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} or {@code supplier} is {@code null}
          */
         @Beta
         @SequentialOnly
         @Stateful
         static <C extends Collection<?>> RowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
             N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return new RowMapper<>() {
                 private int columnCount = -1;
@@ -2511,10 +2523,13 @@ public final class Jdbc {
              * @param <C> specific collection type (e.g., {@code List}, {@code Set})
              * @param supplier a function that provides a new collection instance, given the column count
              * @return a new stateful {@code RowMapper<C>}
+             * @throws IllegalArgumentException if {@code supplier} is {@code null}
              */
             @SequentialOnly
             @Stateful
             public <C extends Collection<?>> RowMapper<C> toCollection(final IntFunction<? extends C> supplier) {
+                N.checkArgNotNull(supplier, cs.supplier);
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
@@ -2575,10 +2590,13 @@ public final class Jdbc {
              *
              * @param mapSupplier a function that provides a new map instance, given the column count
              * @return a new stateful {@code RowMapper<Map<String, Object>>}
+             * @throws IllegalArgumentException if {@code mapSupplier} is {@code null}
              */
             @SequentialOnly
             @Stateful
             public RowMapper<Map<String, Object>> toMap(final IntFunction<? extends Map<String, Object>> mapSupplier) {
+                N.checkArgNotNull(mapSupplier, cs.mapSupplier);
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private List<String> columnLabels = null;
@@ -3835,11 +3853,12 @@ public final class Jdbc {
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
          * @param supplier a function that takes the column count and returns a new {@code Collection} instance
          * @return a {@code BiRowMapper} that produces a {@code Collection}
-         * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
+         * @throws IllegalArgumentException if {@code columnGetterForAll} or {@code supplier} is {@code null}
          */
         @Beta
         static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
             N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
+            N.checkArgNotNull(supplier, cs.supplier);
 
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
@@ -4222,6 +4241,8 @@ public final class Jdbc {
              * @param columnGetter the custom {@code ColumnGetter} to use for this column
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null} or {@code columnGetter} is {@code null}
+             * @implNote the column name is matched against the ResultSet's column labels case-insensitively
+             *           when no exact-case match is found
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, cs.columnName);
@@ -4236,18 +4257,40 @@ public final class Jdbc {
                 final int rsColumnCount = columnLabelList.size();
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount];
 
+                // Match configured column names case-insensitively (falling back from an exact match),
+                // consistent with the column/property resolution elsewhere in this class: drivers may
+                // report labels in a different case than the one used to configure the builder.
+                final Map<String, ColumnGetter<?>> lowerCaseKeyedColumnGetterMap = new HashMap<>(columnGetterMap.size());
+
+                for (final Map.Entry<String, ColumnGetter<?>> entry : columnGetterMap.entrySet()) {
+                    lowerCaseKeyedColumnGetterMap.put(entry.getKey().toLowerCase(), entry.getValue());
+                }
+
+                final Set<String> lowerCaseColumnLabels = new HashSet<>(rsColumnCount);
                 ColumnGetter<?> columnGetter = null;
 
                 for (int i = 0; i < rsColumnCount; i++) {
-                    columnGetter = columnGetterMap.get(columnLabelList.get(i));
+                    final String columnLabel = columnLabelList.get(i);
+                    columnGetter = columnGetterMap.get(columnLabel);
+
+                    if (columnGetter == null) {
+                        columnGetter = lowerCaseKeyedColumnGetterMap.get(columnLabel.toLowerCase());
+                    }
 
                     rsColumnGetters[i] = columnGetter == null ? defaultColumnGetter : columnGetter;
+                    lowerCaseColumnLabels.add(columnLabel.toLowerCase());
                 }
 
-                if (!new HashSet<>(columnLabelList).containsAll(columnGetterMap.keySet())) {
-                    final List<String> tmp = new ArrayList<>(columnGetterMap.keySet());
-                    tmp.removeAll(columnLabelList);
-                    throw new IllegalArgumentException("ColumnGetters for " + tmp + " are not found in ResultSet columns: " + columnLabelList);
+                final List<String> unmatchedColumnNames = new ArrayList<>();
+
+                for (final String configuredColumnName : columnGetterMap.keySet()) {
+                    if (!lowerCaseColumnLabels.contains(configuredColumnName.toLowerCase())) {
+                        unmatchedColumnNames.add(configuredColumnName);
+                    }
+                }
+
+                if (!unmatchedColumnNames.isEmpty()) {
+                    throw new IllegalArgumentException("ColumnGetters for " + unmatchedColumnNames + " are not found in ResultSet columns: " + columnLabelList);
                 }
 
                 return rsColumnGetters;
@@ -4268,6 +4311,7 @@ public final class Jdbc {
              * @param <T> target type
              * @param targetClass the class to map rows to
              * @return a new stateful {@code BiRowMapper<T>}
+             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
              */
             @SequentialOnly
             @Stateful
@@ -6131,8 +6175,14 @@ public final class Jdbc {
              * @return a {@code RowMapper} for the specified type
              */
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
-                final RowMapper<T> rowMapper = rs -> type.get(rs, 1);
-                return rowMapperPool.computeIfAbsent(type, k -> rowMapper);
+                RowMapper<T> rowMapper = rowMapperPool.get(type);
+
+                if (rowMapper == null) {
+                    rowMapper = rs -> type.get(rs, 1);
+                    rowMapperPool.put(type, rowMapper);
+                }
+
+                return rowMapper;
             }
 
             /**

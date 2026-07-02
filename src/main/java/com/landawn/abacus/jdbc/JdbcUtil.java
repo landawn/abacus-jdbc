@@ -53,7 +53,6 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
@@ -330,16 +329,8 @@ public final class JdbcUtil {
     static final Set<String> UPDATE_METHOD_NAME_SET = N.toSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
             "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
 
-    static final Set<Method> BUILT_IN_DAO_QUERY_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
-            .filter(Dao.class::isAssignableFrom)
-            .flatMapArray(Class::getDeclaredMethods)
-            .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
-            .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
-            .filter(it -> N.anyMatch(QUERY_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
-            .toImmutableSet();
-
     static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
-            .filter(Dao.class::isAssignableFrom)
+            .filter(DaoBase.class::isAssignableFrom)
             .flatMapArray(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
             .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
@@ -347,10 +338,10 @@ public final class JdbcUtil {
             .toImmutableSet();
 
     static final Predicate<Method> IS_QUERY_METHOD = method -> N.anyMatch(QUERY_METHOD_NAME_SET,
-            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
+            it -> Strings.isNotEmpty(it) && Strings.startsWith(method.getName(), it));
 
     static final Predicate<Method> IS_UPDATE_METHOD = method -> N.anyMatch(UPDATE_METHOD_NAME_SET,
-            it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
+            it -> Strings.isNotEmpty(it) && Strings.startsWith(method.getName(), it));
 
     static volatile Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR; //NOSONAR
 
@@ -372,7 +363,9 @@ public final class JdbcUtil {
     static volatile TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
+    // Keyed by (daoInterface, entityClass, idType): the cached key extractor depends on the DAO interface's
+    // registration in idExtractorPool, so DAOs sharing the same entity/id types must not share entries.
+    private static final Map<Tuple3<Class<?>, Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     private static final Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer> noIdGeneratorGetterSetter = Tuple
@@ -1559,14 +1552,14 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
+     * <p>This method is null-safe and always returns immediately when {@code conn} is {@code null}.
+     * All closing exceptions are ignored; it delegates to {@link #closeQuietly(ResultSet, Statement, Connection)} with no ResultSet or Statement.</p>
+     *
      * @param conn The {@link Connection} to close. Can be {@code null}.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #close(Connection)
      * @deprecated This method is deprecated as it encourages manual connection management.
      *             Prefer {@link #releaseConnection(Connection, javax.sql.DataSource)} and a pooled DataSource.
-     *
-     * <p>This method is null-safe and always returns immediately when {@code conn} is {@code null}.
-     * All closing exceptions are ignored; it delegates to {@link #closeQuietly(ResultSet, Statement, Connection)} with no ResultSet or Statement.</p>
      */
     @Deprecated
     public static void closeQuietly(final Connection conn) {
@@ -2164,8 +2157,10 @@ public final class JdbcUtil {
                 converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(),
                         (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());
             } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
-                converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(), // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue(),
-                        (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue()); // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue());
+                // Datum.timestampValue() (no-arg) throws SQLException on TIMESTAMPTZ/TIMESTAMPLTZ because
+                // they require the originating Connection's session timezone to materialize.
+                // rs.getTimestamp lets the driver perform the timezone-aware conversion correctly for both.
+                converterTP = Tuple.of((rs, columnIndex, val) -> rs.getTimestamp(columnIndex), (rs, columnLabel, val) -> rs.getTimestamp(columnLabel));
             } else if (className.startsWith("oracle.sql.DATE")) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> {
                     final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
@@ -2192,10 +2187,12 @@ public final class JdbcUtil {
                     }
                 });
             } else if (ret instanceof java.sql.Date) {
+                // Also treat a declared metadata class of oracle.sql.TIMESTAMP as timestamp-bearing,
+                // matching ResultSetProxy: otherwise time-of-day is silently truncated on such columns.
                 converterTP = Tuple.of((rs, columnIndex, val) -> {
                     final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
 
-                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         return rs.getTimestamp(columnIndex);
                     }
 
@@ -2210,7 +2207,7 @@ public final class JdbcUtil {
 
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
-                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         return rs.getTimestamp(columnIndex);
                     }
 
@@ -2688,7 +2685,13 @@ public final class JdbcUtil {
      * @see SqlOperation
      */
     static SqlOperation getSqlOperation(final String sql) {
-        final String trimmedSql = sql.trim();
+        String trimmedSql = sql.trim();
+
+        // Skip leading parentheses so parenthesized queries like "(SELECT ...) UNION ALL (SELECT ...)"
+        // are classified by their real leading keyword.
+        while (trimmedSql.length() > 0 && trimmedSql.charAt(0) == '(') {
+            trimmedSql = trimmedSql.substring(1).trim();
+        }
 
         if (Strings.startsWithIgnoreCase(trimmedSql, "select ")) {
             return SqlOperation.SELECT;
@@ -5187,6 +5190,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @return The total number of rows affected by the batch update across all batches.
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a SQL exception occurs while executing the batch update
@@ -5234,6 +5238,7 @@ public final class JdbcUtil {
      * @param batchSize The size of each batch, must be positive. Smaller batches use less memory
      *                  but may be slower; larger batches are faster but use more memory.
      * @return The total number of rows affected by the batch update across all batches
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a SQL exception occurs while executing the batch update
@@ -5305,6 +5310,7 @@ public final class JdbcUtil {
      * @param sql the SQL statement to execute; must not be {@code null} or empty
      * @param listOfParameters a list of parameter sets for the batch update; may be empty (no-op returning {@code 0})
      * @return the total number of rows affected by the batch update across all batches
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a database access error occurs while executing the batch
@@ -5347,6 +5353,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
      * @return The total number of rows affected by the batch update across all batches
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)
      * @throws SQLException if a SQL exception occurs while executing the batch update
@@ -5443,6 +5450,7 @@ public final class JdbcUtil {
      * @param listOfParameters a list of parameter sets; each element supplies one set of parameter
      *                         values for one batch entry; may be empty (no-op returning {@code 0})
      * @return the total number of rows affected by the batch update across all batches
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if {@code ds} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs while executing the batch
      * @see PreparedStatement#executeLargeBatch()
@@ -5579,6 +5587,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
      * @return The total number of rows affected by the batch update across all batches, as a long value
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
@@ -8525,8 +8534,32 @@ public final class JdbcUtil {
 
             return true;
         } catch (final SQLException e) {
-            // The table may have been dropped concurrently by another thread/process
             if (isTableNotExistsException(e)) {
+                // Quoting makes the identifier case-exact while tableExists matches case-tolerantly:
+                // on case-folding databases (H2/Oracle/DB2, ...) a table created unquoted is stored
+                // upper-case, so the quoted as-supplied name may miss it. Retry unquoted so the
+                // database applies its own case folding.
+                final String simpleTableName = buildSimpleQualifiedName(tableName);
+
+                if (simpleTableName != null && !simpleTableName.equals(sqlTableName) && tableExists(conn, tableName)) {
+                    try {
+                        execute(conn, "DROP TABLE " + simpleTableName);
+
+                        logger.info("Dropped table(tableName={})", tableName);
+
+                        return true;
+                    } catch (final SQLException e2) {
+                        if (isTableNotExistsException(e2)) {
+                            logger.debug("Table was dropped concurrently(tableName={})", tableName);
+                            return false;
+                        }
+
+                        logger.warn(e2, "Failed to drop table(tableName={})", tableName);
+                        throw new UncheckedSQLException("Failed to drop table: " + tableName, e2);
+                    }
+                }
+
+                // The table may have been dropped concurrently by another thread/process
                 logger.debug("Table was dropped concurrently(tableName={})", tableName);
                 return false;
             }
@@ -8534,6 +8567,22 @@ public final class JdbcUtil {
             logger.warn(e, "Failed to drop table(tableName={})", tableName);
             throw new UncheckedSQLException("Failed to drop table: " + tableName, e);
         }
+    }
+
+    /**
+     * Returns {@code qualifiedName} with delimiters stripped and parts joined by {@code '.'} when every
+     * part is a plain (unquoted-safe) SQL identifier; returns {@code null} otherwise.
+     */
+    private static String buildSimpleQualifiedName(final String qualifiedName) {
+        final String[] parts = splitQualifiedSqlIdentifier(qualifiedName, "tableName");
+
+        for (final String part : parts) {
+            if (!isSimpleSqlIdentifier(part)) {
+                return null;
+            }
+        }
+
+        return String.join(".", parts);
     }
 
     /**
@@ -10055,7 +10104,8 @@ public final class JdbcUtil {
 
         if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0
                 && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
-            sql = sqlExtractor.apply(stmt);
+            // A custom extractor registered via setSqlExtractor may return null.
+            sql = N.defaultIfNull(sqlExtractor.apply(stmt), "");
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
                 sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
@@ -10068,7 +10118,7 @@ public final class JdbcUtil {
 
         if (sqlLogHandler != null) {
             if (sql == null) {
-                sql = sqlExtractor.apply(stmt);
+                sql = N.defaultIfNull(sqlExtractor.apply(stmt), "");
             }
 
             sqlLogHandler.accept(sql, startTime, endTime);
@@ -10310,7 +10360,9 @@ public final class JdbcUtil {
      * </ul>
      *
      * <p>For the Spring check, this method may briefly acquire and release a {@link Connection} from
-     * {@code ds} (silently on failure), so callers should not assume it is side-effect-free.</p>
+     * {@code ds}, so callers should not assume it is side-effect-free. A {@link LinkageError} from a
+     * mismatched Spring classpath is handled silently, but a connection-acquisition failure propagates
+     * as an unchecked exception.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10550,10 +10602,10 @@ public final class JdbcUtil {
                 }
             }
 
-            logger.info("Created new SqlTransaction(id={})", tran.id());
+            logger.debug("Created new SqlTransaction(id={})", tran.id());
             SqlTransaction.putTransaction(tran);
         } else {
-            logger.info("Reusing existing SqlTransaction(id={})", tran.id());
+            logger.debug("Reusing existing SqlTransaction(id={})", tran.id());
             tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
         }
 
@@ -11443,11 +11495,13 @@ public final class JdbcUtil {
      */
     static void doNotUseSpringTransactional(final boolean b) {
         if (isInSpring) {
-            if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) { //NOSONAR
+            // DEBUG, not WARN: toggling is the intended behavior of the public
+            // runWithoutUsingSpringTransaction/callWithoutUsingSpringTransaction API, invoked per call.
+            if (logger.isDebugEnabled() && isSpringTransactionalDisabled_TL.get() != b) { //NOSONAR
                 if (b) {
-                    logger.warn("Disabled Spring Transactional integration");
+                    logger.debug("Disabled Spring Transactional integration");
                 } else {
-                    logger.warn("Re-enabled Spring Transactional integration");
+                    logger.debug("Re-enabled Spring Transactional integration");
                 }
             }
 
@@ -11473,7 +11527,7 @@ public final class JdbcUtil {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
 
-        final Tuple2<Class<?>, Class<?>> key = Tuple.of(entityClass, idType);
+        final Tuple3<Class<?>, Class<?>, Class<?>> key = Tuple.of(daoInterface, entityClass, idType);
 
         Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>> map = idGeneratorGetterSetterPool
                 .get(key);
@@ -11521,7 +11575,8 @@ public final class JdbcUtil {
                                         }
                                     }
                                 } else {
-                                    logger.warn("Cannot set generated keys for unsupported id type(idType={})", ClassUtil.getCanonicalClassName(id.getClass()));
+                                    logger.warn("Cannot set generated keys for unsupported id type(idType={})",
+                                            id == null ? "null" : ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             } : (id, entity) -> {
                                 if (id != null && Beans.isBeanClass(id.getClass())) {
@@ -11631,6 +11686,9 @@ public final class JdbcUtil {
         N.checkArgNotNull(idExtractor, cs.idExtractor);
 
         idExtractorPool.put(daoInterface, (rs, cls) -> idExtractor.apply(rs));
+
+        // Drop cached key extractors built before this registration so future createDao calls pick it up.
+        idGeneratorGetterSetterPool.keySet().removeIf(key -> key._1.equals(daoInterface));
     }
 
     /**
@@ -11672,6 +11730,9 @@ public final class JdbcUtil {
         N.checkArgNotNull(idExtractor, cs.idExtractor);
 
         idExtractorPool.put(daoInterface, idExtractor);
+
+        // Drop cached key extractors built before this registration so future createDao calls pick it up.
+        idGeneratorGetterSetterPool.keySet().removeIf(key -> key._1.equals(daoInterface));
     }
 
     /**

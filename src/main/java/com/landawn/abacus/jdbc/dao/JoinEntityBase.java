@@ -34,7 +34,7 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
  * @see JoinEntityDeleteOps
  * @see JoinEntityHelper
  */
-public sealed interface JoinEntityBase<T, TD extends Dao<T, TD>> permits JoinEntityReadOps, JoinEntityDeleteOps {
+public sealed interface JoinEntityBase<T, TD extends DaoBase<T, TD>> permits JoinEntityReadOps, JoinEntityDeleteOps {
     /**
      * Retrieves the class type of the target DAO interface.
      * Internal use only.

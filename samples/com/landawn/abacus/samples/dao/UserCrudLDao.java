@@ -14,10 +14,11 @@
 package com.landawn.abacus.samples.dao;
 
 import com.landawn.abacus.jdbc.annotation.PerfLog;
-import com.landawn.abacus.jdbc.dao.UncheckedCrudLDao;
-import com.landawn.abacus.jdbc.dao.UncheckedReadOnlyCrudJoinEntityHelper;
+import com.landawn.abacus.jdbc.dao.CrudLDao;
+import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.samples.entity.User;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
-public interface UncheckedUserDaoL extends UncheckedCrudLDao<User, UncheckedUserDaoL>, UncheckedReadOnlyCrudJoinEntityHelper<User, Long, UncheckedUserDaoL> {
+public interface UserCrudLDao extends CrudLDao<User, UserCrudLDao>, JoinEntityHelper<User, UserCrudLDao> {
+
 }

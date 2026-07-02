@@ -28,12 +28,12 @@ import java.util.Map;
  * or when you want to group results by a specific field value.
  *
  * <p>The annotation extracts the value of the specified key from each result row and
- * uses it as the map key. For entity/bean results, the key is an entity property name
- * (for example, {@code id} or {@code email}); SQL column labels must map to that
- * property. For row-map results, the key is the result-map key/column label. If
- * multiple rows have the same key value, the last row will overwrite previous ones;
- * use {@link MergedById} when you need to combine one-to-many rows into a single
- * entity instead.</p>
+ * uses it as the map key. The key must be a property (getter) of the DAO's <i>target entity
+ * class</i> (for example, {@code id} or {@code email}); SQL column labels must map to that
+ * property, and the map's value type must be the target entity type (or a supertype) — plain
+ * row-map values such as {@code Map<String, Object>} are not supported. Rows sharing the same
+ * key value are merged into a single entity (the same merge {@link MergedById} performs), so
+ * duplicate keys never overwrite each other.</p>
  *
  * <p>Per its {@code @Target}, this annotation is placed on a DAO query method whose declared return
  * type is a {@code Map} (or a {@code Map} subtype); see {@link #mapClass()} to control the concrete
@@ -45,22 +45,17 @@ import java.util.Map;
  *     // Map users by their ID
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     @MappedByKey(keyName = "id")
- *     Map<Long, User> findUsersByStatus(@Bind("status") String status);
+ *     Map<Long, User> findUsersByStatus(@Bind("status") String status) throws SQLException;
  *
  *     // Map users by email (assuming email is unique)
  *     @Query("SELECT * FROM users WHERE created_date > :date")
  *     @MappedByKey(keyName = "email")
- *     Map<String, User> findRecentUsersByEmail(@Bind("date") Date date);
+ *     Map<String, User> findRecentUsersByEmail(@Bind("date") Date date) throws SQLException;
  *
  *     // Using custom map implementation
  *     @Query("SELECT * FROM users WHERE department = :dept")
  *     @MappedByKey(keyName = "id", mapClass = java.util.LinkedHashMap.class)
- *     Map<Long, User> findUsersByDepartment(@Bind("dept") String dept);
- *
- *     // Map with composite objects
- *     @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
- *     @MappedByKey(keyName = "id")
- *     Map<Long, Map<String, Object>> getUserLoginStats();
+ *     Map<Long, User> findUsersByDepartment(@Bind("dept") String dept) throws SQLException;
  * }
  *
  * // Usage example
@@ -70,10 +65,10 @@ import java.util.Map;
  *
  * <p>Important considerations:</p>
  * <ul>
- *   <li>For entity/bean results, the key must be an entity property name</li>
- *   <li>For row-map results, the key must exist in the returned map keys/column labels</li>
+ *   <li>The key must be a property (getter) of the DAO's target entity class</li>
+ *   <li>The map's value type must be the target entity type or a supertype ({@code Map<K, ? super Entity>})</li>
  *   <li>Null key values will be included in the map (if the Map implementation supports {@code null} keys)</li>
- *   <li>Duplicate keys will result in later values overwriting earlier ones</li>
+ *   <li>Rows sharing the same key are merged into one entity before the map is built</li>
  *   <li>The return type must be a Map or a subtype of Map</li>
  * </ul>
  *
@@ -107,30 +102,22 @@ public @interface MappedByKey {
     String value() default "";
 
     /**
-     * Specifies the property name or row-map key to use as the map key.
+     * Specifies the target-entity property name to use as the map key.
      *
-     * <p>The value is extracted from each result row and used as the key in the resulting map.
-     * The key can be:</p>
-     * <ul>
-     *   <li>An entity property name when the result value is an entity/bean</li>
-     *   <li>A result-map key or column label when the result value is a {@code Map}</li>
-     * </ul>
+     * <p>The value of that property is extracted from each merged result entity and used as the key
+     * in the resulting map.</p>
      *
      * <p>If both {@code keyName} and the deprecated {@link #value()} are left empty, the framework falls
      * back to the target entity's single id property name; a DAO whose entity has no id property then
-     * fails initialization with {@code IllegalArgumentException}.</p>
+     * fails initialization with {@code IllegalArgumentException}. When both are set, the deprecated
+     * {@link #value()} takes precedence.</p>
      *
      * <p>Examples:</p>
      * <pre>{@code
-     * // Using a row-map key/column label
-     * @Query("SELECT user_id AS userId, user_name AS userName, email FROM users")
-     * @MappedByKey(keyName = "userId")
-     * Map<Long, Map<String, Object>> getUsers();
-     *
      * // Using entity property name
      * @Query("SELECT * FROM products WHERE category = :category")
      * @MappedByKey(keyName = "productCode")  // Maps to product_code column
-     * Map<String, Product> getProductsByCategory(@Bind("category") String category);
+     * Map<String, Product> getProductsByCategory(@Bind("category") String category) throws SQLException;
      * }</pre>
      *
      * @return the field name to use as map key, or empty string if using the deprecated {@link #value()} instead

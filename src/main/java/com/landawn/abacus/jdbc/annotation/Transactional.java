@@ -63,7 +63,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *     // Independent audit record — survives even if the outer transaction rolls back.
  *     @Transactional(propagation = Propagation.REQUIRES_NEW)
  *     @Query("INSERT INTO audit_log (event, ts) VALUES (:event, :ts)")
- *     int logAudit(@Bind("event") String event, @Bind("ts") Instant ts);
+ *     int logAudit(@Bind("event") String event, @Bind("ts") Instant ts) throws SQLException;
  *
  *     // Money transfer needs the strictest isolation.
  *     @Transactional(propagation = Propagation.REQUIRED,

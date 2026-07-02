@@ -34,8 +34,11 @@ import com.landawn.abacus.annotation.JoinedBy;
  * <p>The merging is performed based on the entity's ID field(s). Rows with the
  * same ID are combined into one entity, with collection properties populated from the multiple rows.</p>
  *
- * <p>Per its {@code @Target}, this annotation is placed on a DAO query method that returns the
- * entity type (typically a {@code List} of entities) produced by a one-to-many join. Contrast with
+ * <p>Per its {@code @Target}, this annotation is placed on a DAO query method whose return type is an
+ * {@code Optional}, {@code List}, or other {@code Collection} of the entity type produced by a
+ * one-to-many join &mdash; a bare entity return type is rejected &mdash; and whose {@code OP} is
+ * {@code DEFAULT}, {@code list}, {@code findFirst}, or {@code findOnlyOne}; anything else fails DAO
+ * initialization with {@code IllegalArgumentException}. Contrast with
  * {@link MappedByKey}, which keys each row into a {@code Map} rather than merging rows.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -63,7 +66,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  *             "FROM users u LEFT JOIN devices d ON u.id = d.user_id " +
  *             "WHERE u.id IN ({ids})")
  *     @MergedById
- *     List<User> findUsersWithDevices(@BindList("ids") List<Long> ids);
+ *     List<User> findUsersWithDevices(@BindList("ids") List<Long> ids) throws SQLException;
  *
  *     // Result: Each User object will have its devices list populated
  * }
@@ -123,12 +126,12 @@ public @interface MergedById {
      * // Old way (deprecated) - manually specify composite key
      * @Query("SELECT * FROM order_items WHERE order_date = :date")
      * @MergedById("orderId, productId")
-     * List<OrderItem> findByDate(@Bind("date") Date date);
+     * List<OrderItem> findByDate(@Bind("date") Date date) throws SQLException;
      *
      * // New way (recommended) - let framework detect ID fields
      * @Query("SELECT * FROM order_items WHERE order_date = :date")
      * @MergedById
-     * List<OrderItem> findByDate(@Bind("date") Date date);
+     * List<OrderItem> findByDate(@Bind("date") Date date) throws SQLException;
      * // OrderItem class should have @Id annotations on orderId and productId fields
      * }</pre>
      *

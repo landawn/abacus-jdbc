@@ -993,7 +993,7 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
             daoUtil.when(
                     () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
                     .thenReturn(List.of("orders", "addresses"));
-            daoUtil.when(() -> DaoUtil.getDao(dao)).thenReturn(dao);
+            daoUtil.when(() -> DaoUtil.getReadOps(dao)).thenReturn(dao);
             jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
             doReturn(Integer.MAX_VALUE).when(dao).deleteJoinEntities(entity, "orders");
             doReturn(1).when(dao).deleteJoinEntities(entity, "addresses");

@@ -59,7 +59,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *     // Results will be cached when annotated with @CacheResult
  *     @CacheResult(enabled = true)
  *     @Query("SELECT * FROM countries WHERE continent = :continent")
- *     List<Country> findByContinent(@Bind("continent") String continent);
+ *     List<Country> findByContinent(@Bind("continent") String continent) throws SQLException;
  * }
  *
  * // Using custom cache implementation

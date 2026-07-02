@@ -43,13 +43,13 @@ import com.landawn.abacus.util.stream.Stream;
  * (see {@link UncheckedReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
  *
  * @param <T> the entity type that this helper manages
- * @param <TD> the companion {@link UncheckedDao} type that owns this helper
+ * @param <TD> the DAO self-type, bounded by {@link UncheckedDaoBase}, that owns this helper
  * @see JoinEntityReadOps
  * @see UncheckedJoinEntityHelper
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings("resource")
-sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> extends JoinEntityReadOps<T, TD>
+sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends JoinEntityReadOps<T, TD>
         permits UncheckedJoinEntityDeleteOps, UncheckedCrudJoinEntityReadOps, UncheckedReadOnlyJoinEntityHelper {
 
     /**
@@ -77,7 +77,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Override
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
             throws UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(selectPropNames, cond);
 
         if (result.isPresent()) {
             loadJoinEntities(result.get(), joinEntitiesToLoad);
@@ -112,7 +112,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Override
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(selectPropNames, cond);
 
         if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -147,7 +147,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Override
     default Optional<T> findFirst(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(selectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {
             loadAllJoinEntities(result.get());
@@ -182,7 +182,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
             throws DuplicateResultException, UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(selectPropNames, cond);
 
         if (result.isPresent()) {
             loadJoinEntities(result.get(), joinEntitiesToLoad);
@@ -218,7 +218,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws DuplicateResultException, UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(selectPropNames, cond);
 
         if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -254,7 +254,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws DuplicateResultException, UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(selectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {
             loadAllJoinEntities(result.get());
@@ -291,7 +291,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Beta
     @Override
     default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws UncheckedSQLException {
-        final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
+        final List<T> result = DaoUtil.getReadOps(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -333,7 +333,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Override
     default List<T> list(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws UncheckedSQLException {
-        final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
+        final List<T> result = DaoUtil.getReadOps(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -380,7 +380,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
     @Beta
     @Override
     default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws UncheckedSQLException {
-        final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
+        final List<T> result = DaoUtil.getReadOps(this).list(selectPropNames, cond);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -542,7 +542,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
      *
      * <p>It queries the database for related entities based on the join relationship defined in the
      * {@code @JoinedBy} annotation and populates the specified property in the entity. Unlike the
-     * checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * checked version in {@link JoinEntityReadOps}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming
      * contexts and lambda expressions.</p>
      *
@@ -609,7 +609,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDao<T, TD>> e
      * related entities in one query, then distributes them to the appropriate parent entities based
      * on the foreign key relationship.</p>
      *
-     * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * <p>Unlike the checked version in {@link JoinEntityReadOps}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
      * such as Stream operations and lambda expressions without requiring explicit exception handling.</p>
      *

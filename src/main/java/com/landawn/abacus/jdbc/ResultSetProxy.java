@@ -1509,6 +1509,39 @@ final class ResultSetProxy implements ResultSet {
     }
 
     /**
+     * Updates the designated column with an {@code Object} value using the given target SQL type.
+     * The database is not changed until {@link #updateRow} or {@link #insertRow} is called.
+     * Delegates to the underlying {@link ResultSet} (without this override, the JDBC 4.2 interface
+     * default would throw {@code SQLFeatureNotSupportedException} even when the wrapped driver
+     * supports it).
+     *
+     * @param columnIndex the first column is 1, the second is 2, ...
+     * @param x the new column value
+     * @param targetSqlType the SQL type to be sent to the database
+     * @param scaleOrLength for an object of {@code java.math.BigDecimal}, this is the number of digits after the decimal point; for Java Object types {@code InputStream} and {@code Reader}, this is the length of the data in the stream or reader; for all other types, this value will be ignored
+     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     */
+    @Override
+    public void updateObject(int columnIndex, Object x, java.sql.SQLType targetSqlType, int scaleOrLength) throws SQLException {
+        delegate.updateObject(columnIndex, x, targetSqlType, scaleOrLength);
+    }
+
+    /**
+     * Updates the designated column with an {@code Object} value using the given target SQL type.
+     * The database is not changed until {@link #updateRow} or {@link #insertRow} is called.
+     * Delegates to the underlying {@link ResultSet}.
+     *
+     * @param columnIndex the first column is 1, the second is 2, ...
+     * @param x the new column value
+     * @param targetSqlType the SQL type to be sent to the database
+     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     */
+    @Override
+    public void updateObject(int columnIndex, Object x, java.sql.SQLType targetSqlType) throws SQLException {
+        delegate.updateObject(columnIndex, x, targetSqlType);
+    }
+
+    /**
      * Updates the designated column with a {@code null} value. The database is not changed until
      * {@link #updateRow} or {@link #insertRow} is called. Delegates to the underlying {@link ResultSet}.
      *
@@ -1760,6 +1793,37 @@ final class ResultSetProxy implements ResultSet {
     @Override
     public void updateObject(String columnLabel, Object x) throws SQLException {
         delegate.updateObject(columnLabel, x);
+    }
+
+    /**
+     * Updates the designated column with an {@code Object} value using the given target SQL type.
+     * The database is not changed until {@link #updateRow} or {@link #insertRow} is called.
+     * Delegates to the underlying {@link ResultSet}.
+     *
+     * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
+     * @param x the new column value
+     * @param targetSqlType the SQL type to be sent to the database
+     * @param scaleOrLength for an object of {@code java.math.BigDecimal}, this is the number of digits after the decimal point; for Java Object types {@code InputStream} and {@code Reader}, this is the length of the data in the stream or reader; for all other types, this value will be ignored
+     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     */
+    @Override
+    public void updateObject(String columnLabel, Object x, java.sql.SQLType targetSqlType, int scaleOrLength) throws SQLException {
+        delegate.updateObject(columnLabel, x, targetSqlType, scaleOrLength);
+    }
+
+    /**
+     * Updates the designated column with an {@code Object} value using the given target SQL type.
+     * The database is not changed until {@link #updateRow} or {@link #insertRow} is called.
+     * Delegates to the underlying {@link ResultSet}.
+     *
+     * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
+     * @param x the new column value
+     * @param targetSqlType the SQL type to be sent to the database
+     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     */
+    @Override
+    public void updateObject(String columnLabel, Object x, java.sql.SQLType targetSqlType) throws SQLException {
+        delegate.updateObject(columnLabel, x, targetSqlType);
     }
 
     /**

@@ -45,7 +45,7 @@ import java.sql.Types;
  * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
  * Jdbc.OutParamResult calculateDiscount(
  *         @Bind("price")      BigDecimal price,
- *         @Bind("customerId") long       customerId);
+ *         @Bind("customerId") long       customerId) throws SQLException;
  * }</pre>
  *
  * @see Query
@@ -79,7 +79,7 @@ public @interface OutParameter {
      * Jdbc.OutParamResult calculateDiscount(
      *     @Bind("price") BigDecimal price,
      *     @Bind("customerId") long customerId
-     * );
+     * ) throws SQLException;
      * }</pre>
      *
      * @return the parameter name; empty string when {@link #position()} is used instead
@@ -109,7 +109,7 @@ public @interface OutParameter {
      * @OutParameter(position = 2, sqlType = Types.VARCHAR)  // status
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)  // credit_score
      * @OutParameter(position = 4, sqlType = Types.DATE)     // last_purchase
-     * Jdbc.OutParamResult analyzeCustomer(long customerId);
+     * Jdbc.OutParamResult analyzeCustomer(long customerId) throws SQLException;
      * }</pre>
      *
      * @return the parameter position (1-based); {@code -1} (default) when {@link #name()} is used instead

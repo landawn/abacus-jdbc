@@ -63,28 +63,28 @@ public class DaoUtilTest extends TestBase {
     public void testGetCrudDao() {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class);
 
-        assertSame(dao, DaoUtil.getCrudDao(dao));
+        assertSame(dao, DaoUtil.getCrudReadOps(dao));
     }
 
     @Test
     public void testGetUncheckedCrudDao() {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class);
 
-        assertSame(dao, DaoUtil.getCrudDao(dao));
+        assertSame(dao, DaoUtil.getCrudReadOps(dao));
     }
 
     @Test
     public void testGetDao_RejectsJoinHelperWithoutDao() {
         TestJoinHelperOnly helper = Mockito.mock(TestJoinHelperOnly.class);
 
-        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getDao(helper));
+        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getReadOps(helper));
     }
 
     @Test
     public void testGetUncheckedDao_RejectsJoinHelperWithoutDao() {
         TestUncheckedJoinHelperOnly helper = Mockito.mock(TestUncheckedJoinHelperOnly.class);
 
-        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getDao(helper));
+        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getReadOps(helper));
     }
 
     @Test
@@ -393,7 +393,7 @@ public class DaoUtilTest extends TestBase {
     @Test
     public void testGetCrudDao_NotCrudDao_Throws() {
         final OnlyCrudJoinHelper helper = Mockito.mock(OnlyCrudJoinHelper.class);
-        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getCrudDao(helper));
+        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getCrudReadOps(helper));
     }
 
     // UncheckedCrudJoinEntityHelper without UncheckedCrudDao — exercises throw branch (line 386-387).
@@ -403,7 +403,7 @@ public class DaoUtilTest extends TestBase {
     @Test
     public void testGetCrudDao_NotUncheckedCrudDao_Throws() {
         final OnlyUncheckedCrudJoinHelper helper = Mockito.mock(OnlyUncheckedCrudJoinHelper.class);
-        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getCrudDao(helper));
+        assertThrows(UnsupportedOperationException.class, () -> DaoUtil.getCrudReadOps(helper));
     }
 
     // uncheckedCompleteSum throws UncheckedSQLException when a future fails (line 493).

@@ -3448,7 +3448,9 @@ public class NamedQueryTest extends TestBase {
         when(mockParsedSql.parameterCount()).thenReturn(1);
         NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
         q.addBatchParameters(Arrays.asList(1, 2, 3).iterator());
-        verify(mockPreparedStatement, times(3)).setObject(eq(1), any());
+        // Single-value batch rows bind through the Abacus type system (like the non-batch path),
+        // so an Integer is dispatched to setInt(1, x) rather than raw setObject(1, x).
+        verify(mockPreparedStatement, times(3)).setInt(eq(1), anyInt());
         verify(mockPreparedStatement, times(3)).addBatch();
     }
 

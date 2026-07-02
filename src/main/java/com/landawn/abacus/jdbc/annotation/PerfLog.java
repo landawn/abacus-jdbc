@@ -55,11 +55,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *     @PerfLog(minExecutionTimeForSql = 100,
  *              maxSqlLogLength = 200)
  *     @Query("SELECT * FROM users WHERE id = :id")
- *     User findById(@Bind("id") Long id);
+ *     User findById(@Bind("id") Long id) throws SQLException;
  *
  *     // Type-level @PerfLog also applies here, with the defaults from the type.
  *     @Query("SELECT COUNT(*) FROM users")
- *     long countAll();
+ *     long countAll() throws SQLException;
  * }
  *
  * // Filter only the read paths at the type level.

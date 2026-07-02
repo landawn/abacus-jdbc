@@ -949,10 +949,11 @@ public class DaoImplTest extends TestBase {
     }
 
     private static Condition invokeHandleLimit(final Condition cond, final int count, final DBVersion dbVersion) throws Exception {
-        final Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", Condition.class, int.class, DBVersion.class);
+        // dbVersion no longer participates: dialect rendering is delegated to the SQL builder.
+        final Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", Condition.class, int.class);
         handleLimit.setAccessible(true);
 
-        return (Condition) handleLimit.invoke(null, cond, count, dbVersion);
+        return (Condition) handleLimit.invoke(null, cond, count);
     }
 
     // Regression: handleLimit's Expression-already-has-limit check used to omit " FETCH FIRST ", so an
@@ -961,18 +962,18 @@ public class DaoImplTest extends TestBase {
     // with a second LIMIT/FETCH appended — producing invalid SQL on those databases.
     @Test
     public void testHandleLimit_FetchFirstExpressionNotDuplicated() throws Exception {
-        Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", com.landawn.abacus.query.condition.Condition.class, int.class, DBVersion.class);
+        Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", com.landawn.abacus.query.condition.Condition.class, int.class);
         handleLimit.setAccessible(true);
 
         Expression expr = Filters.expr("id > 0 FETCH FIRST 10 ROWS ONLY");
 
-        // Oracle: prior bug → wrapped in Criteria with extra FETCH FIRST appended. After fix, returned as-is.
-        Object out = handleLimit.invoke(null, expr, 5, DBVersion.Oracle);
+        // Prior bug → wrapped in Criteria with extra FETCH FIRST appended. After fix, returned as-is.
+        Object out = handleLimit.invoke(null, expr, 5);
         assertSame(expr, out, "Expression already containing FETCH FIRST must not be re-wrapped");
 
         // Sanity: an Expression containing a plain LIMIT is also returned as-is (already covered before fix).
         Expression limitExpr = Filters.expr("id > 0 LIMIT 10");
-        Object out2 = handleLimit.invoke(null, limitExpr, 5, DBVersion.MySQL_5_5);
+        Object out2 = handleLimit.invoke(null, limitExpr, 5);
         assertSame(limitExpr, out2, "Expression already containing LIMIT must not be re-wrapped");
     }
 

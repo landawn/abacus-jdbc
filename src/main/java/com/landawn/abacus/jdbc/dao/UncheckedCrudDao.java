@@ -219,7 +219,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @return a list of upserted entities
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -240,7 +240,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entities the collection of entities to upsert
      * @param batchSize the size of each batch
-     * @return a list of upserted entities
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -272,7 +272,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each record
-     * @return a list of upserted entities
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -302,7 +302,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each record
      * @param batchSize the size of each batch
-     * @return a list of upserted entities
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */

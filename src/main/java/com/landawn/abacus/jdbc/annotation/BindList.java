@@ -36,12 +36,20 @@ import com.landawn.abacus.annotation.Beta;
  * annotation applied to a single collection/array parameter, which it expands into the appropriate
  * number of JDBC placeholders.</p>
  *
+ * <p><b>Restriction:</b> {@code @BindList} is <em>not</em> supported for named or callable queries —
+ * DAO initialization fails with {@code UnsupportedOperationException}
+ * ("@BindList ... is not supported for named or callable query"). Consequently, mixing a
+ * {@code {ids}}-style {@code @BindList} placeholder with any {@code :param} named parameter in the
+ * same SQL fails at DAO creation, because the named parameter makes it a named query. Use positional
+ * {@code ?} parameters (with plain method parameters, not {@link Bind @Bind}) alongside
+ * {@code @BindList} instead.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Basic usage with IN clause
  *     @Query("SELECT * FROM users WHERE id IN ({ids})")
- *     List<User> findByIds(@BindList("ids") List<Long> userIds);
+ *     List<User> findByIds(@BindList("ids") List<Long> userIds) throws SQLException;
  *
  *     // Usage: dao.findByIds(Arrays.asList(1L, 2L, 3L))
  *     // Generates: SELECT * FROM users WHERE id IN (?, ?, ?)
@@ -49,7 +57,7 @@ import com.landawn.abacus.annotation.Beta;
  *
  *     // Using with array parameter
  *     @Query("SELECT * FROM users WHERE status IN ({statuses})")
- *     List<User> findByStatuses(@BindList("statuses") String[] statuses);
+ *     List<User> findByStatuses(@BindList("statuses") String[] statuses) throws SQLException;
  *
  *     // With prefix and suffix for conditional SQL
  *     @Query("SELECT * FROM users WHERE active = true {statusFilter}")
@@ -58,7 +66,7 @@ import com.landawn.abacus.annotation.Beta;
  *                   prefixForNonEmpty = "AND status IN (",
  *                   suffixForNonEmpty = ")")
  *         List<String> statuses
- *     );
+ *     ) throws SQLException;
  *
  *     // If statuses is empty: SELECT * FROM users WHERE active = true
  *     // If statuses has values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
@@ -101,11 +109,11 @@ public @interface BindList {
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT * FROM users WHERE id IN ({userIds})")
-     * List<User> find(@BindList("userIds") List<Long> ids);
+     * List<User> find(@BindList("userIds") List<Long> ids) throws SQLException;
      *
      * // Falls back to method parameter name (requires '-parameters')
      * @Query("SELECT * FROM users WHERE id IN ({ids})")
-     * List<User> find(@BindList List<Long> ids);
+     * List<User> find(@BindList List<Long> ids) throws SQLException;
      * }</pre>
      *
      * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})
@@ -127,7 +135,7 @@ public @interface BindList {
      *               prefixForNonEmpty = "AND status IN (",
      *               suffixForNonEmpty = ")")
      *     List<String> statuses
-     * );
+     * ) throws SQLException;
      *
      * // With empty list: SELECT * FROM users WHERE active = true
      * // With values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
@@ -153,7 +161,7 @@ public @interface BindList {
      *               prefixForNonEmpty = "WHERE category IN (",
      *               suffixForNonEmpty = ")")
      *     Set<String> categories
-     * );
+     * ) throws SQLException;
      *
      * // With empty set: SELECT * FROM products ORDER BY name
      * // With values: SELECT * FROM products WHERE category IN (?, ?, ?) ORDER BY name

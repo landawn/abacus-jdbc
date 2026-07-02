@@ -42,10 +42,10 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
- *     // Built-in Condition-based single-result methods (e.g. findFirst, findOnlyOne, exists)
- *     // will have a LIMIT clause appended automatically. User-supplied SQL in @Query methods
- *     // is left untouched.
- *     Optional<User> findFirst(Condition cond);   // LIMIT 1 added automatically
+ *     // The inherited Condition-based single-result methods (e.g. findFirst, findOnlyOne, exists)
+ *     // will have a LIMIT clause appended automatically, for example:
+ *     //     Optional<User> user = userDao.findFirst(CF.eq("email", email));   // LIMIT 1 added automatically
+ *     // User-supplied SQL in @Query methods is left untouched.
  *
  *     // ID generation will be called if user.id is null or 0
  *     default User createUser(String name, String email) {
@@ -57,8 +57,8 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *
  * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
  * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
- *     // Framework-managed @JoinedBy joins are allowed even when the join key is null
- *     List<Order> listAllWithItems(Collection<String> selectPropNames);
+ *     // Framework-managed @JoinedBy joins are allowed even when the join key is null:
+ *     // use the inherited JoinEntityHelper methods (e.g. loadJoinEntities, listAllJoinEntities).
  * }
  * }</pre>
  *
@@ -163,8 +163,8 @@ public @interface DaoConfig {
      * <pre>{@code
      * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
      * public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> {
-     *     // @JoinedBy-driven joins are allowed even if the join key is null or zero
-     *     List<Customer> listAllWithPreferredContacts(Collection<String> selectPropNames);
+     *     // @JoinedBy-driven joins are allowed even if the join key is null or zero:
+     *     // use the inherited JoinEntityHelper methods (e.g. loadJoinEntities, listAllJoinEntities).
      * }
      * }</pre>
      *
@@ -198,7 +198,7 @@ public @interface DaoConfig {
      *     @Query("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
      *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +
      *             "GROUP BY r.id")
-     *     Dataset getReportSummaries();
+     *     Dataset getReportSummaries() throws SQLException;
      * }
      * }</pre>
      *

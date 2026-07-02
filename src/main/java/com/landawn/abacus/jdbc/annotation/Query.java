@@ -51,24 +51,26 @@ import com.landawn.abacus.util.RegExUtil;
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Inline SQL with a named parameter
  *     @Query("SELECT * FROM users WHERE email = :email")
- *     Optional<User> findByEmail(@Bind("email") String email);
+ *     Optional<User> findByEmail(@Bind("email") String email) throws SQLException;
  *
  *     // Scalar aggregate via an explicit execution mode
  *     @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = OP.queryForSingle)
- *     long countActiveUsers();
+ *     long countActiveUsers() throws SQLException;
  *
  *     // Streaming a large result set with a fetch-size hint
+ *     // (Stream-returning methods must NOT declare 'throws SQLException')
  *     @Query(value = "SELECT * FROM users ORDER BY id", fetchSize = 1000)
  *     Stream<User> streamAllUsers();
  *
- *     // Batch insert with a custom batch size
+ *     // Batch insert with a custom batch size: the single Collection parameter supplies the batch
+ *     // rows; a batch INSERT may return void or List<ID> (the generated keys)
  *     @Query(value = "INSERT INTO users (name, email) VALUES (:name, :email)",
  *            isBatch = true, batchSize = 500)
- *     int[] batchInsert(List<User> users);
+ *     List<Long> batchInsert(List<User> users) throws SQLException;
  *
  *     // SQL stored in an external mapper, referenced by id
  *     @Query(id = "findUsersByComplexCriteria")
- *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria);
+ *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria) throws SQLException;
  * }
  * }</pre>
  *
@@ -117,9 +119,10 @@ public @interface Query {
      * @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge")
      * List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max);
      *
-     * // Nested property access
+     * // Nested property paths require a single unannotated bean parameter
+     * // (filter.getUser().getId() and filter.getStatus() supply the values)
      * @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status")
-     * List<Order> findOrders(@Bind("user") User user, @Bind("status") String status);
+     * List<Order> findOrders(OrderFilter filter) throws SQLException;
      *
      * // IN clause with collection (uses {ids} template variable expanded via @BindList)
      * @Query("SELECT * FROM users WHERE id IN ({ids})")
@@ -291,10 +294,14 @@ public @interface Query {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Stored procedure call with output parameter (positional binding to match the '?' placeholders)
-     * @Query(value = "{call calculate_bonus(?, ?, ?)}", isProcedure = true)
+     * // Stored procedure call with an output parameter (positional binding to match the '?' placeholders).
+     * // Registered OUT parameters are surfaced through Jdbc.OutParamResult with
+     * // op = OP.executeAndGetOutParameters (they are not returned as the method result directly).
+     * @Query(value = "{call calculate_bonus(?, ?, ?)}", isProcedure = true, op = OP.executeAndGetOutParameters)
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)  // bonus (OUT)
-     * BigDecimal calculateBonus(long employeeId, int performanceScore);
+     * Jdbc.OutParamResult calculateBonus(long employeeId, int performanceScore) throws SQLException;
+     *
+     * // BigDecimal bonus = dao.calculateBonus(1L, 95).getOutParamValue(3);
      * }</pre>
      *
      * <p>When to use:</p>
@@ -334,41 +341,27 @@ public @interface Query {
      *
      * <p>Basic batch insert examples:</p>
      * <pre>{@code
-     * // Batch insert with entity list
+     * // Batch insert with entity list: the single Collection parameter supplies one entity per batch row
      * @Query(value = "INSERT INTO users (name, email, status) " +
      *               "VALUES (:name, :email, :status)",
      *        isBatch = true)
-     * int[] batchInsertUsers(List<User> users);
-     * // Returns array of affected row counts
-     *
-     * // Batch insert with parallel parameter lists
-     * @Query(value = "INSERT INTO products (code, name, price) " +
-     *               "VALUES (:code, :name, :price)",
-     *        isBatch = true, batchSize = 500)
-     * int[] batchInsertProducts(@Bind("code") List<String> codes,
-     *                          @Bind("name") List<String> names,
-     *                          @Bind("price") List<BigDecimal> prices);
+     * List<Long> batchInsertUsers(List<User> users) throws SQLException;
+     * // Returns the generated keys (or declare void if they are not needed)
      * }</pre>
      *
-     * <p>Batch update examples:</p>
+     * <p>Batch update/delete examples:</p>
      * <pre>{@code
      * // Batch update with entity list
      * @Query(value = "UPDATE users SET status = :status WHERE id = :id",
      *        isBatch = true)
-     * int[] batchUpdateStatus(List<User> users);
+     * int batchUpdateStatus(List<User> users) throws SQLException;
+     * // Returns the total affected-row count summed across all batch rows
      *
-     * // Batch update with parallel lists
-     * @Query(value = "UPDATE inventory SET quantity = :quantity WHERE product_id = :productId",
+     * // Batch delete: for positional SQL each element of the Collection is one row's value
+     * // (or an Object[]/List of values for multi-parameter SQL)
+     * @Query(value = "DELETE FROM temp_records WHERE id = ?",
      *        isBatch = true)
-     * int[] batchUpdateInventory(@Bind("productId") List<Long> productIds,
-     *                           @Bind("quantity") List<Integer> quantities);
-     * }</pre>
-     *
-     * <p>Batch delete example:</p>
-     * <pre>{@code
-     * @Query(value = "DELETE FROM temp_records WHERE id = :id",
-     *        isBatch = true)
-     * int[] batchDelete(@Bind("id") List<Long> ids);
+     * int batchDelete(List<Long> ids) throws SQLException;
      * }</pre>
      *
      * <p>Advanced batch examples:</p>
@@ -377,50 +370,33 @@ public @interface Query {
      * @Query(value = "INSERT INTO event_log (timestamp, event_type, data) " +
      *               "VALUES (:timestamp, :eventType, :data)",
      *        isBatch = true, batchSize = 1000)
-     * int[] batchLogEvents(List<EventLog> events);
+     * void batchLogEvents(List<EventLog> events) throws SQLException;
      * // Processes 1000 records per database round trip
      *
-     * // Batch with timeout for large operations
+     * // Batch with timeout for large operations; the optional second int parameter
+     * // overrides batchSize() at call time (0 falls back to the default batch size)
      * @Query(value = "INSERT INTO historical_data (date, metric, value) " +
      *               "VALUES (:date, :metric, :value)",
-     *        isBatch = true, batchSize = 5000, queryTimeout = 300)
-     * int[] importHistoricalData(@Bind("date") List<Date> dates,
-     *                           @Bind("metric") List<String> metrics,
-     *                           @Bind("value") List<Double> values);
-     *
-     * // Complex batch operation with multiple fields
-     * @Query(value = "INSERT INTO orders (user_id, product_id, quantity, price, order_date) " +
-     *               "VALUES (:userId, :productId, :quantity, :price, :orderDate)",
-     *        isBatch = true)
-     * int[] batchCreateOrders(List<Order> orders);
+     *        isBatch = true, queryTimeout = 300)
+     * void importHistoricalData(List<HistoricalData> rows, int batchSize) throws SQLException;
      * }</pre>
      *
      * <p>Return type requirements:</p>
      * <ul>
-     *   <li>{@code int[]} - Array of affected row counts (one per batch item) - most common</li>
-     *   <li>{@code void} - No return value needed</li>
-     *   <li>{@code int} - Total affected rows across all batches</li>
+     *   <li>Batch INSERT: {@code void}, or {@code List<ID>} to receive the generated keys</li>
+     *   <li>Batch UPDATE/DELETE: {@code int}/{@code Integer}, {@code long}/{@code Long},
+     *       {@code boolean}/{@code Boolean} or {@code void} — the affected-row counts are summed
+     *       across all batch rows (a per-row {@code int[]} result is not supported)</li>
      * </ul>
      *
      * <p>Parameter requirements:</p>
      * <ul>
-     *   <li>At least one parameter must be a {@code Collection} or {@code List}</li>
-     *   <li>All collection parameters must have the same size</li>
-     *   <li>Framework iterates through collections in parallel, creating one batch item per index</li>
-     *   <li>Single (non-collection) parameters are used for all batch items</li>
+     *   <li>Exactly one {@code Collection} parameter supplies the batch rows: entities/Maps
+     *       (or single values/{@code Object[]}/{@code List} rows) whose properties bind to the
+     *       named parameters, one element per batch row</li>
+     *   <li>An optional second {@code int} parameter overrides {@link #batchSize()} at call time</li>
+     *   <li>No other parameters are supported for batch methods</li>
      * </ul>
-     *
-     * <p>Parameter combination example:</p>
-     * <pre>{@code
-     * // Mix of collection and single parameters
-     * @Query(value = "INSERT INTO user_actions (user_id, action, category, timestamp) " +
-     *               "VALUES (:userId, :action, :category, :timestamp)",
-     *        isBatch = true)
-     * int[] logUserActions(@Bind("userId") List<Long> userIds,     // varies per batch item
-     *                     @Bind("action") List<String> actions,    // varies per batch item
-     *                     @Bind("category") String category,       // same for all items
-     *                     @Bind("timestamp") Date timestamp);      // same for all items
-     * }</pre>
      *
      * <p>Performance considerations:</p>
      * <ul>
@@ -434,7 +410,6 @@ public @interface Query {
      * <p>Error handling:</p>
      * <ul>
      *   <li>If any batch item fails, the entire batch typically fails (depends on database/driver)</li>
-     *   <li>Some drivers support {@code Statement.EXECUTE_FAILED} in the result array</li>
      *   <li>Consider wrapping batch operations in transactions for atomicity</li>
      *   <li>Validate data before batching to minimize mid-batch failures</li>
      * </ul>
@@ -484,10 +459,10 @@ public @interface Query {
      *        isSingleParameter = true)
      * List<Event> findByExactParticipants(@Bind("participants") Long[] participants);
      *
-     * // JSON array column
-     * @Query(value = "INSERT INTO configs (name, options) VALUES (:name, :options::jsonb)",
+     * // JSON array column (isSingleParameter requires exactly one statement parameter)
+     * @Query(value = "UPDATE configs SET options = :options::jsonb WHERE name = 'default'",
      *        isSingleParameter = true)
-     * int insertConfig(@Bind("name") String name, @Bind("options") String[] options);
+     * int updateDefaultConfigOptions(@Bind("options") String[] options);
      *
      * // Array intersection
      * @Query(value = "SELECT * FROM items WHERE categories && :categories",
@@ -819,7 +794,11 @@ public @interface Query {
      * Example: 1000 rows × 2KB/row = 2MB buffered in memory
      * </pre>
      *
-     * @return the fetch size hint for the JDBC driver, or {@code -1} to use the driver's default
+     * @return the fetch size hint for the JDBC driver; only positive values are forwarded to the
+     *         statement ({@code -1} and {@code 0} both leave it unset). When unset, the framework may
+     *         still apply its own per-operation fetch size for SELECTs (e.g. 1 for find-first/exists
+     *         style queries, 2 for find-only-one/unique queries, and a large-result configuration for
+     *         streaming) rather than the raw driver default
      */
     int fetchSize() default -1;
 
@@ -852,19 +831,19 @@ public @interface Query {
      * // Using default batch size
      * @Query(value = "INSERT INTO users (name, email) VALUES (:name, :email)",
      *        isBatch = true)
-     * int[] insertUsers(List<User> users);
+     * void insertUsers(List<User> users) throws SQLException;
      * // Uses JdbcUtil.DEFAULT_BATCH_SIZE
      *
      * // Small batch size for memory-constrained environment
      * @Query(value = "INSERT INTO large_documents (title, content) VALUES (:title, :content)",
      *        isBatch = true, batchSize = 50)
-     * int[] insertDocuments(List<Document> documents);
+     * void insertDocuments(List<Document> documents) throws SQLException;
      * // Processes 50 documents per round trip
      *
      * // Large batch size for bulk import
      * @Query(value = "INSERT INTO event_log (timestamp, type, data) VALUES (:timestamp, :type, :data)",
      *        isBatch = true, batchSize = 5000)
-     * int[] importEvents(List<Event> events);
+     * void importEvents(List<Event> events) throws SQLException;
      * // Processes 5000 events per round trip
      * }</pre>
      *
@@ -873,17 +852,17 @@ public @interface Query {
      * // Optimize for network latency (high latency, use larger batches)
      * @Query(value = "INSERT INTO metrics (name, value, timestamp) VALUES (:name, :value, :timestamp)",
      *        isBatch = true, batchSize = 2000)
-     * int[] insertMetrics(List<Metric> metrics);
+     * void insertMetrics(List<Metric> metrics) throws SQLException;
      *
      * // Optimize for low memory (small row size but many rows)
      * @Query(value = "INSERT INTO simple_logs (timestamp, message) VALUES (:timestamp, :message)",
      *        isBatch = true, batchSize = 10000)
-     * int[] insertLogs(List<LogEntry> logs);
+     * void insertLogs(List<LogEntry> logs) throws SQLException;
      *
      * // Optimize for large rows (documents, blobs)
      * @Query(value = "INSERT INTO files (filename, content) VALUES (:filename, :content)",
      *        isBatch = true, batchSize = 10)
-     * int[] insertFiles(List<FileData> files);
+     * void insertFiles(List<FileData> files) throws SQLException;
      * }</pre>
      *
      * <p>Advanced configuration examples:</p>
@@ -891,14 +870,13 @@ public @interface Query {
      * // Batch with timeout for very large operations
      * @Query(value = "INSERT INTO archive_data SELECT * FROM staging WHERE batch_id = :batchId",
      *        isBatch = true, batchSize = 1000, queryTimeout = 600)
-     * int[] archiveData(@Bind("batchId") List<String> batchIds);
+     * void archiveData(List<String> batchIds) throws SQLException;
      *
-     * // Balance batch size with transaction scope
+     * // Balance batch size with transaction scope: the entity list supplies both named parameters
      * @Transactional
      * @Query(value = "UPDATE inventory SET quantity = quantity - :amount WHERE product_id = :productId",
      *        isBatch = true, batchSize = 500)
-     * int[] decrementInventory(@Bind("productId") List<Long> productIds,
-     *                         @Bind("amount") List<Integer> amounts);
+     * int decrementInventory(List<InventoryAdjustment> adjustments) throws SQLException;
      * }</pre>
      *
      * <p>How batch size affects execution:</p>

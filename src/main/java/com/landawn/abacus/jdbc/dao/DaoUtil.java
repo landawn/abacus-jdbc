@@ -59,7 +59,7 @@ import com.landawn.abacus.util.function.Function;
  *   <li>Refresh support — computing the set of properties to select so that ID columns are always
  *       included (see {@link #getRefreshSelectPropNames(Collection, List)})</li>
  *   <li>DAO type casting and validation — narrowing join-entity helpers to their backing
- *       {@link Dao}/{@link CrudDao} (and unchecked) types</li>
+ *       {@link ReadOps}/{@link CrudReadOps} (and unchecked/{@code long}-ID) views</li>
  *   <li>Asynchronous operation completion and result aggregation — joining batches of futures and
  *       surfacing the first failure as a checked or unchecked SQL exception</li>
  *   <li>Join metadata retrieval — looking up {@link JoinInfo} for an entity's join properties</li>
@@ -384,11 +384,11 @@ public final class DaoUtil {
     }
 
     /**
-     * Casts a {@link CrudJoinEntityReadOps} to a {@link CrudDao} instance.
+     * Casts a {@link CrudJoinEntityReadOps} to a {@link CrudReadOps} instance.
      * <p>
      * This method is used internally to ensure type safety when working with DAO instances
-     * that implement both CrudJoinEntityReadOps and CrudDao interfaces. It validates that
-     * the provided DAO actually extends CrudDao before performing the cast.
+     * that implement both CrudJoinEntityReadOps and CrudReadOps interfaces. It validates that
+     * the provided DAO actually extends CrudReadOps before performing the cast.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -400,31 +400,31 @@ public final class DaoUtil {
      * }
      *
      * UserDaoImpl dao = new UserDaoImpl();
-     * CrudDao<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
-     * // Successfully casts to CrudDao
+     * CrudReadOps<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudReadOps(dao);
+     * // Successfully casts to CrudReadOps
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
      * @param <TD> the DAO type
      * @param dao the CrudJoinEntityReadOps instance to cast
-     * @return the DAO instance cast to CrudDao
-     * @throws UnsupportedOperationException if the DAO does not implement CrudDao interface
+     * @return the DAO instance cast to CrudReadOps
+     * @throws UnsupportedOperationException if the DAO does not implement CrudReadOps interface
      */
-    static <T, ID, TD extends CrudDao<T, ID, TD>> TD getCrudDao(final CrudJoinEntityReadOps<T, ID, TD> dao) {
-        if (dao instanceof CrudDao) {
-            return (TD) dao;
+    static <T, ID, TD extends DaoBase<T, TD>> CrudReadOps<T, ID, TD> getCrudReadOps(final CrudJoinEntityReadOps<T, ID, TD> dao) {
+        if (dao instanceof CrudReadOps) {
+            return (CrudReadOps<T, ID, TD>) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement CrudDao interface"); //NOSONAR
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement CrudReadOps interface"); //NOSONAR
         }
     }
 
     /**
-     * Casts a {@link JoinEntityReadOps} to a {@link Dao} instance.
+     * Casts a {@link JoinEntityBase} join-entity helper to its {@link ReadOps} view.
      * <p>
      * This method is used internally to ensure type safety when working with DAO instances
-     * that implement both JoinEntityReadOps and Dao interfaces. It validates that the provided
-     * DAO actually extends Dao before performing the cast.
+     * that implement both a join-entity helper interface and ReadOps. It validates that the provided
+     * DAO actually extends ReadOps before performing the cast.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -436,30 +436,30 @@ public final class DaoUtil {
      * }
      *
      * ProductDaoImpl dao = new ProductDaoImpl();
-     * Dao<Product, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
-     * // Successfully casts to Dao
+     * ReadOps<Product, ProductDaoImpl> daoInstance = DaoUtil.getReadOps(dao);
+     * // Successfully casts to ReadOps
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
      * @param <TD> the DAO type
-     * @param dao the JoinEntityReadOps instance to cast
-     * @return the DAO instance cast to Dao
-     * @throws UnsupportedOperationException if the DAO does not implement Dao interface
+     * @param dao the join-entity helper instance to cast
+     * @return the DAO instance cast to ReadOps
+     * @throws UnsupportedOperationException if the DAO does not implement ReadOps interface
      */
-    static <T, TD extends Dao<T, TD>> TD getDao(final JoinEntityBase<T, TD> dao) {
-        if (dao instanceof Dao) {
-            return (TD) dao;
+    static <T, TD extends DaoBase<T, TD>> ReadOps<T, TD> getReadOps(final JoinEntityBase<T, TD> dao) {
+        if (dao instanceof ReadOps) {
+            return (ReadOps<T, TD>) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement Dao interface");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement ReadOps interface");
         }
     }
 
     /**
-     * Casts an {@link UncheckedJoinEntityReadOps} to an {@link UncheckedDao} instance.
+     * Casts an {@link UncheckedJoinEntityReadOps} to an {@link UncheckedReadOps} instance.
      * <p>
      * This method is used internally to ensure type safety when working with unchecked DAO instances
-     * that implement both UncheckedJoinEntityReadOps and UncheckedDao interfaces. It validates that
-     * the provided DAO actually extends UncheckedDao before performing the cast.
+     * that implement both UncheckedJoinEntityReadOps and UncheckedReadOps interfaces. It validates that
+     * the provided DAO actually extends UncheckedReadOps before performing the cast.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -471,30 +471,30 @@ public final class DaoUtil {
      * }
      *
      * ProductDaoImpl dao = new ProductDaoImpl();
-     * UncheckedDao<Product, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
-     * // Successfully casts to UncheckedDao
+     * UncheckedReadOps<Product, ProductDaoImpl> daoInstance = DaoUtil.getReadOps(dao);
+     * // Successfully casts to UncheckedReadOps
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
      * @param <TD> the DAO type
      * @param dao the UncheckedJoinEntityReadOps instance to cast
-     * @return the DAO instance cast to UncheckedDao
-     * @throws UnsupportedOperationException if the DAO does not implement UncheckedDao interface
+     * @return the DAO instance cast to UncheckedReadOps
+     * @throws UnsupportedOperationException if the DAO does not implement UncheckedReadOps interface
      */
-    static <T, TD extends UncheckedDao<T, TD>> TD getDao(final UncheckedJoinEntityReadOps<T, TD> dao) {
-        if (dao instanceof UncheckedDao) {
-            return (TD) dao;
+    static <T, TD extends UncheckedDaoBase<T, TD>> UncheckedReadOps<T, TD> getReadOps(final UncheckedJoinEntityReadOps<T, TD> dao) {
+        if (dao instanceof UncheckedReadOps) {
+            return (UncheckedReadOps<T, TD>) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedDao interface");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedReadOps interface");
         }
     }
 
     /**
-     * Casts an {@link UncheckedCrudJoinEntityReadOps} to an {@link UncheckedCrudDao} instance.
+     * Casts an {@link UncheckedCrudJoinEntityReadOps} to an {@link UncheckedCrudReadOps} instance.
      * <p>
      * This method is used internally to ensure type safety when working with unchecked CRUD DAO instances
-     * that implement both UncheckedCrudJoinEntityReadOps and UncheckedCrudDao interfaces. It validates that
-     * the provided DAO actually extends UncheckedCrudDao before performing the cast.
+     * that implement both UncheckedCrudJoinEntityReadOps and UncheckedCrudReadOps interfaces. It validates that
+     * the provided DAO actually extends UncheckedCrudReadOps before performing the cast.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -506,22 +506,64 @@ public final class DaoUtil {
      * }
      *
      * UserDaoImpl dao = new UserDaoImpl();
-     * UncheckedCrudDao<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
-     * // Successfully casts to UncheckedCrudDao
+     * UncheckedCrudReadOps<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudReadOps(dao);
+     * // Successfully casts to UncheckedCrudReadOps
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
      * @param <TD> the DAO type
      * @param dao the UncheckedCrudJoinEntityReadOps instance to cast
-     * @return the DAO instance cast to UncheckedCrudDao
-     * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudDao interface
+     * @return the DAO instance cast to UncheckedCrudReadOps
+     * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudReadOps interface
      */
-    static <T, ID, TD extends UncheckedCrudDao<T, ID, TD>> TD getCrudDao(final UncheckedCrudJoinEntityReadOps<T, ID, TD> dao) {
-        if (dao instanceof UncheckedCrudDao) {
-            return (TD) dao;
+    static <T, ID, TD extends UncheckedDaoBase<T, TD>> UncheckedCrudReadOps<T, ID, TD> getCrudReadOps(final UncheckedCrudJoinEntityReadOps<T, ID, TD> dao) {
+        if (dao instanceof UncheckedCrudReadOps) {
+            return (UncheckedCrudReadOps<T, ID, TD>) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedCrudDao interface");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedCrudReadOps interface");
+        }
+    }
+
+    /**
+     * Casts a {@link CrudLJoinEntityHelper} to a {@link CrudLReadOps} instance.
+     * <p>
+     * This is the {@code long}-ID counterpart of {@link #getCrudReadOps(CrudJoinEntityReadOps)}. It returns the
+     * {@link CrudLReadOps} view so the helper's primitive {@code long}-ID {@code gett} paths resolve to the
+     * primitive {@code gett(long)} overloads (avoiding boxing) rather than the boxed {@code gett(Long)} ones.
+     *
+     * @param <T> the entity type managed by this DAO
+     * @param <TD> the DAO type
+     * @param dao the CrudLJoinEntityHelper instance to cast
+     * @return the DAO instance cast to CrudLReadOps
+     * @throws UnsupportedOperationException if the DAO does not implement CrudLReadOps interface
+     */
+    static <T, TD extends CrudLDao<T, TD>> CrudLReadOps<T, TD> getCrudReadOps(final CrudLJoinEntityHelper<T, TD> dao) {
+        if (dao instanceof CrudLReadOps) {
+            return (CrudLReadOps<T, TD>) dao;
+        } else {
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement CrudLReadOps interface"); //NOSONAR
+        }
+    }
+
+    /**
+     * Casts an {@link UncheckedCrudLJoinEntityHelper} to an {@link UncheckedCrudLReadOps} instance.
+     * <p>
+     * This is the {@code long}-ID counterpart of {@link #getCrudReadOps(UncheckedCrudJoinEntityReadOps)}. It
+     * returns the {@link UncheckedCrudLReadOps} view so the helper's primitive {@code long}-ID {@code gett}
+     * paths resolve to the primitive {@code gett(long)} overloads (avoiding boxing).
+     *
+     * @param <T> the entity type managed by this DAO
+     * @param <TD> the DAO type
+     * @param dao the UncheckedCrudLJoinEntityHelper instance to cast
+     * @return the DAO instance cast to UncheckedCrudLReadOps
+     * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudLReadOps interface
+     */
+    static <T, TD extends UncheckedCrudLDao<T, TD>> UncheckedCrudLReadOps<T, TD> getCrudReadOps(final UncheckedCrudLJoinEntityHelper<T, TD> dao) {
+        if (dao instanceof UncheckedCrudLReadOps) {
+            return (UncheckedCrudLReadOps<T, TD>) dao;
+        } else {
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedCrudLReadOps interface"); //NOSONAR
         }
     }
 

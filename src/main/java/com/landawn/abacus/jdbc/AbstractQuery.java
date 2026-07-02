@@ -378,6 +378,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
+    @Beta
     public This setBoolean(final int parameterIndex, final Boolean value, final boolean defaultValueForNull) throws SQLException {
         if (value == null) {
             stmt.setBoolean(parameterIndex, defaultValueForNull);
@@ -447,6 +448,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
+    @Beta
     public This setByte(final int parameterIndex, final Byte value, final byte defaultValueForNull) throws SQLException {
         if (value == null) {
             stmt.setByte(parameterIndex, defaultValueForNull);
@@ -516,6 +518,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
+    @Beta
     public This setShort(final int parameterIndex, final Short value, final short defaultValueForNull) throws SQLException {
         if (value == null) {
             stmt.setShort(parameterIndex, defaultValueForNull);
@@ -883,6 +886,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
+    @Beta
     public This setFloat(final int parameterIndex, final Float value, final float defaultValueForNull) throws SQLException {
         if (value == null) {
             stmt.setFloat(parameterIndex, defaultValueForNull);
@@ -981,6 +985,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
+    @Beta
     public This setDouble(final int parameterIndex, final Double value, final double defaultValueForNull) throws SQLException {
         if (value == null) {
             stmt.setDouble(parameterIndex, defaultValueForNull);
@@ -2115,7 +2120,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value the object to set
+     * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -2136,7 +2141,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value the object to set
+     * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
@@ -2159,7 +2164,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value the object to set
+     * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -2179,7 +2184,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value the object to set
+     * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
@@ -2203,7 +2208,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> the type of the object being set as a parameter
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value the object to set
+     * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param type the Type handler for custom serialization. Must not be {@code null}.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code type} is {@code null} or the type handler cannot set the value
@@ -2648,25 +2653,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter)
-    //            throws SQLException {
-    //        checkArgNotNull(parametersSetter, "parametersSetter");
-    //
-    //        boolean noException = false;
-    //
-    //        try {
-    //            parametersSetter.accept((This) this, stmt, parameters);
-    //
-    //            noException = true;
-    //        } finally {
-    //            if (noException == false) {
-    //                close();
-    //            }
-    //        }
-    //
-    //        return (This) this;
-    //    }
-
     /**
      * Sets multiple int parameters starting from index 1.
      *
@@ -2821,30 +2807,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         return (This) this;
     }
-
-    //    /**
-    //     *
-    //     * @param parametersSetter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> parametersSetter) throws SQLException {
-    //        checkArgNotNull(parametersSetter, "parametersSetter");
-    //
-    //        boolean noException = false;
-    //
-    //        try {
-    //            parametersSetter.accept((This) this, stmt);
-    //
-    //            noException = true;
-    //        } finally {
-    //            if (noException == false) {
-    //                close();
-    //            }
-    //        }
-    //
-    //        return (This) this;
-    //    }
 
     /**
      * Sets parameters using a BiParametersSetter with additional context.
@@ -3083,49 +3045,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    //    /**
-    //     *
-    //     * @param parametersSetter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> parametersSetter) throws SQLException {
-    //        checkArgNotNull(parametersSetter, "parametersSetter");
-    //
-    //        boolean noException = false;
-    //
-    //        try {
-    //            parametersSetter.accept((This) this, stmt);
-    //
-    //            noException = true;
-    //        } finally {
-    //            if (noException == false) {
-    //                close();
-    //            }
-    //        }
-    //
-    //        return (This) this;
-    //    }
-
-    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter)
-    //            throws SQLException {
-    //        checkArgNotNull(parametersSetter, "parametersSetter");
-    //
-    //        boolean noException = false;
-    //
-    //        try {
-    //            parametersSetter.accept((This) this, stmt, parameters);
-    //
-    //            noException = true;
-    //        } finally {
-    //            if (noException == false) {
-    //                close();
-    //            }
-    //        }
-    //
-    //        return (This) this;
-    //    }
-
     /**
      * Sets parameters using a custom ParametersSetter that operates on this query instance.
      * This provides access to all the parameter setting methods of this class.
@@ -3237,7 +3156,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Types
      */
     @Beta
-    public This setNullForIndices(final int sqlType, final int... parameterIndices) throws SQLException {
+    public This setNullForIndices(final int sqlType, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3262,7 +3181,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setBooleanForIndices(final Boolean value, final int... parameterIndices) throws SQLException {
+    public This setBooleanForIndices(final Boolean value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3288,7 +3207,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setIntForIndices(final Integer value, final int... parameterIndices) throws SQLException {
+    public This setIntForIndices(final Integer value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3352,7 +3271,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setLongForIndices(final Long value, final int... parameterIndices) throws SQLException {
+    public This setLongForIndices(final Long value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3377,7 +3296,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDoubleForIndices(final Double value, final int... parameterIndices) throws SQLException {
+    public This setDoubleForIndices(final Double value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3402,7 +3321,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setStringForIndices(final String value, final int... parameterIndices) throws SQLException {
+    public This setStringForIndices(final String value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3428,7 +3347,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDateForIndices(final java.sql.Date value, final int... parameterIndices) throws SQLException {
+    public This setDateForIndices(final java.sql.Date value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3454,7 +3373,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDateForIndices(final java.util.Date value, final int... parameterIndices) throws SQLException {
+    public This setDateForIndices(final java.util.Date value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3480,7 +3399,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimeForIndices(final java.sql.Time value, final int... parameterIndices) throws SQLException {
+    public This setTimeForIndices(final java.sql.Time value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3506,7 +3425,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimeForIndices(final java.util.Date value, final int... parameterIndices) throws SQLException {
+    public This setTimeForIndices(final java.util.Date value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3532,7 +3451,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimestampForIndices(final java.sql.Timestamp value, final int... parameterIndices) throws SQLException {
+    public This setTimestampForIndices(final java.sql.Timestamp value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3558,7 +3477,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimestampForIndices(final java.util.Date value, final int... parameterIndices) throws SQLException {
+    public This setTimestampForIndices(final java.util.Date value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3584,7 +3503,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setObjectForIndices(final Object value, final int... parameterIndices) throws SQLException {
+    public This setObjectForIndices(final Object value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3746,18 +3665,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Object first = iter.next();
 
             if (first instanceof Collection) {
+                // Clear before every row (including the first) so no row can inherit positions bound
+                // earlier via setXxx or by a previous, longer row.
+                stmt.clearParameters();
                 setParameters((Collection) first);
                 addBatch();
 
                 while (iter.hasNext()) {
-                    // Clear between rows so a shorter follow-up row can't inherit positions bound by an earlier row
-                    // (mirrors the defensive pattern in NamedQuery.addBatchParameters).
                     stmt.clearParameters();
                     setParameters((Collection) iter.next());
 
                     addBatch();
                 }
             } else if (first instanceof Object[]) {
+                stmt.clearParameters();
                 setParameters((Object[]) first);
                 addBatch();
 
@@ -3767,7 +3688,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
                     addBatch();
                 }
-            } else {
+            } else { // single-value rows bind only position 1, so no clearing is needed between rows
                 setObject(1, first);
                 addBatch();
 
@@ -4135,7 +4056,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      * @see java.sql.PreparedStatement#addBatch()
      */
-    public This addBatch() throws SQLException {
+    public This addBatch() throws IllegalStateException, SQLException {
         assertNotClosed();
 
         boolean noException = false;
@@ -4185,7 +4106,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see FetchDirection
      * @see java.sql.Statement#setFetchDirection(int)
      */
-    public This setFetchDirection(final FetchDirection direction) throws SQLException {
+    public This setFetchDirection(final FetchDirection direction) throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
 
         checkArgNotNull(direction, cs.direction);
@@ -4194,7 +4115,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             defaultFetchDirection = stmt.getFetchDirection();
         }
 
-        stmt.setFetchDirection(direction.intValue);
+        stmt.setFetchDirection(direction.intValue());
 
         isFetchDirectionSet = true;
 
@@ -4217,7 +4138,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      * @see #setFetchDirection(FetchDirection)
      */
-    public This setFetchDirectionToForward() throws SQLException {
+    public This setFetchDirectionToForward() throws IllegalStateException, SQLException {
         return setFetchDirection(FetchDirection.FORWARD);
     }
 
@@ -4239,7 +4160,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs (including a negative {@code fetchSize} rejected by the driver)
      * @see java.sql.Statement#setFetchSize(int)
      */
-    public This setFetchSize(final int fetchSize) throws SQLException {
+    public This setFetchSize(final int fetchSize) throws IllegalStateException, SQLException {
         assertNotClosed();
 
         if (defaultFetchSize < 0) {
@@ -4268,7 +4189,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setMaxFieldSize(int)
      */
-    public This setMaxFieldSize(final int max) throws SQLException {
+    public This setMaxFieldSize(final int max) throws IllegalStateException, SQLException {
         assertNotClosed();
 
         if (defaultMaxFieldSize < 0) {
@@ -4296,7 +4217,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setMaxRows(int)
      */
-    public This setMaxRows(final int max) throws SQLException {
+    public This setMaxRows(final int max) throws IllegalStateException, SQLException {
         assertNotClosed();
 
         if (defaultMaxRows < 0) {
@@ -4324,7 +4245,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setLargeMaxRows(long)
      */
-    public This setLargeMaxRows(final long max) throws SQLException {
+    public This setLargeMaxRows(final long max) throws IllegalStateException, SQLException {
         assertNotClosed();
 
         if (defaultLargeMaxRows < 0) {
@@ -4352,7 +4273,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs (including a negative {@code seconds} rejected by the driver)
      * @see java.sql.Statement#setQueryTimeout(int)
      */
-    public This setQueryTimeout(final int seconds) throws SQLException {
+    public This setQueryTimeout(final int seconds) throws IllegalStateException, SQLException {
         assertNotClosed();
 
         if (defaultQueryTimeout < 0) {
@@ -4388,7 +4309,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException {
+    public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(stmtSetter, cs.stmtSetter);
 
@@ -4429,7 +4351,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public This configureStatement(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(stmtSetter, cs.stmtSetter);
 
@@ -4491,7 +4413,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
-    static final Type<Character> charType = TypeFactory.getType(char.class);
+    private static final Type<Character> CHAR_TYPE = TypeFactory.getType(char.class);
 
     /**
      * Executes this query and returns the first column of the first row as a char value.
@@ -4521,7 +4443,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            return rs.next() ? OptionalChar.of(charType.get(rs, 1)) : OptionalChar.empty();
+            return rs.next() ? OptionalChar.of(CHAR_TYPE.get(rs, 1)) : OptionalChar.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5393,6 +5315,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     public Dataset query(final Class<?> entityClassForExtractor) throws SQLException {
+        checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
+
         return query(Jdbc.ResultExtractor.toDataset(entityClassForExtractor));
     }
 
@@ -5766,13 +5690,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the function
      * @param func the function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      */
     @Beta
     public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super Dataset, ? extends R, E> func)
-            throws IllegalArgumentException, SQLException, E {
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(func, cs.func);
 
         return func.apply(query());
@@ -5797,6 +5722,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param entityClassForExtractor the class used to provide metadata for column mapping
      * @param func the function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code func} is {@code null}, or if {@code entityClassForExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
@@ -5804,7 +5730,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <R, E extends Exception> R queryThenApply(final Class<?> entityClassForExtractor, final Throwables.Function<? super Dataset, ? extends R, E> func)
-            throws IllegalArgumentException, SQLException, E {
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
         checkArgNotNull(func, cs.func);
 
         return func.apply(query(entityClassForExtractor));
@@ -5826,12 +5753,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <E> the type of exception that may be thrown by the consumer
      * @param consumer the consumer to apply to the {@code Dataset} resulting from the query
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer action throws an exception
      */
     @Beta
-    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> consumer) throws IllegalArgumentException, SQLException, E {
+    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> consumer)
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(query());
@@ -5856,6 +5785,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param entityClassForExtractor the class used to provide metadata for column mapping
      * @param consumer the consumer to apply to the {@code Dataset} resulting from the query
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code consumer} is {@code null}, or if {@code entityClassForExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer action throws an exception
@@ -5863,7 +5793,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super Dataset, E> consumer)
-            throws IllegalArgumentException, SQLException, E {
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(query(entityClassForExtractor));
@@ -7274,6 +7205,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code targetType} or {@code func} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
@@ -7282,7 +7214,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Class<? extends T> targetType, final Throwables.Function<? super List<T>, ? extends R, E> func)
-            throws SQLException, E {
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(targetType, cs.targetType);
         checkArgNotNull(func, cs.func);
 
@@ -7317,13 +7249,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the row mapper to use. Must not be {@code null}.
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
-     * @throws IllegalArgumentException if {@code func} is {@code null}.
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if {@code rowMapper} or {@code func} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      */
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.RowMapper<? extends T> rowMapper,
-            final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
+            final Throwables.Function<? super List<T>, ? extends R, E> func) throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(func, cs.func);
 
         return func.apply(list(rowMapper));
@@ -7358,13 +7291,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the BiRowMapper to use. Must not be {@code null}.
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
-     * @throws IllegalArgumentException if {@code func} is {@code null}.
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if {@code rowMapper} or {@code func} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      */
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.BiRowMapper<? extends T> rowMapper,
-            final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
+            final Throwables.Function<? super List<T>, ? extends R, E> func) throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(func, cs.func);
 
         return func.apply(list(rowMapper));
@@ -7402,6 +7336,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
+     * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code targetType} or {@code consumer} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer throws an exception
@@ -7410,7 +7345,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public <T, E extends Exception> void listThenAccept(final Class<? extends T> targetType, final Throwables.Consumer<? super List<T>, E> consumer)
-            throws SQLException, E {
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(targetType, cs.targetType);
         checkArgNotNull(consumer, cs.consumer);
 
@@ -7437,13 +7372,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param rowMapper the RowMapper to use. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
-     * @throws IllegalArgumentException if {@code consumer} is {@code null}.
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if {@code rowMapper} or {@code consumer} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer throws an exception
      */
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.RowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
-            throws SQLException, E {
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(list(rowMapper));
@@ -7473,13 +7409,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param rowMapper the BiRowMapper to use. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
-     * @throws IllegalArgumentException if {@code consumer} is {@code null}.
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if {@code rowMapper} or {@code consumer} is {@code null}.
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer throws an exception
      */
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.BiRowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
-            throws SQLException, E {
+            throws IllegalStateException, IllegalArgumentException, SQLException, E {
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(list(rowMapper));
@@ -7765,6 +7702,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Dataset
      */
     @Beta
+    @LazyEvaluation
     public Stream<Dataset> streamAllResultSets() {
         return streamAllResultSets(ResultExtractor.TO_DATASET);
     }
@@ -7801,6 +7739,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see ResultExtractor
      */
     @Beta
+    @LazyEvaluation
     @SuppressWarnings("resource")
     public <R> Stream<R> streamAllResultSets(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws IllegalStateException, IllegalArgumentException {
         assertNotClosed();
@@ -7866,6 +7805,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see BiResultExtractor
      */
     @Beta
+    @LazyEvaluation
     @SuppressWarnings("resource")
     public <R> Stream<R> streamAllResultSets(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws IllegalStateException, IllegalArgumentException {
         assertNotClosed();
@@ -8290,6 +8230,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      * @see #count(RowFilter)
      */
+    @Beta
     public int count(final Jdbc.BiRowFilter rowFilter) throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(rowFilter, cs.rowFilter);
@@ -9975,7 +9916,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Asynchronously executes the provided SQL action without returning a result using a custom executor.
      *
-     * <p>This method is similar to {@link #asyncCall(Throwables.Function, Executor)} but allows specification of
+     * <p>This method is similar to {@link #asyncRun(Throwables.Consumer)} but allows specification of
      * a custom executor for the asynchronous operation.</p>
      *
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction

@@ -53,12 +53,12 @@ package com.landawn.abacus.jdbc.dao;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <TD> the companion {@link CrudLDao} type (with {@code Long} primary key) that owns
+ * @param <TD> the companion {@link ReadOnlyCrudLDao} type (with {@code Long} primary key) that owns
  *             this helper, used for fluent method chaining and access to CRUD operations
  * @see ReadOnlyCrudJoinEntityHelper
  * @see CrudLJoinEntityHelper
  * @see CrudLDao
  */
-public interface ReadOnlyCrudLJoinEntityHelper<T, TD extends CrudLDao<T, TD>> extends ReadOnlyCrudJoinEntityHelper<T, Long, TD> {
+public interface ReadOnlyCrudLJoinEntityHelper<T, TD extends ReadOnlyCrudLDao<T, TD>> extends ReadOnlyCrudJoinEntityHelper<T, Long, TD> {
 
 }

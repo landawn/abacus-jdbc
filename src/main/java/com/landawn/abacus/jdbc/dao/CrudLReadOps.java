@@ -57,7 +57,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalBoolean} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code false}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code false}.
@@ -82,7 +82,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalChar} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code (char) 0}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code (char) 0}.
@@ -105,7 +105,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a byte value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalByte} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
@@ -128,7 +128,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalShort} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
@@ -151,7 +151,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalInt} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code 0}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0}.
@@ -174,7 +174,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalLong} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code 0L}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0L}.
@@ -197,7 +197,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a float value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalFloat} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code 0f}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0f}.
@@ -220,7 +220,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link OptionalDouble} only when no record matches the given id. If a matching record's value is SQL {@code null},
      * the returned optional is <i>present</i> and holds the primitive default ({@code 0d}); use
      * {@link #queryForSingleValue(String, long, Class)} to distinguish SQL {@code null} from a real {@code 0d}.
@@ -243,7 +243,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -264,7 +264,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a {@link java.sql.Date} value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -285,7 +285,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a {@link java.sql.Time} value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -306,7 +306,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a {@link java.sql.Timestamp} value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -327,7 +327,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns a {@link Nullable} holding the value, whose contained value may be {@code null} if the database value is {@code null}.
      * This is typically used for BLOB data.
      *
@@ -349,7 +349,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
      *
      * <p><b>Usage Examples:</b></p>
@@ -373,7 +373,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a single non-null value of the specified type from a property of the entity with the specified ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Returns an empty {@link Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -397,7 +397,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a single non-null value using a custom row mapper.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * This allows for complex transformations of the result.
      *
      * <p><b>Usage Examples:</b></p>
@@ -422,7 +422,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a unique single result of the specified type.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p>This method ensures that at most one record matches the query.</p>
@@ -449,7 +449,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a unique non-null result of the specified type.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
      * Returns an empty {@link Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
      *
@@ -475,7 +475,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Queries for a unique non-null result using a custom row mapper.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * to {@link Long} and delegated to the corresponding {@code CrudReadOps} method.
      * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p><b>Usage Examples:</b></p>
@@ -501,7 +501,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Retrieves an entity by its ID.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to {@link CrudDao#get(Object)}.
+     * to {@link Long} and delegated to {@link CrudReadOps#get(Object)}.
      * Returns an {@link Optional} containing the entity if found, otherwise empty.
      *
      * <p><b>Usage Examples:</b></p>
@@ -522,7 +522,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Retrieves an entity by its ID with only the selected properties populated.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to {@link CrudDao#get(Object, Collection)}.
+     * to {@link Long} and delegated to {@link CrudReadOps#get(Object, Collection)}.
      * Properties not in the select list will have their default values.
      *
      * <p><b>Usage Examples:</b></p>
@@ -545,7 +545,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Retrieves an entity by its ID, returning {@code null} if not found.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to {@link CrudDao#gett(Object)}. Unlike {@link #get(long)}, the
+     * to {@link Long} and delegated to {@link CrudReadOps#gett(Object)}. Unlike {@link #get(long)}, the
      * entity is returned directly rather than wrapped in an {@link Optional}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -568,7 +568,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to {@link CrudDao#gett(Object, Collection)}.
+     * to {@link Long} and delegated to {@link CrudReadOps#gett(Object, Collection)}.
      * This is useful for performance optimization when you only need specific fields.
      *
      * <p><b>Usage Examples:</b></p>
@@ -594,7 +594,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
     /**
      * Checks if an entity with the specified ID exists in the database.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to {@link CrudDao#exists(Object)}.
+     * to {@link Long} and delegated to {@link CrudReadOps#exists(Object)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

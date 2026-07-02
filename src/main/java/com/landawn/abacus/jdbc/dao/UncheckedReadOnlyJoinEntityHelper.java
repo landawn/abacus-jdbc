@@ -41,19 +41,19 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
- * User user = userDao.gett(1L);
+ * User user = userDao.findFirst(Filters.eq("id", 1L)).orElseThrow();
  * userDao.loadJoinEntities(user, "orders");   // Loads successfully
  *
  * // userDao.deleteJoinEntities(user, Order.class);   // Does not compile
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedDao}
+ * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedReadOnlyDao}
  *
  * @see UncheckedJoinEntityReadOps
  * @see ReadOnlyJoinEntityHelper
  * @see UncheckedSQLException
  */
-public non-sealed interface UncheckedReadOnlyJoinEntityHelper<T, TD extends UncheckedDao<T, TD>>
+public non-sealed interface UncheckedReadOnlyJoinEntityHelper<T, TD extends UncheckedReadOnlyDao<T, TD>>
         extends UncheckedJoinEntityReadOps<T, TD>, ReadOnlyJoinEntityHelper<T, TD> {
 }

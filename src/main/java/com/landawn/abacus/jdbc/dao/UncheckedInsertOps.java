@@ -102,7 +102,6 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param entitiesToSave the collection of entities to save
      * @throws UncheckedSQLException if a database access error occurs
-     * @see CrudDao#batchInsert(Collection)
      */
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
@@ -122,7 +121,6 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entitiesToSave the collection of entities to save
      * @param batchSize the size of each batch
      * @throws UncheckedSQLException if a database access error occurs
-     * @see CrudDao#batchInsert(Collection)
      */
     @Override
     void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
@@ -139,7 +137,6 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entitiesToSave the collection of entities to save
      * @param propNamesToSave the properties to save for each entity
      * @throws UncheckedSQLException if a database access error occurs
-     * @see CrudDao#batchInsert(Collection)
      */
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException {
@@ -159,7 +156,6 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param propNamesToSave the properties to save for each entity
      * @param batchSize the size of each batch
      * @throws UncheckedSQLException if a database access error occurs
-     * @see CrudDao#batchInsert(Collection)
      */
     @Override
     void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws UncheckedSQLException;
@@ -177,7 +173,6 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param namedInsertSql the named insert SQL statement
      * @param entitiesToSave the collection of entities to save
      * @throws UncheckedSQLException if a database access error occurs
-     * @see CrudDao#batchInsert(Collection)
      */
     @Beta
     @Override
@@ -199,7 +194,6 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entitiesToSave the collection of entities to save
      * @param batchSize the size of each batch
      * @throws UncheckedSQLException if a database access error occurs
-     * @see CrudDao#batchInsert(Collection)
      */
     @Beta
     @Override
