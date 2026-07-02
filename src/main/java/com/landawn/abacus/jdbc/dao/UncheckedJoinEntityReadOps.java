@@ -175,7 +175,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicateResultException if more than one record is found for the specified condition
+     * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
@@ -211,7 +211,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicateResultException if more than one record is found for the specified condition
+     * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
@@ -248,7 +248,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicateResultException if more than one record is found for the specified condition
+     * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

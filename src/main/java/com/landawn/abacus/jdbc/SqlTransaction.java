@@ -49,7 +49,7 @@ import com.landawn.abacus.util.Throwables;
  * underlying JDBC {@code COMMIT}/{@code ROLLBACK} is issued only when the outermost scope completes
  * (the reference count reaches zero). If any inner scope rolls back, the transaction is marked
  * rollback-only and the outermost commit is converted into a rollback. A nested scope may request a
- * different isolation level, which is pushed onto a stack and restored when that scope exits.</p>
+ * different isolation level; the previous level is pushed onto a stack and restored when that scope exits.</p>
  *
  * <p>This class implements {@link AutoCloseable}; {@link #close()} simply delegates to
  * {@link #rollbackIfNotCommitted()}, making it safe to use in a try-with-resources block.</p>
@@ -316,7 +316,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p>If the transaction has been marked for rollback only (status {@link Status#MARKED_ROLLBACK}
      * because an inner scope rolled back), the outermost commit is converted into a rollback
-     * rather than a commit; this method returns normally in that case.</p>
+     * rather than a commit; this method returns normally in that case (or throws
+     * {@link UncheckedSQLException} if that rollback itself fails).</p>
      *
      * <p>When the outermost scope actually commits, the status transitions to
      * {@link Status#COMMITTED} on success or {@link Status#FAILED_COMMIT} on failure. After the
@@ -819,7 +820,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * This is an internal method that creates a transaction identifier composed of the data source's
      * identity hash code, the current thread ID, and the creator's ordinal value, joined by underscores.
      *
-     * @param ds the data source, must not be {@code null}
+     * @param ds the data source; may be {@code null} (as permitted by the constructor when {@code closeConnection} is {@code false}), in which case the identity hash code is {@code 0}
      * @param creator the transaction creator type, must not be {@code null}
      * @return a unique transaction identifier string, never {@code null}
      */
@@ -903,7 +904,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             } finally {
                 if (wasRegistered && _status == Status.ACTIVE && threadTransactionMap.putIfAbsent(_id, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
-                            "Another transaction is opened but not closed in 'Transaction.runOutsideTransaction'."); //NOSONAR
+                            "Another transaction is opened but not closed in 'SqlTransaction.runOutsideTransaction'."); //NOSONAR
 
                     if (throwable != null) {
                         throwable.addSuppressed(ex);
@@ -972,7 +973,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             } finally {
                 if (wasRegistered && _status == Status.ACTIVE && threadTransactionMap.putIfAbsent(_id, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
-                            "Another transaction is opened but not closed in 'Transaction.callOutsideTransaction'."); //NOSONAR
+                            "Another transaction is opened but not closed in 'SqlTransaction.callOutsideTransaction'."); //NOSONAR
 
                     if (throwable != null) {
                         throwable.addSuppressed(ex);

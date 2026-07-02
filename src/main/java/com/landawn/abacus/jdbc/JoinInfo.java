@@ -105,8 +105,8 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * <p><b>Note:</b> this class is annotated {@code @Internal} and is intended for use by the framework rather
- * than directly by application code. Instances are not created via its (package-private) constructor; they are
- * obtained and cached through the static factory methods {@link #getEntityJoinInfo(Class, Class, String)} and
+ * than directly by application code. The constructor is package-private; instances are obtained and cached
+ * through the static factory methods {@link #getEntityJoinInfo(Class, Class, String)} and
  * {@link #getPropJoinInfo(Class, Class, String, String)}.</p>
  *
  * @see JoinedBy
@@ -192,8 +192,8 @@ public final class JoinInfo {
      * @param tableName the database table name for the entity, must not be {@code null}
      * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}
      * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are {@code null} or default;
-     *                                         if {@code false}, an {@code IllegalArgumentException} is thrown later from the parameter setter
-     *                                         when a null or default join value is encountered.
+     *                                         if {@code false}, an {@code IllegalArgumentException} is thrown later from the generated
+     *                                         parameter setters and source-key extractors when a null or default join value is encountered.
      *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class
      * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid;
      *                                   if the referenced entity type is not a valid bean/entity class;
@@ -763,7 +763,7 @@ public final class JoinInfo {
         final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
         }
 
         return tp;
@@ -832,7 +832,7 @@ public final class JoinInfo {
                 .get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
         }
 
         return tp;
@@ -898,7 +898,7 @@ public final class JoinInfo {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
         }
 
         return tp;
@@ -966,7 +966,7 @@ public final class JoinInfo {
                 .get(sbc);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SqlBuilder: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
         }
 
         return tp;

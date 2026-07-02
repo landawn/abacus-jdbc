@@ -1522,7 +1522,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties to select
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs

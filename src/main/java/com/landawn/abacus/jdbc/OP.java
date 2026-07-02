@@ -263,7 +263,7 @@ public enum OP {
      * @Query(value = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters, isProcedure = true)
      * @OutParameter(position = 2, sqlType = Types.INTEGER)
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)
-     * Jdbc.OutParamResult calculateStats(@Bind("input") int input);
+     * Jdbc.OutParamResult calculateStats(int input);
      * }</pre>
      *
      * <p>This operation is primarily used with {@code @Query} annotation to execute the target procedure

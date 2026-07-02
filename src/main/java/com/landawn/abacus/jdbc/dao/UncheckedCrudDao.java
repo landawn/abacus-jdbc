@@ -104,8 +104,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entity the entity to insert or update
      * @return the inserted or updated entity
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      */
     @Override
@@ -288,6 +288,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * 2. Separating entities into insert and update groups
      * 3. Performing batch insert and batch update operations
      *
+     * <p>When both inserts and updates are needed (or either set is larger than {@code batchSize}),
+     * the operation is wrapped in a transaction.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> importedUsers = parseCSVFile();
@@ -303,7 +306,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param uniquePropNamesForQuery the property names that uniquely identify each record
      * @param batchSize the size of each batch
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code batchSize} is not positive or {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, if {@code uniquePropNamesForQuery} is {@code null} or empty,
+     *                                  or if any name in {@code uniquePropNamesForQuery} is not a property of the entity class
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

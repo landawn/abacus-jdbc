@@ -374,7 +374,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *     d.list(Filters.eq("status", "ACTIVE"))
      * );
      *
-     * future.thenAccept(users ->
+     * future.thenRunAsync(users ->
      *     users.forEach(System.out::println)
      * );
      * }</pre>

@@ -191,7 +191,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param targetDataSource the DataSource to obtain database connections
+     * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
@@ -1794,7 +1794,7 @@ public final class DataTransferUtil {
      *
      * @param conn the Connection to the database (will not be closed by this method)
      * @param selectSql the SQL query to execute for retrieving data
-     * @param selectColumnNames collection of column names to include in export (null for all columns)
+     * @param selectColumnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the query result
@@ -1868,7 +1868,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
-     * @param selectColumnNames collection of column names to include in export (null for all columns)
+     * @param selectColumnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the query result
@@ -1945,7 +1945,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
-     * @param selectColumnNames collection of column names to include in export (null for all columns)
+     * @param selectColumnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
@@ -2357,7 +2357,7 @@ public final class DataTransferUtil {
      * @param targetDataSource the data source to which to copy data
      * @param sourceTableName the name of the table in the source data source
      * @param targetTableName the name of the table in the target data source
-     * @param selectColumnNames the collection of column names to copy
+     * @param selectColumnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs or any specified column doesn't exist
      */
@@ -2386,7 +2386,7 @@ public final class DataTransferUtil {
      * @param targetDataSource the data source to which to copy data
      * @param sourceTableName the name of the table in the source data source
      * @param targetTableName the name of the table in the target data source
-     * @param selectColumnNames the collection of column names to copy
+     * @param selectColumnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
@@ -2505,7 +2505,8 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to select data from the source data source
      * @param targetDataSource the data source to which to copy data
      * @param insertSql the SQL query to insert data into the target data source
-     * @param stmtSetter a bi-consumer to set parameters on the prepared statement from the result set
+     * @param stmtSetter a bi-consumer to set parameters on the prepared statement from the result set;
+     *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs
      */
@@ -2552,7 +2553,8 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target data source
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
-     * @param stmtSetter a bi-consumer to set parameters on the prepared statement
+     * @param stmtSetter a bi-consumer to set parameters on the prepared statement;
+     *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
@@ -2720,7 +2722,7 @@ public final class DataTransferUtil {
      * @param targetConn the connection to the target database
      * @param sourceTableName the name of the source table to copy data from
      * @param targetTableName the name of the target table to copy data to
-     * @param selectColumnNames the collection of column names to be copied
+     * @param selectColumnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs or any specified column doesn't exist
      */
@@ -2753,7 +2755,7 @@ public final class DataTransferUtil {
      * @param targetConn the connection to the target database
      * @param sourceTableName the name of the source table to copy data from
      * @param targetTableName the name of the target table to copy data to
-     * @param selectColumnNames the collection of column names to be copied
+     * @param selectColumnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
@@ -2968,7 +2970,8 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to select data from the source database
      * @param targetConn the connection to the target database
      * @param insertSql the SQL query to insert data into the target database
-     * @param stmtSetter the custom statement setter to set the parameters of the prepared statement
+     * @param stmtSetter the custom statement setter to set the parameters of the prepared statement;
+     *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs
      */
@@ -3018,7 +3021,8 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target database
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
-     * @param stmtSetter the custom statement setter to set the parameters of the prepared statement
+     * @param stmtSetter the custom statement setter to set the parameters of the prepared statement;
+     *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
@@ -3209,7 +3213,7 @@ public final class DataTransferUtil {
      * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * List<String> cols = Arrays.asList("name", "age");
      *
-     * // Equivalent to importData(dataset, cols, filter, dataSource, insertSql, 1000, 0)
+     * // Equivalent to importData(dataset, cols, filter, conn, insertSql, 1000, 0) run on a connection from dataSource
      * int rowsImported = DataTransferUtil.importFrom(dataset)
      *         .selectColumns(cols)
      *         .filter(row -> ((Integer) row[1]) >= 18)
@@ -3219,6 +3223,7 @@ public final class DataTransferUtil {
      *
      * @param dataset the Dataset whose data will be imported (must not be {@code null})
      * @return a {@link DatasetImportBuilder} for configuring and running the import
+     * @throws IllegalArgumentException if {@code dataset} is {@code null}
      * @see DatasetImportBuilder
      * @see #importData(Dataset, javax.sql.DataSource, String)
      */
@@ -3435,6 +3440,7 @@ public final class DataTransferUtil {
      * @param <T> the iterator element type
      * @param iter the iterator whose elements will be imported (must not be {@code null})
      * @return a {@link RowImportBuilder} over the iterator's elements
+     * @throws IllegalArgumentException if {@code iter} is {@code null}
      * @see #importData(Iterator, java.sql.PreparedStatement, int, long, Throwables.BiConsumer)
      */
     @Beta
@@ -3463,6 +3469,7 @@ public final class DataTransferUtil {
      *
      * @param file the CSV file to import (must not be {@code null})
      * @return a {@link RowImportBuilder} over the CSV rows ({@code String[]} per row)
+     * @throws IllegalArgumentException if {@code file} is {@code null}
      * @see #importCsvFrom(Reader)
      */
     @Beta
@@ -3480,6 +3487,7 @@ public final class DataTransferUtil {
      *
      * @param reader the reader supplying CSV data (must not be {@code null}); not closed by this builder
      * @return a {@link RowImportBuilder} over the CSV rows ({@code String[]} per row)
+     * @throws IllegalArgumentException if {@code reader} is {@code null}
      * @see #importCsvFrom(File)
      */
     @Beta
@@ -3694,6 +3702,7 @@ public final class DataTransferUtil {
      * @param sourceDataSource the DataSource to obtain a connection from (must not be {@code null})
      * @param selectSql the SQL query to execute (must not be {@code null})
      * @return a {@link CsvExportBuilder}
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code selectSql} is {@code null}
      * @see #exportCsv(Connection, String)
      */
     @Beta
@@ -3711,6 +3720,7 @@ public final class DataTransferUtil {
      * @param conn the Connection to run the query against (must not be {@code null}; not closed by the builder)
      * @param selectSql the SQL query to execute (must not be {@code null})
      * @return a {@link CsvExportBuilder}
+     * @throws IllegalArgumentException if {@code conn} or {@code selectSql} is {@code null}
      * @see #exportCsv(javax.sql.DataSource, String)
      */
     @Beta
@@ -3728,6 +3738,7 @@ public final class DataTransferUtil {
      *
      * @param stmt the PreparedStatement to execute (must not be {@code null}; not closed by the builder)
      * @return a {@link CsvExportBuilder}
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}
      */
     @Beta
     public static CsvExportBuilder exportCsv(final PreparedStatement stmt) {
@@ -3742,6 +3753,7 @@ public final class DataTransferUtil {
      *
      * @param rs the ResultSet to export (must not be {@code null}; not closed by the builder)
      * @return a {@link CsvExportBuilder}
+     * @throws IllegalArgumentException if {@code rs} is {@code null}
      */
     @Beta
     public static CsvExportBuilder exportCsv(final ResultSet rs) {
@@ -3800,7 +3812,7 @@ public final class DataTransferUtil {
          *
          * @param output the file to write to
          * @return the number of rows exported
-         * @throws IllegalArgumentException if a configured column name is not present in the query result
+         * @throws IllegalArgumentException if {@code output} is {@code null} or a configured column name is not present in the query result
          * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection,
          *         PreparedStatement or ResultSet) configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
@@ -3817,7 +3829,7 @@ public final class DataTransferUtil {
          *
          * @param output the writer to write to
          * @return the number of rows exported
-         * @throws IllegalArgumentException if a configured column name is not present in the query result
+         * @throws IllegalArgumentException if {@code output} is {@code null} or a configured column name is not present in the query result
          * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection,
          *         PreparedStatement or ResultSet) configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
@@ -3916,8 +3928,9 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceDataSource the data source to read from (must not be {@code null})
-     * @param selectSql the SQL query selecting the rows to copy
+     * @param selectSql the SQL query selecting the rows to copy (must not be {@code null})
      * @return a {@link CopyFromDataSource} for configuring and running the copy
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code selectSql} is {@code null}
      * @see CopyFromDataSource
      * @see #copy(javax.sql.DataSource, String, javax.sql.DataSource, String)
      */
@@ -3942,8 +3955,9 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceConn the connection to read from (must not be {@code null})
-     * @param selectSql the SQL query selecting the rows to copy
+     * @param selectSql the SQL query selecting the rows to copy (must not be {@code null})
      * @return a {@link CopyFromConnection} for configuring and running the copy
+     * @throws IllegalArgumentException if {@code sourceConn} or {@code selectSql} is {@code null}
      * @see CopyFromConnection
      * @see #copy(Connection, String, Connection, String)
      */
@@ -3972,6 +3986,7 @@ public final class DataTransferUtil {
      *
      * @param selectStmt the statement that produces the rows to copy (must not be {@code null}; not closed by the copy)
      * @return a {@link CopyFromStatement} for configuring and running the copy
+     * @throws IllegalArgumentException if {@code selectStmt} is {@code null}
      * @see CopyFromStatement
      * @see #copy(PreparedStatement, PreparedStatement, int, long, Throwables.BiConsumer)
      */
@@ -4002,8 +4017,9 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceDataSource the data source to read from (must not be {@code null})
-     * @param sourceTableName the name of the source table
+     * @param sourceTableName the name of the source table (must not be blank)
      * @return a {@link CopyTableFromDataSource} for configuring and running the copy
+     * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null} or {@code sourceTableName} is blank
      * @see CopyTableFromDataSource
      * @see #copy(javax.sql.DataSource, javax.sql.DataSource, String, String)
      */
@@ -4027,8 +4043,9 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceConn the connection to read from (must not be {@code null})
-     * @param sourceTableName the name of the source table
+     * @param sourceTableName the name of the source table (must not be blank)
      * @return a {@link CopyTableFromConnection} for configuring and running the copy
+     * @throws IllegalArgumentException if {@code sourceConn} is {@code null} or {@code sourceTableName} is blank
      * @see CopyTableFromConnection
      * @see #copy(Connection, Connection, String, String)
      */

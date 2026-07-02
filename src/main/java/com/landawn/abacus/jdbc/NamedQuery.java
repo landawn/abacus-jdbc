@@ -3938,7 +3938,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameters an object containing the parameters (bean, map, collection, array, or single value)
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameters} is {@code null}, is of an unsupported type, or is a
-     *         bean that lacks a property matching one of the named parameters in the SQL
+     *         bean that lacks a property matching one of the named parameters in the SQL (except the reserved
+     *         system date/time parameter names {@code now}, {@code sysTime} and {@code sysDate}, which are
+     *         skipped and left unbound when no matching property exists — bind them separately)
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#namedParameters(String)
      */
@@ -4190,7 +4192,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param batchParameters a collection of parameter objects for batch processing
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if batchParameters is {@code null} or contains invalid parameter objects
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null} or contains invalid parameter objects
      * @throws SQLException if a database access error occurs
      * @see #setParameters(Object)
      * @see #addBatch()
@@ -4225,6 +4227,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Note that when the <i>first</i> element is {@code null}, no type-based classification is possible:
      * every remaining element is then bound as a plain single value (bean/Map/Collection/array
      * interpretation is skipped), which also requires the SQL to have exactly one named parameter.
+     * For bean elements, a named parameter without a matching property is only tolerated for the reserved
+     * system date/time names ({@code now}, {@code sysTime}, {@code sysDate}) — such parameters keep whatever
+     * value was previously bound (or stay unbound); any other missing property causes an
+     * {@link IllegalArgumentException}.
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *
@@ -4250,7 +4256,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param batchParameters an iterator providing parameter objects for batch processing
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if batchParameters is {@code null} or contains invalid parameter objects
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null} or contains invalid parameter objects
      * @throws SQLException if a database access error occurs
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)

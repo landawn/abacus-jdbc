@@ -420,7 +420,10 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the mapped non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@code Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -501,7 +504,10 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
-     * @return an {@code Optional} containing the mapped unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@code Optional} containing the mapped unique value if a record matches the {@code id}, otherwise empty
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
+     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */

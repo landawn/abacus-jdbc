@@ -310,10 +310,10 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * CallableQuery query = dao.prepareCallableQuery("{call get_user_count(?)}");
-     * query.registerOutParameter(1, Types.INTEGER);
-     * query.execute();
-     * int count = query.getInt(1);
+     * Jdbc.OutParamResult outParams = dao.prepareCallableQuery("{call get_user_count(?)}")
+     *                                    .registerOutParameter(1, Types.INTEGER)
+     *                                    .executeAndGetOutParameters();
+     * int count = outParams.getOutParamValue(1);
      * }</pre>
      *
      * @param sql the stored procedure call string
@@ -356,8 +356,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws SQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches
      * @see #upsert(Object, Condition)
      */
@@ -391,8 +391,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param entity the entity to insert or update
      * @param cond condition to check for existence
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws SQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the specified condition
      */
     default T upsert(final T entity, final Condition cond) throws SQLException {

@@ -2180,7 +2180,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param register the {@link Jdbc.ParametersSetter} that will register the OUT parameters.
      *                 Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if register is null
+     * @throws IllegalArgumentException if {@code register} is {@code null}
      * @throws SQLException if a database access error occurs during parameter registration
      */
     public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> register) throws IllegalArgumentException, SQLException {
@@ -2213,11 +2213,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * class ReportConfig {
-     *     boolean includeTotal;
-     *     boolean includeAvg;
-     *     // getters/setters...
+     * record ReportConfig(boolean includeTotal, boolean includeAvg) {
      * }
+     *
      * ReportConfig config = new ReportConfig(true, false);
      *
      * query.registerOutParameters(config, (q, cfg) -> {
@@ -2541,7 +2539,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *               3. Boolean indicating if the first result is a ResultSet
      * @return the result of applying the tri-function
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if func is null
+     * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see Jdbc.OutParam
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -2664,7 +2662,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 2. List of registered OUT parameters (never {@code null}; empty if none were registered)
      *                 3. Boolean indicating if the first result is a ResultSet
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if consumer is null
+     * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if a database access error occurs or the consumer throws an exception
      * @see Jdbc.OutParam
      */
@@ -2796,7 +2794,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element).
      *         The first element may be {@code null} if no result set is returned.
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if resultExtractor is null
+     * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see Jdbc.ResultExtractor
      */
@@ -2850,7 +2848,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element).
      *         The first element may be {@code null} if no result set is returned.
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if resultExtractor is null
+     * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see Jdbc.BiResultExtractor
      */
@@ -2940,7 +2938,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                        Must not save or return the ResultSet itself.
      * @return a {@link Tuple2} containing a list of extracted results and OUT parameters
      * @throws IllegalStateException if this CallableQuery is closed
-     * @throws IllegalArgumentException if resultExtractor is null
+     * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see Jdbc.ResultExtractor
      */

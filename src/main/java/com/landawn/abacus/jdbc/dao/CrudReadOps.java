@@ -816,8 +816,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param entity the entity to refresh (must not be {@code null} and must have its ID populated)
      * @return {@code true} if the matching database row was found and {@code entity} was updated;
      *         {@code false} if no matching row exists
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default boolean refresh(final T entity) throws SQLException {
@@ -846,8 +846,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param propNamesToRefresh the properties to refresh from the database (must not be {@code null} or empty)
      * @return {@code true} if the matching database row was found and {@code entity} was updated;
      *         {@code false} if no matching row exists
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
@@ -945,8 +945,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param propNamesToRefresh the properties to refresh from the database (must not be {@code null} or empty)
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws SQLException {
@@ -972,8 +972,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null}/empty or {@code batchSize} is not positive
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {

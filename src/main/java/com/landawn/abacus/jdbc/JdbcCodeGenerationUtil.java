@@ -533,7 +533,7 @@ public final class JdbcCodeGenerationUtil {
 
                 if (!Strings.isValidJavaIdentifier(fieldName)) {
                     logger.warn(
-                            "Generated field name '{}' for column '{}' is not a valid Java identifier (reserved word or starts with a non-letter) — the generated entity class will not compile. Override via EntityCodeConfig.fieldNameConverter or customizedFields.",
+                            "Generated field name '{}' for column '{}' is not a valid Java identifier (e.g., a Java keyword, starts with a digit, or contains unsupported characters) — the generated entity class will not compile. Override via EntityCodeConfig.fieldNameConverter or customizedFields.",
                             fieldName, columnName);
                 }
 

@@ -106,8 +106,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *
      * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (either newly inserted or updated)
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws SQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      */
     default T upsert(final T entity) throws SQLException {
@@ -136,8 +136,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param cond the condition used to look up an existing record (must not be {@code null})
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
      *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws SQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @see Filters
      */
@@ -202,8 +202,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws SQLException if a database access error occurs
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -234,8 +234,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity (must not be empty)
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws SQLException if a database access error occurs
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws SQLException {
         return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -264,10 +264,10 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code uniquePropNamesForQuery} is not a property of the entity class
+     * @throws SQLException if a database access error occurs
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);

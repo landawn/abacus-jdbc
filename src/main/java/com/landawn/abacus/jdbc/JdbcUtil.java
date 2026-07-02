@@ -899,7 +899,7 @@ public final class JdbcUtil {
             // jdbc:hsqldb:hsql://localhost/abacustest
         } else if (Strings.indexOfIgnoreCase(url, ":hsqldb:") >= 0) {
             driverClass = ClassUtil.forName("org.hsqldb.jdbc.JDBCDriver");
-            // jdbc:h2:hsql://<host>:<port>/<database>
+            // jdbc:h2:tcp://<host>:<port>/<database>
         } else if (Strings.indexOfIgnoreCase(url, ":h2:") >= 0) {
             driverClass = ClassUtil.forName("org.h2.Driver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
@@ -1867,8 +1867,8 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use.
      * @param tableName The name of the table for which to retrieve column names.
      * @return A {@link List} of column names in the order they are defined in the table.
-     * @throws SQLException if a database access error occurs or the table does not exist.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
+     * @throws SQLException if a database access error occurs or the table does not exist.
      * @see #getColumnLabels(ResultSet)
      */
     public static List<String> getColumnNames(final Connection conn, final String tableName) throws SQLException {
@@ -2551,8 +2551,8 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to retrieve values from. It will be iterated to the end.
      * @param columnLabel The label of the column to retrieve.
      * @return A {@link List} containing all values from the specified column.
-     * @throws SQLException if a database access error occurs.
      * @throws IllegalArgumentException if the column label does not exist in the result set.
+     * @throws SQLException if a database access error occurs.
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
@@ -3952,7 +3952,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL, or returnColumnIndexes is {@code null} or empty
+     * @throws IllegalArgumentException if the DataSource, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4012,7 +4012,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL, or returnColumnNames is {@code null} or empty
+     * @throws IllegalArgumentException if the DataSource, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4069,7 +4069,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource or named SQL is {@code null}, or if {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if the DataSource or named SQL is {@code null} or invalid, or if {@code stmtCreator} is {@code null}
      * @throws SQLException if a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4194,7 +4194,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL, or returnColumnIndexes is {@code null} or empty
+     * @throws IllegalArgumentException if the Connection, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] returnColumnIndexes)
@@ -4230,7 +4230,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL, or returnColumnNames is {@code null} or empty
+     * @throws IllegalArgumentException if the Connection, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames)
@@ -4266,7 +4266,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection or named SQL is {@code null}, or if {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if the Connection or named SQL is {@code null} or invalid, or if {@code stmtCreator} is {@code null}
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
@@ -4743,6 +4743,7 @@ public final class JdbcUtil {
      * @param sql the SQL statement, which may contain positional or named parameters
      * @param parameters the parameter values to set on the prepared statement
      * @return a PreparedStatement with parameters set, ready for execution
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static PreparedStatement prepareStmt(final Connection conn, final String sql, final Object... parameters) throws SQLException {
@@ -4772,6 +4773,7 @@ public final class JdbcUtil {
      * @param sql the SQL call statement, which may contain positional or named parameters
      * @param parameters the parameter values to set on the callable statement
      * @return a CallableStatement with parameters set, ready for execution
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static CallableStatement prepareCall(final Connection conn, final String sql, final Object... parameters) throws SQLException {
@@ -4802,6 +4804,7 @@ public final class JdbcUtil {
      * @param sql the SQL statement, which may contain positional or named parameters
      * @param parametersList a list where each element contains parameter values for one batch operation
      * @return a PreparedStatement with all batches added, ready for batch execution via executeBatch()
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static PreparedStatement prepareBatchStmt(final Connection conn, final String sql, final List<?> parametersList) throws SQLException {
@@ -4833,6 +4836,7 @@ public final class JdbcUtil {
      * @param sql the SQL call statement, which may contain positional or named parameters
      * @param parametersList a list where each element contains parameter values for one batch operation
      * @return a CallableStatement with all batches added, ready for batch execution via executeBatch()
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static CallableStatement prepareBatchCall(final Connection conn, final String sql, final List<?> parametersList) throws SQLException {
@@ -4938,7 +4942,7 @@ public final class JdbcUtil {
      *     "SELECT id, name, email FROM users ORDER BY created_at DESC");
      *
      * // Working with column names
-     * List<String> columnNames = allUsers.columnNameList();
+     * List<String> columnNames = allUsers.columnNames();
      * columnNames.forEach(System.out::println);
      * }</pre>
      *
@@ -5485,7 +5489,8 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
-     * @return The number of rows affected by the batch update as a long value
+     * @return The total number of rows affected by the batch update across all batches, as a long value
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
@@ -5548,7 +5553,8 @@ public final class JdbcUtil {
      * @param conn The Connection to use for the batch update
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
-     * @return The number of rows affected by the batch update as a long value
+     * @return The total number of rows affected by the batch update across all batches, as a long value
+     *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
      * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
@@ -6406,8 +6412,8 @@ public final class JdbcUtil {
      *               returns {@code true} will be included. Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction
      * @return A Dataset containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
      * @throws IllegalArgumentException if any argument is invalid (null or negative values)
+     * @throws SQLException if a SQL exception occurs while extracting data
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
@@ -6438,8 +6444,8 @@ public final class JdbcUtil {
      *                     Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction
      * @return A Dataset containing the extracted and transformed data
-     * @throws SQLException if a SQL exception occurs while extracting data
      * @throws IllegalArgumentException if any argument is invalid (null or negative values)
+     * @throws SQLException if a SQL exception occurs while extracting data
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
@@ -6478,8 +6484,8 @@ public final class JdbcUtil {
      *                     Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction completes (or if an error occurs)
      * @return A Dataset containing the filtered and transformed data
-     * @throws SQLException if a SQL exception occurs while extracting data
      * @throws IllegalArgumentException if any argument is invalid (null or negative values)
+     * @throws SQLException if a SQL exception occurs while extracting data
      * @see RowFilter
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
@@ -6982,10 +6988,16 @@ public final class JdbcUtil {
      *     }
      *     return false;
      * };
-     * BiRowMapper<String> csvMapper = (rs, columnLabels) ->
-     *     columnLabels.stream()
-     *         .map(label -> rs.getString(label))
-     *         .collect(Collectors.joining(","));
+     * BiRowMapper<String> csvMapper = (rs, columnLabels) -> {
+     *     StringBuilder sb = new StringBuilder();
+     *     for (String label : columnLabels) {
+     *         if (sb.length() > 0) {
+     *             sb.append(',');
+     *         }
+     *         sb.append(rs.getString(label));
+     *     }
+     *     return sb.toString();
+     * };
      *
      * JdbcUtil.stream(resultSet, hasNonNullValues, csvMapper)
      *     .onClose(Fn.closeQuietly(resultSet))
@@ -8905,7 +8917,7 @@ public final class JdbcUtil {
      *     () -> JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET processed = ?", true)
      * );
      *
-     * ContinuableFuture.allOf(futures._1, futures._2).thenRunAsync(() ->
+     * Futures.allOf(futures._1, futures._2).thenRunAsync(() ->
      *     System.out.println("Both updates completed")
      * );
      * }</pre>
@@ -8938,7 +8950,7 @@ public final class JdbcUtil {
      *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE inventory SET updated = ?", new Date())
      *     );
      *
-     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRunAsync(() ->
+     * Futures.allOf(futures._1, futures._2, futures._3).thenRunAsync(() ->
      *     System.out.println("All updates completed")
      * );
      * }</pre>
@@ -9064,7 +9076,7 @@ public final class JdbcUtil {
      *     return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findFirst(User.class).orElse(null);
      * });
      *
-     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
+     * future.thenRunAsync(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
      * }</pre>
      *
      * @param <R> The type of the result
@@ -9091,8 +9103,8 @@ public final class JdbcUtil {
      *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE age > ?").setInt(1, 18).list(String.class)
      * );
      *
-     * futures._1.thenAccept(name -> System.out.println("User name: " + name));
-     * futures._2.thenAccept(results -> System.out.println("Found " + results.size() + " emails"));
+     * futures._1.thenRunAsync(name -> System.out.println("User name: " + name));
+     * futures._2.thenRunAsync(results -> System.out.println("Found " + results.size() + " emails"));
      * }</pre>
      *
      * @param <R1> The type of the result from the first action
@@ -9125,7 +9137,7 @@ public final class JdbcUtil {
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM products WHERE stock < ?").setInt(1, 10).list(Product.class)
      *     );
      *
-     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRunAsync(() -> {
+     * Futures.allOf(futures._1, futures._2, futures._3).thenRunAsync(() -> {
      *     System.out.println("All queries completed");
      * });
      * }</pre>
@@ -9160,7 +9172,7 @@ public final class JdbcUtil {
      *     param -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, param).findFirst(User.class).orElse(null)
      * );
      *
-     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
+     * future.thenRunAsync(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
      * }</pre>
      *
      * @param <T> The type of the parameter
@@ -9190,7 +9202,7 @@ public final class JdbcUtil {
      *                          .setLong(1, uid).setString(2, st).list(Order.class)
      * );
      *
-     * future.thenAccept(orders -> System.out.println("Found " + orders.size() + " orders"));
+     * future.thenRunAsync(orders -> System.out.println("Found " + orders.size() + " orders"));
      * }</pre>
      *
      * @param <T> The type of the first parameter
@@ -9224,7 +9236,7 @@ public final class JdbcUtil {
      *         .queryForSingleValue(BigDecimal.class).orElse(BigDecimal.ZERO)
      * );
      *
-     * future.thenAccept(total -> System.out.println("Total sales: " + total));
+     * future.thenRunAsync(total -> System.out.println("Total sales: " + total));
      * }</pre>
      *
      * @param <A> The type of the first parameter
@@ -10370,7 +10382,7 @@ public final class JdbcUtil {
      *     // Execute operations within the existing transaction
      * } else {
      *     // Start a new transaction
-     *     SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+     *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      *     // ...
      * }
      * }</pre>
@@ -10427,7 +10439,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Basic transaction usage
-     * SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     JdbcUtil.executeUpdate(dataSource,
      *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)",
@@ -10443,7 +10455,7 @@ public final class JdbcUtil {
      * }
      *
      * // Transaction with conditional rollback
-     * SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     int updatedRows = JdbcUtil.executeUpdate(dataSource,
      *         "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
@@ -10468,7 +10480,7 @@ public final class JdbcUtil {
      *
      * // Transaction shared across method calls
      * public void processOrder(Order order) {
-     *     SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+     *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      *     try {
      *         createOrder(order);   // Shares this transaction
      *         updateInventory(order);   // Shares this transaction
@@ -10507,7 +10519,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
      * try {
      *     // Perform database operations with READ_COMMITTED isolation
      *     JdbcUtil.executeUpdate(dataSource,
@@ -10638,10 +10650,11 @@ public final class JdbcUtil {
      *         "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
      *         quantity, productId);
      *     return JdbcUtil.prepareQuery(dataSource,
-     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)")
+     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)", true)   // true: return generated keys
      *         .setLong(1, customerId)
      *         .setBigDecimal(2, total)
-     *         .insert();
+     *         .<Long> insert()
+     *         .orElse(0L);
      * });
      *
      * // Nested call — participates in the outer transaction
@@ -11770,7 +11783,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Use a custom cache implementation
-     * Map<String, Object> cacheMap = new LRUMap<>(1000);
+     * Map<String, Object> cacheMap = new ConcurrentHashMap<>();
      * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
      *
      * JdbcUtil.openDaoCacheOnCurrentThread(cache);
@@ -11868,12 +11881,12 @@ public final class JdbcUtil {
      *
      * <p><b>Key Features of Generated DAOs:</b></p>
      * <ul>
-     *   <li>Automatic CRUD operations (save, update, delete, findById, list, etc.)</li>
+     *   <li>Automatic CRUD operations (save, update, deleteById, get/gett, list, etc.)</li>
      *   <li>Custom query methods defined by annotations or external SQL files</li>
      *   <li>Batch operation support for high-throughput processing</li>
      *   <li>Transaction-aware operations that participate in active transactions</li>
      *   <li>Type-safe parameter binding and result mapping</li>
-     *   <li>Asynchronous operation support with CompletableFuture return types</li>
+     *   <li>Asynchronous operation support via the inherited {@code asyncRun}/{@code asyncCall} methods (returning {@link ContinuableFuture})</li>
      *   <li>Stream-based result processing for large datasets</li>
      * </ul>
      *
@@ -11887,8 +11900,8 @@ public final class JdbcUtil {
      *     // - gett(Long id)
      *     // - update(User user)
      *     // - deleteById(Long id)
-     *     // - list()
-     *     // - findFirst(Condition where)
+     *     // - list(Condition cond)
+     *     // - findFirst(Condition cond)
      *
      *     // Custom query methods
      *     @Query("SELECT * FROM users WHERE email = ?")
@@ -11950,10 +11963,6 @@ public final class JdbcUtil {
      *     // Complex joins (SQL defined externally in SQL mapper file)
      *     @Query(id = "findOrdersWithCustomerDetails")
      *     List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start);
-     *
-     *     // Async operations
-     *     @Query("SELECT * FROM orders WHERE id = ?")
-     *     CompletableFuture<Optional<Order>> findByIdAsync(Long id);
      * }
      *
      * OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource);
@@ -11961,9 +11970,9 @@ public final class JdbcUtil {
      * // Use aggregate queries
      * long pendingCount = orderDao.countByStatus("PENDING");
      *
-     * // Async operations
-     * CompletableFuture<Optional<Order>> future = orderDao.findByIdAsync(orderId);
-     * future.thenAccept(order -> {
+     * // Async operations (inherited from the DAO root interface)
+     * ContinuableFuture<Optional<Order>> future = orderDao.asyncCall(dao -> dao.get(orderId));
+     * future.thenRunAsync(order -> {
      *     order.ifPresent(o -> System.out.println("Order: " + o.getId()));
      * });
      * }</pre>

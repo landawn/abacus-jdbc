@@ -191,7 +191,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     //        /**
-    //         * It's designed to void try-catch.
+    //         * It's designed to avoid try-catch.
     //         * This method should be called immediately after {@code JdbcUtil#prepareCallableQuery/SqlExecutor#prepareQuery}.
     //         *
     //         * @return
@@ -2429,7 +2429,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @param param2
     //     * @return
     //     * @throws SQLException
-    //     * @deprecated to void error: java ambiguous method call with other {@code setParameters} methods
+    //     * @deprecated to avoid error: java ambiguous method call with other {@code setParameters} methods
     //     */
     //    @Deprecated
     //    public This setParameters(final Object param1, final Object param2) throws SQLException {
@@ -6566,6 +6566,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class of the type to map the rows to
      * @param maxResult the maximum number of results to return
      * @return A list of objects of the specified type, limited by maxResult
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if targetType is {@code null}, or maxResult is negative
      * @throws SQLException if a database access error occurs
      * @deprecated The result size should be limited on the database server side by SQL scripts (e.g., LIMIT clause).
      *             Use SQL's LIMIT/TOP/ROWNUM instead for better performance.
@@ -6631,6 +6633,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the row mapper to map each row to an object
      * @param maxResult the maximum number of results to return
      * @return A list of mapped objects, limited by maxResult
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if rowMapper is {@code null}, or maxResult is negative
      * @throws SQLException if a database access error occurs
      * @deprecated The result size should be limited on the database server side by SQL scripts (e.g., LIMIT clause).
      *             Use SQL's LIMIT/TOP/ROWNUM instead for better performance.
@@ -6710,7 +6714,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-        checkArg(maxResult >= 0, "'maxResult' can't be negative:" + maxResult);
+        checkArg(maxResult >= 0, "'maxResult' can't be negative: " + maxResult);
 
         try (ResultSet rs = executeQuery()) {
             final List<T> result = new ArrayList<>();
@@ -6786,6 +6790,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the BiRowMapper to map each row
      * @param maxResult the maximum number of results to return
      * @return A list of mapped objects, limited by maxResult
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if rowMapper is {@code null}, or maxResult is negative
      * @throws SQLException if a database access error occurs
      * @deprecated The result size should be limited on the database server side by SQL scripts (e.g., LIMIT clause).
      *             Use SQL's LIMIT/TOP/ROWNUM instead for better performance.
@@ -6868,7 +6874,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-        checkArg(maxResult >= 0, "'maxResult' can't be negative:" + maxResult);
+        checkArg(maxResult >= 0, "'maxResult' can't be negative: " + maxResult);
 
         try (ResultSet rs = executeQuery()) {
             final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
@@ -8864,7 +8870,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <ID> the expected type of the auto-generated key (the default extractor returns a numeric key)
+     * @param <ID> the expected type of the auto-generated key (the default extractor returns the value of the first generated-key column, typically numeric)
      * @return An Optional containing the generated key if available, otherwise empty
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -9025,7 +9031,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .batchInsert();
      * }</pre>
      *
-     * @param <ID> the expected type of the auto-generated key (the default extractor returns a numeric key)
+     * @param <ID> the expected type of the auto-generated key (the default extractor returns the value of the first generated-key column, typically numeric)
      * @return A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated,
      *         or if every generated key is a default/invalid value.
      * @throws IllegalStateException if this query is closed
@@ -9540,11 +9546,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * if (hasResultSet) {
      *     // First result is a ResultSet
-     *     // Use getResultSet() to retrieve it
      * } else {
-     *     // First result is an update count
-     *     // Use getUpdateCount() to retrieve it
+     *     // First result is an update count (or there are no results)
      * }
+     *
+     * // Note: the statement is closed when execute() returns (by default), so the
+     * // results themselves are no longer retrievable here. To consume the results,
+     * // use executeThenApply(...) or executeThenAccept(...) instead.
      * }</pre>
      *
      * <p><b>Note:</b> The underlying statement will be closed after execution unless
@@ -10079,7 +10087,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>This method is called internally by {@link #close()} to perform the actual statement
      * cleanup. Before closing the statement, it restores the original values (captured the
-     * first time each property was changed via this query's fluent setters) of:</p>
+     * first time each property was changed via this query's fluent setters — or, for the fetch
+     * direction, when {@link #executeQuery()} applied the implicit {@code FETCH_FORWARD}
+     * default) of:</p>
      * <ul>
      *   <li>fetch direction</li>
      *   <li>fetch size</li>

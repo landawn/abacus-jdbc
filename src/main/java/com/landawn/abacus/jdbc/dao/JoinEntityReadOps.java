@@ -530,7 +530,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * // All users now have their orders loaded
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -708,7 +709,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to load
+     * @param joinEntityPropNames the property names of the join entities to load.
+     *                            If {@code null} or empty, this method returns immediately
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
@@ -789,8 +791,10 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * userDao.loadJoinEntities(users, Arrays.asList("orders", "subscriptions"));
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to load
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropNames the property names of the join entities to load.
+     *                            If {@code null} or empty, this method returns immediately
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
@@ -987,7 +991,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * userDao.loadAllJoinEntities(users, batchExecutor);
      * }</pre>
      *
-     * @param entities the collection of entities for which to load all join entities
+     * @param entities the collection of entities for which to load all join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
@@ -1199,7 +1204,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * userDao.loadJoinEntitiesIfAbsent(users, "subscriptions", Arrays.asList("planType", "expiryDate"));
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityPropName the property name of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -1238,7 +1244,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to load
+     * @param joinEntityPropNames the property names of the join entities to load.
+     *                            If {@code null} or empty, this method returns immediately
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
@@ -1321,8 +1328,10 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * userDao.loadJoinEntitiesIfAbsent(users, Arrays.asList("orders", "addresses"));
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to load
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropNames the property names of the join entities to load.
+     *                            If {@code null} or empty, this method returns immediately
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */

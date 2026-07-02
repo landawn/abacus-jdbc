@@ -46,7 +46,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 /**
  * Unchecked-exception read capability: the {@link ReadOps} operations re-declared to throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of {@link java.sql.SQLException}.
- * 
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
  * @see ReadOps
@@ -101,7 +101,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * }</pre>
      *
      * @param cond the condition to match
-     * @return the count of matching records
+     * @return the number of matching records, or {@code 0} if none match
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -837,7 +837,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * }</pre>
      *
      * @param cond the condition to match
-     * @return a Dataset containing all matching records
+     * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
+     *         returned when no record matches)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -856,7 +857,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
-     * @return a Dataset containing the selected properties of matching records
+     * @return a {@code Dataset} containing the selected properties of matching records; never {@code null}
+     *         (an empty {@code Dataset} is returned when no record matches)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -881,8 +883,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *
      * @param <R> the result type
      * @param cond the condition to match
-     * @param resultExtractor the function to extract results from the ResultSet
-     * @return the extracted result
+     * @param resultExtractor the function to extract results from the ResultSet; it is responsible for iterating the
+     *                        {@code ResultSet} and must not save or hold a reference to it after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -909,8 +912,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param <R> the result type
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
-     * @param resultExtractor the function to extract results from the ResultSet
-     * @return the extracted result
+     * @param resultExtractor the function to extract results from the ResultSet; it is responsible for iterating the
+     *                        {@code ResultSet} and must not save or hold a reference to it after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -940,8 +944,10 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *
      * @param <R> the result type
      * @param cond the condition to match
-     * @param resultExtractor the function to extract results with column labels
-     * @return the extracted result
+     * @param resultExtractor the function to extract results with column labels; it receives the {@code ResultSet}
+     *                        and the list of column labels, and must not save or hold a reference to the
+     *                        {@code ResultSet} after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -970,8 +976,10 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param <R> the result type
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
-     * @param resultExtractor the function to extract results with column labels
-     * @return the extracted result
+     * @param resultExtractor the function to extract results with column labels; it receives the {@code ResultSet}
+     *                        and the list of column labels, and must not save or hold a reference to the
+     *                        {@code ResultSet} after returning
+     * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -987,7 +995,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * }</pre>
      *
      * @param cond the condition to match
-     * @return a list of matching entities
+     * @return a list of matching entities, or an empty list if none match
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1007,7 +1015,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param <R> the result type
      * @param cond the condition to match
      * @param rowMapper the function to map each result set row
-     * @return a list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1027,7 +1035,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param <R> the result type
      * @param cond the condition to match
      * @param rowMapper the function to map each result set row with column labels
-     * @return a list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1050,7 +1058,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowFilter the predicate to filter rows before mapping
      * @param rowMapper the function to map filtered result set rows
-     * @return a list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1072,7 +1080,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowFilter the bi-predicate to filter rows with column labels
      * @param rowMapper the function to map filtered rows with column labels
-     * @return a list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1091,7 +1099,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
-     * @return a list of entities with selected properties
+     * @return a list of entities with selected properties, or an empty list if no record matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1113,7 +1121,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map each result set row
-     * @return a list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1135,7 +1143,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map each row with column labels
-     * @return a list of mapped results
+     * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1160,7 +1168,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowFilter the predicate to filter rows before mapping
      * @param rowMapper the function to map filtered rows
-     * @return a list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1185,7 +1193,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowFilter the bi-predicate to filter rows with column labels
      * @param rowMapper the function to map filtered rows with column labels
-     * @return a list of filtered and mapped results
+     * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1204,7 +1212,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param <R> the result type
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
-     * @return a list of values for the specified property
+     * @return a list of values for the specified property, or an empty list if no record matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1232,7 +1240,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param rowMapper the function to map the single column value
-     * @return a list of mapped values
+     * @return a list of mapped values, or an empty list if no record matches the condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1259,7 +1267,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowFilter the predicate to filter rows before mapping
      * @param rowMapper the function to map filtered values
-     * @return a list of filtered and mapped values
+     * @return a list of filtered and mapped values, or an empty list if no record matches or passes the filter
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1451,7 +1459,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws UncheckedSQLException if a database access error occurs

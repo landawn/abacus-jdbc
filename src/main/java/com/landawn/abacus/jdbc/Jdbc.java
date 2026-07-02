@@ -2991,7 +2991,7 @@ public final class Jdbc {
          * @param <T> target type
          * @param targetClass the class to map rows to
          * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are silently skipped;
-         * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column.
+         * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (only relevant for bean targets).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          */
@@ -3370,7 +3370,9 @@ public final class Jdbc {
          * @param entityClass the class to map rows to
          * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code entityClass} is {@code null} or not a valid bean class
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndFieldNameMap} is
+         *         non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
+         *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
          */
         @SequentialOnly
         @Stateful
@@ -3393,7 +3395,9 @@ public final class Jdbc {
          * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code entityClass} is {@code null} or not a valid bean class
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndFieldNameMap} is
+         *         non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
+         *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
          */
         @SequentialOnly
         @Stateful
@@ -6519,12 +6523,13 @@ public final class Jdbc {
 
         /**
          * This method is invoked after the DAO method completes, whether successfully or with an exception.
-         * It is also invoked for handlers that were entered via {@link #beforeInvoke}, in reverse order; if this
+         * Handlers are invoked in the reverse order of their {@link #beforeInvoke} calls; if this
          * handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke}
          * is not invoked for it. It can be used for logging results, result transformation, or resource cleanup.
          *
-         * <p>Exceptions thrown from this method are logged and suppressed onto any underlying invocation failure;
-         * they will not replace a primary exception from the DAO method itself.</p>
+         * <p>Exceptions thrown from this method are logged and attached as suppressed exceptions to any primary
+         * failure from the DAO method itself (they never replace it); if the DAO method completed normally, the
+         * first such exception is propagated to the caller.</p>
          *
          * @param result the value returned by the method. Will be {@code null} if the method's return type is
          *               {@code void} or if the method threw an exception (in which case the throwable is not
@@ -6956,6 +6961,10 @@ public final class Jdbc {
         /**
          * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom
          * map implementations (e.g., {@code ConcurrentHashMap}) for caching.
+         *
+         * <p>The provided map must be thread-safe (e.g., {@code ConcurrentHashMap}) if the DAO is
+         * accessed concurrently, because the framework reads, writes, and invalidates entries from
+         * whatever threads invoke the DAO methods.</p>
          *
          * @param map the map to use for caching.
          * @return a new {@code DaoCache} instance backed by the provided map.
