@@ -58,7 +58,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * // Read operations work without checked exception handling:
  * Optional<AuditLog> retrieved = auditDao.get(id);
  * List<AuditLog> userLogs = auditDao.list(Filters.eq("userId", userId));
- * long count = auditDao.count(Filters.between("timestamp", startDate, endDate));
+ * int count = auditDao.count(Filters.between("timestamp", startDate, endDate));
  *
  * // Can be used in functional contexts without try-catch:
  * List<Long> logIds = Arrays.asList(1L, 2L, 3L);

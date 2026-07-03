@@ -45,7 +45,7 @@ sealed interface UncheckedDeleteOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param cond the condition to match records to delete
-     * @return the number of records deleted
+     * @return the number of records deleted, or {@code 0} if none match
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

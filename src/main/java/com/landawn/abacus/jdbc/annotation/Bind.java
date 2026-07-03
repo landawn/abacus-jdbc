@@ -111,8 +111,12 @@ public @interface Bind {
      *
      * <p><b>Empty value:</b> an empty {@code value} (the default) is effectively invalid outside stored
      * procedures: for a named query it matches no named parameter and fails DAO initialization, and on a
-     * non-procedure positional query any {@code @Bind} is rejected outright. Only for stored procedures
-     * with {@code ?} placeholders is an empty-valued {@code @Bind} parameter bound <i>positionally</i>.
+     * non-procedure positional query any {@code @Bind} is rejected outright. For a stored procedure with a
+     * single {@code ?} placeholder parameter, an empty-valued (or entirely absent) {@code @Bind} falls back
+     * to positional binding. When a procedure has more than one statement parameter, either give
+     * <i>every</i> parameter a non-empty {@code @Bind} name, or omit {@code @Bind} from all of them for
+     * purely positional binding &mdash; mixing an empty-valued {@code @Bind} in among named ones is not a
+     * supported combination.
      * (This differs from {@code @SqlFragment}/{@code @BindList}, where an empty value falls back to the
      * method parameter name &mdash; which requires compiling with the {@code -parameters} flag.)</p>
      *

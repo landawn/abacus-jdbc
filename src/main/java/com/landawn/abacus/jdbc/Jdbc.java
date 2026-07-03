@@ -4241,12 +4241,13 @@ public final class Jdbc {
             /**
              * Configures the mapper to use a custom {@code ColumnGetter} for the specified column name.
              *
+             * <p>The column name is matched against the ResultSet's column labels case-insensitively
+             * when no exact-case match is found.</p>
+             *
              * @param columnName the name of the column
              * @param columnGetter the custom {@code ColumnGetter} to use for this column
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null} or {@code columnGetter} is {@code null}
-             * @implNote the column name is matched against the ResultSet's column labels case-insensitively
-             *           when no exact-case match is found
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, cs.columnName);

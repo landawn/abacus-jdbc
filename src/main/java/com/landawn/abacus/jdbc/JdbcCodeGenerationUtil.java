@@ -122,8 +122,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Default name of the inner interface that holds field(property) name constants inside a generated entity class.
      * This is the only one of {@link #S}/{@link #SF}/{@code X} actually emitted by the generator: it produces a
-     * {@code public interface x} that declares a {@code String} constant for each field, providing compile-time
-     * safe field-name references. It is generated only when {@link EntityCodeConfig#generateFieldNameTable} is enabled.
+     * {@code public interface x} that declares a {@code String} constant for each field, providing compile-time-safe
+     * field-name references. It is generated only when {@link EntityCodeConfig#generateFieldNameTable} is enabled.
      */
     public static final String X = "x";
 

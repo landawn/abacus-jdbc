@@ -151,7 +151,7 @@ public final class JoinInfo {
 
     private final Map<Dsl, Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
 
-    private final Map<Dsl, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSqlBuilderAndParamSetterForPool = new HashMap<>();
+    private final Map<Dsl, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSqlBuilderAndParamSetterPool = new HashMap<>();
 
     /**
      * Constructs a new JoinInfo instance for managing join relationships between entities.
@@ -516,7 +516,7 @@ public final class JoinInfo {
                     }
                 };
 
-                batchDeleteSqlBuilderAndParamSetterForPool.put(entry.getKey(),
+                batchDeleteSqlBuilderAndParamSetterPool.put(entry.getKey(),
                         Tuple.of(batchDeleteSqlBuilder, cascadeDeleteDefinedInDB ? null : batchMiddleDeleteSqlBuilder, batchParaSetter));
             }
 
@@ -673,7 +673,7 @@ public final class JoinInfo {
                     }
                 };
 
-                batchDeleteSqlBuilderAndParamSetterForPool.put(entry.getKey(), Tuple.of(batchDeleteSqlBuilder, null, batchParaSetter));
+                batchDeleteSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchDeleteSqlBuilder, null, batchParaSetter));
             }
 
             Function<Object, Object> srcEntityKeyExtractorTmp = null;
@@ -962,7 +962,7 @@ public final class JoinInfo {
      */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR
             final Dsl sbc) {
-        final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSqlBuilderAndParamSetterForPool
+        final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSqlBuilderAndParamSetterPool
                 .get(sbc);
 
         if (tp == null) {

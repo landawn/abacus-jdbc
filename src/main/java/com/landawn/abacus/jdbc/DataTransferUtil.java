@@ -3441,7 +3441,7 @@ public final class DataTransferUtil {
      * @param iter the iterator whose elements will be imported (must not be {@code null})
      * @return a {@link RowImportBuilder} over the iterator's elements
      * @throws IllegalArgumentException if {@code iter} is {@code null}
-     * @see #importData(Iterator, java.sql.PreparedStatement, int, long, Throwables.BiConsumer)
+     * @see #importData(Iterator, PreparedStatement, int, long, Throwables.BiConsumer)
      */
     @Beta
     public static <T> RowImportBuilder<T> importFrom(final Iterator<? extends T> iter) {

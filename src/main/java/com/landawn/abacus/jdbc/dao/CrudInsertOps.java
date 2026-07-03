@@ -71,8 +71,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If {@code null} or empty, all properties will be inserted
      * @return the ID of the inserted entity (either database-generated or entity-provided)
-     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     ID insert(final T entity, final Collection<String> propNamesToInsert) throws SQLException;
 

@@ -34,8 +34,9 @@ import java.lang.annotation.Target;
  * <ul>
  *   <li>The annotated field must be declared {@code static final String} on the DAO interface
  *       (or a nested class within it).</li>
- *   <li>The resolved id (either {@link #id()} when non-empty, or the field name) must be a
- *       non-empty, whitespace-free Java identifier.</li>
+ *   <li>The resolved id (either {@link #id()} when non-empty, or the field name) must be
+ *       non-empty and must not contain whitespace characters (this is a lighter check than full
+ *       Java-identifier syntax; e.g. punctuation other than whitespace is not rejected).</li>
  *   <li>No two annotated fields may resolve to the same id.</li>
  *   <li>The id must not collide with any entry already loaded by {@link SqlSource}.</li>
  * </ul>
@@ -80,8 +81,8 @@ public @interface SqlScript {
      *         PSC.selectFrom(User.class).where(Filters.gt("id")).sql();
      * }</pre>
      *
-     * <p>When supplied, the id must be a non-empty, whitespace-free Java identifier that is unique
-     * among all {@link SqlScript} fields on the DAO and does not collide with any id loaded via
+     * <p>When supplied, the id must be non-empty and whitespace-free, unique among all
+     * {@link SqlScript} fields on the DAO, and must not collide with any id loaded via
      * {@link SqlSource}; otherwise DAO initialization fails with {@code IllegalArgumentException}.</p>
      *
      * @return the identifier used by {@link Query#id()}; empty means the annotated field name is used
