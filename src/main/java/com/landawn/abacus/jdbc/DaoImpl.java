@@ -731,12 +731,16 @@ final class DaoImpl {
                                     + " is not supported by the specified op: " + op);
                         }
                     } else {
-                        if (firstReturnEleType == null) {
+                        // For a return type of List<List<User>>, each result set's rows are mapped to the innermost element type (User),
+                        // so prefer firstReturnEleEleType; fall back to firstReturnEleType for a single-level List<User> declaration.
+                        final Class<?> rowType = firstReturnEleEleType != null ? firstReturnEleEleType : firstReturnEleType;
+
+                        if (rowType == null) {
                             throw new UnsupportedOperationException(
                                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
                         }
 
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSets(firstReturnEleType);
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSets(rowType);
                     }
                 }
             } else if (op == OP.queryAll) {
