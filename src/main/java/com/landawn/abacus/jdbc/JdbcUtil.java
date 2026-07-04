@@ -6499,7 +6499,6 @@ public final class JdbcUtil {
         }
     }
 
-    @SuppressWarnings("deprecation")
     static Dataset extractResultSetToDataset(final ResultSet rs, final int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean checkDateType) throws SQLException {
         final ResultSetMetaData rsmd = rs.getMetaData();
