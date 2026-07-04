@@ -302,8 +302,6 @@ public final class JdbcUtil {
 
     static final char CHAR_ZERO = 0;
 
-    static final String CURRENT_DIR_PATH = "./";
-
     static final AsyncExecutor asyncExecutor = new AsyncExecutor(//
             N.max(64, IOUtil.CPU_CORES * 8), // coreThreadPoolSize
             N.max(128, IOUtil.CPU_CORES * 16), // maxThreadPoolSize
@@ -775,7 +773,8 @@ public final class JdbcUtil {
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#getConnection(String, String, String)
      */
-    public static Connection createConnection(final String url, final String user, final String password) throws IllegalArgumentException, UncheckedSQLException {
+    public static Connection createConnection(final String url, final String user, final String password)
+            throws IllegalArgumentException, UncheckedSQLException {
         return createConnection(getDriverClassByUrl(url), url, user, password);
     }
 
@@ -810,7 +809,7 @@ public final class JdbcUtil {
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
             throws IllegalArgumentException, UncheckedSQLException {
-        N.checkArgNotEmpty(driverClass, "driverClass");
+        N.checkArgNotEmpty(driverClass, cs.driverClass);
         N.checkArgNotEmpty(url, cs.url);
 
         final Class<? extends Driver> cls = ClassUtil.forName(driverClass);
@@ -853,7 +852,7 @@ public final class JdbcUtil {
      */
     public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
             throws IllegalArgumentException, UncheckedSQLException {
-        N.checkArgNotNull(driverClass, "driverClass");
+        N.checkArgNotNull(driverClass, cs.driverClass);
         N.checkArgNotEmpty(url, cs.url);
 
         try {
@@ -6564,7 +6563,9 @@ public final class JdbcUtil {
         N.checkArgNotNegative(count, cs.count);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(rowExtractor, cs.rowExtractor);
-        final boolean checkDateType = checkDateType(rs);
+        // A ResultSetProxy already normalizes date/time types itself, so getColumnValue ignores this flag for proxies.
+        // Skip the DatabaseMetaData lookup in that case (behavior-identical, avoids a potential server round-trip).
+        final boolean checkDateType = !(rs instanceof ResultSetProxy) && checkDateType(rs);
 
         try {
             return JdbcUtil.extractResultSetToDataset(rs, offset, count, filter, rowExtractor, checkDateType);
@@ -7157,7 +7158,8 @@ public final class JdbcUtil {
         N.checkArgNotNull(rs, cs.rs);
         N.checkArgPositive(columnIndex, cs.columnIndex);
 
-        final boolean checkDateType = JdbcUtil.checkDateType(rs);
+        // getColumnValue ignores checkDateType for a ResultSetProxy (it self-normalizes), so skip the metadata lookup then.
+        final boolean checkDateType = !(rs instanceof ResultSetProxy) && JdbcUtil.checkDateType(rs);
         final RowMapper<? extends T> rowMapper = resultSet -> (T) getColumnValue(resultSet, columnIndex, checkDateType);
 
         return stream(rs, rowMapper);
@@ -8748,178 +8750,6 @@ public final class JdbcUtil {
         return N.notEmpty(ids) && ids.stream().allMatch(isDefaultIdTester);
     }
 
-    //    /**
-    //     * Executes the specified SQL action.
-    //     *
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @throws IllegalArgumentException if the SQL action is invalid.
-    //     */
-    //    @Beta
-    //    public static void run(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            sqlAction.run();
-    //        } catch (final Exception e) {
-    //           throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-    //
-    //    /**
-    //     * Executes the specified SQL action with the given input parameter.
-    //     *
-    //     * @param <T> The type of the input parameter.
-    //     * @param t The input parameter.
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @throws IllegalArgumentException if the SQL action is invalid.
-    //     */
-    //    @Beta
-    //    public static <T> void run(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            sqlAction.accept(t);
-    //        } catch (final Exception e) {
-    //            throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-    //
-    //    /**
-    //     * Executes the specified SQL action with the given input parameters.
-    //     *
-    //     * @param <T> The type of the first input parameter.
-    //     * @param <U> The type of the second input parameter.
-    //     * @param t The first input parameter.
-    //     * @param u The second input parameter.
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @throws IllegalArgumentException if the SQL action is invalid.
-    //     */
-    //    @Beta
-    //    public static <T, U> void run(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
-    //            throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            sqlAction.accept(t, u);
-    //        } catch (final Exception e) {
-    //            throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-    //
-    //    /**
-    //     * Executes the specified SQL action with the given input parameters.
-    //     *
-    //     * @param <A> The type of the first input parameter.
-    //     * @param <B> The type of the second input parameter.
-    //     * @param <C> The type of the third input parameter.
-    //     * @param a The first input parameter.
-    //     * @param b The second input parameter.
-    //     * @param c The third input parameter.
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @throws IllegalArgumentException if the SQL action is invalid.
-    //     */
-    //    @Beta
-    //    public static <A, B, C> void run(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction)
-    //            throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            sqlAction.accept(a, b, c);
-    //        } catch (final Exception e) {
-    //            throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-    //
-    //    /**
-    //     * Executes the specified SQL action and returns the result.
-    //     *
-    //     * @param <R> The type of the result.
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @return The result of the SQL action.
-    //     * @throws IllegalArgumentException if the SQL action is {@code null}.
-    //     */
-    //    @Beta
-    //    public static <R> R call(final Callable<? extends R> sqlAction) throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            return sqlAction.call();
-    //        } catch (final Exception e) {
-    //            throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-    //
-    //    /**
-    //     * Executes the specified SQL action with the given input parameter and returns the result.
-    //     *
-    //     * @param <T> The type of the input parameter.
-    //     * @param <R> The type of the result.
-    //     * @param t The input parameter.
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @return The result of the SQL action.
-    //     * @throws IllegalArgumentException if the SQL action is invalid.
-    //     */
-    //    @Beta
-    //    public static <T, R> R call(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            return sqlAction.apply(t);
-    //        } catch (final Exception e) {
-    //            throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-    //
-    //    /**
-    //     * Calls the specified SQL action with two input parameters and returns the result.
-    //     *
-    //     * @param <T> The type of the first input parameter.
-    //     * @param <U> The type of the second input parameter.
-    //     * @param <R> The type of the result.
-    //     * @param t The first input parameter.
-    //     * @param u The second input parameter.
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @return The result of the SQL action.
-    //     * @throws IllegalArgumentException if the SQL action is invalid.
-    //     */
-    //    @Beta
-    //    public static <T, U, R> R call(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction)
-    //            throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            return sqlAction.apply(t, u);
-    //        } catch (final Exception e) {
-    //            throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-    //
-    //    /**
-    //     * Calls the specified SQL action with three input parameters and returns the result.
-    //     *
-    //     * @param <A> The type of the first input parameter.
-    //     * @param <B> The type of the second input parameter.
-    //     * @param <C> The type of the third input parameter.
-    //     * @param <R> The type of the result.
-    //     * @param a The first input parameter.
-    //     * @param b The second input parameter.
-    //     * @param c The third input parameter.
-    //     * @param sqlAction The SQL action to be executed.
-    //     * @return The result of the SQL action.
-    //     * @throws IllegalArgumentException if the SQL action is invalid.
-    //     */
-    //    @Beta
-    //    public static <A, B, C, R> R call(final A a, final B b, final C c,
-    //            final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
-    //        N.checkArgNotNull(sqlAction, s.sqlAction);
-    //
-    //        try {
-    //            return sqlAction.apply(a, b, c);
-    //        } catch (final Exception e) {
-    //            throw ExceptionUtil.toRuntimeException(e, true);
-    //        }
-    //    }
-
     /**
      * Asynchronously runs the specified SQL action in a separate thread.
      * <p>Note: Any transaction started in current thread won't be automatically applied to the SQL
@@ -9365,57 +9195,6 @@ public final class JdbcUtil {
     static <R> BiRowMapper<R> toBiRowMapper(final RowMapper<R> rowMapper) {
         return (rs, columnLabels) -> rowMapper.apply(rs);
     }
-
-    //    @SuppressWarnings("rawtypes")
-    //    static Class<?> getTargetEntityClass(final Class<? extends Dao> daoInterface) {
-    //        if (N.notEmpty(daoInterface.getGenericInterfaces()) && daoInterface.getGenericInterfaces()[0] instanceof ParameterizedType) {
-    //            final ParameterizedType parameterizedType = (ParameterizedType) daoInterface.getGenericInterfaces()[0];
-    //            java.lang.reflect.Type[] typeArguments = parameterizedType.getActualTypeArguments();
-    //
-    //            if (typeArguments.length >= 1 && typeArguments[0] instanceof Class) {
-    //                if (!Beans.isBeanClass((Class) typeArguments[0])) {
-    //                    throw new IllegalArgumentException(
-    //                            "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
-    //                                    + typeArguments[0]);
-    //                }
-    //
-    //                return (Class) typeArguments[0];
-    //            }
-    //        }
-    //
-    //        throw new IllegalArgumentException("Invalid Dao interface: " + daoInterface + ". No entity class found by type parameter");
-    //    }
-    //
-    //    @SuppressWarnings("rawtypes")
-    //    static final Map<javax.sql.DataSource, Map<Class<?>, Dao>> dsEntityDaoPool = new IdentityHashMap<>();
-
-    //    /**
-    //     *
-    //     * @param ds
-    //     * @param targetEntityOrDaoClass
-    //     */
-    //    public static void removeCachedDao(final javax.sql.DataSource ds, final Class<?> targetEntityOrDaoClass) {
-    //        N.checkArgNotNull(ds, "dataSource");
-    //        N.checkArgNotNull(targetEntityOrDaoClass, "targetEntityOrDaoClass");
-    //
-    //        @SuppressWarnings("rawtypes")
-    //        final Class<?> targetEntityClass = Dao.class.isAssignableFrom(targetEntityOrDaoClass)
-    //                ? getTargetEntityClass((Class<? extends Dao>) targetEntityOrDaoClass)
-    //                : targetEntityOrDaoClass;
-    //
-    //        synchronized (dsEntityDaoPool) {
-    //            @SuppressWarnings("rawtypes")
-    //            Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
-    //
-    //            if (entityDaoPool != null) {
-    //                entityDaoPool.remove(targetEntityClass);
-    //
-    //                if (N.isEmpty(entityDaoPool)) {
-    //                    dsEntityDaoPool.remove(ds);
-    //                }
-    //            }
-    //        }
-    //    }
 
     /**
      * Retrieves the output parameters from the given CallableStatement.
@@ -11939,7 +11718,8 @@ public final class JdbcUtil {
     public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlDialect sqlDialect) {
         N.checkArgNotNull(sqlDialect, cs.sqlDialect);
 
-        return DaoImpl.createDao(daoInterface, null, ds, dslPool.computeIfAbsent(sqlDialect, Dsl::forDialect), null, null, JdbcUtil.asyncExecutor.getExecutor());
+        return DaoImpl.createDao(daoInterface, null, ds, dslPool.computeIfAbsent(sqlDialect, Dsl::forDialect), null, null,
+                JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**

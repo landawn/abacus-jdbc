@@ -284,10 +284,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
 
         final PropInfo uniquePropInfo = entityInfo.getPropInfo(uniquePropNameList.get(0));
 
-        if (uniquePropInfo == null) {
-            throw new IllegalArgumentException("No property found with name: '" + uniquePropNameList.get(0) + "' in class: " + cls.getName());
-        }
-
         final List<PropInfo> uniquePropInfos = N.map(uniquePropNameList, entityInfo::getPropInfo);
 
         for (int i = 0; i < uniquePropInfos.size(); i++) {

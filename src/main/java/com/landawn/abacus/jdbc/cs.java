@@ -127,6 +127,10 @@ public final class cs { // NOSONAR
      */
     public static final String downstream = "downstream";
     /**
+     * Parameter name for the JDBC driver class.
+     */
+    public static final String driverClass = "driverClass";
+    /**
      * Parameter name for DataSource objects used to obtain database connections.
      */
     public static final String ds = "ds";

@@ -59,8 +59,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T, TD>
-        permits CrudDao, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
+sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T, TD> permits CrudDao, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
     /**
      * Returns a {@link Jdbc.BiRowMapper} that extracts the ID from a database row.
      * This mapper is used internally to extract ID values from query results (for example,
@@ -380,7 +379,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return a {@code Nullable} containing the value if found, or {@code Nullable.empty()} if no record exists
+     * @return a {@code Nullable} holding the value (possibly {@code null} for a SQL {@code NULL}) when a record
+     *         matches, or an empty {@code Nullable} if no record exists
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -446,7 +446,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return a {@code Nullable} containing the unique value if found, or {@code Nullable.empty()} if no record exists
+     * @return a {@code Nullable} holding the unique value (possibly {@code null} for a SQL {@code NULL}) when a
+     *         record matches, or an empty {@code Nullable} if no record exists
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)

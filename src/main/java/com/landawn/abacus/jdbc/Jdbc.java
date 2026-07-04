@@ -267,7 +267,7 @@ public final class Jdbc {
          * must match the order of values in the input array and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if a name in {@code fieldNameList} does not resolve to a property of {@code entityClass}.
          */
         @Beta
         @SequentialOnly
@@ -335,7 +335,7 @@ public final class Jdbc {
          * must match the order of values in the input list and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if a name in {@code fieldNameList} does not resolve to a property of {@code entityClass}.
          */
         @Beta
         @SequentialOnly
@@ -2077,6 +2077,9 @@ public final class Jdbc {
          * Do not cache, share, or use this mapper in parallel streams.
          * </p>
          *
+         * <p>Columns whose label does not match any property of {@code entityClass} are read with the default
+         * {@code Object} column reader (no type-specific conversion is applied to them).</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray(User.class);
@@ -3256,6 +3259,15 @@ public final class Jdbc {
                                 if (columnNameFilterToBeUsed.test(columnLabels[i])) {
                                     columnLabels[i] = columnNameConverterToBeUsed.apply(columnLabels[i]);
 
+                                    // A converter that returns null signals "skip this column", mirroring the
+                                    // filtered-out branch below; without this guard the subsequent lookups would
+                                    // dereference the null label and throw NPE (Array/List/Map siblings defend too).
+                                    if (columnLabels[i] == null) {
+                                        propInfos[i] = null;
+                                        columnTypes[i] = null;
+                                        continue;
+                                    }
+
                                     propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
 
                                     if (propInfos[i] == null) {
@@ -3935,6 +3947,10 @@ public final class Jdbc {
          * You must process or copy its contents before the next row is mapped. Do not cache, share, or
          * use this mapper in parallel streams.
          * </p>
+         *
+         * <p>Columns that cannot be matched to a property of {@code entityClass} are not skipped; they are
+         * extracted with the default {@code Object} reader (via {@code JdbcUtil.getColumnValue}) and placed
+         * into the output array at their original column index.</p>
          *
          * @param entityClass the class used to infer the data type for each column based on matching property names
          * @return a stateful {@code BiRowMapper} for high-performance, type-aware, single-threaded row processing
@@ -5275,6 +5291,10 @@ public final class Jdbc {
          * <p><b>Warning:</b> The returned extractor is stateful. It initializes its internal type mapping
          * on the first execution. It should not be reused across queries with different column structures
          * or in parallel streams.</p>
+         *
+         * <p>The returned extractor writes column values into positions {@code 0..columnCount-1} of the
+         * {@code outputRow} passed to {@code accept}, so that array must be at least as long as the number of
+         * mapped columns; an undersized array raises {@code ArrayIndexOutOfBoundsException}.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
          * @param columnLabels an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet}.
@@ -6657,7 +6677,8 @@ public final class Jdbc {
          *
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
-         * @throws IllegalArgumentException if {@code handler} is {@code null}.
+         * @throws IllegalArgumentException if {@code handler} is {@code null}, or if {@code handler}'s class has no canonical name
+         *         (e.g. an anonymous, local, or lambda-built handler); use {@link #register(String, Handler)} with an explicit qualifier for those.
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, cs.handler);
@@ -6693,6 +6714,9 @@ public final class Jdbc {
          * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found,
          * it attempts to retrieve it from the Spring application context if available.
          *
+         * <p>A handler resolved from the Spring context is then cached into the internal registry, replacing
+         * any existing entry for this qualifier.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * HandlerFactory.register("myHandler", new MyHandler());
@@ -6721,7 +6745,7 @@ public final class Jdbc {
                         handlerPool.put(qualifier, result);
                     }
                 } catch (final Exception e) {
-                    // Bean not found in Spring context, return null
+                    // Spring context lookup failed (no such bean, context not ready, or bean creation error) — return null
                 }
             }
 
@@ -6732,6 +6756,9 @@ public final class Jdbc {
          * Retrieves a handler by its class. It first checks the internal registry using the class's
          * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring
          * application context.
+         *
+         * <p>A handler resolved from the Spring context is then cached into the internal registry, replacing
+         * any existing entry for this qualifier.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code

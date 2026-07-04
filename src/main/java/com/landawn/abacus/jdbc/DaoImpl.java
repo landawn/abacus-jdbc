@@ -3713,7 +3713,7 @@ final class DaoImpl {
 
                             return Stream.of(supplier).flatMap(Supplier::get);
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3729,7 +3729,7 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("forEach") && paramLen == 2 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3745,7 +3745,7 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.RowFilter.class) && paramTypes[2].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3763,7 +3763,7 @@ final class DaoImpl {
                                     .forEach(rowFilter, rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Condition.class)
                             && paramTypes[1].equals(Jdbc.BiRowFilter.class) && paramTypes[2].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = (Condition) args[0];
@@ -3781,8 +3781,8 @@ final class DaoImpl {
                                     .forEach(rowFilter, rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class)
-                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowConsumer.class)) {
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -3798,8 +3798,8 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class)
-                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.BiRowConsumer.class)) {
+                    } else if (methodName.equals("forEach") && paramLen == 3 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -3815,9 +3815,8 @@ final class DaoImpl {
                                     .forEach(rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class)
-                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowFilter.class)
-                            && paramTypes[3].equals(Jdbc.RowConsumer.class)) {
+                    } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(Jdbc.RowFilter.class) && paramTypes[3].equals(Jdbc.RowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];
@@ -3835,9 +3834,8 @@ final class DaoImpl {
                                     .forEach(rowFilter, rowConsumer);
                             return null;
                         };
-                    } else if (methodName.equalsIgnoreCase("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class)
-                            && paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.BiRowFilter.class)
-                            && paramTypes[3].equals(Jdbc.BiRowConsumer.class)) {
+                    } else if (methodName.equals("forEach") && paramLen == 4 && paramTypes[0].equals(Collection.class) && paramTypes[1].equals(Condition.class)
+                            && paramTypes[2].equals(Jdbc.BiRowFilter.class) && paramTypes[3].equals(Jdbc.BiRowConsumer.class)) {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = (Condition) args[1];

@@ -212,6 +212,8 @@ public enum OP {
      * List<List<User>> getUserBatches(long departmentId);
      * }</pre>
      *
+     * @see AbstractQuery#listAllResultSets(Class)
+     * @see CallableQuery#listAllResultSetsAndGetOutParameters(Class)
      */
     listAll,
 
@@ -230,6 +232,8 @@ public enum OP {
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre>
      *
+     * @see AbstractQuery#queryAllResultSets()
+     * @see CallableQuery#queryAllResultSetsAndGetOutParameters()
      */
     queryAll,
 
@@ -248,6 +252,7 @@ public enum OP {
      * Stream<Dataset> streamLargeDatasets();
      * }</pre>
      *
+     * @see AbstractQuery#streamAllResultSets()
      */
     streamAll,
 
@@ -268,6 +273,8 @@ public enum OP {
      *
      * <p>This operation is primarily used with {@code @Query} annotation to execute the target procedure
      * and get out parameters by {@code executeAndGetOutParameters}.</p>
+     *
+     * @see CallableQuery#executeAndGetOutParameters()
      */
     executeAndGetOutParameters,
 

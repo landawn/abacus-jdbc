@@ -81,7 +81,7 @@ import lombok.experimental.Accessors;
  * various aspects such as field naming conventions, type mappings, annotations, and more.</p>
  *
  * <p><b>Exceptions thrown by the {@code generate*Sql(...)} family:</b> in addition to the
- * {@link UncheckedSQLException} declared on each method, every {@code generateSelectSql} /
+ * {@link UncheckedSQLException} these methods may throw on a database-access error, every {@code generateSelectSql} /
  * {@code generateInsertSql} / {@code generateNamedInsertSql} / {@code generateUpdateSql} /
  * {@code generateNamedUpdateSql} overload throws {@link IllegalArgumentException} when a supplied
  * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank; the column-excluding and update
@@ -1459,7 +1459,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1486,7 +1486,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1713,7 +1713,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1740,7 +1740,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried

@@ -96,7 +96,7 @@ public @interface Query {
      * This can contain any valid SQL, including SELECT, INSERT, UPDATE, DELETE, or stored procedure calls.
      *
      * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
-     * (across {@code value} and {@link #id()}) fails DAO initialization with {@link UnsupportedOperationException}.
+     * (across {@code value} and {@link #id()}) fails DAO initialization with {@link IllegalArgumentException}.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime.</p>
@@ -156,7 +156,9 @@ public @interface Query {
      * }</pre>
      *
      * <p>Note: Exactly one of {@code value} or {@link #id()} must be non-empty; specifying both
-     * or neither causes initialization to fail with an {@code IllegalArgumentException}.</p>
+     * or neither causes initialization to fail with an {@code IllegalArgumentException}. The only exception is
+     * a {@code default} method whose last parameter is a {@code String[]} (see above), which collects every
+     * entry from both {@code value} and {@link #id()} at runtime.</p>
      *
      * @return inline SQL statement lines; empty by default when using {@link #id()}
      */
@@ -168,7 +170,7 @@ public @interface Query {
      * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
      *
      * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
-     * (across {@link #value()} and {@code id}) fails DAO initialization with {@link UnsupportedOperationException}.
+     * (across {@link #value()} and {@code id}) fails DAO initialization with {@link IllegalArgumentException}.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime.</p>
@@ -211,7 +213,9 @@ public @interface Query {
      * }</pre>
      *
      * <p>Note: Exactly one of {@link #value()} or {@code id} must be non-empty; specifying both
-     * or neither causes initialization to fail with an {@code IllegalArgumentException}.</p>
+     * or neither causes initialization to fail with an {@code IllegalArgumentException}. The only exception is
+     * a {@code default} method whose last parameter is a {@code String[]} (see above), which collects every
+     * entry from both {@link #value()} and {@code id} at runtime.</p>
      *
      * @return SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
      * @see RegExUtil#JAVA_IDENTIFIER_MATCHER
@@ -711,7 +715,7 @@ public @interface Query {
      * <p>Fetch size guidelines (number of rows):</p>
      * <ul>
      *   <li>{@code -1} (default) - Uses the JDBC driver's default fetch size (often 10-50 rows)</li>
-     *   <li>{@code 0} - Database-specific behavior; some drivers disable fetch size optimization</li>
+     *   <li>{@code 0} - Same as {@code -1}: left unset, so the JDBC driver's default fetch size applies</li>
      *   <li>{@code 10-100} - Small result sets, interactive queries, or small row sizes</li>
      *   <li>{@code 100-1000} - Medium result sets with moderate row sizes</li>
      *   <li>{@code 1000-10000} - Large result sets, batch processing, or reporting queries</li>

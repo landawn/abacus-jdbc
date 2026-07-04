@@ -345,7 +345,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         favour of this exception
      * @throws IllegalStateException if the outermost commit is attempted while the transaction is
      *         not in {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}. If this transaction
-     *         scope has already completed (reference count already at or below zero), the call is
+     *         scope has already completed (reference count already below zero), the call is
      *         logged and ignored rather than throwing.
      */
     @Override
@@ -372,7 +372,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         automatic rollback is also attempted
      * @throws IllegalStateException if the outermost commit is attempted while the transaction is
      *         neither {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}. If this transaction
-     *         scope has already completed (reference count already at or below zero), the call is
+     *         scope has already completed (reference count already below zero), the call is
      *         logged and ignored rather than throwing.
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
@@ -474,7 +474,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalStateException if the outermost rollback is attempted while the transaction
      *         status is not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
      *         {@link Status#FAILED_COMMIT}. If this transaction scope has already completed
-     *         (reference count already at or below zero), the call is logged and ignored rather
+     *         (reference count already below zero), the call is logged and ignored rather
      *         than throwing.
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
@@ -497,7 +497,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE},
      *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. If this transaction
-     *         scope has already completed (reference count already at or below zero), the call is
+     *         scope has already completed (reference count already below zero), the call is
      *         logged and ignored rather than throwing.
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
