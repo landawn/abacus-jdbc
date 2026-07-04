@@ -2652,7 +2652,7 @@ public class JdbcUtilTest extends TestBase {
 
         assertNotNull(info);
         assertNull(info.name());
-        assertNull(info.version());
+        assertEquals("", info.version());
     }
 
     // getDBProductInfo DataSource overload with SQLException when Spring bypassed
