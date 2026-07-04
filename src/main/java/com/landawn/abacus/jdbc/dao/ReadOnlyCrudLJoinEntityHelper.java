@@ -15,6 +15,8 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import com.landawn.abacus.annotation.Beta;
+
 /**
  * Read-only helper for join entity operations in CRUD DAOs with {@code Long} primary keys.
  * This interface specializes {@link ReadOnlyCrudJoinEntityHelper} to entities with {@code Long} identifiers,
@@ -61,6 +63,7 @@ package com.landawn.abacus.jdbc.dao;
  * @see CrudLJoinEntityHelper
  * @see CrudLDao
  */
+@Beta
 public interface ReadOnlyCrudLJoinEntityHelper<T, TD extends ReadOnlyCrudLDao<T, TD>> extends ReadOnlyCrudJoinEntityHelper<T, Long, TD> {
 
 }

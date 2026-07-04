@@ -5625,7 +5625,7 @@ final class DaoImpl {
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno) {
-                                JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                JdbcUtil.setSqlLogEnabled(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
                             if (hasPerfLogAnno) {
@@ -5646,7 +5646,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasSqlLogAnno) {
-                                    JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                    JdbcUtil.setSqlLogEnabled(prevSqlLogEnabled, prevMaxSqlLogLength);
                                 }
                             }
                         };
@@ -5671,7 +5671,7 @@ final class DaoImpl {
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno) {
-                                JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                JdbcUtil.setSqlLogEnabled(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
                             if (hasPerfLogAnno) {
@@ -5700,7 +5700,7 @@ final class DaoImpl {
                                     }
 
                                     if (hasSqlLogAnno) {
-                                        JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                        JdbcUtil.setSqlLogEnabled(prevSqlLogEnabled, prevMaxSqlLogLength);
                                     }
                                 }
                             }
@@ -5742,7 +5742,7 @@ final class DaoImpl {
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
-                                    JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                    JdbcUtil.setSqlLogEnabled(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
                                 if (hasPerfLogAnno) {
@@ -5771,7 +5771,7 @@ final class DaoImpl {
                                         }
 
                                         if (hasSqlLogAnno) {
-                                            JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                            JdbcUtil.setSqlLogEnabled(prevSqlLogEnabled, prevMaxSqlLogLength);
                                         }
                                     }
                                 }
@@ -5812,7 +5812,7 @@ final class DaoImpl {
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
-                                    JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                    JdbcUtil.setSqlLogEnabled(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
                                 if (hasPerfLogAnno) {
@@ -5833,7 +5833,7 @@ final class DaoImpl {
                                     }
 
                                     if (hasSqlLogAnno) {
-                                        JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                        JdbcUtil.setSqlLogEnabled(prevSqlLogEnabled, prevMaxSqlLogLength);
                                     }
                                 }
                             });

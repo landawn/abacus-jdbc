@@ -15,6 +15,8 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import com.landawn.abacus.annotation.Beta;
+
 /**
  * A read-only CRUD DAO helper interface with join entity capabilities that uses {@code Long} as the ID type
  * and throws unchecked exceptions. This interface combines read-only access restrictions with join entity
@@ -67,6 +69,7 @@ package com.landawn.abacus.jdbc.dao;
  * @see UncheckedReadOnlyCrudJoinEntityHelper
  * @see UncheckedCrudLDao
  */
+@Beta
 public interface UncheckedReadOnlyCrudLJoinEntityHelper<T, TD extends UncheckedReadOnlyCrudLDao<T, TD>>
         extends UncheckedReadOnlyCrudJoinEntityHelper<T, Long, TD>, ReadOnlyCrudLJoinEntityHelper<T, TD> {
 }

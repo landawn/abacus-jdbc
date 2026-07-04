@@ -70,6 +70,7 @@ import com.landawn.abacus.util.u.Optional;
  * @see CrudJoinEntityHelper
  * @see CrudLDao
  */
+@Beta
 public interface CrudLJoinEntityHelper<T, TD extends CrudLDao<T, TD>> extends CrudJoinEntityHelper<T, Long, TD> {
 
     /**

@@ -73,6 +73,7 @@ import com.landawn.abacus.util.u.Optional;
  * @see CrudLJoinEntityHelper
  * @see UncheckedCrudLDao
  */
+@Beta
 public interface UncheckedCrudLJoinEntityHelper<T, TD extends UncheckedCrudLDao<T, TD>>
         extends UncheckedCrudJoinEntityHelper<T, Long, TD>, CrudLJoinEntityHelper<T, TD> {
 

@@ -187,6 +187,10 @@ public final class cs { // NOSONAR
      */
     public static final String keyExtractor = "keyExtractor";
     /**
+     * Parameter name for the thread-local DAO cache opened on the current thread.
+     */
+    public static final String localThreadCache = "localThreadCache";
+    /**
      * Parameter name for binary functions that merge duplicate values in map operations.
      */
     public static final String mergeFunction = "mergeFunction";
@@ -314,6 +318,10 @@ public final class cs { // NOSONAR
      * Parameter name for the third SQL action function in multi-action operations.
      */
     public static final String sqlAction3 = "sqlAction3";
+    /**
+     * Parameter name for the SQL dialect used to generate a DAO's CRUD SQL.
+     */
+    public static final String sqlDialect = "sqlDialect";
     /**
      * Parameter name for Statement or PreparedStatement objects.
      */

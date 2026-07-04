@@ -371,6 +371,11 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
+    // Memoizes one Dsl per SqlDialect value so createDao(Class, DataSource, SqlDialect) hands DaoImpl a stable
+    // Dsl identity: Dsl.forDialect only returns a shared instance for the ~15 canonical dialects, so without this
+    // a non-canonical dialect would yield a fresh Dsl on every call and defeat DaoImpl's identity-keyed proxy cache.
+    private static final Map<SqlDialect, Dsl> dslPool = new ConcurrentHashMap<>();
+
     static final String CACHE_KEY_SPLITOR = "#";
 
     static final ThreadLocal<Jdbc.DaoCache> localThreadCache_TL = new ThreadLocal<>();
@@ -416,7 +421,7 @@ public final class JdbcUtil {
      * @see DBProductInfo
      * @see DBVersion
      */
-    public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException {
+    public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException {
         Connection conn = null;
 
         try {
@@ -770,7 +775,7 @@ public final class JdbcUtil {
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#getConnection(String, String, String)
      */
-    public static Connection createConnection(final String url, final String user, final String password) throws UncheckedSQLException {
+    public static Connection createConnection(final String url, final String user, final String password) throws IllegalArgumentException, UncheckedSQLException {
         return createConnection(getDriverClassByUrl(url), url, user, password);
     }
 
@@ -813,7 +818,7 @@ public final class JdbcUtil {
         return createConnection(cls, url, user, password);
     }
 
-    private static final Set<Class<? extends Driver>> registeredDriverClasses = ConcurrentHashMap.newKeySet();
+    private static final Map<Class<? extends Driver>, Boolean> registeredDriverClasses = new ConcurrentHashMap<>();
 
     /**
      * Creates a new database {@link Connection} using a type-safe {@link Driver} class.
@@ -852,17 +857,19 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(url, cs.url);
 
         try {
-            if (registeredDriverClasses.add(driverClass)) {
+            // computeIfAbsent gives per-class locking so a concurrent caller blocks until registration
+            // completes rather than racing past a half-registered driver; a failed mapping function does
+            // not leave an entry behind, so a later call can retry (no cache poisoning).
+            registeredDriverClasses.computeIfAbsent(driverClass, cls -> {
                 try {
-                    DriverManager.registerDriver(N.newInstance(driverClass));
-                    logger.debug("Registered JDBC driver(class={})", ClassUtil.getCanonicalClassName(driverClass));
-                } catch (final Throwable e) { //NOSONAR
-                    // Don't poison the cache: if registration fails, drop the entry so a later call can retry it
-                    // (otherwise the class is permanently treated as registered and every later call skips it).
-                    registeredDriverClasses.remove(driverClass);
-                    throw e;
+                    DriverManager.registerDriver(N.newInstance(cls));
+                    logger.debug("Registered JDBC driver(class={})", ClassUtil.getCanonicalClassName(cls));
+                } catch (final SQLException e) {
+                    throw new UncheckedSQLException(e);
                 }
-            }
+
+                return Boolean.TRUE;
+            });
 
             return DriverManager.getConnection(url, user, password);
         } catch (final SQLException e) {
@@ -1973,8 +1980,9 @@ public final class JdbcUtil {
             while (rows.next()) {
                 tableNameInMetadata = rows.getString("TABLE_NAME");
 
-                if (!Strings.equalsAny(tableNameInMetadata, tableNamePattern, tableNamePattern.toUpperCase(Locale.ROOT),
-                        tableNamePattern.toLowerCase(Locale.ROOT))) {
+                // Case-insensitive match still blocks '_'-wildcard false positives (getColumns treats '_' as
+                // a single-char wildcard) while accepting mixed-case stored names the three-variant check missed.
+                if (!tableNamePattern.equalsIgnoreCase(tableNameInMetadata)) {
                     continue;
                 }
 
@@ -2520,9 +2528,11 @@ public final class JdbcUtil {
                         } while (rs.next());
                     }
                 } else if (val instanceof java.sql.Date) {
-                    final ResultSetMetaData metaData = rs.getMetaData();
+                    // Also treat a declared metadata class of oracle.sql.TIMESTAMP as timestamp-bearing,
+                    // matching ResultSetProxy: otherwise time-of-day is silently truncated on such columns.
+                    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
 
-                    if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
 
                         do {
                             result.add(rs.getTimestamp(columnIndex));
@@ -2571,7 +2581,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the column label does not exist in the result set.
      * @throws SQLException if a database access error occurs.
      */
-    public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws SQLException {
+    public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
 
         if (columnIndex < 1) {
@@ -4432,7 +4442,7 @@ public final class JdbcUtil {
      * @param conn The Connection to use for the query
      * @param namedSql The pre-parsed named SQL to prepare
      * @return A NamedQuery object configured for big result sets
-     * @throws IllegalArgumentException if the Connection or named SQL is {@code null}
+     * @throws IllegalArgumentException if the Connection or named SQL is {@code null} or invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     @Beta
@@ -6704,8 +6714,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final Class<? extends T> targetClass) throws IllegalArgumentException {
-        N.checkArgNotNull(targetClass, cs.targetClass);
         N.checkArgNotNull(rs, cs.rs);
+        N.checkArgNotNull(targetClass, cs.targetClass);
 
         return stream(rs, BiRowMapper.to(targetClass));
     }
@@ -8116,7 +8126,7 @@ public final class JdbcUtil {
      * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's current schema
      * — and, for an unqualified name, all schemas — with the table name as supplied, then upper- and
      * lower-case variants). If metadata lookup yields no match,
-     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL error from that query
+     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated.</p>
      *
@@ -8135,8 +8145,8 @@ public final class JdbcUtil {
      * @param ds the {@link javax.sql.DataSource} to obtain a connection from; must not be {@code null}
      * @param tableName the table name (optionally qualified, e.g., {@code schema.table} or {@code catalog.schema.table}); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
-     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
      * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
+     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
      * @see #tableExists(Connection, String)
      */
     public static boolean tableExists(final javax.sql.DataSource ds, final String tableName) {
@@ -8156,7 +8166,7 @@ public final class JdbcUtil {
      * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's current schema
      * — and, for an unqualified name, all schemas — with the table name as supplied, then upper- and
      * lower-case variants). If metadata lookup yields no match,
-     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL error from that query
+     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated.</p>
      *
@@ -8175,8 +8185,8 @@ public final class JdbcUtil {
      * @param conn the database connection to use for checking table existence
      * @param tableName the table name (optionally qualified); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
-     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
+     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
      */
     public static boolean tableExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
@@ -8270,8 +8280,8 @@ public final class JdbcUtil {
         // as wildcards. A bare rows.next() can therefore return true for an unrelated table whose name
         // (or schema) happens to match the wildcard expansion (e.g., looking up "users_log" matches
         // "usersXlog"; looking up "my_app.users" matches "myXapp.users"). When either argument contains
-        // a wildcard meta-character, verify the returned TABLE_NAME and TABLE_SCHEM (and TABLE_CAT)
-        // actually match (case-insensitive) the requested values; otherwise rely on rows.next().
+        // a wildcard meta-character, verify the returned TABLE_NAME and TABLE_SCHEM actually match
+        // (case-insensitive) the requested values; otherwise rely on rows.next().
         final boolean tableNameHasWildcard = tableNamePattern != null && (tableNamePattern.indexOf('_') >= 0 || tableNamePattern.indexOf('%') >= 0);
         final boolean schemaHasWildcard = schemaPattern != null && (schemaPattern.indexOf('_') >= 0 || schemaPattern.indexOf('%') >= 0);
 
@@ -8359,11 +8369,11 @@ public final class JdbcUtil {
             // the literal name. Otherwise downstream re-quoting via toQualifiedSqlIdentifier would
             // double-escape (e.g., `"a""b"` -> body `a""b` -> re-quoted `"a""""b"`).
             if ((first == '"' && last == '"') || (first == '`' && last == '`')) {
-                return trimmed.substring(1, trimmed.length() - 1).trim().replace("" + first + first, String.valueOf(first));
+                return trimmed.substring(1, trimmed.length() - 1).replace("" + first + first, String.valueOf(first));
             }
 
             if (first == '[' && last == ']') {
-                return trimmed.substring(1, trimmed.length() - 1).trim().replace("]]", "]");
+                return trimmed.substring(1, trimmed.length() - 1).replace("]]", "]");
             }
         }
 
@@ -8387,7 +8397,7 @@ public final class JdbcUtil {
                     continue;
                 }
 
-                if (isBlank(sb)) {
+                if (Strings.isBlank(sb)) {
                     if (ch == '"' || ch == '`') {
                         closingQuote = ch;
                     } else if (ch == '[') {
@@ -8420,16 +8430,6 @@ public final class JdbcUtil {
         }
 
         return parts.toArray(String[]::new);
-    }
-
-    private static boolean isBlank(final CharSequence cs) {
-        for (int i = 0, len = cs.length(); i < len; i++) {
-            if (!Character.isWhitespace(cs.charAt(i))) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private static void addQualifiedIdentifierPart(final List<String> parts, final StringBuilder sb, final String qualifiedName, final String argName) {
@@ -8511,8 +8511,8 @@ public final class JdbcUtil {
      * @param schema the SQL DDL statement (typically {@code CREATE TABLE ...}) used to create the table; must not be {@code null} or empty
      * @return {@code true} if this call created the table; {@code false} if the table already existed
      *         when checked, or was created concurrently while this call was running
-     * @throws UncheckedSQLException if the {@code CREATE} fails for a reason other than the table already existing
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is blank or otherwise invalid, or {@code schema} is {@code null} or empty
+     * @throws UncheckedSQLException if the {@code CREATE} fails for a reason other than the table already existing
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         N.checkArgNotNull(conn, cs.conn);
@@ -8560,8 +8560,8 @@ public final class JdbcUtil {
      * @param tableName the name of the table to drop (optionally qualified); must not be blank
      * @return {@code true} if the table was dropped by this call; {@code false} if the table did not exist
      *         (either at the time of the existence check or by the time the {@code DROP} executed)
-     * @throws UncheckedSQLException if a database error other than "table not found" occurs during the drop
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
+     * @throws UncheckedSQLException if a database error other than "table not found" occurs during the drop
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
@@ -9991,36 +9991,24 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables or disables SQL logging in the current thread.
+     * Sets the current thread's SQL-logging state and maximum log length. This is the shared implementation
+     * behind the public {@link #enableSqlLog(int)} / {@link #disableSqlLog()} entry points.
      *
-     * @param b {@code true} to enable SQL logging, {@code false} to disable it.
-     * @deprecated Use {@link #enableSqlLog()} or {@link #disableSqlLog()} instead.
-     */
-    @Deprecated
-    static void enableSqlLog(final boolean b) {
-        enableSqlLog(b, DEFAULT_MAX_SQL_LOG_LENGTH);
-    }
-
-    /**
-     * Enables or disables SQL logging in the current thread, with a configurable maximum log length.
-     *
-     * @param b {@code true} to enable SQL logging, {@code false} to disable it.
+     * @param enabled {@code true} to enable SQL logging, {@code false} to disable it.
      * @param maxSqlLogLength The maximum length of the SQL log. Default value is 1024.
-     * @deprecated Use {@link #enableSqlLog(int)} or {@link #disableSqlLog()} instead.
      */
-    @Deprecated
-    static void enableSqlLog(final boolean b, final int maxSqlLogLength) {
+    static void setSqlLogEnabled(final boolean enabled, final int maxSqlLogLength) {
         final SqlLogConfig config = isSQLLogEnabled_TL.get();
 
-        if (logger.isDebugEnabled() && config.isEnabled != b) {
-            if (b) {
+        if (logger.isDebugEnabled() && config.isEnabled != enabled) {
+            if (enabled) {
                 logger.debug("Enabled SQL logging(maxSqlLogLength={})", maxSqlLogLength);
             } else {
                 logger.debug("Disabled SQL logging");
             }
         }
 
-        config.set(b, maxSqlLogLength);
+        config.set(enabled, maxSqlLogLength);
     }
 
     /**
@@ -10068,7 +10056,7 @@ public final class JdbcUtil {
      * @param maxSqlLogLength the maximum length of SQL statements in logs
      */
     public static void enableSqlLog(final int maxSqlLogLength) {
-        enableSqlLog(true, maxSqlLogLength);
+        setSqlLogEnabled(true, maxSqlLogLength);
     }
 
     /**
@@ -10087,7 +10075,7 @@ public final class JdbcUtil {
      *
      */
     public static void disableSqlLog() {
-        enableSqlLog(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
+        setSqlLogEnabled(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
     }
 
     /**
@@ -11641,13 +11629,16 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param localThreadCache the cache to use for the current thread
+     * @param localThreadCache the cache to use for the current thread, must not be {@code null}
      * @return the specified localThreadCache
+     * @throws IllegalArgumentException if {@code localThreadCache} is {@code null}
      * @see Jdbc.DaoCache#createByMap()
      * @see Jdbc.DaoCache#createByMap(Map)
      * @see #closeDaoCacheOnCurrentThread()
      */
-    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) {
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException {
+        N.checkArgNotNull(localThreadCache, cs.localThreadCache);
+
         localThreadCache_TL.set(localThreadCache);
 
         return localThreadCache;
@@ -11946,7 +11937,9 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlDialect sqlDialect) {
-        return DaoImpl.createDao(daoInterface, null, ds, Dsl.forDialect(sqlDialect), null, null, JdbcUtil.asyncExecutor.getExecutor());
+        N.checkArgNotNull(sqlDialect, cs.sqlDialect);
+
+        return DaoImpl.createDao(daoInterface, null, ds, dslPool.computeIfAbsent(sqlDialect, Dsl::forDialect), null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
     /**
