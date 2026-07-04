@@ -15670,408 +15670,6 @@
           ]
         },
         {
-          "fqn": "com.landawn.abacus.jdbc.DBProductInfo",
-          "name": "DBProductInfo",
-          "kind": "record",
-          "modifiers": [
-            "public"
-          ],
-          "javadoc_summary": "A record that encapsulates database product information including the product name, version string, and parsed version enum.",
-          "thread_safety": "unspecified",
-          "nullability": "unspecified",
-          "type_params": [],
-          "constructors": [],
-          "methods": [
-            {
-              "name": "<init>",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR }",
-              "return_type": "void",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "productName",
-                  "type": "String",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "productVersion",
-                  "type": "String",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "version",
-                  "type": "DBVersion",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            }
-          ],
-          "fields": []
-        },
-        {
-          "fqn": "com.landawn.abacus.jdbc.DBVersion",
-          "name": "DBVersion",
-          "kind": "enum",
-          "modifiers": [
-            "public"
-          ],
-          "javadoc_summary": "Enumeration representing various database products and their major versions.",
-          "thread_safety": "unspecified",
-          "nullability": "unspecified",
-          "type_params": [],
-          "constructors": [],
-          "methods": [
-            {
-              "name": "isMySQL",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "public boolean isMySQL()",
-              "return_type": "boolean",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "javadoc_summary": "Checks if this {@code DBVersion} enum constant represents any variant of MySQL.",
-              "contract": [
-                "Checks if this {@code DBVersion} enum constant represents any variant of MySQL.",
-                "<p> The check is performed by verifying if the enum constant's name starts with \"MySQL\" (case-insensitive).",
-                "Test for it explicitly with {@code == DBVersion.MariaDB} when MySQL-compatible handling is desired.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); DBVersion currentDbVersion = dbInfo.version(); if (currentDbVersion.isMySQL()) { System.out.println(\"Connected to a MySQL database.\"); // Apply MySQL-specific SQL or optimizations } else { System.out.println(\"Not a MySQL database.\"); } } </pre>"
-              ],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "isPostgreSQL",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "public boolean isPostgreSQL()",
-              "return_type": "boolean",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "javadoc_summary": "Checks if this {@code DBVersion} enum constant represents any variant of PostgreSQL.",
-              "contract": [
-                "Checks if this {@code DBVersion} enum constant represents any variant of PostgreSQL.",
-                "<p> The check is performed by verifying if the enum constant's name starts with \"PostgreSQL\" (case-insensitive).",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); DBVersion currentDbVersion = dbInfo.version(); if (currentDbVersion.isPostgreSQL()) { System.out.println(\"Connected to a PostgreSQL database.\"); // Apply PostgreSQL-specific SQL or features like JSONB } else { System.out.println(\"Not a PostgreSQL database.\"); } } </pre>"
-              ],
-              "examples": [],
-              "see_also": []
-            }
-          ],
-          "fields": [
-            {
-              "name": "H2",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "H2 Database Engine."
-            },
-            {
-              "name": "HSQLDB",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "HSQLDB (HyperSQL Database)."
-            },
-            {
-              "name": "MySQL_5_5",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 5.5."
-            },
-            {
-              "name": "MySQL_5_6",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 5.6."
-            },
-            {
-              "name": "MySQL_5_7",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 5.7."
-            },
-            {
-              "name": "MySQL_5_8",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 5.8."
-            },
-            {
-              "name": "MySQL_5_9",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 5.9."
-            },
-            {
-              "name": "MySQL_6",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 6.x."
-            },
-            {
-              "name": "MySQL_7",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 7.x."
-            },
-            {
-              "name": "MySQL_8",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 8.x."
-            },
-            {
-              "name": "MySQL_9",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 9.x."
-            },
-            {
-              "name": "MySQL_10",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MySQL version 10.x."
-            },
-            {
-              "name": "MySQL_OTHERS",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "Other MySQL versions not specifically enumerated."
-            },
-            {
-              "name": "MariaDB",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "MariaDB (a fork of MySQL)."
-            },
-            {
-              "name": "PostgreSQL_9_2",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 9.2."
-            },
-            {
-              "name": "PostgreSQL_9_3",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 9.3."
-            },
-            {
-              "name": "PostgreSQL_9_4",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 9.4."
-            },
-            {
-              "name": "PostgreSQL_9_5",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 9.5."
-            },
-            {
-              "name": "PostgreSQL_9_6",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 9.6."
-            },
-            {
-              "name": "PostgreSQL_10",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 10.x."
-            },
-            {
-              "name": "PostgreSQL_11",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 11.x."
-            },
-            {
-              "name": "PostgreSQL_12",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "PostgreSQL version 12.x."
-            },
-            {
-              "name": "PostgreSQL_OTHERS",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "Other PostgreSQL versions not specifically enumerated."
-            },
-            {
-              "name": "Oracle",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "Oracle Database."
-            },
-            {
-              "name": "DB2",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "IBM DB2 Database."
-            },
-            {
-              "name": "SQLServer",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "Microsoft SQL Server."
-            },
-            {
-              "name": "OTHERS",
-              "modifiers": [
-                "public",
-                "static",
-                "final"
-              ],
-              "type": "DBVersion",
-              "value": "new DBVersion()",
-              "javadoc_summary": "Other database systems not specifically enumerated."
-            }
-          ]
-        },
-        {
           "fqn": "com.landawn.abacus.jdbc.DataTransferUtil",
           "name": "DataTransferUtil",
           "kind": "class",
@@ -30600,8 +30198,8 @@
                 "public",
                 "static"
               ],
-              "signature": "public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException",
-              "return_type": "DBProductInfo",
+              "signature": "public static SqlDialect.ProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException",
+              "return_type": "SqlDialect.ProductInfo",
               "type_params": [],
               "params": [
                 {
@@ -30619,13 +30217,12 @@
               ],
               "javadoc_summary": "Retrieves the database product information from the given DataSource.",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code DataSource dataSource = ...; // Obtain a DataSource instance DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource); System.out.println(\"Database Product Name: \" + dbInfo.productName()); System.out.println(\"Database Product Version: \" + dbInfo.productVersion()); // Perform actions based on the database type if (dbInfo.version().isPostgreSQL()) { System.out.println(\"This is a PostgreSQL database.\"); } else if (dbInfo.version() == DBVersion.MySQL_8) { System.out.println(\"This is MySQL version 8.\"); } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code DataSource dataSource = ...; // Obtain a DataSource instance SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource); System.out.println(\"Database Product Name: \" + dbInfo.name()); System.out.println(\"Database Product Version: \" + dbInfo.version()); } </pre>"
               ],
               "examples": [],
               "see_also": [
                 "#getDBProductInfo(Connection)",
-                "DBProductInfo",
-                "DBVersion"
+                "SqlDialect.ProductInfo"
               ]
             },
             {
@@ -30635,8 +30232,8 @@
                 "public",
                 "static"
               ],
-              "signature": "public static DBProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException",
-              "return_type": "DBProductInfo",
+              "signature": "public static SqlDialect.ProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException",
+              "return_type": "SqlDialect.ProductInfo",
               "type_params": [],
               "params": [
                 {
@@ -30658,7 +30255,7 @@
               ],
               "javadoc_summary": "Retrieves the database product information from the given {@link Connection} .",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Connection connection = ...; // Obtain a database Connection DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); System.out.println(\"Database Name: \" + dbInfo.productName()); System.out.println(\"Database Version: \" + dbInfo.productVersion()); // Example of checking for a specific database version if (dbInfo.version() == DBVersion.Oracle) { System.out.println(\"Connected to an Oracle database.\"); } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code Connection connection = ...; // Obtain a database Connection SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); System.out.println(\"Database Name: \" + dbInfo.name()); System.out.println(\"Database Version: \" + dbInfo.version()); } </pre>"
               ],
               "examples": [],
               "see_also": [

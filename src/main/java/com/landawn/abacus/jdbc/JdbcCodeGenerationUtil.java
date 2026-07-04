@@ -44,6 +44,7 @@ import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
+import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.util.BiMap;
 import com.landawn.abacus.util.Charsets;
 import com.landawn.abacus.util.ClassUtil;
@@ -913,7 +914,7 @@ public final class JdbcCodeGenerationUtil {
         return createQueryByTableName(tableName, JdbcUtil.getDBProductInfo(conn));
     }
 
-    private static String createQueryByTableName(final String tableName, final DBProductInfo dbProductInfo) {
+    private static String createQueryByTableName(final String tableName, final ProductInfo dbProductInfo) {
         return "SELECT * FROM " + checkTableName(tableName, dbProductInfo) + " WHERE 1 > 2";
     }
 
@@ -1017,7 +1018,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateSelectSql(final Connection conn, final String tableName) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1085,7 +1086,7 @@ public final class JdbcCodeGenerationUtil {
      */
     public static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
             final String whereClause) throws UncheckedSQLException {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1154,7 +1155,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateInsertSql(final Connection conn, final String tableName) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1222,7 +1223,7 @@ public final class JdbcCodeGenerationUtil {
      * @see #generateNamedInsertSql(Connection, String, Collection)
      */
     public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1290,7 +1291,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1359,7 +1360,7 @@ public final class JdbcCodeGenerationUtil {
      * @see #generateInsertSql(Connection, String, Collection)
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1430,7 +1431,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
@@ -1492,7 +1493,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1588,7 +1589,7 @@ public final class JdbcCodeGenerationUtil {
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
             final Collection<String> keyColumnNames, final String whereClause) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1681,7 +1682,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1746,7 +1747,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1839,7 +1840,7 @@ public final class JdbcCodeGenerationUtil {
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
             final Collection<String> keyColumnNames, final String whereClause) {
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1920,7 +1921,7 @@ public final class JdbcCodeGenerationUtil {
      *   <li>Column and value counts must match or conversion fails.</li>
      *   <li>Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
      *       (with backticks for MySQL/MariaDB, or double quotes for other databases) based on the
-     *       {@link DBProductInfo} resolved from {@code ds}.</li>
+     *       {@link ProductInfo} resolved from {@code ds}.</li>
      *   <li>Value tokens are copied verbatim from the parsed {@code VALUES} list; they are not re-quoted,
      *       re-escaped, or otherwise transformed (the supplied INSERT is assumed to already contain valid SQL literals).</li>
      *   <li>The WHERE clause is appended only when {@code whereClause} is non-empty.</li>
@@ -1944,7 +1945,7 @@ public final class JdbcCodeGenerationUtil {
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause) {
 
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
 
         final String insertInto = "INSERT INTO ";
         final int insertIntoLen = insertInto.length();
@@ -2159,7 +2160,7 @@ public final class JdbcCodeGenerationUtil {
         return trimmed;
     }
 
-    private static String checkTableName(final String tableName, final DBProductInfo dbProductInfo) {
+    private static String checkTableName(final String tableName, final ProductInfo dbProductInfo) {
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
 
@@ -2182,7 +2183,7 @@ public final class JdbcCodeGenerationUtil {
         return sb.toString();
     }
 
-    private static String checkColumnName(final String columnName, final DBProductInfo dbProductInfo) {
+    private static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
         N.checkArgNotBlank(columnName, cs.columnName);
 
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
@@ -2210,7 +2211,7 @@ public final class JdbcCodeGenerationUtil {
         return Strings.wrap(identifier.replace(quote, quote + quote), quote);
     }
 
-    private static List<String> checkColumnName(final List<String> columnLabelList, final DBProductInfo dbProductInfo) {
+    private static List<String> checkColumnName(final List<String> columnLabelList, final ProductInfo dbProductInfo) {
         return N.map(columnLabelList, it -> checkColumnName(it, dbProductInfo));
     }
 
@@ -2226,8 +2227,8 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
-    private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {
-        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.productName(), "MySQL", "MariaDB") ? "`" : "\"";
+    private static String getTableColumnNameQuoteChar(final ProductInfo dbProductInfo) {
+        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.name(), "MySQL", "MariaDB") ? "`" : "\"";
     }
 
     /**

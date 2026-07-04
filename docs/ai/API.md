@@ -4113,61 +4113,6 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Parameters:**
   - (none)
 
-### Record DBProductInfo (com.landawn.abacus.jdbc.DBProductInfo)
-A record that encapsulates database product information including the product name, version string, and parsed version enum.
-
-**Thread-safety:** unspecified
-**Nullability:** unspecified
-
-#### Public Constructors
-- (none)
-
-#### Public Static Methods
-- (none)
-
-#### Public Instance Methods
-##### <init>(...) -> void
-- **Signature:** `record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR }`
-- **Parameters:**
-  - `productName` (`String`)
-  - `productVersion` (`String`)
-  - `version` (`DBVersion`)
-
-### Enum DBVersion (com.landawn.abacus.jdbc.DBVersion)
-Enumeration representing various database products and their major versions.
-
-**Thread-safety:** unspecified
-**Nullability:** unspecified
-
-#### Public Constructors
-- (none)
-
-#### Public Static Methods
-- (none)
-
-#### Public Instance Methods
-##### isMySQL(...) -> boolean
-- **Signature:** `public boolean isMySQL()`
-- **Summary:** Checks if this {@code DBVersion} enum constant represents any variant of MySQL.
-- **Contract:**
-  - Checks if this {@code DBVersion} enum constant represents any variant of MySQL.
-  - <p> The check is performed by verifying if the enum constant's name starts with "MySQL" (case-insensitive).
-  - Test for it explicitly with {@code == DBVersion.MariaDB} when MySQL-compatible handling is desired.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); DBVersion currentDbVersion = dbInfo.version(); if (currentDbVersion.isMySQL()) { System.out.println("Connected to a MySQL database."); // Apply MySQL-specific SQL or optimizations } else { System.out.println("Not a MySQL database."); } } </pre>
-- **Parameters:**
-  - (none)
-- **Returns:** {@code true} if this {@code DBVersion} is a MySQL variant, {@code false} otherwise.
-##### isPostgreSQL(...) -> boolean
-- **Signature:** `public boolean isPostgreSQL()`
-- **Summary:** Checks if this {@code DBVersion} enum constant represents any variant of PostgreSQL.
-- **Contract:**
-  - Checks if this {@code DBVersion} enum constant represents any variant of PostgreSQL.
-  - <p> The check is performed by verifying if the enum constant's name starts with "PostgreSQL" (case-insensitive).
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); DBVersion currentDbVersion = dbInfo.version(); if (currentDbVersion.isPostgreSQL()) { System.out.println("Connected to a PostgreSQL database."); // Apply PostgreSQL-specific SQL or features like JSONB } else { System.out.println("Not a PostgreSQL database."); } } </pre>
-- **Parameters:**
-  - (none)
-- **Returns:** {@code true} if this {@code DBVersion} is a PostgreSQL variant, {@code false} otherwise.
-
 ### Class DataTransferUtil (com.landawn.abacus.jdbc.DataTransferUtil)
 Utility class for database import/export operations, CSV processing, and data copying between databases.
 
@@ -7678,24 +7623,24 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - (none)
 
 #### Public Static Methods
-##### getDBProductInfo(...) -> DBProductInfo
-- **Signature:** `public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException`
+##### getDBProductInfo(...) -> SqlDialect.ProductInfo
+- **Signature:** `public static SqlDialect.ProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException`
 - **Summary:** Retrieves the database product information from the given DataSource.
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code DataSource dataSource = ...; // Obtain a DataSource instance DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource); System.out.println("Database Product Name: " + dbInfo.productName()); System.out.println("Database Product Version: " + dbInfo.productVersion()); // Perform actions based on the database type if (dbInfo.version().isPostgreSQL()) { System.out.println("This is a PostgreSQL database."); } else if (dbInfo.version() == DBVersion.MySQL_8) { System.out.println("This is MySQL version 8."); } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code DataSource dataSource = ...; // Obtain a DataSource instance SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource); System.out.println("Database Product Name: " + dbInfo.name()); System.out.println("Database Product Version: " + dbInfo.version()); } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource from which to obtain a database connection.
-- **Returns:** A {@link DBProductInfo} object containing the database product name, version, and type.
+- **Returns:** A {@link SqlDialect.ProductInfo} object containing the database product name and version.
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs while trying to connect to the database.
-- **See also:** #getDBProductInfo(Connection), DBProductInfo, DBVersion
-- **Signature:** `public static DBProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException`
+- **See also:** #getDBProductInfo(Connection), SqlDialect.ProductInfo
+- **Signature:** `public static SqlDialect.ProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Retrieves the database product information from the given {@link Connection} .
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Connection connection = ...; // Obtain a database Connection DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); System.out.println("Database Name: " + dbInfo.productName()); System.out.println("Database Version: " + dbInfo.productVersion()); // Example of checking for a specific database version if (dbInfo.version() == DBVersion.Oracle) { System.out.println("Connected to an Oracle database."); } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code Connection connection = ...; // Obtain a database Connection SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); System.out.println("Database Name: " + dbInfo.name()); System.out.println("Database Version: " + dbInfo.version()); } </pre>
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use for retrieving metadata. It must be an active connection.
-- **Returns:** A {@link DBProductInfo} object containing the database product name, version, and a standardized {@link DBVersion} enum.
+- **Returns:** A {@link SqlDialect.ProductInfo} object containing the database product name and version.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs while retrieving metadata.

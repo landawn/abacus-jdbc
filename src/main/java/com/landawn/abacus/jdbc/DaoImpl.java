@@ -1860,12 +1860,11 @@ final class DaoImpl {
 
         @SuppressWarnings("UnnecessaryLocalVariable")
         final javax.sql.DataSource primaryDataSource = ds;
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
-        final DBVersion dbVersion = dbProductInfo.dbVersion();
+        final SqlDialect.ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
 
         if (daoLogger.isDebugEnabled()) {
-            daoLogger.debug("Resolved database product for Dao proxy(interface={}): name={}, version={}, dbVersion={}", daoClassName,
-                    dbProductInfo.productName(), dbProductInfo.productVersion(), dbVersion);
+            daoLogger.debug("Resolved database product for Dao proxy(interface={}): name={}, version={}", daoClassName, dbProductInfo.name(),
+                    dbProductInfo.version());
         }
 
         final AsyncExecutor asyncExecutor = executor == null ? JdbcUtil.asyncExecutor : new AsyncExecutor(executor);

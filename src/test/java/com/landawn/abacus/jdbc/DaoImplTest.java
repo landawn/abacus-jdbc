@@ -948,8 +948,7 @@ public class DaoImplTest extends TestBase {
         return ds;
     }
 
-    private static Condition invokeHandleLimit(final Condition cond, final int count, final DBVersion dbVersion) throws Exception {
-        // dbVersion no longer participates: dialect rendering is delegated to the SQL builder.
+    private static Condition invokeHandleLimit(final Condition cond, final int count) throws Exception {
         final Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", Condition.class, int.class);
         handleLimit.setAccessible(true);
 
@@ -981,40 +980,40 @@ public class DaoImplTest extends TestBase {
     public void testHandleLimit_StandaloneLimitRetainedForLimitDialect() throws Exception {
         final Limit original = Filters.limit(20, 5);
 
-        assertSame(original, invokeHandleLimit(original, -1, DBVersion.MySQL_8));
+        assertSame(original, invokeHandleLimit(original, -1));
     }
 
     @Test
     public void testHandleLimit_CriteriaLimitRetainedAndAppendedForLimitDialect() throws Exception {
         final Criteria withLimit = Criteria.builder().where(Filters.eq("id", 1)).limit(20, 5).build();
-        final Criteria retained = (Criteria) invokeHandleLimit(withLimit, -1, DBVersion.MySQL_8);
+        final Criteria retained = (Criteria) invokeHandleLimit(withLimit, -1);
 
         assertEquals(20, retained.getLimit().getCount());
         assertEquals(5, retained.getLimit().getOffset());
         assertNotNull(retained.getWhere());
 
         final Criteria withoutLimit = Criteria.builder().where(Filters.eq("id", 1)).build();
-        final Criteria mysqlLimited = (Criteria) invokeHandleLimit(withoutLimit, 3, DBVersion.MySQL_8);
+        final Criteria mysqlLimited = (Criteria) invokeHandleLimit(withoutLimit, 3);
         assertEquals(3, mysqlLimited.getLimit().getCount());
         assertEquals(0, mysqlLimited.getLimit().getOffset());
     }
 
     @Test
     public void testHandleLimit_BuildsCriteriaForBareConditions() throws Exception {
-        final Criteria whereLimited = (Criteria) invokeHandleLimit(Filters.eq("id", 1), 2, DBVersion.MySQL_8);
+        final Criteria whereLimited = (Criteria) invokeHandleLimit(Filters.eq("id", 1), 2);
         assertNotNull(whereLimited.getWhere());
         assertEquals(2, whereLimited.getLimit().getCount());
 
-        final Criteria orderLimited = (Criteria) invokeHandleLimit(Filters.orderBy("id"), 2, DBVersion.Oracle);
+        final Criteria orderLimited = (Criteria) invokeHandleLimit(Filters.orderBy("id"), 2);
         assertNotNull(orderLimited.getOrderBy());
         assertEquals(2, orderLimited.getLimit().getCount());
 
-        final Criteria groupLimited = (Criteria) invokeHandleLimit(Filters.groupBy("status"), 2, DBVersion.MySQL_8);
+        final Criteria groupLimited = (Criteria) invokeHandleLimit(Filters.groupBy("status"), 2);
         assertNotNull(groupLimited.getGroupBy());
         assertEquals(2, groupLimited.getLimit().getCount());
 
         // A null condition with a positive count yields a standalone Limit (no wrapping Criteria).
-        final Limit noConditionLimited = (Limit) invokeHandleLimit(null, 2, DBVersion.MySQL_8);
+        final Limit noConditionLimited = (Limit) invokeHandleLimit(null, 2);
         assertEquals(2, noConditionLimited.getCount());
         assertEquals(0, noConditionLimited.getOffset());
     }
@@ -1061,7 +1060,7 @@ public class DaoImplTest extends TestBase {
     public void testHandleLimit_BareUnionConditionDoesNotClassCast() throws Exception {
         final Condition union = Filters.union(Filters.subQuery("select 1"));
 
-        final Criteria limited = (Criteria) invokeHandleLimit(union, 2, DBVersion.MySQL_8);
+        final Criteria limited = (Criteria) invokeHandleLimit(union, 2);
 
         assertEquals(1, limited.getSetOperations().size());
         assertEquals(2, limited.getLimit().getCount());

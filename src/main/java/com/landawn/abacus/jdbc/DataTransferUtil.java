@@ -45,6 +45,7 @@ import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCsvWriter;
 import com.landawn.abacus.util.CsvUtil;
@@ -2777,7 +2778,7 @@ public final class DataTransferUtil {
             return JdbcCodeGenerationUtil.generateSelectSql(conn, tableName);
         }
 
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final StringBuilder sb = new StringBuilder();
 
         sb.append(SK.SELECT).append(SK._SPACE);
@@ -2804,7 +2805,7 @@ public final class DataTransferUtil {
             return JdbcCodeGenerationUtil.generateInsertSql(conn, tableName);
         }
 
-        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final StringBuilder sb = new StringBuilder();
 
         sb.append(SK.INSERT).append(SK._SPACE).append(SK.INTO).append(SK._SPACE).append(checkTableName(tableName, dbProductInfo)).append(SK._PARENTHESIS_L);
@@ -2827,7 +2828,7 @@ public final class DataTransferUtil {
         return sb.toString();
     }
 
-    private static String checkTableName(final String tableName, final DBProductInfo dbProductInfo) {
+    private static String checkTableName(final String tableName, final ProductInfo dbProductInfo) {
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
@@ -2851,7 +2852,7 @@ public final class DataTransferUtil {
         return sb.toString();
     }
 
-    private static String checkColumnName(final String columnName, final DBProductInfo dbProductInfo) {
+    private static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
         N.checkArgNotBlank(columnName, cs.columnName);
 
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
@@ -2877,8 +2878,8 @@ public final class DataTransferUtil {
         return quote + identifier.replace(quote, quote + quote) + quote;
     }
 
-    private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {
-        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.productName(), "MySQL", "MariaDB") ? "`" : "\"";
+    private static String getTableColumnNameQuoteChar(final ProductInfo dbProductInfo) {
+        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.name(), "MySQL", "MariaDB") ? "`" : "\"";
     }
 
     /**
@@ -3145,13 +3146,13 @@ public final class DataTransferUtil {
     private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
-        // MariaDB shares MySQL's protocol-level requirement for Integer.MIN_VALUE to enable
+        // MySQL and MariaDB share a protocol-level requirement for Integer.MIN_VALUE to enable
         // row-by-row streaming; without it the driver buffers the entire result set in client
-        // memory. DBVersion.isMySQL() returns true only for MySQL_* constants and excludes
-        // MariaDB, so we check the enum explicitly.
-        final DBVersion version = JdbcUtil.getDBProductInfo(conn).dbVersion();
+        // memory. MariaDB drivers may report the product name as either "MariaDB" or "MySQL" (with
+        // "MariaDB" only in the version string), so match both name and version.
+        final ProductInfo productInfo = JdbcUtil.getDBProductInfo(conn);
 
-        if (version.isMySQL() || version == DBVersion.MariaDB) {
+        if (Strings.containsAnyIgnoreCase(productInfo.name(), "MySQL", "MariaDB") || Strings.containsIgnoreCase(productInfo.version(), "MariaDB")) {
             stmt.setFetchSize(Integer.MIN_VALUE);
         } else {
             stmt.setFetchSize(fetchSize);

@@ -31,6 +31,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.u.Nullable;
@@ -736,10 +737,10 @@ public class JdbcUtilIntegrationTest extends TestBase {
     @Test
     public void testGetDBProductInfo_H2Connection() throws SQLException {
         try (Connection conn = ds.getConnection()) {
-            final DBProductInfo info = JdbcUtil.getDBProductInfo(conn);
+            final ProductInfo info = JdbcUtil.getDBProductInfo(conn);
             assertNotNull(info);
-            assertNotNull(info.productName());
-            assertTrue(info.productName().toLowerCase().contains("h2"));
+            assertNotNull(info.name());
+            assertTrue(info.name().toLowerCase().contains("h2"));
         }
     }
 

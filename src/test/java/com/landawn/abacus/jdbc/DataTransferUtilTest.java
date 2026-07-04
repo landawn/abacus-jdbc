@@ -1331,10 +1331,10 @@ public class DataTransferUtilTest extends TestBase {
         verify(stmt, never()).close();
     }
 
-    // Regression: setFetchForLargeResult only enabled row-by-row streaming for MySQL_* enums.
-    // MariaDB has its own DBVersion constant and shares MySQL's protocol-level requirement for
-    // setFetchSize(Integer.MIN_VALUE); without it, the driver buffers the entire result set in
-    // client memory. The fix checks both MySQL and MariaDB.
+    // Regression: setFetchForLargeResult must enable row-by-row streaming for MariaDB too, not just
+    // MySQL. MariaDB shares MySQL's protocol-level requirement for setFetchSize(Integer.MIN_VALUE);
+    // without it, the driver buffers the entire result set in client memory. The check matches both
+    // MySQL and MariaDB by product name/version.
     //
     // setFetchForLargeResult is package-private; we invoke it reflectively against a connection
     // whose metadata reports productName="MariaDB".

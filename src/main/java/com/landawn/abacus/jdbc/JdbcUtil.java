@@ -86,6 +86,7 @@ import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SqlDialect;
+import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.SqlOperation;
 import com.landawn.abacus.type.Type;
@@ -393,33 +394,25 @@ public final class JdbcUtil {
     /**
      * Retrieves the database product information from the given DataSource.
      * This method establishes a temporary connection to extract metadata about the database,
-     * including its product name, version, and a standardized {@link DBVersion} enum.
+     * including its product name and version.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource dataSource = ...;  // Obtain a DataSource instance
-     * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource);
+     * SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource);
      *
-     * System.out.println("Database Product Name: " + dbInfo.productName());
-     * System.out.println("Database Product Version: " + dbInfo.productVersion());
-     *
-     * // Perform actions based on the database type
-     * if (dbInfo.dbVersion().isPostgreSQL()) {
-     *     System.out.println("This is a PostgreSQL database.");
-     * } else if (dbInfo.dbVersion() == DBVersion.MySQL_8) {
-     *     System.out.println("This is MySQL version 8.");
-     * }
+     * System.out.println("Database Product Name: " + dbInfo.name());
+     * System.out.println("Database Product Version: " + dbInfo.version());
      * }</pre>
      *
      * @param ds The DataSource from which to obtain a database connection.
-     * @return A {@link DBProductInfo} object containing the database product name, version, and type.
+     * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
      * @throws IllegalArgumentException if {@code ds} is {@code null}.
      * @throws UncheckedSQLException if a database access error occurs while trying to connect to the database.
      * @see #getDBProductInfo(Connection)
-     * @see DBProductInfo
-     * @see DBVersion
+     * @see SqlDialect.ProductInfo
      */
-    public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException {
+    public static ProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException {
         Connection conn = null;
 
         try {
@@ -432,101 +425,31 @@ public final class JdbcUtil {
 
     /**
      * Retrieves the database product information from the given {@link Connection}.
-     * This method extracts metadata to determine the database type and version without closing the connection.
+     * This method extracts metadata to determine the database product name and version without closing the connection.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection connection = ...;  // Obtain a database Connection
-     * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
+     * SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
      *
-     * System.out.println("Database Name: " + dbInfo.productName());
-     * System.out.println("Database Version: " + dbInfo.productVersion());
-     *
-     * // Example of checking for a specific database version
-     * if (dbInfo.dbVersion() == DBVersion.Oracle) {
-     *     System.out.println("Connected to an Oracle database.");
-     * }
+     * System.out.println("Database Name: " + dbInfo.name());
+     * System.out.println("Database Version: " + dbInfo.version());
      * }</pre>
      *
      * @param conn The database {@link Connection} to use for retrieving metadata. It must be an active connection.
-     * @return A {@link DBProductInfo} object containing the database product name, version, and a standardized {@link DBVersion} enum.
+     * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
      * @throws IllegalArgumentException if {@code conn} is {@code null}.
      * @throws UncheckedSQLException if a database access error occurs while retrieving metadata.
      * @see #getDBProductInfo(javax.sql.DataSource)
      * @see DatabaseMetaData
      */
-    public static DBProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException {
+    public static ProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
 
         try {
             final DatabaseMetaData metaData = conn.getMetaData();
 
-            final String dbProductName = metaData.getDatabaseProductName();
-            final String dbProductVersion = metaData.getDatabaseProductVersion();
-            final String productNameForMatch = dbProductName == null ? "" : dbProductName.trim();
-            final String productVersionForMatch = dbProductVersion == null ? "" : dbProductVersion.trim();
-
-            DBVersion dbVersion = DBVersion.OTHERS;
-
-            if (Strings.containsIgnoreCase(productNameForMatch, "H2")) {
-                dbVersion = DBVersion.H2;
-            } else if (Strings.containsIgnoreCase(productNameForMatch, "HSQL")) {
-                dbVersion = DBVersion.HSQLDB;
-            } else if (Strings.containsIgnoreCase(productNameForMatch, "MariaDB") || Strings.containsIgnoreCase(productVersionForMatch, "MariaDB")) {
-                dbVersion = DBVersion.MariaDB;
-            } else if (Strings.containsIgnoreCase(productNameForMatch, "MySQL")) {
-                if (productVersionForMatch.startsWith("5.5") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.MySQL_5_5;
-                } else if (productVersionForMatch.startsWith("5.6") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.MySQL_5_6;
-                } else if (productVersionForMatch.startsWith("5.7") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.MySQL_5_7;
-                } else if (productVersionForMatch.startsWith("5.8") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.MySQL_5_8;
-                } else if (productVersionForMatch.startsWith("5.9") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.MySQL_5_9;
-                } else if (productVersionForMatch.startsWith("6") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
-                    dbVersion = DBVersion.MySQL_6;
-                } else if (productVersionForMatch.startsWith("7") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
-                    dbVersion = DBVersion.MySQL_7;
-                } else if (productVersionForMatch.startsWith("8") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
-                    dbVersion = DBVersion.MySQL_8;
-                } else if (productVersionForMatch.startsWith("9") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
-                    dbVersion = DBVersion.MySQL_9;
-                } else if (productVersionForMatch.startsWith("10") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
-                    dbVersion = DBVersion.MySQL_10;
-                } else {
-                    dbVersion = DBVersion.MySQL_OTHERS;
-                }
-            } else if (Strings.containsIgnoreCase(productNameForMatch, "PostgreSQL")) {
-                if (productVersionForMatch.startsWith("9.2") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_9_2;
-                } else if (productVersionForMatch.startsWith("9.3") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_9_3;
-                } else if (productVersionForMatch.startsWith("9.4") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_9_4;
-                } else if (productVersionForMatch.startsWith("9.5") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_9_5;
-                } else if (productVersionForMatch.startsWith("9.6") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_9_6;
-                } else if (productVersionForMatch.startsWith("10") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_10;
-                } else if (productVersionForMatch.startsWith("11") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_11;
-                } else if (productVersionForMatch.startsWith("12") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
-                    dbVersion = DBVersion.PostgreSQL_12;
-                } else {
-                    dbVersion = DBVersion.PostgreSQL_OTHERS;
-                }
-            } else if (Strings.containsIgnoreCase(productNameForMatch, "Oracle")) {
-                dbVersion = DBVersion.Oracle;
-            } else if (Strings.containsIgnoreCase(productNameForMatch, "DB2")) {
-                dbVersion = DBVersion.DB2;
-            } else if (Strings.containsIgnoreCase(productNameForMatch, "SQL SERVER")) {
-                dbVersion = DBVersion.SQLServer;
-            }
-
-            return new DBProductInfo(dbProductName, dbProductVersion, dbVersion);
+            return ProductInfo.of(metaData.getDatabaseProductName(), metaData.getDatabaseProductVersion());
         } catch (final SQLException e) {
             logger.warn(e, "Failed to read database product metadata");
             throw new UncheckedSQLException(e);
@@ -7795,7 +7718,7 @@ public final class JdbcUtil {
 
     static boolean checkDateType(final Statement stmt) {
         try {
-            return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(stmt.getConnection()).productName(), "Oracle");
+            return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(stmt.getConnection()).name(), "Oracle");
         } catch (final SQLException e) {
             return true;
         }
