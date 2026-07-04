@@ -47,11 +47,11 @@ No NEW public-API inconsistencies were introduced by the recent deletions.
   Medium | The two families differ ONLY by letter case (foreach vs forEach) and take different
   callback contracts; a one-character typo silently selects a different method. The Javadoc documents
   the hazard (8773-8776 / 8819-8822) and an in-source "NAMING-REVIEW SUGGESTION (2026-06-27)" comment
-  at 8802-8804 / 8856-8858 proposes rename `forEachRow`, but no rename was made.
+  at 8802-8804 / 8856-8858 proposes rename `foreach`, but no rename was made.
   Current evidence: `public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR` (8806);
   `public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR` (8860);
   comment `// NAMING-REVIEW SUGGESTION (2026-06-27): \`foreach\` differs from the sibling \`forEach(...)\` only by` (8802).
-  Recommend: add an unambiguous name (e.g. forEachRow) and keep foreach only as a deprecated alias.
+  Recommend: add an unambiguous name (e.g. foreach) and keep foreach only as a deprecated alias.
 - [PARTIALLY-ADDRESSED] settParameters(...) (double-t) vs setParameters(...) | AbstractQuery.java:3153, 3201 |
   Low | Same capitalization/typo hazard; the double-t disambiguates ParametersSetter<? super This>
   from ParametersSetter<? super Stmt>. A class-level doc block (115-125) explicitly explains the

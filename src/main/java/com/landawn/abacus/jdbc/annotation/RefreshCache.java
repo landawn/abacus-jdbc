@@ -24,8 +24,9 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * Triggers invalidation of the DAO's result cache after the annotated method completes. Use it on
- * write-side operations (insert, update, delete, save, etc.) so that subsequent read-side calls
- * marked with {@link CacheResult} re-issue the SQL instead of returning stale results.
+ * write-side operations (on a cacheable DAO these are the built-in insert/save methods and custom
+ * {@code INSERT} queries) so that subsequent read-side calls marked with {@link CacheResult}
+ * re-issue the SQL instead of returning stale results.
  *
  * <p>The DAO proxy ({@code DaoImpl}) collects {@code @RefreshCache} annotations at build time. At
  * runtime, after a matching method finishes (success or failure), the proxy clears the entries
@@ -40,24 +41,29 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
  *
+ * <p>Note: caching (and therefore cache invalidation) is only supported on cacheable DAOs
+ * ({@code NoUpdateDao}/{@code ReadOnlyDao} families), whose only write operations are the built-in
+ * insert/save methods and custom {@code INSERT} queries — a custom {@code UPDATE}/{@code DELETE}
+ * {@code @Query} fails DAO initialization on such DAOs.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Cache(capacity = 1000)
- * @RefreshCache                                   // type-level: defaults cover insert/update/delete/...
+ * @RefreshCache                                   // type-level: defaults cover insert/save/...
  * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
  *
  *     @CacheResult(enabled = true, liveTime = 600_000)
  *     @Query("SELECT * FROM product WHERE id = :id")
  *     Product findById(@Bind("id") Long id) throws SQLException;
  *
- *     @Query("UPDATE product SET price = :price WHERE id = :id")
- *     int updatePrice(@Bind("id") Long id, @Bind("price") BigDecimal price) throws SQLException;
+ *     @Query("INSERT INTO product (name, price) VALUES (:name, :price)")
+ *     void addProduct(@Bind("name") String name, @Bind("price") BigDecimal price) throws SQLException;
  *     // ← falls under the type-level filter; cache is invalidated after each call.
  *
- *     // High-frequency update that is intentionally exempt from cache invalidation.
+ *     // High-frequency insert that is intentionally exempt from cache invalidation.
  *     @RefreshCache(enabled = false)
- *     @Query("UPDATE product SET view_count = view_count + 1 WHERE id = :id")
- *     int incrementViews(@Bind("id") Long id) throws SQLException;
+ *     @Query("INSERT INTO product_view_log (product_id) VALUES (:id)")
+ *     void logView(@Bind("id") Long id) throws SQLException;
  * }
  * }</pre>
  *
@@ -86,12 +92,12 @@ public @interface RefreshCache {
      * <pre>{@code
      * @RefreshCache
      * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
-     *     @Query("UPDATE users SET last_seen = NOW() WHERE id = :id")
-     *     @RefreshCache(enabled = false) // Don't refresh cache for this frequent update
-     *     void updateLastSeen(@Bind("id") long id) throws SQLException;
+     *     @Query("INSERT INTO user_activity_log (user_id) VALUES (:id)")
+     *     @RefreshCache(enabled = false) // Don't refresh cache for this frequent insert
+     *     void logActivity(@Bind("id") long id) throws SQLException;
      *
-     *     @Query("UPDATE users SET email = :email WHERE id = :id")
-     *     void updateEmail(@Bind("id") long id, @Bind("email") String email) throws SQLException;   // Will refresh cache
+     *     @Query("INSERT INTO users (email) VALUES (:email)")
+     *     void addUser(@Bind("email") String email) throws SQLException;   // Will refresh cache
      * }
      * }</pre>
      *

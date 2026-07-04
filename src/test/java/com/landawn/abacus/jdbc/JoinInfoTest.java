@@ -284,26 +284,6 @@ public class JoinInfoTest extends TestBase {
         assertTrue(sql.contains("JOIN"));
     }
 
-    // Test deprecated getSelectSqlBuilderAndParamSetter delegates to getSelectSqlPlan
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testGetSelectSqlBuilderAndParamSetter_Deprecated() {
-        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlBuilderAndParamSetter(PSC);
-        assertNotNull(plan);
-        assertNotNull(plan._1.apply(null));
-    }
-
-    // Test deprecated getBatchSelectSqlBuilderAndParamSetter delegates to getBatchSelectSqlPlan
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testGetBatchSelectSqlBuilderAndParamSetter_Deprecated() {
-        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlBuilderAndParamSetter(PSC);
-        assertNotNull(plan);
-        assertNotNull(plan._1.apply(null, 2));
-    }
-
     // Test getDeleteSqlPlan returns valid plan
     @Test
     public void testGetDeleteSqlPlan() {
@@ -312,16 +292,6 @@ public class JoinInfoTest extends TestBase {
         assertNotNull(plan);
         assertNotNull(plan._1);
         assertTrue(plan._1.contains("DELETE"));
-    }
-
-    // Test deprecated getDeleteSqlAndParamSetter delegates to getDeleteSqlPlan
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testGetDeleteSqlAndParamSetter_Deprecated() {
-        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple3<String, String, ?> plan = joinInfo.getDeleteSqlAndParamSetter(PSC);
-        assertNotNull(plan);
-        assertNotNull(plan._1);
     }
 
     // Test getDeleteSqlPlan for many-to-many join
@@ -342,16 +312,6 @@ public class JoinInfoTest extends TestBase {
         assertNotNull(plan);
         assertNotNull(plan._1.apply(3));
         assertTrue(plan._1.apply(3).contains("DELETE"));
-    }
-
-    // Test deprecated getBatchDeleteSqlBuilderAndParamSetter
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testGetBatchDeleteSqlBuilderAndParamSetter_Deprecated() {
-        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlBuilderAndParamSetter(PSC);
-        assertNotNull(plan);
-        assertNotNull(plan._1.apply(2));
     }
 
     // Test that getSelectSqlPlan throws for unsupported SqlBuilder

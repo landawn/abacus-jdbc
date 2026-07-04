@@ -704,8 +704,10 @@ public class DataTransferUtilTest extends TestBase {
         final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.source-table", "archive.target-table", selectColumns);
 
         assertEquals(1, result);
-        verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales`.`source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        verify(targetConnection).prepareStatement("INSERT INTO \"archive\".\"target-table\"(\"created-date\") VALUES (?)");
+        // Simple parts (sales/archive) stay unquoted so plain qualified names keep resolving on
+        // case-folding databases; only the parts needing quoting are quoted.
+        verify(mockConnection).prepareStatement("SELECT `created-date` FROM sales.`source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO archive.\"target-table\"(\"created-date\") VALUES (?)");
     }
 
     @Test

@@ -206,7 +206,7 @@ public class DaoImplTest extends TestBase {
     }
 
     interface MappedByKeyDao {
-        @MappedByKey("id")
+        @MappedByKey(keyName = "id")
         java.util.Map<Long, TestEntity> findMapped();
     }
 

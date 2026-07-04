@@ -344,8 +344,9 @@ public class JdbcMySQLTest extends TestBase {
 
             final Jdbc.OutParamResult out = q.executeAndGetOutParameters();
 
-            // p_will_be_null (INTEGER) is never assigned → JDBC getInt() returns 0 for SQL NULL
-            assertEquals(0, (int) out.getOutParamValue(2));
+            // p_will_be_null (INTEGER) is never assigned → SQL NULL is reported as null
+            // (getOutParameters applies wasNull() so primitive getters don't mask NULL as 0)
+            assertNull(out.getOutParamValue(2));
             // p_label (VARCHAR) is never assigned → getString() returns null
             assertNull(out.getOutParamValue(3));
         }

@@ -68,7 +68,5 @@ package com.landawn.abacus.jdbc.dao;
  * @see UncheckedCrudLDao
  */
 public interface UncheckedReadOnlyCrudLJoinEntityHelper<T, TD extends UncheckedReadOnlyCrudLDao<T, TD>>
-        extends UncheckedReadOnlyCrudJoinEntityHelper<T, Long, TD> {
-    // This interface combines read-only restrictions with join entity capabilities
-    // for Long-ID entities. All methods are inherited from parent interfaces.
+        extends UncheckedReadOnlyCrudJoinEntityHelper<T, Long, TD>, ReadOnlyCrudLJoinEntityHelper<T, TD> {
 }

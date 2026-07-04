@@ -88,6 +88,12 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *   <li>Manual: Use {@link RefreshCache} annotation on update methods</li>
  * </ul>
  *
+ * <p>Note: while a thread-local DAO cache opened by {@code JdbcUtil.openDaoCacheOnCurrentThread()}
+ * is active, it takes precedence on that thread for query-named methods (names starting with
+ * {@code query}/{@code list}/{@code get}/{@code find}/{@code exists}/{@code count}/...) — for those
+ * methods this annotation's DAO-level cache is neither read from nor written to until the
+ * thread-local cache is closed.</p>
+ *
  * @see Cache
  * @see RefreshCache
  * @see <a href="https://github.com/EsotericSoftware/kryo">Kryo Serialization</a>

@@ -86,7 +86,8 @@ import com.landawn.abacus.util.stream.CharStream;
  *   <tr>
  *     <td>CSV Export</td>
  *     <td>{@code exportCsv()}</td>
- *     <td>Database query results (via DataSource, Connection, PreparedStatement, or ResultSet) to File or Writer</td>
+ *     <td>Database query results (via DataSource, Connection, PreparedStatement, or ResultSet) to File or Writer
+ *         (positional PreparedStatement overloads export to File only; use {@code exportCsvFrom(stmt).to(writer)} for a Writer)</td>
  *   </tr>
  *   <tr>
  *     <td>Data Copying</td>
@@ -100,7 +101,7 @@ import com.landawn.abacus.util.stream.CharStream;
  *   </tr>
  *   <tr>
  *     <td>Fluent Builders</td>
- *     <td>{@code importFrom()}, {@code importCsvFrom()}, {@code exportCsv()}, {@code copyFrom()}, {@code copyTable()}</td>
+ *     <td>{@code importFrom()}, {@code importCsvFrom()}, {@code exportCsvFrom()}, {@code copyFrom()}, {@code copyTable()}</td>
  *     <td>Chainable, named-option alternatives to the positional {@code importData}/{@code importCsv}/{@code exportCsv}/{@code copy} overloads</td>
  *   </tr>
  * </table>
@@ -114,8 +115,8 @@ import com.landawn.abacus.util.stream.CharStream;
  *   <li>{@link #importFrom(Iterator)} &rarr; {@link RowImportBuilder} (terminal: {@code to(...)} returns {@code long})</li>
  *   <li>{@link #importCsvFrom(File)} / {@link #importCsvFrom(Reader)} &rarr; {@link RowImportBuilder}
  *       (terminal: {@code to(...)} returns {@code long})</li>
- *   <li>{@link #exportCsv(javax.sql.DataSource, String)} / {@link #exportCsv(Connection, String)} /
- *       {@link #exportCsv(PreparedStatement)} / {@link #exportCsv(ResultSet)} &rarr; {@link CsvExportBuilder}
+ *   <li>{@link #exportCsvFrom(javax.sql.DataSource, String)} / {@link #exportCsvFrom(Connection, String)} /
+ *       {@link #exportCsvFrom(PreparedStatement)} / {@link #exportCsvFrom(ResultSet)} &rarr; {@link CsvExportBuilder}
  *       (terminal: {@code to(File)} / {@code to(Writer)} returns {@code long})</li>
  *   <li>{@link #copyFrom(javax.sql.DataSource, String)} / {@link #copyFrom(Connection, String)} /
  *       {@link #copyFrom(PreparedStatement)} &rarr; {@code CopyFrom*} builders (terminal: {@code to(...)} returns {@code long})</li>
@@ -2842,13 +2843,17 @@ public final class DataTransferUtil {
                 sb.append('.');
             }
 
-            sb.append(quoteIdentifier(parts[i], quote));
+            // Same conditional quoting as the single-part path: unconditional quoting makes plain
+            // qualified names case-exact and breaks resolution on case-folding databases (Oracle/H2/...).
+            sb.append(isSimpleSqlIdentifier(parts[i]) ? parts[i] : quoteIdentifier(parts[i], quote));
         }
 
         return sb.toString();
     }
 
     private static String checkColumnName(final String columnName, final DBProductInfo dbProductInfo) {
+        N.checkArgNotBlank(columnName, cs.columnName);
+
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
         return isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quote);
@@ -3144,7 +3149,7 @@ public final class DataTransferUtil {
         // row-by-row streaming; without it the driver buffers the entire result set in client
         // memory. DBVersion.isMySQL() returns true only for MySQL_* constants and excludes
         // MariaDB, so we check the enum explicitly.
-        final DBVersion version = JdbcUtil.getDBProductInfo(conn).version();
+        final DBVersion version = JdbcUtil.getDBProductInfo(conn).dbVersion();
 
         if (version.isMySQL() || version == DBVersion.MariaDB) {
             stmt.setFetchSize(Integer.MIN_VALUE);
@@ -3694,7 +3699,7 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * long n = DataTransferUtil.exportCsv(dataSource, "SELECT id, name, email FROM users")
+     * long n = DataTransferUtil.exportCsvFrom(dataSource, "SELECT id, name, email FROM users")
      *         .selectColumns(List.of("id", "name"))
      *         .to(new File("users.csv"));
      * }</pre>
@@ -3703,10 +3708,10 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute (must not be {@code null})
      * @return a {@link CsvExportBuilder}
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code selectSql} is {@code null}
-     * @see #exportCsv(Connection, String)
+     * @see #exportCsvFrom(Connection, String)
      */
     @Beta
-    public static CsvExportBuilder exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql) {
+    public static CsvExportBuilder exportCsvFrom(final javax.sql.DataSource sourceDataSource, final String selectSql) {
         N.checkArgNotNull(sourceDataSource, "sourceDataSource");
         N.checkArgNotNull(selectSql, "selectSql");
 
@@ -3721,10 +3726,10 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute (must not be {@code null})
      * @return a {@link CsvExportBuilder}
      * @throws IllegalArgumentException if {@code conn} or {@code selectSql} is {@code null}
-     * @see #exportCsv(javax.sql.DataSource, String)
+     * @see #exportCsvFrom(javax.sql.DataSource, String)
      */
     @Beta
-    public static CsvExportBuilder exportCsv(final Connection conn, final String selectSql) {
+    public static CsvExportBuilder exportCsvFrom(final Connection conn, final String selectSql) {
         N.checkArgNotNull(conn, "conn");
         N.checkArgNotNull(selectSql, "selectSql");
 
@@ -3741,7 +3746,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code stmt} is {@code null}
      */
     @Beta
-    public static CsvExportBuilder exportCsv(final PreparedStatement stmt) {
+    public static CsvExportBuilder exportCsvFrom(final PreparedStatement stmt) {
         N.checkArgNotNull(stmt, "stmt");
 
         return new CsvExportBuilder(null, null, stmt, null, null);
@@ -3756,7 +3761,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code rs} is {@code null}
      */
     @Beta
-    public static CsvExportBuilder exportCsv(final ResultSet rs) {
+    public static CsvExportBuilder exportCsvFrom(final ResultSet rs) {
         N.checkArgNotNull(rs, "rs");
 
         return new CsvExportBuilder(null, null, null, rs, null);
@@ -3764,9 +3769,9 @@ public final class DataTransferUtil {
 
     /**
      * A fluent builder that exports the rows of a query/result to CSV. Obtain an instance via one of the
-     * {@code exportCsv(...)} factory methods ({@link DataTransferUtil#exportCsv(javax.sql.DataSource, String)},
-     * {@link DataTransferUtil#exportCsv(Connection, String)}, {@link DataTransferUtil#exportCsv(PreparedStatement)} or
-     * {@link DataTransferUtil#exportCsv(ResultSet)}), optionally restrict the columns with
+     * {@code exportCsvFrom(...)} factory methods ({@link DataTransferUtil#exportCsvFrom(javax.sql.DataSource, String)},
+     * {@link DataTransferUtil#exportCsvFrom(Connection, String)}, {@link DataTransferUtil#exportCsvFrom(PreparedStatement)} or
+     * {@link DataTransferUtil#exportCsvFrom(ResultSet)}), optionally restrict the columns with
      * {@link #selectColumns(Collection)}, then write to a {@link File} or a {@link Writer} with a terminal
      * {@code to(...)} call.
      *
@@ -3775,7 +3780,7 @@ public final class DataTransferUtil {
      * obtained and released by the terminal. A {@code File} target is created if it does not exist; a {@code Writer}
      * target is flushed but not closed.</p>
      *
-     * @see DataTransferUtil#exportCsv(javax.sql.DataSource, String)
+     * @see DataTransferUtil#exportCsvFrom(javax.sql.DataSource, String)
      */
     public static final class CsvExportBuilder {
         private final javax.sql.DataSource dataSource;
@@ -3992,7 +3997,7 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyFromStatement copyFrom(final PreparedStatement selectStmt) {
-        N.checkArgNotNull(selectStmt, cs.stmt);
+        N.checkArgNotNull(selectStmt, "selectStmt");
 
         return new CopyFromStatement(selectStmt);
     }

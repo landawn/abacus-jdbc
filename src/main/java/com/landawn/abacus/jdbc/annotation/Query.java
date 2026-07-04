@@ -773,7 +773,9 @@ public @interface Query {
      * <p>Database-specific behavior:</p>
      * <ul>
      *   <li><strong>PostgreSQL:</strong> Default fetch size is typically 0 (all rows). Set explicit fetch size for large results</li>
-     *   <li><strong>MySQL:</strong> Fetches all rows by default. Use {@code Integer.MIN_VALUE} for row-by-row streaming</li>
+     *   <li><strong>MySQL:</strong> Fetches all rows by default. Row-by-row streaming needs {@code Integer.MIN_VALUE},
+     *       which this attribute can't express (only positive values are forwarded — see {@code @return});
+     *       use {@code prepareQuery(...).setFetchSize(Integer.MIN_VALUE)} instead</li>
      *   <li><strong>Oracle:</strong> Default is 10. Higher values significantly improve performance for large result sets</li>
      *   <li><strong>SQL Server:</strong> Adaptive fetch size based on packet size</li>
      * </ul>

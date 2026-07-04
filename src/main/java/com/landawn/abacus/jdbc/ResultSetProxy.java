@@ -836,7 +836,9 @@ final class ResultSetProxy implements ResultSet {
             }
 
             if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean) {
-                getter = rs -> rs.getObject(columnIndex);
+                // Matches the index path's cached GET_OBJECT getter, so a type-shifting column (e.g.
+                // SQLite dynamic typing) reads identically whether accessed by index or by label.
+                getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
             } else {
                 if (metadata == null) {
                     metadata = delegate.getMetaData();

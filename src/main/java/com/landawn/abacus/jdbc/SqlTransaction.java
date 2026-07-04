@@ -45,7 +45,9 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p><b>Nested scopes:</b> beginning a transaction again on the same thread and data source does
  * not start a brand-new transaction; instead it re-enters this one and increments an internal
- * reference count. Each scope must call {@link #commit()} or {@link #rollbackIfNotCommitted()}; the
+ * reference count. Each scope should call {@link #commit()} and pair it with
+ * {@link #rollbackIfNotCommitted()} in a {@code finally} block (calling only one of them may leave
+ * the scope open if the other path is skipped by an exception); the
  * underlying JDBC {@code COMMIT}/{@code ROLLBACK} is issued only when the outermost scope completes
  * (the reference count reaches zero). If any inner scope rolls back, the transaction is marked
  * rollback-only and the outermost commit is converted into a rollback. A nested scope may request a
@@ -362,7 +364,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p>If the transaction is marked for rollback only (status {@link Status#MARKED_ROLLBACK}), it
      * will be rolled back instead of committed, and {@code actionAfterCommit} is not run.</p>
      *
-     * @param actionAfterCommit the action to be executed after the current transaction is committed successfully, must not be {@code null}
+     * @param actionAfterCommit the action to be executed after the current transaction is committed successfully in this
+     *        (outermost) scope; for a nested scope the commit is deferred to the outermost scope and this action is
+     *        <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
      * @throws IllegalArgumentException if {@code actionAfterCommit} is {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
      *         automatic rollback is also attempted
@@ -372,10 +376,13 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         logged and ignored rather than throwing.
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
-        N.checkArgNotNull(actionAfterCommit, cs.action);
+        N.checkArgNotNull(actionAfterCommit, "actionAfterCommit");
 
-        _isMarkedByCommitOrRollbackPreviously = true;
+        // Set the latch only after the scope exit succeeds: decrementAndGetRef() can throw on a nested
+        // exit (isolation restore failure) and restores _refCount for a retry — a pre-set latch would
+        // turn the paired rollbackIfNotCommitted() into a no-op and leak the scope.
         final int refCount = decrementAndGetRef();
+        _isMarkedByCommitOrRollbackPreviously = true;
 
         if (refCount > 0) {
             logger.debug("Deferred commit for nested transaction(id={}); remaining scopes={}", _timedId, refCount);
@@ -494,10 +501,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         logged and ignored rather than throwing.
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
-        N.checkArgNotNull(actionAfterRollback, cs.action);
+        N.checkArgNotNull(actionAfterRollback, "actionAfterRollback");
 
-        _isMarkedByCommitOrRollbackPreviously = true;
+        // Latch after the scope exit succeeds — see commit(Runnable) for the failure-path reasoning.
         final int refCount = decrementAndGetRef();
+        _isMarkedByCommitOrRollbackPreviously = true;
 
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
@@ -986,97 +994,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Executes the specified {@code Runnable} outside of this transaction context.
-     * This transaction is temporarily suspended (removed from the current thread) while
-     * {@code cmd} runs, so any work performed inside {@code cmd} executes on a separate,
-     * non-transactional connection and is committed independently of this transaction.
-     * After {@code cmd} returns (or throws), this transaction is restored on the thread.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     // Inside the enclosing transaction: insert a row but do NOT commit yet.
-     *     JdbcUtil.prepareQuery(dataSource, "INSERT INTO widget (name) VALUES (?)").setString(1, "tx-row").update();
-     *
-     *     // runNotInMe suspends THIS transaction, so the command runs outside it.
-     *     tran.runNotInMe(() -> {
-     *         // This write happens on a separate, non-transactional connection and commits immediately.
-     *         JdbcUtil.prepareQuery(dataSource, "INSERT INTO audit_log (msg) VALUES (?)").setString(1, "widget added").update();
-     *     });
-     *
-     *     // ... an exception below triggers rollbackIfNotCommitted() in finally ...
-     *     throw new RuntimeException("business rule failed");
-     * } finally {
-     *     tran.rollbackIfNotCommitted(); // "tx-row" is rolled back, but the audit_log row stays committed.
-     * }
-     *
-     * // A checked exception thrown by the command is propagated as-is:
-     * tran.runNotInMe((Throwables.Runnable<java.io.IOException>) () -> {
-     *     throw new java.io.IOException("io failed"); // throws java.io.IOException
-     * });
-     * }</pre>
-     *
-     * @param <E> the exception type that may be thrown during execution
-     * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
-     * @throws E if the {@code Runnable} throws an exception
-     * @deprecated replaced by {@link #runOutsideTransaction(Throwables.Runnable)}
-     */
-    @Deprecated
-    public <E extends Throwable> void runNotInMe(final Throwables.Runnable<E> cmd) throws E {
-        runOutsideTransaction(cmd);
-    }
-
-    /**
-     * Executes the specified {@code Callable} outside of this transaction context and returns its result.
-     * This transaction is temporarily suspended (removed from the current thread) while
-     * {@code cmd} runs, so any work performed inside {@code cmd} executes on a separate,
-     * non-transactional connection: it does not see this transaction's uncommitted changes,
-     * and any writes it performs are committed independently. After {@code cmd} returns
-     * (or throws), this transaction is restored on the thread.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     // Inside the enclosing transaction: insert a row but do NOT commit yet.
-     *     JdbcUtil.prepareQuery(dataSource, "INSERT INTO widget (name) VALUES (?)").setString(1, "inside-tx").update();
-     *
-     *     // callNotInMe suspends THIS transaction, so the query runs outside it and does NOT
-     *     // see the uncommitted insert above; here the count comes back as 0.
-     *     long committedCount = tran.callNotInMe(() ->
-     *         JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM widget").queryForLong().orElse(0L));
-     *
-     *     // callNotInMe returns the callable's value:
-     *     String marker = tran.callNotInMe(() -> {
-     *         JdbcUtil.prepareQuery(dataSource, "INSERT INTO audit_log (msg) VALUES (?)").setString(1, "checked").update();
-     *         return "done"; // committed independently of the enclosing transaction
-     *     });
-     *
-     *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();
-     * }
-     *
-     * // A checked exception thrown by the command is propagated as-is:
-     * Object value = tran.callNotInMe((Throwables.Callable<Object, java.io.IOException>) () -> {
-     *     throw new java.io.IOException("io failed"); // throws java.io.IOException
-     * });
-     * }</pre>
-     *
-     * @param <R> the result type returned by the operation
-     * @param <E> the exception type that may be thrown during execution
-     * @param cmd the {@code Callable} to be executed outside of this transaction, must not be {@code null}
-     * @return the result returned by the {@code Callable}
-     * @throws E if the {@code Callable} throws an exception
-     * @deprecated replaced by {@link #callOutsideTransaction(Throwables.Callable)}
-     */
-    @Deprecated
-    public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<? extends R, E> cmd) throws E {
-        return callOutsideTransaction(cmd);
-    }
-
-    /**
      * Closes this transaction by calling {@link #rollbackIfNotCommitted()}.
      * This method is provided to support try-with-resources statements.
      *
@@ -1167,13 +1084,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         /**
          * Transaction created by JdbcUtil for general database operations.
          */
-        JDBC_UTIL,
-
-        /**
-         * Formerly used by the now-archived (non-functional) SqlExecutor; retained only for ordinal stability.
-         * @deprecated no longer used
-         */
-        @Deprecated
-        SQL_EXECUTOR
+        JDBC_UTIL
     }
 }

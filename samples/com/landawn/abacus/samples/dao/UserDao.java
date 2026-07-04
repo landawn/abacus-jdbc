@@ -54,7 +54,7 @@ import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
-@Handler(type = UserDaoHandlerA.class)
+@Handler(impl = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
 @DaoConfig(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
@@ -186,7 +186,7 @@ public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<
     Queue<User> listToCollection(int id) throws SQLException;
 
     @Query("select * FROM user1 where id > ?")
-    @MappedByKey("id")
+    @MappedByKey(keyName = "id")
     Map<Long, User> selectIdBiggerThan(int id) throws SQLException;
 
     @Query("select user1.id as \"id\", first_name, last_name, device.id as \"devices.id\", device.manufacture as \"devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.id as \"address.id\", address.street as \"address.street\", address.city as \"address.city\" FROM user1 left join device on user1.id = device.user_id left join address on user1.id = address.user_id")

@@ -22,7 +22,7 @@ public class DBProductInfoTest extends TestBase {
 
         assertEquals(productName, dbInfo.productName());
         assertEquals(productVersion, dbInfo.productVersion());
-        assertEquals(version, dbInfo.version());
+        assertEquals(version, dbInfo.dbVersion());
     }
 
     @Test
@@ -31,7 +31,7 @@ public class DBProductInfoTest extends TestBase {
 
         assertNull(dbInfo.productName());
         assertNull(dbInfo.productVersion());
-        assertNull(dbInfo.version());
+        assertNull(dbInfo.dbVersion());
     }
 
     @Test
@@ -40,7 +40,7 @@ public class DBProductInfoTest extends TestBase {
 
         assertEquals("PostgreSQL", dbInfo.productName());
         assertEquals("15.3", dbInfo.productVersion());
-        assertEquals(DBVersion.PostgreSQL_OTHERS, dbInfo.version());
+        assertEquals(DBVersion.PostgreSQL_OTHERS, dbInfo.dbVersion());
     }
 
     @Test
@@ -82,16 +82,16 @@ public class DBProductInfoTest extends TestBase {
         DBProductInfo mysqlInfo = new DBProductInfo("MySQL", "5.7.42", DBVersion.MySQL_5_7);
         assertEquals("MySQL", mysqlInfo.productName());
         assertEquals("5.7.42", mysqlInfo.productVersion());
-        assertEquals(DBVersion.MySQL_5_7, mysqlInfo.version());
+        assertEquals(DBVersion.MySQL_5_7, mysqlInfo.dbVersion());
 
         DBProductInfo oracleInfo = new DBProductInfo("Oracle", "19.3.0", DBVersion.Oracle);
         assertEquals("Oracle", oracleInfo.productName());
         assertEquals("19.3.0", oracleInfo.productVersion());
-        assertEquals(DBVersion.Oracle, oracleInfo.version());
+        assertEquals(DBVersion.Oracle, oracleInfo.dbVersion());
 
         DBProductInfo sqlServerInfo = new DBProductInfo("Microsoft SQL Server", "2019", DBVersion.SQLServer);
         assertEquals("Microsoft SQL Server", sqlServerInfo.productName());
         assertEquals("2019", sqlServerInfo.productVersion());
-        assertEquals(DBVersion.SQLServer, sqlServerInfo.version());
+        assertEquals(DBVersion.SQLServer, sqlServerInfo.dbVersion());
     }
 }

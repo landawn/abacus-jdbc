@@ -1672,7 +1672,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs while binding the parameters
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
-     * @see JdbcUtil#namedParameters(String)
+     * @see JdbcUtil#getNamedParameters(String)
      */
     public CallableQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
@@ -2328,7 +2328,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         while (ret || updateCount != -1) {
             if (ret) {
-                return cstmt.getResultSet();
+                // Wrapped for parity with PreparedQuery/NamedQuery reads (JdbcUtil.executeQuery): user
+                // mappers see normalized values (Oracle TIMESTAMP -> java.sql.Timestamp, materialized LOBs).
+                return ResultSetProxy.wrap(cstmt.getResultSet());
             } else {
                 ret = cstmt.getMoreResults();
                 updateCount = cstmt.getUpdateCount();
@@ -2408,7 +2410,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } else if (Short.TYPE.equals(returnType)) {
             return (short) 0;
         } else if (Integer.TYPE.equals(returnType)) {
-            return 0;
+            // 0 is not a legal value for these JDBC characteristics; return the standard defaults.
+            return switch (methodName) {
+                case "getType" -> ResultSet.TYPE_FORWARD_ONLY;
+                case "getConcurrency" -> ResultSet.CONCUR_READ_ONLY;
+                case "getHoldability" -> ResultSet.CLOSE_CURSORS_AT_COMMIT;
+                case "getFetchDirection" -> ResultSet.FETCH_FORWARD;
+                default -> 0;
+            };
         } else if (Long.TYPE.equals(returnType)) {
             return 0L;
         } else if (Float.TYPE.equals(returnType)) {
@@ -2572,15 +2581,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      *     // Process multiple result sets. Note: getMoreResults() returning false only means the next
      *     // result is not a ResultSet — keep going until getUpdateCount() is also -1, so ResultSets
-     *     // interleaved with update counts are not skipped.
-     *     boolean isResultSet = stmt.getResultSet() != null;
-     *     int updateCount;
+     *     // interleaved with update counts are not skipped. Call getResultSet() at most once per result.
+     *     ResultSet rs = stmt.getResultSet();
      *
-     *     while (isResultSet || (updateCount = stmt.getUpdateCount()) != -1) {
-     *         if (isResultSet) {
-     *             // Process stmt.getResultSet()
+     *     while (rs != null || stmt.getUpdateCount() != -1) {
+     *         if (rs != null) {
+     *             // Process rs
      *         }
-     *         isResultSet = stmt.getMoreResults();
+     *         rs = stmt.getMoreResults() ? stmt.getResultSet() : null;
      *     }
      * });
      * }</pre>
@@ -2743,19 +2751,22 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * Tuple2<Dataset, Jdbc.OutParamResult> result = query.queryAndGetOutParameters();
      *
-     * Dataset dataset = result._1;
+     * Dataset dataset = result._1;   // null if the procedure returned no result set
      * Jdbc.OutParamResult outParams = result._2;
      *
      * // Process the data set
-     * dataset.forEach(row -> {
-     *     System.out.println(row.get(0) + ": " + row.get(1));
-     * });
+     * if (dataset != null) {
+     *     dataset.forEach(row -> {
+     *         System.out.println(row.get(0) + ": " + row.get(1));
+     *     });
+     * }
      *
      * // Get OUT parameters
      * int totalCount = outParams.getOutParamValue("totalCount");
      * }</pre>
      *
-     * @return a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element)
+     * @return a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element).
+     *         The first element may be {@code null} if the procedure does not return a result set.
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs
      * @see #queryAndGetOutParameters(Jdbc.ResultExtractor)
@@ -3276,7 +3287,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #listAndGetOutParameters(RowMapper)
      * @see #listAndGetOutParameters(BiRowMapper)
      */
-    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws IllegalArgumentException, SQLException {
+    public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 

@@ -80,38 +80,14 @@ import java.util.Map;
 public @interface MappedByKey {
 
     /**
-     * Legacy attribute for specifying the key field name.
-     *
-     * <p><strong>Deprecated:</strong> Use {@link #keyName()} instead for better clarity and consistency.
-     * This attribute is retained for backward compatibility only.</p>
-     *
-     * <p>Example migration:</p>
-     * <pre>{@code
-     * // Old way (deprecated)
-     * @MappedByKey("id")
-     * Map<Long, User> getUserMap();
-     *
-     * // New way (recommended)
-     * @MappedByKey(keyName = "id")
-     * Map<Long, User> getUserMap();
-     * }</pre>
-     *
-     * @return the field name to use as map key, or empty string if using {@link #keyName()} instead
-     * @deprecated Use {@link #keyName()} for explicit and clear field name declaration
-     */
-    @Deprecated
-    String value() default "";
-
-    /**
      * Specifies the target-entity property name to use as the map key.
      *
      * <p>The value of that property is extracted from each merged result entity and used as the key
      * in the resulting map.</p>
      *
-     * <p>If both {@code keyName} and the deprecated {@link #value()} are left empty, the framework falls
-     * back to the target entity's single id property name; a DAO whose entity has no id property then
-     * fails initialization with {@code IllegalArgumentException}. When both are set, the deprecated
-     * {@link #value()} takes precedence.</p>
+     * <p>If {@code keyName} is left empty, the framework falls back to the target entity's single id
+     * property name; a DAO whose entity has no id property then fails initialization with
+     * {@code IllegalArgumentException}.</p>
      *
      * <p>Examples:</p>
      * <pre>{@code
@@ -121,7 +97,7 @@ public @interface MappedByKey {
      * Map<String, Product> getProductsByCategory(@Bind("category") String category) throws SQLException;
      * }</pre>
      *
-     * @return the field name to use as map key, or empty string if using the deprecated {@link #value()} instead
+     * @return the field name to use as map key, or empty string to fall back to the entity's id property
      */
     String keyName() default "";
 

@@ -84,7 +84,7 @@ public enum IsolationLevel {
      *
      * <p>This is a descriptive value only: per the JDBC specification it cannot be passed to
      * {@code Connection.setTransactionIsolation(...)}, so using it with
-     * {@code JdbcUtil.beginTransaction(...)} raises a {@code SQLException} on spec-compliant drivers.</p>
+     * {@code JdbcUtil.beginTransaction(...)} raises an {@code UncheckedSQLException} (wrapping the driver's {@code SQLException}) on spec-compliant drivers.</p>
      *
      * @deprecated This isolation level is rarely encountered in modern relational databases and
      *             cannot be used to begin a transaction.

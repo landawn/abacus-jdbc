@@ -1067,123 +1067,123 @@ public class JoinEntityHelperTest extends TestBase {
         Mockito.verify(dao, Mockito.never()).loadJoinEntitiesIfAbsent(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
     }
 
-    // loadJoinEntitiesIfAbsent(entity) - loads all join entities if null
+    // loadAllJoinEntitiesIfAbsent(entity) - loads all join entities if null
     @Test
-    public void testloadJoinEntitiesIfAbsent_SingleEntity_All() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_SingleEntity_All() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
-        dao.loadJoinEntitiesIfAbsent(entity);
+        dao.loadAllJoinEntitiesIfAbsent(entity);
         verify(dao).targetDaoInterface();
     }
 
-    // loadJoinEntitiesIfAbsent(entity, boolean) - false branch
+    // loadAllJoinEntitiesIfAbsent(entity, boolean) - false branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_SingleEntity_InParallelFalse() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_SingleEntity_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(entity);
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(entity);
 
-        dao.loadJoinEntitiesIfAbsent(entity, false);
+        dao.loadAllJoinEntitiesIfAbsent(entity, false);
 
-        verify(dao).loadJoinEntitiesIfAbsent(entity);
+        verify(dao).loadAllJoinEntitiesIfAbsent(entity);
     }
 
-    // loadJoinEntitiesIfAbsent(entity, boolean) - true branch
+    // loadAllJoinEntitiesIfAbsent(entity, boolean) - true branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_SingleEntity_InParallelTrue_UsesExecutor() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_SingleEntity_InParallelTrue_UsesExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entity), ArgumentMatchers.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(ArgumentMatchers.eq(entity), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
-        dao.loadJoinEntitiesIfAbsent(entity, true);
+        dao.loadAllJoinEntitiesIfAbsent(entity, true);
 
         verify(dao).executor();
     }
 
-    // loadJoinEntitiesIfAbsent(entity, Executor)
+    // loadAllJoinEntitiesIfAbsent(entity, Executor)
     @Test
-    public void testloadJoinEntitiesIfAbsent_SingleEntity_WithExecutor() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_SingleEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
-        dao.loadJoinEntitiesIfAbsent(entity, Runnable::run);
+        dao.loadAllJoinEntitiesIfAbsent(entity, Runnable::run);
         verify(dao).targetDaoInterface();
     }
 
-    // loadJoinEntitiesIfAbsent(entities) - non-empty
+    // loadAllJoinEntitiesIfAbsent(entities) - non-empty
     @Test
-    public void testloadJoinEntitiesIfAbsent_CollectionEntity_All() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_CollectionEntity_All() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
-        dao.loadJoinEntitiesIfAbsent(entities);
+        dao.loadAllJoinEntitiesIfAbsent(entities);
         verify(dao).targetDaoInterface();
     }
 
-    // edge: loadJoinEntitiesIfAbsent(entities) - empty entities
+    // edge: loadAllJoinEntitiesIfAbsent(entities) - empty entities
     @Test
-    public void testloadJoinEntitiesIfAbsent_CollectionEntity_All_EmptyEntities_ShortCircuits() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_CollectionEntity_All_EmptyEntities_ShortCircuits() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
-        dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of());
+        dao.loadAllJoinEntitiesIfAbsent(List.<TestEntity> of());
         verify(dao, Mockito.never()).targetDaoInterface();
     }
 
-    // loadJoinEntitiesIfAbsent(entities, boolean) - false branch
+    // loadAllJoinEntitiesIfAbsent(entities, boolean) - false branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_CollectionEntity_InParallelFalse() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_CollectionEntity_InParallelFalse() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(entities);
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(entities);
 
-        dao.loadJoinEntitiesIfAbsent(entities, false);
+        dao.loadAllJoinEntitiesIfAbsent(entities, false);
 
-        verify(dao).loadJoinEntitiesIfAbsent(entities);
+        verify(dao).loadAllJoinEntitiesIfAbsent(entities);
     }
 
-    // loadJoinEntitiesIfAbsent(entities, boolean) - true branch
+    // loadAllJoinEntitiesIfAbsent(entities, boolean) - true branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_CollectionEntity_InParallelTrue_UsesExecutor() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_CollectionEntity_InParallelTrue_UsesExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entities), ArgumentMatchers.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(ArgumentMatchers.eq(entities), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
-        dao.loadJoinEntitiesIfAbsent(entities, true);
+        dao.loadAllJoinEntitiesIfAbsent(entities, true);
 
         verify(dao).executor();
     }
 
-    // loadJoinEntitiesIfAbsent(entities, Executor) - non-empty
+    // loadAllJoinEntitiesIfAbsent(entities, Executor) - non-empty
     @Test
-    public void testloadJoinEntitiesIfAbsent_CollectionEntity_WithExecutor() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_CollectionEntity_WithExecutor() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.targetDaoInterface()).thenReturn(TestJoinDao.class);
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.targetTableName()).thenReturn("test");
 
-        dao.loadJoinEntitiesIfAbsent(entities, Runnable::run);
+        dao.loadAllJoinEntitiesIfAbsent(entities, Runnable::run);
         verify(dao).targetDaoInterface();
     }
 
-    // edge: loadJoinEntitiesIfAbsent(entities, Executor) - empty entities
+    // edge: loadAllJoinEntitiesIfAbsent(entities, Executor) - empty entities
     @Test
-    public void testloadJoinEntitiesIfAbsent_CollectionEntity_WithExecutor_EmptyEntities_ShortCircuits() throws SQLException {
+    public void testloadAllJoinEntitiesIfAbsent_CollectionEntity_WithExecutor_EmptyEntities_ShortCircuits() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
-        dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), Runnable::run);
+        dao.loadAllJoinEntitiesIfAbsent(List.<TestEntity> of(), Runnable::run);
         verify(dao, Mockito.never()).targetDaoInterface();
     }
 

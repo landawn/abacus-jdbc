@@ -641,6 +641,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @deprecated Generally {@code char} should be saved as {@code String} in DB. Use {@link #setString(String, char)} instead.
      */
     @Deprecated
+    @Beta
     public NamedQuery setInt(final String parameterName, final char value) throws IllegalArgumentException, SQLException {
         return setInt(parameterName, (int) value);
     }
@@ -666,6 +667,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @deprecated Generally {@code char} should be saved as {@code String} in DB. Use {@link #setString(String, Character)} instead.
      */
     @Deprecated
+    @Beta
     public NamedQuery setInt(final String parameterName, final Character value) throws IllegalArgumentException, SQLException {
         if (value == null) {
             setNull(parameterName, java.sql.Types.INTEGER);
@@ -3915,7 +3917,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li><b>Map</b>: Entries with keys matching parameter names will be used</li>
      * <li><b>Collection/Array</b>: Elements will be assigned to parameters in positional order</li>
      * <li><b>EntityId</b>: Values with keys matching parameter names will be used</li>
-     * <li><b>Single value</b>: Used only if the query has exactly one parameter</li>
+     * <li><b>Single value</b>: Used only if the query has exactly one parameter placeholder
+     *     (a single named parameter appearing exactly once)</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>
@@ -3942,7 +3945,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         system date/time parameter names {@code now}, {@code sysTime} and {@code sysDate}, which are
      *         skipped and left unbound when no matching property exists — bind them separately)
      * @throws SQLException if a database access error occurs
-     * @see JdbcUtil#namedParameters(String)
+     * @see JdbcUtil#getNamedParameters(String)
      */
     @SuppressWarnings("rawtypes")
     public NamedQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException {
@@ -3999,7 +4002,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
         } else {
             close();
-            throw new IllegalArgumentException("Unsupported named parameter type: " + parameters.getClass() + " for SQL: " + namedSql.originalSql());
+            throw new IllegalArgumentException(
+                    "Unsupported named parameter type: " + ClassUtil.getCanonicalClassName(parameters.getClass()) + " for SQL: " + namedSql.originalSql());
         }
 
         return this;
@@ -4036,7 +4040,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
-     * @see JdbcUtil#namedParameters(String)
+     * @see JdbcUtil#getNamedParameters(String)
      */
     public NamedQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
@@ -4197,6 +4201,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @see #setParameters(Object)
      * @see #addBatch()
      */
+    @Beta
     @Override
     public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, cs.batchParameters);
@@ -4222,11 +4227,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>The runtime type of the <i>first</i> element determines how every element is interpreted; all
      * remaining elements are assumed to be of the same kind. If the iterator is empty, this is a no-op
-     * and no batch is added. A {@code null} element is only supported when the SQL has exactly one named
-     * parameter (it is bound as SQL {@code NULL}); otherwise an {@link IllegalArgumentException} is thrown.
+     * and no batch is added. A {@code null} element is only supported when the SQL has exactly one
+     * parameter placeholder — a single named parameter appearing exactly once (it is bound as SQL
+     * {@code NULL}); otherwise an {@link IllegalArgumentException} is thrown.
      * Note that when the <i>first</i> element is {@code null}, no type-based classification is possible:
      * every remaining element is then bound as a plain single value (bean/Map/Collection/array
-     * interpretation is skipped), which also requires the SQL to have exactly one named parameter.
+     * interpretation is skipped), which also requires the SQL to have exactly one parameter placeholder.
      * For bean elements, a named parameter without a matching property is only tolerated for the reserved
      * system date/time names ({@code now}, {@code sysTime}, {@code sysDate}) — such parameters keep whatever
      * value was previously bound (or stay unbound); any other missing property causes an
@@ -4426,7 +4432,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else {
-                    throw new IllegalArgumentException("Unsupported named parameter type: " + cls + " for SQL: " + namedSql.originalSql());
+                    throw new IllegalArgumentException(
+                            "Unsupported named parameter type: " + ClassUtil.getCanonicalClassName(cls) + " for SQL: " + namedSql.originalSql());
                 }
             }
 
@@ -4442,7 +4449,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     private void addNullBatchParameter() throws SQLException {
         if (parameterCount != 1) {
-            throw new IllegalArgumentException("Unsupported named parameter type: null for SQL: " + namedSql.originalSql());
+            throw new IllegalArgumentException(
+                    "A null batch parameter is only supported when the SQL has exactly one parameter placeholder. SQL: " + namedSql.originalSql());
         }
 
         stmt.clearParameters();

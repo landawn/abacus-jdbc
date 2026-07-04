@@ -521,7 +521,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default Optional<T> get(final long id) throws SQLException {
+    default Optional<T> get(final long id) throws DuplicateResultException, SQLException {
         return get(Long.valueOf(id));
     }
 
@@ -544,7 +544,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default Optional<T> get(final long id, final Collection<String> selectPropNames) throws SQLException {
+    default Optional<T> get(final long id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException {
         return get(Long.valueOf(id), selectPropNames);
     }
 
@@ -567,7 +567,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default T gett(final long id) throws SQLException {
+    default T gett(final long id) throws DuplicateResultException, SQLException {
         return gett(Long.valueOf(id));
     }
 
@@ -593,7 +593,7 @@ sealed interface CrudLReadOps<T, TD extends DaoBase<T, TD>> extends CrudReadOps<
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default T gett(final long id, final Collection<String> selectPropNames) throws SQLException {
+    default T gett(final long id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException {
         return gett(Long.valueOf(id), selectPropNames);
     }
 

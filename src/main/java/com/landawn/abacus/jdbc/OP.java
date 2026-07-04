@@ -272,19 +272,20 @@ public enum OP {
     executeAndGetOutParameters,
 
     /**
-     * Executes an {@code UPDATE}, {@code INSERT}, or {@code DELETE} statement and returns the number of affected rows.
-     * The selected operation produces an {@code int} row count.
+     * Executes an {@code UPDATE} or {@code DELETE} (or other data-modifying, non-INSERT) statement and
+     * returns the number of affected rows. The selected operation produces an {@code int} row count.
      *
-     * <p>This is the standard operation for DML (Data Manipulation Language) statements
-     * that modify data in the database. The return value indicates how many rows were affected.</p>
+     * <p>The return value indicates how many rows were affected. Note: {@code INSERT} statements are
+     * always dispatched to the dedicated insert path, which returns the generated key(s) (or
+     * {@code void}), not an affected-row count — this operation does not apply to them.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
      * int deactivateInactiveUsers(Date threshold);
      *
-     * @Query(value = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)
-     * int createUser(String name, String email);
+     * @Query(value = "DELETE FROM users WHERE id = ?", op = OP.update)
+     * int deleteUser(long id);
      * }</pre>
      *
      * @see AbstractQuery#update()
@@ -292,7 +293,8 @@ public enum OP {
     update,
 
     /**
-     * Executes an {@code UPDATE}, {@code INSERT}, or {@code DELETE} statement that may affect a large number of rows.
+     * Executes an {@code UPDATE} or {@code DELETE} (or other data-modifying, non-INSERT) statement that
+     * may affect a large number of rows.
      * The selected operation produces a {@code long} row count for compatibility with large datasets.
      *
      * <p>Use this operation when the number of affected rows might exceed the range of {@code int}.
@@ -316,7 +318,9 @@ public enum OP {
      *
      * <p>When {@code DEFAULT} is used, the framework analyzes the SQL statement and method return type
      * to select the most appropriate operation. For example, {@code SELECT} statements default to {@link #list}
-     * or {@link #query} operations, while {@code UPDATE}/{@code INSERT}/{@code DELETE} statements default to {@link #update} operations.</p>
+     * or {@link #query} operations, and {@code UPDATE}/{@code DELETE} statements default to {@link #update}
+     * operations; {@code INSERT} statements are dispatched to the dedicated insert path, which returns the
+     * generated key(s) (or {@code void}).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -535,7 +535,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default Optional<T> get(final long id) throws UncheckedSQLException {
+    default Optional<T> get(final long id) throws DuplicateResultException, UncheckedSQLException {
         return get(Long.valueOf(id));
     }
 
@@ -558,7 +558,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default Optional<T> get(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
+    default Optional<T> get(final long id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException {
         return get(Long.valueOf(id), selectPropNames);
     }
 
@@ -582,7 +582,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default T gett(final long id) throws UncheckedSQLException {
+    default T gett(final long id) throws DuplicateResultException, UncheckedSQLException {
         return gett(Long.valueOf(id));
     }
 
@@ -605,7 +605,7 @@ sealed interface UncheckedCrudLReadOps<T, TD extends UncheckedDaoBase<T, TD>> ex
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default T gett(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
+    default T gett(final long id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException {
         return gett(Long.valueOf(id), selectPropNames);
     }
 

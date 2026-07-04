@@ -18,7 +18,9 @@ package com.landawn.abacus.jdbc.dao;
 /**
  * Read-only helper for join entity operations in CRUD DAOs with {@code Long} primary keys.
  * This interface specializes {@link ReadOnlyCrudJoinEntityHelper} to entities with {@code Long} identifiers,
- * providing read-only access to join entity operations.
+ * providing read-only access to join entity operations. (The primitive {@code long} no-boxing overloads live
+ * on the companion DAO's plain read side, {@link CrudLReadOps}, not on this helper — the join-loading
+ * {@code get}/{@code gett}/{@code batchGet} variants here take {@code Long}.)
  *
  * <p>This interface enforces read-only behavior by inheriting from {@link ReadOnlyCrudJoinEntityHelper},
  * in which the join-entity mutation operations are <b>absent from the type</b> — calling them is a compile error

@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -368,10 +369,6 @@ public final class JdbcUtil {
     private static final Map<Tuple3<Class<?>, Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
-    private static final Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer> noIdGeneratorGetterSetter = Tuple
-            .of(JdbcUtil.NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null, BiConsumers.doNothing());
-
-    @SuppressWarnings("rawtypes")
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     static final String CACHE_KEY_SPLITOR = "#";
@@ -404,9 +401,9 @@ public final class JdbcUtil {
      * System.out.println("Database Product Version: " + dbInfo.productVersion());
      *
      * // Perform actions based on the database type
-     * if (dbInfo.version().isPostgreSQL()) {
+     * if (dbInfo.dbVersion().isPostgreSQL()) {
      *     System.out.println("This is a PostgreSQL database.");
-     * } else if (dbInfo.version() == DBVersion.MySQL_8) {
+     * } else if (dbInfo.dbVersion() == DBVersion.MySQL_8) {
      *     System.out.println("This is MySQL version 8.");
      * }
      * }</pre>
@@ -443,7 +440,7 @@ public final class JdbcUtil {
      * System.out.println("Database Version: " + dbInfo.productVersion());
      *
      * // Example of checking for a specific database version
-     * if (dbInfo.version() == DBVersion.Oracle) {
+     * if (dbInfo.dbVersion() == DBVersion.Oracle) {
      *     System.out.println("Connected to an Oracle database.");
      * }
      * }</pre>
@@ -893,6 +890,9 @@ public final class JdbcUtil {
         // jdbc:mysql://localhost:3306/abacustest
         if (Strings.indexOfIgnoreCase(url, ":mysql:") >= 0) {
             driverClass = ClassUtil.forName("com.mysql.cj.jdbc.Driver");
+            // jdbc:mariadb://localhost:3306/abacustest
+        } else if (Strings.indexOfIgnoreCase(url, ":mariadb:") >= 0) {
+            driverClass = ClassUtil.forName("org.mariadb.jdbc.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
         } else if (Strings.indexOfIgnoreCase(url, ":postgresql:") >= 0) {
             driverClass = ClassUtil.forName("org.postgresql.Driver");
@@ -912,8 +912,8 @@ public final class JdbcUtil {
         } else if (Strings.indexOfIgnoreCase(url, ":db2:") >= 0) {
             driverClass = ClassUtil.forName("com.ibm.db2.jcc.DB2Driver");
         } else {
-            throw new IllegalArgumentException(
-                    "Cannot identify the driver class from URL: " + url + ". Only MySQL, PostgreSQL, H2, HSQLDB, Oracle, SQL Server, and DB2 are supported");
+            throw new IllegalArgumentException("Cannot identify the driver class from URL: " + url
+                    + ". Only MySQL, MariaDB, PostgreSQL, H2, HSQLDB, Oracle, SQL Server, and DB2 are supported");
         }
         return driverClass;
     }
@@ -950,7 +950,7 @@ public final class JdbcUtil {
      * @see org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)
      */
     public static Connection getConnection(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
@@ -1845,10 +1845,11 @@ public final class JdbcUtil {
      * Returns an ordered list of column names for a specified table.
      *
      * <p>This method first consults {@link DatabaseMetaData#getColumns} (trying the connection's
-     * catalog/schema with the table name as supplied, and upper- and lower-case variants). If the
-     * metadata lookup yields no match, it falls back to running an empty-result query of the form
-     * {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set
-     * metadata.</p>
+     * current schema — and, for an unqualified name, all schemas — with the table name as supplied,
+     * and upper- and lower-case variants). If the metadata lookup yields no match and all name parts
+     * are simple identifiers (letters, digits, {@code _} and {@code $}), it falls back to running an
+     * empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column
+     * names from the result set metadata; quoted or otherwise exotic names have no such fallback.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like
      * {@code schema.table} or {@code catalog.schema.table}.</p>
@@ -1883,7 +1884,7 @@ public final class JdbcUtil {
 
         if (nameParts.length == 1) {
             catalog = conn.getCatalog();
-            schema = conn.getSchema();
+            schema = null; // unqualified: try the connection's current schema first, then all schemas.
             table = nameParts[0];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, null, table);
         } else if (nameParts.length == 2) {
@@ -1905,27 +1906,42 @@ public final class JdbcUtil {
         }
 
         final DatabaseMetaData metadata = conn.getMetaData();
-        final String schemaToUse = schema == null ? conn.getSchema() : schema;
+        String schemaToUse = schema;
+
+        if (schemaToUse == null) {
+            try {
+                schemaToUse = conn.getSchema();
+            } catch (final SQLException e) {
+                // Connection.getSchema() is JDBC 4.1 and optional; fall back to a schema-less lookup.
+            }
+        }
+
+        // The null-schema retries broaden an unqualified lookup to all schemas; they only add anything
+        // when a current schema was actually used above.
+        final boolean retryWithAllSchemas = schema == null && schemaToUse != null;
+        final String upperCaseTable = table.toUpperCase(Locale.ROOT);
+        final String lowerCaseTable = table.toLowerCase(Locale.ROOT);
+
         List<String> columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table);
 
-        if (N.isEmpty(columnNameList) && schema == null) {
+        if (N.isEmpty(columnNameList) && retryWithAllSchemas) {
             columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table);
         }
 
         if (N.isEmpty(columnNameList)) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table.toUpperCase());
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, upperCaseTable);
         }
 
         if (N.isEmpty(columnNameList)) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table.toLowerCase());
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, lowerCaseTable);
         }
 
-        if (N.isEmpty(columnNameList) && schema == null) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table.toUpperCase());
+        if (N.isEmpty(columnNameList) && retryWithAllSchemas) {
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, upperCaseTable);
         }
 
-        if (N.isEmpty(columnNameList) && schema == null) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table.toLowerCase());
+        if (N.isEmpty(columnNameList) && retryWithAllSchemas) {
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, lowerCaseTable);
         }
 
         if (N.isEmpty(columnNameList) && Strings.isNotEmpty(fallbackQualifiedTableName)) {
@@ -1957,7 +1973,8 @@ public final class JdbcUtil {
             while (rows.next()) {
                 tableNameInMetadata = rows.getString("TABLE_NAME");
 
-                if (!Strings.equalsAny(tableNameInMetadata, tableNamePattern, tableNamePattern.toUpperCase(), tableNamePattern.toLowerCase())) {
+                if (!Strings.equalsAny(tableNameInMetadata, tableNamePattern, tableNamePattern.toUpperCase(Locale.ROOT),
+                        tableNamePattern.toLowerCase(Locale.ROOT))) {
                     continue;
                 }
 
@@ -2643,10 +2660,10 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Assuming User class has fields like 'userId' and 'userName' mapped to columns 'user_id' and 'user_name'
-     * ImmutableMap<String, String> columnToFieldMap = JdbcUtil.getColumn2FieldNameMap(User.class);
+     * ImmutableMap<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(User.class);
      *
-     * System.out.println(columnToFieldMap.get("user_id"));     // Output: userId
-     * System.out.println(columnToFieldMap.get("user_name"));   // Output: userName
+     * System.out.println(columnToPropNameMap.get("user_id"));     // Output: userId
+     * System.out.println(columnToPropNameMap.get("user_name"));   // Output: userName
      * }</pre>
      *
      * @param entityClass The entity class to analyze for column-to-field mappings.
@@ -2654,7 +2671,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.annotation.Column
      * @see com.landawn.abacus.util.NamingPolicy
      */
-    public static ImmutableMap<String, String> getColumn2FieldNameMap(final Class<?> entityClass) {
+    public static ImmutableMap<String, String> getColumnToPropNameMap(final Class<?> entityClass) {
         return QueryUtil.getColumn2PropNameMap(entityClass);
     }
 
@@ -2687,10 +2704,30 @@ public final class JdbcUtil {
     static SqlOperation getSqlOperation(final String sql) {
         String trimmedSql = sql.trim();
 
-        // Skip leading parentheses so parenthesized queries like "(SELECT ...) UNION ALL (SELECT ...)"
-        // are classified by their real leading keyword.
-        while (trimmedSql.length() > 0 && trimmedSql.charAt(0) == '(') {
-            trimmedSql = trimmedSql.substring(1).trim();
+        // Skip leading parentheses and comments so queries like "(SELECT ...) UNION ALL (SELECT ...)",
+        // "/* hint */ SELECT ..." or "-- note\nSELECT ..." are classified by their real leading keyword.
+        while (!trimmedSql.isEmpty()) {
+            if (trimmedSql.charAt(0) == '(') {
+                trimmedSql = trimmedSql.substring(1).trim();
+            } else if (trimmedSql.startsWith("/*")) {
+                final int end = trimmedSql.indexOf("*/", 2);
+
+                if (end < 0) {
+                    break;
+                }
+
+                trimmedSql = trimmedSql.substring(end + 2).trim();
+            } else if (trimmedSql.startsWith("--")) {
+                final int end = trimmedSql.indexOf('\n', 2);
+
+                if (end < 0) {
+                    trimmedSql = Strings.EMPTY;
+                } else {
+                    trimmedSql = trimmedSql.substring(end + 1).trim();
+                }
+            } else {
+                break;
+            }
         }
 
         if (Strings.startsWithIgnoreCase(trimmedSql, "select ")) {
@@ -2835,7 +2872,7 @@ public final class JdbcUtil {
      * @see #executeQuery(javax.sql.DataSource, String, Object...)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
@@ -2892,7 +2929,7 @@ public final class JdbcUtil {
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
@@ -2951,7 +2988,7 @@ public final class JdbcUtil {
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
 
@@ -3010,7 +3047,7 @@ public final class JdbcUtil {
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
 
@@ -3063,7 +3100,7 @@ public final class JdbcUtil {
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -3365,7 +3402,7 @@ public final class JdbcUtil {
      * @see #prepareNamedQuery(Connection, String)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
 
         final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
@@ -3424,7 +3461,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
 
         final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
@@ -3484,7 +3521,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
 
@@ -3544,7 +3581,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
 
@@ -3600,7 +3637,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -3844,7 +3881,7 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         validateNamedSql(namedSql);
 
@@ -3900,7 +3937,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         validateNamedSql(namedSql);
 
@@ -3959,7 +3996,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
         validateNamedSql(namedSql);
@@ -4019,7 +4056,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
         validateNamedSql(namedSql);
@@ -4076,7 +4113,7 @@ public final class JdbcUtil {
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
         validateNamedSql(namedSql);
@@ -4435,7 +4472,7 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
@@ -4514,7 +4551,7 @@ public final class JdbcUtil {
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -4959,7 +4996,7 @@ public final class JdbcUtil {
      */
     public static Dataset executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
@@ -5107,7 +5144,7 @@ public final class JdbcUtil {
      * @see #prepareQuery(javax.sql.DataSource, String)
      */
     public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
@@ -5251,7 +5288,7 @@ public final class JdbcUtil {
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
 
@@ -5377,10 +5414,12 @@ public final class JdbcUtil {
         final boolean originalAutoCommit = conn.getAutoCommit();
         PreparedStatement stmt = null;
         boolean noException = false;
+        boolean autoCommitDisabled = false;
 
         try {
             if (originalAutoCommit && listOfParameters.size() > 1) {
                 conn.setAutoCommit(false);
+                autoCommitDisabled = true;
             }
 
             stmt = prepareStatement(conn, parsedSql);
@@ -5408,16 +5447,24 @@ public final class JdbcUtil {
 
             return res;
         } finally {
-            if (originalAutoCommit && listOfParameters.size() > 1) {
+            if (autoCommitDisabled) {
                 try {
                     if (noException) {
                         conn.commit();
                     } else {
-                        conn.rollback();
+                        try {
+                            conn.rollback();
+                        } catch (final SQLException e) {
+                            // Don't mask the batch failure that is already propagating.
+                            logger.warn("Failed to roll back after batch failure", e);
+                        }
                     }
                 } finally {
                     try {
                         conn.setAutoCommit(true);
+                    } catch (final SQLException e) {
+                        // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
+                        logger.warn("Failed to restore auto-commit mode after batch execution", e);
                     } finally {
                         JdbcUtil.closeQuietly(stmt);
                     }
@@ -5497,7 +5544,7 @@ public final class JdbcUtil {
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
 
@@ -5612,10 +5659,12 @@ public final class JdbcUtil {
         final boolean originalAutoCommit = conn.getAutoCommit();
         PreparedStatement stmt = null;
         boolean noException = false;
+        boolean autoCommitDisabled = false;
 
         try {
             if (originalAutoCommit && listOfParameters.size() > 1) {
                 conn.setAutoCommit(false);
+                autoCommitDisabled = true;
             }
 
             stmt = prepareStatement(conn, parsedSql);
@@ -5643,16 +5692,24 @@ public final class JdbcUtil {
 
             return res;
         } finally {
-            if (originalAutoCommit && listOfParameters.size() > 1) {
+            if (autoCommitDisabled) {
                 try {
                     if (noException) {
                         conn.commit();
                     } else {
-                        conn.rollback();
+                        try {
+                            conn.rollback();
+                        } catch (final SQLException e) {
+                            // Don't mask the batch failure that is already propagating.
+                            logger.warn("Failed to roll back after batch failure", e);
+                        }
                     }
                 } finally {
                     try {
                         conn.setAutoCommit(true);
+                    } catch (final SQLException e) {
+                        // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
+                        logger.warn("Failed to restore auto-commit mode after batch execution", e);
                     } finally {
                         JdbcUtil.closeQuietly(stmt);
                     }
@@ -5746,7 +5803,7 @@ public final class JdbcUtil {
      * @see #executeUpdate(javax.sql.DataSource, String, Object...)
      */
     public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
@@ -6492,7 +6549,7 @@ public final class JdbcUtil {
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotNegative(offset, cs.offset);
         N.checkArgNotNegative(count, cs.count);
         N.checkArgNotNull(filter, cs.filter);
@@ -6648,7 +6705,7 @@ public final class JdbcUtil {
      */
     public static <T> Stream<T> stream(final ResultSet rs, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(targetClass, cs.targetClass);
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
 
         return stream(rs, BiRowMapper.to(targetClass));
     }
@@ -6673,7 +6730,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
         return Stream.of(iterate(rs, rowMapper, null));
@@ -6712,14 +6769,14 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(final long count) throws IllegalArgumentException {
-                N.checkArgNotNegative(count, cs.n);
+            public void advance(final long n) throws IllegalArgumentException {
+                N.checkArgNotNegative(n, cs.n);
 
-                if (count == 0) {
+                if (n == 0) {
                     return;
                 }
 
-                final long rowsToSkip = hasNext ? count - 1 : count;
+                final long rowsToSkip = hasNext ? n - 1 : n;
 
                 try {
                     JdbcUtil.skip(resultSet, rowsToSkip);
@@ -6785,7 +6842,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -6793,7 +6850,6 @@ public final class JdbcUtil {
     }
 
     static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
-        N.checkArgNotNull(resultSet, cs.ResultSet);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -6876,7 +6932,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
         return Stream.of(iterate(rs, rowMapper, null));
@@ -6924,14 +6980,14 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(final long count) {
-                N.checkArgNotNegative(count, cs.n);
+            public void advance(final long n) {
+                N.checkArgNotNegative(n, cs.n);
 
-                if (count == 0) {
+                if (n == 0) {
                     return;
                 }
 
-                final long rowsToSkip = hasNext ? count - 1 : count;
+                final long rowsToSkip = hasNext ? n - 1 : n;
 
                 try {
                     JdbcUtil.skip(resultSet, rowsToSkip);
@@ -7013,7 +7069,7 @@ public final class JdbcUtil {
      */
     public static <T> Stream<T> stream(final ResultSet rs, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -7088,7 +7144,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final int columnIndex) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgPositive(columnIndex, cs.columnIndex);
 
         final boolean checkDateType = JdbcUtil.checkDateType(rs);
@@ -7118,7 +7174,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet rs, final String columnName) throws IllegalArgumentException {
-        N.checkArgNotNull(rs, cs.ResultSet);
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotEmpty(columnName, cs.columnName);
 
         final RowMapper<? extends T> rowMapper = new RowMapper<>() {
@@ -7271,7 +7327,9 @@ public final class JdbcUtil {
                                 isNextResultSet = false;
 
                                 if (currentRs != null) {
-                                    resultSetHolder.setValue(currentRs);
+                                    // Wrapped for parity with single-ResultSet reads (executeQuery): consumers see
+                                    // normalized values (Oracle TIMESTAMP -> java.sql.Timestamp, materialized LOBs).
+                                    resultSetHolder.setValue(ResultSetProxy.wrap(currentRs));
                                     break;
                                 }
                                 // First-result claim was wrong (driver returned null, meaning the
@@ -7355,20 +7413,25 @@ public final class JdbcUtil {
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
+     * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
-     * @throws IllegalArgumentException if {@code ds} or {@code paramSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code ds} or {@code parametersSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter) {
-        return queryByPage(ds, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATASET);
+            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
+        return queryByPage(ds, query, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided ResultExtractor.
+     *
+     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
+     * non-null result is treated as non-empty. The extractor should therefore return a container of the
+     * page's rows — with a scalar result the stream never ends on its own.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7396,18 +7459,18 @@ public final class JdbcUtil {
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+     * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code ds}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code ds}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
-        N.checkArgNotNull(ds, cs.dataSource);
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(query, cs.query);
         N.checkArgPositive(pageSize, cs.pageSize);
-        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
@@ -7419,7 +7482,7 @@ public final class JdbcUtil {
                         final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
+                                .settParameters(it.value(), parametersSetter)
                                 .query(resultExtractor);
 
                         it.setValue(ret);
@@ -7436,6 +7499,11 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided BiResultExtractor.
+     *
+     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
+     * non-null result is treated as non-empty. The extractor should therefore return a container of the
+     * page's rows — with a scalar result the stream never ends on its own.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7461,18 +7529,18 @@ public final class JdbcUtil {
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+     * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code ds}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code ds}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
-        N.checkArgNotNull(ds, cs.dataSource);
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(query, cs.query);
         N.checkArgPositive(pageSize, cs.pageSize);
-        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
@@ -7484,7 +7552,7 @@ public final class JdbcUtil {
                         final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
+                                .settParameters(it.value(), parametersSetter)
                                 .query(resultExtractor);
 
                         it.setValue(ret);
@@ -7523,20 +7591,25 @@ public final class JdbcUtil {
      * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
+     * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
-     * @throws IllegalArgumentException if {@code conn} or {@code paramSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code conn} or {@code parametersSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter) {
-        return queryByPage(conn, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATASET);
+            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
+        return queryByPage(conn, query, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided ResultExtractor.
+     *
+     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
+     * non-null result is treated as non-empty. The extractor should therefore return a container of the
+     * page's rows — with a scalar result the stream never ends on its own.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7564,18 +7637,18 @@ public final class JdbcUtil {
      * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+     * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code conn}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code conn}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(query, cs.query);
         N.checkArgPositive(pageSize, cs.pageSize);
-        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
@@ -7587,7 +7660,7 @@ public final class JdbcUtil {
                         final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
+                                .settParameters(it.value(), parametersSetter)
                                 .query(resultExtractor);
 
                         it.setValue(ret);
@@ -7604,6 +7677,11 @@ public final class JdbcUtil {
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided BiResultExtractor.
+     *
+     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
+     * non-null result is treated as non-empty. The extractor should therefore return a container of the
+     * page's rows — with a scalar result the stream never ends on its own.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7630,18 +7708,18 @@ public final class JdbcUtil {
      * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+     * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code conn}, {@code paramSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code conn}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(query, cs.query);
         N.checkArgPositive(pageSize, cs.pageSize);
-        N.checkArgNotNull(paramSetter, cs.parametersSetter);
+        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
@@ -7653,7 +7731,7 @@ public final class JdbcUtil {
                         final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
-                                .settParameters(it.value(), paramSetter)
+                                .settParameters(it.value(), parametersSetter)
                                 .query(resultExtractor);
 
                         it.setValue(ret);
@@ -8035,8 +8113,9 @@ public final class JdbcUtil {
     /**
      * Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource}.
      *
-     * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's catalog/schema
-     * and the table name as supplied, then upper- and lower-case variants). If metadata lookup yields no match,
+     * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's current schema
+     * — and, for an unqualified name, all schemas — with the table name as supplied, then upper- and
+     * lower-case variants). If metadata lookup yields no match,
      * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated.</p>
@@ -8072,37 +8151,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource}.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * boolean exists = JdbcUtil.doesTableExist(dataSource, "account");          // returns true if the table exists
-     * boolean missing = JdbcUtil.doesTableExist(dataSource, "no_such_table");   // returns false (does NOT throw)
-     *
-     * // A qualified name (schema.table) is also accepted.
-     * boolean qualified = JdbcUtil.doesTableExist(dataSource, "PUBLIC.account");
-     *
-     * // A blank table name is rejected.
-     * JdbcUtil.doesTableExist(dataSource, "");   // throws IllegalArgumentException
-     * }</pre>
-     *
-     * @param ds the data source to get the connection from
-     * @param tableName the table name (optionally qualified); must not be blank
-     * @return {@code true} if the table exists, {@code false} otherwise
-     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
-     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
-     * @deprecated use {@link #tableExists(javax.sql.DataSource, String)} instead.
-     */
-    @Deprecated
-    public static boolean doesTableExist(final javax.sql.DataSource ds, final String tableName) {
-        return tableExists(ds, tableName);
-    }
-
-    /**
      * Checks whether a table exists on the given {@link Connection}.
      *
-     * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's catalog/schema
-     * and the table name as supplied, then upper- and lower-case variants). If metadata lookup yields no match,
+     * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's current schema
+     * — and, for an unqualified name, all schemas — with the table name as supplied, then upper- and
+     * lower-case variants). If metadata lookup yields no match,
      * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated.</p>
@@ -8156,17 +8209,31 @@ public final class JdbcUtil {
             }
 
             final DatabaseMetaData metadata = conn.getMetaData();
-            final String schemaToUse = schema == null ? conn.getSchema() : schema;
+            String schemaToUse = schema;
 
-            if (tableExists(metadata, catalog, schemaToUse, table) || (schema == null && tableExists(metadata, catalog, null, table))) {
+            if (schemaToUse == null) {
+                try {
+                    schemaToUse = conn.getSchema();
+                } catch (final SQLException e) {
+                    // Connection.getSchema() is JDBC 4.1 and optional; fall back to a schema-less lookup.
+                }
+            }
+
+            // The null-schema retries broaden an unqualified lookup to all schemas; they only add anything
+            // when a current schema was actually used above.
+            final boolean retryWithAllSchemas = schema == null && schemaToUse != null;
+            final String upperCaseTable = table.toUpperCase(Locale.ROOT);
+            final String lowerCaseTable = table.toLowerCase(Locale.ROOT);
+
+            if (tableExists(metadata, catalog, schemaToUse, table) || (retryWithAllSchemas && tableExists(metadata, catalog, null, table))) {
                 return true;
             }
 
-            if (tableExists(metadata, catalog, schemaToUse, table.toUpperCase()) || tableExists(metadata, catalog, schemaToUse, table.toLowerCase())) {
+            if (tableExists(metadata, catalog, schemaToUse, upperCaseTable) || tableExists(metadata, catalog, schemaToUse, lowerCaseTable)) {
                 return true;
             }
 
-            if (schema == null && (tableExists(metadata, catalog, null, table.toUpperCase()) || tableExists(metadata, catalog, null, table.toLowerCase()))) {
+            if (retryWithAllSchemas && (tableExists(metadata, catalog, null, upperCaseTable) || tableExists(metadata, catalog, null, lowerCaseTable))) {
                 return true;
             }
 
@@ -8189,32 +8256,6 @@ public final class JdbcUtil {
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
-    }
-
-    /**
-     * Checks whether a table exists on the given {@link Connection}.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
-     *     boolean exists = JdbcUtil.doesTableExist(conn, "account");          // returns true if the table exists
-     *     boolean missing = JdbcUtil.doesTableExist(conn, "no_such_table");   // returns false (does NOT throw)
-     * }
-     *
-     * // A blank table name, or a null connection, is rejected.
-     * JdbcUtil.doesTableExist((Connection) null, "account");   // throws IllegalArgumentException
-     * }</pre>
-     *
-     * @param conn the database connection to use for checking table existence
-     * @param tableName the table name (optionally qualified); must not be blank
-     * @return {@code true} if the table exists, {@code false} otherwise
-     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
-     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
-     * @deprecated use {@link #tableExists(Connection, String)} instead.
-     */
-    @Deprecated
-    public static boolean doesTableExist(final Connection conn, final String tableName) {
-        return tableExists(conn, tableName);
     }
 
     private static boolean tableExists(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern)
@@ -8649,7 +8690,7 @@ public final class JdbcUtil {
             }
 
             // Locale-independent lowercase to avoid Turkish-locale `I` ambiguity.
-            final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase(java.util.Locale.ROOT);
+            final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase(Locale.ROOT);
             return Strings.isNotEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
         }
 
@@ -9258,47 +9299,15 @@ public final class JdbcUtil {
         return asyncExecutor.execute(() -> sqlAction.apply(parameter1, parameter2, parameter3));
     }
 
-    static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
-
     static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
-
-    @SuppressWarnings("deprecation")
-    static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
-        final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
-
-        if (columnLabels.size() == 1) {
-            return getColumnValue(rs, 1);
-        } else {
-            final int columnCount = columnLabels.size();
-            final Seid id = Seid.of(Strings.EMPTY);
-
-            for (int i = 1; i <= columnCount; i++) {
-                id.set(columnLabels.get(i - 1), getColumnValue(rs, i));
-            }
-
-            return id;
-        }
-    };
 
     static final BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> null;
 
-    static final BiRowMapper<Object> SINGLE_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> getColumnValue(rs, 1);
-
-    @SuppressWarnings("deprecation")
-    static final BiRowMapper<Object> MULTI_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> {
-        if (columnLabels.size() == 1) {
-            return getColumnValue(rs, 1);
-        } else {
-            final int columnCount = columnLabels.size();
-            final Seid id = Seid.of(Strings.EMPTY);
-
-            for (int i = 1; i <= columnCount; i++) {
-                id.set(columnLabels.get(i - 1), getColumnValue(rs, i));
-            }
-
-            return id;
-        }
-    };
+    // Must be declared after NO_BI_GENERATED_KEY_EXTRACTOR: a qualified forward reference to it would
+    // compile but read null while this class is still being initialized.
+    @SuppressWarnings("rawtypes")
+    private static final Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer> noIdGeneratorGetterSetter = Tuple
+            .of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null, BiConsumers.doNothing());
 
     private static final Map<Class<?>, Map<String, Optional<PropInfo>>> entityPropInfoQueueMap = new ConcurrentHashMap<>();
 
@@ -9470,6 +9479,12 @@ public final class JdbcUtil {
                 value = outParameterGetter.getOutParameter(stmt, outParam.getParameterName());
             }
 
+            // Primitive getters (getInt, getBoolean, ...) return 0/false for SQL NULL; only wasNull()
+            // distinguishes. It reports on the last parameter read, so one check covers every type.
+            if (value != null && stmt.wasNull()) {
+                value = null;
+            }
+
             if (value instanceof final ResultSet rs) {
                 try {
                     value = JdbcUtil.extractData(rs);
@@ -9511,14 +9526,14 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "SELECT * FROM users WHERE name = :name AND age > :age AND city = :city";
-     * List<String> params = JdbcUtil.namedParameters(sql);
+     * List<String> params = JdbcUtil.getNamedParameters(sql);
      * // Returns: ["name", "age", "city"]
      * }</pre>
      *
      * @param sql the SQL string containing named parameters (e.g., :paramName)
      * @return a list of named parameter names found in the SQL string (without the ':' prefix)
      */
-    public static List<String> namedParameters(final String sql) {
+    public static List<String> getNamedParameters(final String sql) {
         return ParsedSql.parse(sql).namedParameters();
     }
 
@@ -9681,7 +9696,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = resultSet.getBlob("data");
-     * String content = JdbcUtil.blob2String(blob);
+     * String content = JdbcUtil.blobToString(blob);
      * // The blob is automatically freed after conversion
      * }</pre>
      *
@@ -9689,7 +9704,7 @@ public final class JdbcUtil {
      * @return the String representation of the Blob content, or {@code null} if {@code blob} is {@code null}
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
-    public static String blob2String(final Blob blob) throws SQLException {
+    public static String blobToString(final Blob blob) throws SQLException {
         if (blob == null) {
             return null;
         }
@@ -9712,7 +9727,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = resultSet.getBlob("data");
-     * String content = JdbcUtil.blob2String(blob, Charsets.ISO_8859_1);
+     * String content = JdbcUtil.blobToString(blob, Charsets.ISO_8859_1);
      * // The blob is automatically freed after conversion
      * }</pre>
      *
@@ -9722,7 +9737,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code charset} is {@code null} (when {@code blob} is not {@code null})
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
-    public static String blob2String(final Blob blob, final Charset charset) throws IllegalArgumentException, SQLException {
+    public static String blobToString(final Blob blob, final Charset charset) throws IllegalArgumentException, SQLException {
         if (blob == null) {
             return null;
         }
@@ -9781,7 +9796,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = resultSet.getClob("description");
-     * String content = JdbcUtil.clob2String(clob);
+     * String content = JdbcUtil.clobToString(clob);
      * // The clob is automatically freed after conversion
      * }</pre>
      *
@@ -9789,7 +9804,7 @@ public final class JdbcUtil {
      * @return the String representation of the Clob content, or {@code null} if {@code clob} is {@code null}
      * @throws SQLException if a SQL exception occurs while accessing the Clob
      */
-    public static String clob2String(final Clob clob) throws SQLException {
+    public static String clobToString(final Clob clob) throws SQLException {
         if (clob == null) {
             return null;
         }
@@ -9935,11 +9950,11 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Disable SQL logging for production environment
-     * JdbcUtil.turnOffSqlLogGlobally();
+     * JdbcUtil.disableSqlLogGlobally();
      * }</pre>
      *
      */
-    public static void turnOffSqlLogGlobally() {
+    public static void disableSqlLogGlobally() {
         isSqlLogAllowed = false;
     }
 
@@ -9951,11 +9966,11 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Disable SQL performance logging for production
-     * JdbcUtil.turnOffSqlPerfLogGlobally();
+     * JdbcUtil.disableSqlPerfLogGlobally();
      * }</pre>
      *
      */
-    public static void turnOffSqlPerfLogGlobally() {
+    public static void disableSqlPerfLogGlobally() {
         isSqlPerfLogAllowed = false;
     }
 
@@ -9967,11 +9982,11 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Disable DAO performance logging
-     * JdbcUtil.turnOffDaoMethodPerfLogGlobally();
+     * JdbcUtil.disableDaoMethodPerfLogGlobally();
      * }</pre>
      *
      */
-    public static void turnOffDaoMethodPerfLogGlobally() {
+    public static void disableDaoMethodPerfLogGlobally() {
         isDaoMethodPerfLogAllowed = false;
     }
 
@@ -10018,7 +10033,7 @@ public final class JdbcUtil {
      * thread that called this method — do not rely on it propagating to threads you submit to an
      * {@link java.util.concurrent.Executor}.</p>
      *
-     * <p>Has no effect if SQL logging has been globally disabled via {@link #turnOffSqlLogGlobally()}.</p>
+     * <p>Has no effect if SQL logging has been globally disabled via {@link #disableSqlLogGlobally()}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10584,7 +10599,7 @@ public final class JdbcUtil {
      */
     public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
             throws UncheckedSQLException {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
 
         SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
@@ -10684,7 +10699,7 @@ public final class JdbcUtil {
     @Beta
     public static <R, E extends Throwable> R callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
@@ -10745,7 +10760,7 @@ public final class JdbcUtil {
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
@@ -10810,7 +10825,7 @@ public final class JdbcUtil {
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
@@ -10865,7 +10880,7 @@ public final class JdbcUtil {
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
@@ -10940,7 +10955,7 @@ public final class JdbcUtil {
     @Beta
     public static <R, E extends Throwable> R callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
@@ -11030,7 +11045,7 @@ public final class JdbcUtil {
     @Beta
     public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
@@ -11112,7 +11127,7 @@ public final class JdbcUtil {
     @Beta
     public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
@@ -11189,7 +11204,7 @@ public final class JdbcUtil {
     @Beta
     public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
@@ -11215,175 +11230,6 @@ public final class JdbcUtil {
                 tran.runOutsideTransaction(() -> cmd.accept(ds));
             }
         }
-    }
-
-    /**
-     * Executes the given callable outside any active transaction for the specified DataSource
-     * and returns its result.
-     *
-     * <p>This method is a direct alias for
-     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}.
-     * See that method for the full contract and usage guidance.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Inside an active transaction, read on a SEPARATE connection that is NOT part of it.
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     orderDao.save(order);   // part of 'tran' (not yet committed)
-     *
-     *     long committedCount = JdbcUtil.callNotInStartedTransaction(dataSource, () ->
-     *         JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM orders")
-     *             .queryForLong().orElse(0L));   // does NOT see the uncommitted 'order'
-     *
-     *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();
-     * }
-     *
-     * // With no active transaction it simply runs the callable and returns its result.
-     * String token = JdbcUtil.callNotInStartedTransaction(dataSource, () -> tokenStore.generate());
-     * }</pre>
-     *
-     * @param <R> the type of the result returned by the callable
-     * @param <E> the type of exception that the callable may throw
-     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
-     *           suspended, must not be {@code null}
-     * @param cmd the callable to execute outside any active transaction, must not be {@code null}
-     * @return the result returned by {@code cmd}
-     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
-     * @throws E if {@code cmd} throws an exception
-     * @deprecated Use {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} instead.
-     */
-    @Deprecated
-    @Beta
-    public static <R, E extends Throwable> R callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
-            throws IllegalArgumentException, E {
-        return callOutsideTransaction(ds, cmd);
-    }
-
-    /**
-     * Executes the given function outside any active transaction for the specified DataSource,
-     * passing {@code ds} as an argument, and returns its result.
-     *
-     * <p>This method is a direct alias for
-     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)}.
-     * See that method for the full contract and usage guidance.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // The DataSource is passed in; connections it vends here are NOT part of any active transaction.
-     * Boolean exists = JdbcUtil.callNotInStartedTransaction(dataSource, ds ->
-     *     JdbcUtil.tableExists(ds, "account"));   // returns true if the table exists
-     *
-     * // Inside an active transaction, the command still runs OUTSIDE it.
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     inventoryDao.reserve(itemId, qty);   // part of 'tran'
-     *
-     *     long count = JdbcUtil.callNotInStartedTransaction(dataSource, ds ->
-     *         JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM inventory")
-     *             .queryForLong().orElse(0L));   // separate connection, outside 'tran'
-     *
-     *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();
-     * }
-     * }</pre>
-     *
-     * @param <T> the type of the result returned by the function
-     * @param <E> the type of exception that the function may throw
-     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
-     *           suspended, and which is passed as the argument to {@code cmd}; must not be {@code null}
-     * @param cmd the function to execute outside any active transaction, must not be {@code null}
-     * @return the result returned by {@code cmd}
-     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
-     * @throws E if {@code cmd} throws an exception
-     * @deprecated Use {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)} instead.
-     */
-    @Deprecated
-    @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds,
-            final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E {
-        return callOutsideTransaction(ds, cmd);
-    }
-
-    /**
-     * Executes the given runnable outside any active transaction for the specified DataSource.
-     *
-     * <p>This method is a direct alias for
-     * {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)}.
-     * See that method for the full contract and usage guidance.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Write an audit record that must survive even if the enclosing transaction rolls back.
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     orderDao.save(order);   // part of 'tran'
-     *
-     *     JdbcUtil.runNotInStartedTransaction(dataSource, () -> {
-     *         // Runs on a SEPARATE connection, outside 'tran'; committed independently.
-     *         JdbcUtil.executeUpdate(dataSource,
-     *             "INSERT INTO audit_log (event) VALUES (?)", "ORDER_ATTEMPTED");
-     *     });
-     *
-     *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();   // even on rollback, the audit row above persists
-     * }
-     * }</pre>
-     *
-     * @param <E> the type of exception that the runnable may throw
-     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
-     *           suspended, must not be {@code null}
-     * @param cmd the runnable to execute outside any active transaction, must not be {@code null}
-     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
-     * @throws E if {@code cmd} throws an exception
-     * @deprecated Use {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)} instead.
-     */
-    @Deprecated
-    @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
-            throws IllegalArgumentException, E {
-        runOutsideTransaction(ds, cmd);
-    }
-
-    /**
-     * Executes the given consumer outside any active transaction for the specified DataSource,
-     * passing {@code ds} as an argument.
-     *
-     * <p>This method is a direct alias for
-     * {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)}.
-     * See that method for the full contract and usage guidance.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Invalidate a cache entry on a separate connection, outside any active transaction.
-     * JdbcUtil.runNotInStartedTransaction(dataSource, ds -> {
-     *     JdbcUtil.executeUpdate(ds,
-     *         "DELETE FROM query_cache WHERE entity_type = ? AND entity_id = ?",
-     *         "ORDER", order.getId());   // 'ds' is the same DataSource, but NOT part of the active transaction
-     * });
-     *
-     * // With no active transaction it simply runs the command immediately.
-     * JdbcUtil.runNotInStartedTransaction(dataSource, ds ->
-     *     JdbcUtil.executeUpdate(ds, "UPDATE heartbeat SET last = CURRENT_TIMESTAMP WHERE id = 1"));
-     * }</pre>
-     *
-     * @param <E> the type of exception that the consumer may throw
-     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
-     *           suspended, and which is passed as the argument to {@code cmd}; must not be {@code null}
-     * @param cmd the consumer to execute outside any active transaction, must not be {@code null}
-     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
-     * @throws E if {@code cmd} throws an exception
-     * @deprecated Use {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)} instead.
-     */
-    @Deprecated
-    @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
-            throws IllegalArgumentException, E {
-        runOutsideTransaction(ds, cmd);
     }
 
     /**
@@ -11612,7 +11458,7 @@ public final class JdbcUtil {
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
                         .invert()
-                        .flatmapKey(e -> N.asList(e, e.toLowerCase(), e.toUpperCase()))
+                        .flatmapKey(e -> N.asList(e, e.toLowerCase(Locale.ROOT), e.toUpperCase(Locale.ROOT)))
                         .distinctByKey()
                         .toImmutableMap();
 

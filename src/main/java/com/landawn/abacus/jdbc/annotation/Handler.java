@@ -60,21 +60,21 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  * }
  *
  * // Apply handler to entire DAO
- * @Handler(type = LoggingHandler.class)
+ * @Handler(impl = LoggingHandler.class)
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // All methods will be intercepted by LoggingHandler
  * }
  *
  * // Apply handler to specific method
  * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
- *     @Handler(type = PerformanceHandler.class)
+ *     @Handler(impl = PerformanceHandler.class)
  *     @Query("SELECT * FROM orders WHERE total > :amount")
  *     List<Order> findLargeOrders(@Bind("amount") BigDecimal amount) throws SQLException;
  * }
  *
  * // Multiple handlers with filtering
- * @Handler(type = LoggingHandler.class, filter = {"find.*", "query.*"})
- * @Handler(type = CacheHandler.class, filter = {"get.*", "find.*"})
+ * @Handler(impl = LoggingHandler.class, filter = {"find.*", "query.*"})
+ * @Handler(impl = CacheHandler.class, filter = {"get.*", "find.*"})
  * public interface ProductDao extends CrudDao<Product, Long, ProductDao> {
  *     // Methods matching filters will be intercepted
  * }
@@ -93,8 +93,8 @@ public @interface Handler {
     /**
      * Specifies a qualifier used to look up a pre-registered handler instance from
      * {@code HandlerFactory} (or a DAO-class handler map). When non-empty, the qualifier takes
-     * precedence over {@link #type()}; the framework resolves the handler by this name instead
-     * of instantiating one from the {@code type} attribute.
+     * precedence over {@link #impl()}; the framework resolves the handler by this name instead
+     * of instantiating one from the {@code impl} attribute.
      *
      * <p>This is useful when you want to register a handler instance once (with custom
      * configuration or dependencies) and then reference it from multiple DAO interfaces or
@@ -109,7 +109,7 @@ public @interface Handler {
      * }
      * }</pre>
      *
-     * @return the handler qualifier name; empty (default) means resolve a handler by {@link #type()} instead
+     * @return the handler qualifier name; empty (default) means resolve a handler by {@link #impl()} instead
      */
     String qualifier() default "";
 
@@ -146,7 +146,7 @@ public @interface Handler {
      * @return the handler class, defaults to {@link EmptyHandler} (no-op)
      */
     @SuppressWarnings("rawtypes")
-    Class<? extends Jdbc.Handler<? extends DaoBase>> type() default EmptyHandler.class; //NOSONAR
+    Class<? extends Jdbc.Handler<? extends DaoBase>> impl() default EmptyHandler.class; //NOSONAR
 
     /**
      * Specifies filter patterns for methods when the annotation is applied at the class level.
@@ -159,8 +159,8 @@ public @interface Handler {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Handler(type = ReadOnlyHandler.class, filter = {"find.*", "get.*", "query.*"})
-     * @Handler(type = AuditHandler.class, filter = {"save.*", "update.*", "delete.*"})
+     * @Handler(impl = ReadOnlyHandler.class, filter = {"find.*", "get.*", "query.*"})
+     * @Handler(impl = AuditHandler.class, filter = {"save.*", "update.*", "delete.*"})
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     // Read methods will use ReadOnlyHandler
      *     // Write methods will use AuditHandler
@@ -180,12 +180,12 @@ public @interface Handler {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Handler(type = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
+     * @Handler(impl = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     @Query("SELECT * FROM users WHERE id = :id")
      *     User findById(@Bind("id") Long id) throws SQLException;
      *
-     *     default User findActiveById(Long id) {
+     *     default User findActiveById(Long id) throws SQLException {
      *         User user = findById(id);   // TransactionHandler NOT applied here
      *         return user != null && user.isActive() ? user : null;
      *     }

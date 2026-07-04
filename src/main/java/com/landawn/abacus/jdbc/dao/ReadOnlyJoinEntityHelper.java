@@ -47,7 +47,7 @@ package com.landawn.abacus.jdbc.dao;
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Load join entities for a single user
- * User user = userDao.findFirst(null, Order.class, Filters.eq("id", 1L)).orElseThrow();
+ * User user = userDao.findFirst(Filters.eq("id", 1L)).orElseThrow();
  * userDao.loadJoinEntities(user, Order.class);   // Loads associated orders
  * userDao.loadAllJoinEntities(user);             // Loads all defined join entities
  *
@@ -59,7 +59,7 @@ package com.landawn.abacus.jdbc.dao;
  *             method chaining and access to DAO operations)
  * @see JoinEntityReadOps
  * @see JoinEntityHelper
- * @see Dao
+ * @see ReadOnlyDao
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 public non-sealed interface ReadOnlyJoinEntityHelper<T, TD extends ReadOnlyDao<T, TD>> extends JoinEntityReadOps<T, TD> {

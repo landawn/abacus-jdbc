@@ -48,7 +48,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     // User-supplied SQL in @Query methods is left untouched.
  *
  *     // ID generation will be called if user.id is null or 0
- *     default User createUser(String name, String email) {
+ *     default User createUser(String name, String email) throws SQLException {
  *         User user = new User(name, email);
  *         insert(user);   // generateId() called automatically if needed
  *         return user;
@@ -136,7 +136,7 @@ public @interface DaoConfig {
      * <pre>{@code
      * @DaoConfig(callGenerateIdForInsertWithSqlIfIdNotSet = true)
      * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
-     *     default void insertWithAudit(Order order) {
+     *     default void insertWithAudit(Order order) throws SQLException {
      *         String sql = "INSERT INTO orders (id, customer_id, total, created_by) " +
      *                     "VALUES (:id, :customerId, :total, CURRENT_USER())";
      *         insert(sql, order);   // generateId() called if order.id not set
@@ -152,8 +152,8 @@ public @interface DaoConfig {
      * Controls whether framework-managed join operations (driven by {@code @JoinedBy} entity annotations)
      * can be performed when the join key value is {@code null} or the type's default value.
      * When {@code false} (default), an {@code IllegalArgumentException} is thrown at runtime if a
-     * null or default join key is encountered. When {@code true}, such joins are silently skipped
-     * rather than raising an error.
+     * null or default join key is encountered. When {@code true}, the join query is executed with the
+     * null/default key (typically loading no join entities) instead of raising an error.
      *
      * <p>This applies to the built-in join methods provided by {@code JoinEntityHelper}
      * (e.g., {@code listAllJoinEntities}, {@code findFirstWithJoinEntities}).

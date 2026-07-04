@@ -15,31 +15,22 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.jdbc.cs;
-import com.landawn.abacus.parser.ParserUtil;
-import com.landawn.abacus.parser.ParserUtil.BeanInfo;
-import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
-import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Seid;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations
@@ -141,7 +132,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @throws DuplicateResultException if more than one record matches
      */
     @Override
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+    default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
@@ -180,26 +171,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
-        N.checkArgNotNull(entity, cs.entity);
-        N.checkArgNotNull(cond, cs.cond);
-
-        final T dbEntity = findOnlyOne(cond).orElseNull();
-
-        if (dbEntity == null) {
-            insert(entity);
-            return entity;
-        } else {
-            final Class<?> cls = entity.getClass();
-            final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
-
-            if (N.isEmpty(idPropNameList)) {
-                Beans.mergeInto(entity, dbEntity);
-            } else {
-                Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
-            }
-
-            update(dbEntity);
-            return dbEntity;
+        try {
+            return CrudDao.super.upsert(entity, cond);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
         }
     }
 
@@ -277,7 +252,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException {
         return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -308,99 +283,17 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive, if {@code uniquePropNamesForQuery} is {@code null} or empty,
      *                                  or if any name in {@code uniquePropNamesForQuery} is not a property of the entity class
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize)
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize)
             throws UncheckedSQLException {
-        N.checkArgPositive(batchSize, cs.batchSize);
-        N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
-
-        if (N.isEmpty(entities)) {
-            return new ArrayList<>();
-        }
-
-        final T first = N.firstOrNullIfEmpty(entities);
-        final Class<?> cls = first.getClass();
-        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-
-        final PropInfo uniquePropInfo = entityInfo.getPropInfo(uniquePropNamesForQuery.get(0));
-
-        if (uniquePropInfo == null) {
-            throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(0) + "' in class: " + cls.getName());
-        }
-
-        final List<PropInfo> uniquePropInfos = N.map(uniquePropNamesForQuery, entityInfo::getPropInfo);
-
-        for (int i = 0; i < uniquePropInfos.size(); i++) {
-            if (uniquePropInfos.get(i) == null) {
-                throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(i) + "' in class: " + cls.getName());
-            }
-        }
-
-        final com.landawn.abacus.util.function.Function<T, Object> singleKeyExtractor = uniquePropInfo::getPropValue;
-
-        @SuppressWarnings("deprecation")
-        final com.landawn.abacus.util.function.Function<T, EntityId> entityIdExtractor = it -> {
-            final Seid entityId = Seid.of(entityInfo.simpleClassName);
-
-            for (final PropInfo propInfo : uniquePropInfos) {
-                entityId.set(propInfo.name, propInfo.getPropValue(it));
-            }
-
-            return entityId;
-        };
-
-        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNamesForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
-
-        final List<T> dbEntities = uniquePropNamesForQuery.size() == 1
-                ? Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.in(uniquePropNamesForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()
-                : Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.idToCond(N.map(it, entityIdExtractor)))).toList();
-
-        final Map<Object, T> dbIdEntityMap = Stream.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
-        final Map<Boolean, List<T>> map = Stream.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());
-        final List<T> entitiesToUpdate = map.get(true);
-        final List<T> entitiesToInsert = map.get(false);
-
-        final List<T> result = new ArrayList<>(entities.size());
-        final SqlTransaction tran = (N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate))
-                || (N.notEmpty(entitiesToInsert) && entitiesToInsert.size() > batchSize)
-                || (N.notEmpty(entitiesToUpdate) && entitiesToUpdate.size() > batchSize) ? JdbcUtil.beginTransaction(dataSource()) : null;
-
         try {
-            if (N.notEmpty(entitiesToInsert)) {
-                batchInsert(entitiesToInsert, batchSize);
-                result.addAll(entitiesToInsert);
-            }
-
-            if (N.notEmpty(entitiesToUpdate)) {
-                final Set<String> ignoredPropNames = N.newHashSet(uniquePropNamesForQuery);
-
-                final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
-
-                if (N.notEmpty(idPropNameList)) {
-                    ignoredPropNames.addAll(idPropNameList);
-                }
-
-                final List<T> dbEntitiesToUpdate = Stream.of(entitiesToUpdate)
-                        .map(it -> Beans.mergeInto(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
-                        .toList();
-
-                batchUpdate(dbEntitiesToUpdate, batchSize);
-
-                result.addAll(dbEntitiesToUpdate);
-            }
-
-            if (tran != null) {
-                tran.commit();
-            }
-        } finally {
-            if (tran != null) {
-                tran.rollbackIfNotCommitted();
-            }
+            return CrudDao.super.batchUpsert(entities, uniquePropNamesForQuery, batchSize);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
         }
-
-        return result;
     }
 
 }

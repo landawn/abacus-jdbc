@@ -920,7 +920,7 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     // =====================================================================================
-    // @Handler: a recording handler wired via @Handler(type=...) must have its beforeInvoke /
+    // @Handler: a recording handler wired via @Handler(impl=...) must have its beforeInvoke /
     // afterInvoke run around the annotated DAO method (drives the handler wrapper in DaoImpl).
     // =====================================================================================
     public static final class RecordingHandler implements Jdbc.Handler<HandlerDao> {
@@ -943,7 +943,7 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
-    @com.landawn.abacus.jdbc.annotation.Handler(type = RecordingHandler.class)
+    @com.landawn.abacus.jdbc.annotation.Handler(impl = RecordingHandler.class)
     public interface HandlerDao extends CrudDao<UserAccount, Long, HandlerDao> {
         @Query("SELECT COUNT(*) FROM user_account")
         long handledCount() throws SQLException;
@@ -1065,7 +1065,7 @@ public class DaoImplIntegrationTest extends TestBase {
     // =====================================================================================
     public interface MappedUserDao extends CrudDao<UserAccount, Long, MappedUserDao> {
         @Query("SELECT id, first_name, last_name, age, active FROM user_account ORDER BY id")
-        @com.landawn.abacus.jdbc.annotation.MappedByKey("id")
+        @com.landawn.abacus.jdbc.annotation.MappedByKey(keyName = "id")
         Map<Long, UserAccount> findAllMapped() throws SQLException;
 
         @Query("SELECT id, first_name, last_name, age, active FROM user_account WHERE id = :id")

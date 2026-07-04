@@ -292,27 +292,6 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
-    public void testRunNotInMe() throws Exception {
-        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
-        final boolean[] executed = { false };
-        final Throwables.Runnable<Exception> runnable = () -> executed[0] = true;
-
-        transaction.runNotInMe(runnable);
-
-        assertTrue(executed[0]);
-    }
-
-    @Test
-    public void testCallNotInMe() throws Exception {
-        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
-        final Throwables.Callable<String, Exception> callable = () -> "test result";
-
-        final String result = transaction.callNotInMe(callable);
-
-        assertEquals("test result", result);
-    }
-
-    @Test
     public void testClose() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 

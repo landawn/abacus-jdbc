@@ -51,8 +51,8 @@ public class HandlerTest extends TestBase {
     }
 
     @Test
-    public void testDefaultType() throws Exception {
-        assertEquals(EmptyHandler.class, Handler.class.getMethod("type").getDefaultValue());
+    public void testDefaultImpl() throws Exception {
+        assertEquals(EmptyHandler.class, Handler.class.getMethod("impl").getDefaultValue());
     }
 
     @Test

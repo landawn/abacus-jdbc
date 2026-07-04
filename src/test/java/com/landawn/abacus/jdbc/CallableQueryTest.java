@@ -1047,7 +1047,10 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(mockRs);
         ResultSet rs = callableQuery.executeQuery();
-        assertSame(mockRs, rs);
+        // Wrapped for parity with PreparedQuery/NamedQuery reads: values are normalized by ResultSetProxy.
+        assertTrue(rs instanceof com.landawn.abacus.jdbc.ResultSetProxy);
+        rs.next();
+        verify(mockRs).next(); // the proxy delegates to the procedure's first ResultSet
     }
 
     // --- queryAndGetOutParameters() - delegation (L2414) ---

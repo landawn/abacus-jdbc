@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc.annotation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.annotation.ElementType;
@@ -45,9 +46,11 @@ public class MergedByIdTest extends TestBase {
     }
 
     @Test
-    public void testMergedById_ValueIsDeprecated() throws Exception {
+    public void testMergedById_ValueIsNotDeprecated() throws Exception {
+        // value() is the only way to merge by non-id properties (e.g. @MergedById("ID, firstName")),
+        // so it is a live, non-deprecated element; empty means "use the entity's @Id property(ies)".
         Method valueMethod = MergedById.class.getDeclaredMethod("value");
-        assertNotNull(valueMethod.getAnnotation(Deprecated.class));
+        assertNull(valueMethod.getAnnotation(Deprecated.class));
     }
 
     @Test

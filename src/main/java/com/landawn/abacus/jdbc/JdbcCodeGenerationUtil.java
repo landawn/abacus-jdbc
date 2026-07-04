@@ -470,7 +470,8 @@ public final class JdbcCodeGenerationUtil {
                     + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
         }
 
-        final List<Tuple2<String, String>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
+        // (type, fieldName, skipInCopy): static/final fields can't be re-assigned by the generated copy().
+        final List<Tuple3<String, String, Boolean>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
                 : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
                         // Only whole-line comments are skipped; stripping any trailing "//" would corrupt
                         // declarations whose string initializers contain "//" (e.g. "https://...").
@@ -479,8 +480,28 @@ public final class JdbcCodeGenerationUtil {
                         // .peek(Fn.println())
                         .filter(Fn.notEmpty())
                         .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
-                        .map(it -> Strings.substringBetween(it, " ", ";").trim())
-                        .map(it -> {
+                        .map(line -> {
+                            String decl = Strings.substringBetween(line, " ", ";").trim();
+                            boolean skipInCopy = false;
+
+                            // Strip remaining modifiers so the parsed "type" is the bare type ("private static
+                            // final long serialVersionUID = 1L;" would otherwise parse as type "static final long"
+                            // and, worse, get a copy.serialVersionUID assignment that doesn't compile).
+                            while (true) {
+                                if (Strings.startsWithAny(decl, "static ", "final ")) {
+                                    skipInCopy = true;
+                                    decl = decl.substring(decl.indexOf(' ') + 1).trim();
+                                } else if (Strings.startsWithAny(decl, "transient ", "volatile ")) {
+                                    decl = decl.substring(decl.indexOf(' ') + 1).trim();
+                                } else {
+                                    break;
+                                }
+                            }
+
+                            return Tuple.of(decl, skipInCopy);
+                        })
+                        .map(declAndSkip -> {
+                            final String it = declAndSkip._1;
                             final int assignmentIdx = it.indexOf('=');
                             final String withoutInitializer = assignmentIdx >= 0 ? it.substring(0, assignmentIdx).trim() : it;
                             // Split a multi-variable declaration (e.g. "int a, b") on its first top-level comma, but
@@ -500,7 +521,7 @@ public final class JdbcCodeGenerationUtil {
                             }
                             final String declaration = commaIdx >= 0 ? withoutInitializer.substring(0, commaIdx).trim() : withoutInitializer.trim();
                             final int idx = declaration.lastIndexOf(' ');
-                            return Tuple.of(declaration.substring(0, idx).trim(), declaration.substring(idx + 1).trim());
+                            return Tuple.of(declaration.substring(0, idx).trim(), declaration.substring(idx + 1).trim(), declAndSkip._2);
                         })
                         .toList();
 
@@ -591,7 +612,7 @@ public final class JdbcCodeGenerationUtil {
 
             String headPart = "";
 
-            for (final Tuple2<String, String> tp : additionalFields) {
+            for (final Tuple3<String, String, Boolean> tp : additionalFields) {
                 if (tp._1.indexOf('<') > 0) { //NOSONAR
                     final String clsName = tp._1.substring(0, tp._1.indexOf('<'));
 
@@ -772,7 +793,11 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";").append(LINE_SEPARATOR);
                 }
 
-                for (final Tuple2<String, String> tp : additionalFields) {
+                for (final Tuple3<String, String, Boolean> tp : additionalFields) {
+                    if (tp._3) { // static/final fields can't be re-assigned.
+                        continue;
+                    }
+
                     sb.append("        copy.").append(tp._2).append(" = this.").append(tp._2).append(";").append(LINE_SEPARATOR);
                 }
 

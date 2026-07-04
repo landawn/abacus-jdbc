@@ -170,6 +170,13 @@ public @interface Cache {
      *             Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         return delegate.put(defaultCacheKey, result, liveTime, maxIdleTime, daoProxy, args, methodSignature);
      *     }
+     *
+     *     @Override
+     *     public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+     *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *         // Invalidation hook: called after write operations (see @RefreshCache).
+     *         delegate.update(defaultCacheKey, result, daoProxy, args, methodSignature);
+     *     }
      * }
      *
      * // Usage

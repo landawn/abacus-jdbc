@@ -457,7 +457,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     public void testExportCsv_DataSource_ToWriter() throws SQLException {
         final java.io.StringWriter w = new java.io.StringWriter();
 
-        final long n = DataTransferUtil.exportCsv(ds, "SELECT id, name, amount FROM copy_src ORDER BY id").to(w);
+        final long n = DataTransferUtil.exportCsvFrom(ds, "SELECT id, name, amount FROM copy_src ORDER BY id").to(w);
 
         assertEquals(3, n);
         final String csv = w.toString();
@@ -472,7 +472,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         final java.io.StringWriter w = new java.io.StringWriter();
 
         try (Connection conn = ds.getConnection()) {
-            final long n = DataTransferUtil.exportCsv(conn, "SELECT id AS \"id\", name AS \"name\", amount AS \"amount\" FROM copy_src ORDER BY id")
+            final long n = DataTransferUtil.exportCsvFrom(conn, "SELECT id AS \"id\", name AS \"name\", amount AS \"amount\" FROM copy_src ORDER BY id")
                     .selectColumns(List.of("id", "name"))
                     .to(w);
 
@@ -488,7 +488,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertFalse(csv.contains("30.25"));
     }
 
-    // exportCsv(PreparedStatement).to(File) then importCsvFrom(File) round-trips back into csv_tgt.
+    // exportCsvFrom(PreparedStatement).to(File) then importCsvFrom(File) round-trips back into csv_tgt.
     @Test
     public void testExportCsv_PreparedStatement_ToFile_RoundTrip() throws Exception {
         final File out = File.createTempFile("csv_export_", ".csv");
@@ -496,7 +496,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
 
         try (Connection conn = ds.getConnection();
              PreparedStatement st = conn.prepareStatement("SELECT id, name, amount FROM copy_src ORDER BY id")) {
-            final long exported = DataTransferUtil.exportCsv(st).to(out);
+            final long exported = DataTransferUtil.exportCsvFrom(st).to(out);
             assertEquals(3, exported);
         }
 
@@ -521,7 +521,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         try (Connection conn = ds.getConnection();
              PreparedStatement st = conn.prepareStatement("SELECT id, name FROM copy_src ORDER BY id");
              ResultSet rs = st.executeQuery()) {
-            final long n = DataTransferUtil.exportCsv(rs).to(w);
+            final long n = DataTransferUtil.exportCsvFrom(rs).to(w);
             assertEquals(3, n);
         }
 
@@ -532,7 +532,9 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     @Test
     public void testExportCsv_SelectColumns_UnknownColumn_Throws() {
         assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.exportCsv(ds, "SELECT id, name FROM copy_src").selectColumns(List.of("does_not_exist")).to(new java.io.StringWriter()));
+                () -> DataTransferUtil.exportCsvFrom(ds, "SELECT id, name FROM copy_src")
+                        .selectColumns(List.of("does_not_exist"))
+                        .to(new java.io.StringWriter()));
     }
 
     // ===== Builder option setters not exercised elsewhere (batchIntervalInMillis / fetchSize / stmtSetter /

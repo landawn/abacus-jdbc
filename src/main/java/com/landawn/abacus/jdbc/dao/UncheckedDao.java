@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
@@ -32,10 +33,10 @@ import com.landawn.abacus.util.N;
  * Its methods throw {@link UncheckedSQLException} instead of {@link java.sql.SQLException}, providing a more
  * convenient API for developers who prefer unchecked exceptions.
  *
- * <p>Through its {@code Unchecked*Ops} super-interfaces it redeclares the condition-based save, query, update,
- * and delete operations so callers do not need to handle checked exceptions for those methods; this interface
- * itself redeclares the {@code upsert} operations. Inherited methods that are not redeclared keep
- * the checked-exception contract from {@link Dao}.</p>
+ * <p>Through its {@code Unchecked*Ops} super-interfaces it redeclares the save operations and the
+ * condition-based query, update, and delete operations so callers do not need to handle checked
+ * exceptions for those methods; this interface itself redeclares the {@code upsert} operations.
+ * Inherited methods that are not redeclared keep the checked-exception contract from {@link Dao}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -76,7 +77,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @see #upsert(Object, Condition)
      */
     @Override
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+    default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 

@@ -692,34 +692,34 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         }
     }
 
-    // loadJoinEntitiesIfAbsent(T, boolean) — false branch
+    // loadAllJoinEntitiesIfAbsent(T, boolean) — false branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entity_InParallelFalse() {
+    public void testloadAllJoinEntitiesIfAbsent_Entity_InParallelFalse() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(entity);
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(entity);
 
-        dao.loadJoinEntitiesIfAbsent(entity, false);
+        dao.loadAllJoinEntitiesIfAbsent(entity, false);
 
-        verify(dao).loadJoinEntitiesIfAbsent(entity);
+        verify(dao).loadAllJoinEntitiesIfAbsent(entity);
     }
 
-    // loadJoinEntitiesIfAbsent(T, boolean) — true branch
+    // loadAllJoinEntitiesIfAbsent(T, boolean) — true branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entity_InParallelTrue_UsesExecutor() {
+    public void testloadAllJoinEntitiesIfAbsent_Entity_InParallelTrue_UsesExecutor() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entity), ArgumentMatchers.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(ArgumentMatchers.same(entity), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
-        dao.loadJoinEntitiesIfAbsent(entity, true);
+        dao.loadAllJoinEntitiesIfAbsent(entity, true);
 
         verify(dao).executor();
     }
 
-    // loadJoinEntitiesIfAbsent(T, Executor) — delegates to propNames overload
+    // loadAllJoinEntitiesIfAbsent(T, Executor) — delegates to propNames overload
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entity_WithExecutor_DelegatesToPropNames() {
+    public void testloadAllJoinEntitiesIfAbsent_Entity_WithExecutor_DelegatesToPropNames() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
@@ -730,16 +730,16 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
                     .loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entity), ArgumentMatchers.<Collection<String>> any(),
                             ArgumentMatchers.<java.util.concurrent.Executor> any());
 
-            dao.loadJoinEntitiesIfAbsent(entity, Runnable::run);
+            dao.loadAllJoinEntitiesIfAbsent(entity, Runnable::run);
 
             verify(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entity), ArgumentMatchers.<Collection<String>> any(),
                     ArgumentMatchers.<java.util.concurrent.Executor> any());
         }
     }
 
-    // loadJoinEntitiesIfAbsent(T) — delegates to propNames overload via DaoUtil
+    // loadAllJoinEntitiesIfAbsent(T) — delegates to propNames overload via DaoUtil
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entity_DelegatesToJoinEntityPropNames() {
+    public void testloadAllJoinEntitiesIfAbsent_Entity_DelegatesToJoinEntityPropNames() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
@@ -748,50 +748,50 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
             daoUtil.when(() -> DaoUtil.getEntityJoinInfo(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(joinInfoMap);
             doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entity), ArgumentMatchers.<Collection<String>> any());
 
-            dao.loadJoinEntitiesIfAbsent(entity);
+            dao.loadAllJoinEntitiesIfAbsent(entity);
 
             verify(dao).loadJoinEntitiesIfAbsent(entity, joinInfoMap.keySet());
         }
     }
 
-    // loadJoinEntitiesIfAbsent(Collection, boolean) — false branch
+    // loadAllJoinEntitiesIfAbsent(Collection, boolean) — false branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entities_InParallelFalse() {
+    public void testloadAllJoinEntitiesIfAbsent_Entities_InParallelFalse() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(entities);
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(entities);
 
-        dao.loadJoinEntitiesIfAbsent(entities, false);
+        dao.loadAllJoinEntitiesIfAbsent(entities, false);
 
-        verify(dao).loadJoinEntitiesIfAbsent(entities);
+        verify(dao).loadAllJoinEntitiesIfAbsent(entities);
     }
 
-    // loadJoinEntitiesIfAbsent(Collection, boolean) — true branch
+    // loadAllJoinEntitiesIfAbsent(Collection, boolean) — true branch
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entities_InParallelTrue_UsesExecutor() {
+    public void testloadAllJoinEntitiesIfAbsent_Entities_InParallelTrue_UsesExecutor() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
         when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.<java.util.concurrent.Executor> any());
+        doNothing().when(dao).loadAllJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.<java.util.concurrent.Executor> any());
 
-        dao.loadJoinEntitiesIfAbsent(entities, true);
+        dao.loadAllJoinEntitiesIfAbsent(entities, true);
 
         verify(dao).executor();
     }
 
-    // loadJoinEntitiesIfAbsent(Collection) — empty entities short-circuits
+    // loadAllJoinEntitiesIfAbsent(Collection) — empty entities short-circuits
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entities_EmptyShortCircuits() {
+    public void testloadAllJoinEntitiesIfAbsent_Entities_EmptyShortCircuits() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
-        dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of());
+        dao.loadAllJoinEntitiesIfAbsent(List.<TestEntity> of());
         Mockito.verify(dao, Mockito.never())
                 .loadJoinEntitiesIfAbsent(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.<Collection<String>> any());
     }
 
-    // loadJoinEntitiesIfAbsent(Collection) — delegates to propNames overload via DaoUtil
+    // loadAllJoinEntitiesIfAbsent(Collection) — delegates to propNames overload via DaoUtil
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entities_DelegatesToJoinEntityPropNames() {
+    public void testloadAllJoinEntitiesIfAbsent_Entities_DelegatesToJoinEntityPropNames() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
 
@@ -800,26 +800,26 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
             daoUtil.when(() -> DaoUtil.getEntityJoinInfo(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(joinInfoMap);
             doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.<Collection<String>> any());
 
-            dao.loadJoinEntitiesIfAbsent(entities);
+            dao.loadAllJoinEntitiesIfAbsent(entities);
 
             verify(dao).loadJoinEntitiesIfAbsent(entities, joinInfoMap.keySet());
         }
     }
 
-    // loadJoinEntitiesIfAbsent(Collection, Executor) — empty entities short-circuits
+    // loadAllJoinEntitiesIfAbsent(Collection, Executor) — empty entities short-circuits
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entities_WithExecutor_EmptyShortCircuits() {
+    public void testloadAllJoinEntitiesIfAbsent_Entities_WithExecutor_EmptyShortCircuits() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
-        dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), Runnable::run);
+        dao.loadAllJoinEntitiesIfAbsent(List.<TestEntity> of(), Runnable::run);
         Mockito.verify(dao, Mockito.never())
                 .loadJoinEntitiesIfAbsent(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.<Collection<String>> any(),
                         ArgumentMatchers.<java.util.concurrent.Executor> any());
     }
 
-    // loadJoinEntitiesIfAbsent(Collection, Executor) — delegates to propNames overload via DaoUtil
+    // loadAllJoinEntitiesIfAbsent(Collection, Executor) — delegates to propNames overload via DaoUtil
     @Test
-    public void testloadJoinEntitiesIfAbsent_Entities_WithExecutor_DelegatesToPropNames() {
+    public void testloadAllJoinEntitiesIfAbsent_Entities_WithExecutor_DelegatesToPropNames() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
 
@@ -830,7 +830,7 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
                     .loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.<Collection<String>> any(),
                             ArgumentMatchers.<java.util.concurrent.Executor> any());
 
-            dao.loadJoinEntitiesIfAbsent(entities, Runnable::run);
+            dao.loadAllJoinEntitiesIfAbsent(entities, Runnable::run);
 
             verify(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.eq(entities), ArgumentMatchers.<Collection<String>> any(),
                     ArgumentMatchers.<java.util.concurrent.Executor> any());

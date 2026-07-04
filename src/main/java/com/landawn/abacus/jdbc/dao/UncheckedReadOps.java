@@ -736,6 +736,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Condition, Class)
      */
+    @Beta
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
             throws UncheckedSQLException;
@@ -822,6 +823,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Condition, Class)
      */
+    @Beta
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicateResultException, UncheckedSQLException;

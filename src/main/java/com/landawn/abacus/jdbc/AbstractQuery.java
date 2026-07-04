@@ -4082,6 +4082,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     int defaultFetchDirection = -1;
     int defaultFetchSize = -1;
+    // fetchSize is the one statement property whose live value can legitimately be negative
+    // (MySQL/MariaDB use Integer.MIN_VALUE for row streaming), so unlike its siblings a negative
+    // sentinel cannot mark "not captured yet".
+    boolean isFetchSizeCaptured = false;
     int defaultQueryTimeout = -1;
     int defaultMaxFieldSize = -1;
     int defaultMaxRows = -1;
@@ -4154,7 +4158,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .forEach(row -> processRow(row));
      * }</pre>
      *
-     * @param fetchSize the number of rows to fetch. Use 0 to let the JDBC driver choose. A negative value is rejected by the JDBC driver with a {@code SQLException}.
+     * @param fetchSize the number of rows to fetch. Use 0 to let the JDBC driver choose. Most drivers reject a
+     *        negative value with a {@code SQLException}; MySQL/MariaDB accept {@code Integer.MIN_VALUE} to enable
+     *        row-by-row streaming.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs (including a negative {@code fetchSize} rejected by the driver)
@@ -4163,8 +4169,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setFetchSize(final int fetchSize) throws IllegalStateException, SQLException {
         assertNotClosed();
 
-        if (defaultFetchSize < 0) {
+        if (!isFetchSizeCaptured) {
             defaultFetchSize = stmt.getFetchSize();
+            isFetchSizeCaptured = true;
         }
 
         stmt.setFetchSize(fetchSize);
@@ -5142,7 +5149,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final V result = targetValueType.get(rs, 1);
 
                 if (rs.next()) {
-                    throw new DuplicateResultException("At least two results found");
+                    throw new DuplicateResultException("More than one record found");
                 }
 
                 return Nullable.of(result);
@@ -5240,7 +5247,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final V result = targetValueType.get(rs, 1);
 
                 if (rs.next()) {
-                    throw new DuplicateResultException("At least two results found");
+                    throw new DuplicateResultException("More than one record found");
                 }
 
                 return Optional.of(result);
@@ -8761,10 +8768,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * that are automatically recycled. The DisposableObjArray contains all column values
      * for the current row.</p>
      *
-     * <p><b>Note on naming:</b> This method is named {@code foreach} (all lowercase) to
-     * distinguish it from {@link #forEach(RowConsumer)}, which accepts a {@code RowConsumer}
-     * that operates directly on a {@code ResultSet}. This method instead accepts a
-     * {@code Consumer<DisposableObjArray>} for a simpler, array-based interface.</p>
+     * <p><b>Note on naming:</b> Unlike {@link #forEach(RowConsumer)}, whose {@code RowConsumer}
+     * operates directly on a {@code ResultSet}, this method accepts a
+     * {@code Consumer<DisposableObjArray>} for a simpler, array-based interface — hence the
+     * distinct {@code foreach} name.</p>
      *
      * <p><b>Note:</b> The DisposableObjArray is only valid within the consumer execution.
      * Do not store references to it or its contents for later use.</p>
@@ -8804,10 +8811,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method uses the field types defined in the entity class to properly
      * retrieve values from the ResultSet, ensuring type safety and proper conversion.</p>
      *
-     * <p><b>Note on naming:</b> This method is named {@code foreach} (all lowercase) to
-     * distinguish it from {@link #forEach(RowConsumer)}, which accepts a {@code RowConsumer}
-     * that operates directly on a {@code ResultSet}. This method instead accepts a
-     * {@code Consumer<DisposableObjArray>} for a simpler, array-based interface.</p>
+     * <p><b>Note on naming:</b> Unlike {@link #forEach(RowConsumer)}, whose {@code RowConsumer}
+     * operates directly on a {@code ResultSet}, this method accepts a
+     * {@code Consumer<DisposableObjArray>} for a simpler, array-based interface — hence the
+     * distinct {@code foreach} name.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8860,7 +8867,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Insert new user and get generated ID
      * Optional<Long> userId = JdbcUtil.prepareQuery(conn,
-     *         "INSERT INTO users (name, email) VALUES (?, ?)")
+     *         "INSERT INTO users (name, email) VALUES (?, ?)", true)   // true: return generated keys
      *     .setString(1, "John Doe")
      *     .setString(2, "john@example.com")
      *     .insert();
@@ -8892,7 +8899,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Insert with custom key extraction
      * Optional<String> generatedCode = JdbcUtil.prepareQuery(conn,
-     *         "INSERT INTO products (name, price) VALUES (?, ?)")
+     *         "INSERT INTO products (name, price) VALUES (?, ?)", true)   // true: return generated keys
      *     .setString(1, "Widget")
      *     .setDouble(2, 19.99)
      *     .insert(rs -> rs.getString("product_code"));   // Custom column
@@ -9024,7 +9031,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> generatedIds = JdbcUtil.prepareQuery(conn,
-     *         "INSERT INTO users (name, email) VALUES (?, ?)")
+     *         "INSERT INTO users (name, email) VALUES (?, ?)", true)   // true: return generated keys
      *     .setString(1, "John").setString(2, "john@example.com").addBatch()
      *     .setString(1, "Jane").setString(2, "jane@example.com").addBatch()
      *     .setString(1, "Bob").setString(2, "bob@example.com").addBatch()
@@ -9223,7 +9230,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Integer, List<Long>> result = JdbcUtil.prepareQuery(conn,
-     *         "INSERT INTO audit_log (action, user_id) VALUES (?, ?)")
+     *         "INSERT INTO audit_log (action, user_id) VALUES (?, ?)", true)   // true: return generated keys
      *     .setString(1, "LOGIN")
      *     .setLong(2, userId)
      *     .updateAndReturnGeneratedKeys(rs -> rs.getLong(1));
@@ -9375,7 +9382,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<int[], List<Long>> result = JdbcUtil.prepareQuery(conn,
-     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)")
+     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)", true)   // true: return generated keys
      *     .setLong(1, customerId1).setBigDecimal(2, total1).addBatch()
      *     .setLong(1, customerId2).setBigDecimal(2, total2).addBatch()
      *     .batchUpdateAndReturnGeneratedKeys(rs -> rs.getLong(1));
@@ -10122,7 +10129,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            if (defaultFetchSize >= 0) {
+            if (isFetchSizeCaptured) {
                 try {
                     stmt.setFetchSize(defaultFetchSize);
                 } catch (final SQLException e) {

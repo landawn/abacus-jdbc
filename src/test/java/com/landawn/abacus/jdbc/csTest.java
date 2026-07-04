@@ -31,8 +31,8 @@ public class csTest extends TestBase {
 
     @Test
     public void testResultSetConstant() {
-        assertEquals("ResultSet", cs.ResultSet);
-        assertNotNull(cs.ResultSet);
+        assertEquals("rs", cs.rs);
+        assertNotNull(cs.rs);
     }
 
     @Test
@@ -122,7 +122,7 @@ public class csTest extends TestBase {
 
     @Test
     public void testDataSourceConstant() {
-        assertEquals("dataSource", cs.dataSource);
+        assertEquals("ds", cs.ds);
     }
 
     @Test

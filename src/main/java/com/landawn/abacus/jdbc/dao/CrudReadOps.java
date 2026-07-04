@@ -600,7 +600,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
@@ -624,7 +624,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param ids the collection of IDs to retrieve
      * @param batchSize the number of IDs to query for in each batch. The operation will split
      *                  large collections into chunks of this size.
-     * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
@@ -646,7 +646,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if {@code null}
-     * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
@@ -673,7 +673,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                        All properties will be selected if {@code null}
      * @param batchSize the number of IDs to query for in each batch. The operation will split
      *                  large collections into chunks of this size.
-     * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
@@ -696,7 +696,10 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
         N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId), "Input 'ids' can not be EntityIds/Maps or entities for single id");
 
-        final List<ID> idList = new ArrayList<>(ids);
+        // De-duplicated (like count(Collection)) so the result doesn't depend on how duplicate ids
+        // happen to fall across chunk boundaries: duplicates inside one chunk collapse via the IN
+        // list, but duplicates straddling chunks would return the same entity twice.
+        final List<ID> idList = ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
         final List<T> resultList = new ArrayList<>(idList.size());
 
         for (int i = 0, size = idList.size(); i < size; i += batchSize) {
@@ -704,7 +707,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
             final List<T> entities = list(selectPropNames, DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap));
 
             if (entities.size() > batch.size()) {
-                throw new DuplicateResultException("The size of result: " + entities.size() + " is bigger than the size of input ids: " + batch.size());
+                throw new DuplicateResultException("The size of result: " + entities.size() + " is bigger than the size of the current id batch: "
+                        + batch.size() + " (batchSize=" + batchSize + ", total distinct ids=" + idList.size() + ")");
             }
 
             resultList.addAll(entities);
@@ -817,6 +821,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return {@code true} if the matching database row was found and {@code entity} was updated;
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -847,6 +852,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return {@code true} if the matching database row was found and {@code entity} was updated;
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -887,6 +893,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param entities the collection of entities to refresh
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -912,6 +919,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -946,6 +954,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -973,6 +982,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null}/empty or {@code batchSize} is not positive
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta

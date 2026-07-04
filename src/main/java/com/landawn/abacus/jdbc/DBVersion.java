@@ -40,7 +40,7 @@ import com.landawn.abacus.util.Strings;
  * <pre>{@code
  * // Example: Adapting SQL syntax based on detected database version
  * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
- * DBVersion currentDbVersion = dbInfo.version();
+ * DBVersion currentDbVersion = dbInfo.dbVersion();
  *
  * String query;
  * if (currentDbVersion.isMySQL()) {
@@ -219,7 +219,7 @@ public enum DBVersion {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
-     * DBVersion currentDbVersion = dbInfo.version();
+     * DBVersion currentDbVersion = dbInfo.dbVersion();
      *
      * if (currentDbVersion.isMySQL()) {
      *     System.out.println("Connected to a MySQL database.");
@@ -246,7 +246,7 @@ public enum DBVersion {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
-     * DBVersion currentDbVersion = dbInfo.version();
+     * DBVersion currentDbVersion = dbInfo.dbVersion();
      *
      * if (currentDbVersion.isPostgreSQL()) {
      *     System.out.println("Connected to a PostgreSQL database.");

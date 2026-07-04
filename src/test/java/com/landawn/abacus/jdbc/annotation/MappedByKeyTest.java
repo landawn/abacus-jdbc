@@ -39,13 +39,6 @@ public class MappedByKeyTest extends TestBase {
     }
 
     @Test
-    public void testMappedByKey_ValueDefault() throws Exception {
-        Method valueMethod = MappedByKey.class.getDeclaredMethod("value");
-        Object defaultValue = valueMethod.getDefaultValue();
-        assertEquals("", defaultValue);
-    }
-
-    @Test
     public void testMappedByKey_KeyNameDefault() throws Exception {
         Method keyNameMethod = MappedByKey.class.getDeclaredMethod("keyName");
         Object defaultValue = keyNameMethod.getDefaultValue();
@@ -74,6 +67,6 @@ public class MappedByKeyTest extends TestBase {
     @Test
     public void testMappedByKey_ElementCount() {
         Method[] methods = MappedByKey.class.getDeclaredMethods();
-        assertEquals(3, methods.length, "MappedByKey should have exactly 3 elements: value, keyName, mapClass");
+        assertEquals(2, methods.length, "MappedByKey should have exactly 2 elements: keyName, mapClass");
     }
 }

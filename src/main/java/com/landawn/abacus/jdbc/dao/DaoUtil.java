@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.cs;
@@ -112,6 +113,18 @@ public final class DaoUtil {
      */
     public static boolean isCrudLReadOps(final Class<?> daoInterface) {
         return CrudLReadOps.class.isAssignableFrom(daoInterface);
+    }
+
+    /**
+     * Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-read-capable DAO
+     * (any {@link CrudReadOps} variant, including the no-update and read-only composites), otherwise {@code null}.
+     *
+     * @param dao the DAO instance to inspect.
+     * @return the DAO's declared id extractor, or {@code null} if the DAO has none.
+     */
+    @SuppressWarnings("rawtypes")
+    public static Jdbc.BiRowMapper getDeclaredIdExtractor(final DaoBase dao) {
+        return dao instanceof CrudReadOps ? ((CrudReadOps) dao).idExtractor() : null;
     }
 
     /**
@@ -332,12 +345,16 @@ public final class DaoUtil {
 
     /**
      * A consumer that configures a {@link PreparedStatement} for handling large query results efficiently.
-     * Sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and the fetch size to
-     * {@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_BIG_RESULT}.
+     * Sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and raises the fetch size to
+     * {@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_BIG_RESULT} (a larger pre-configured size is preserved,
+     * matching {@code JdbcUtil.stmtSetterForBigQueryResult}).
      */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-        stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+
+        if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT) {
+            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        }
     };
 
     /**
@@ -530,7 +547,7 @@ public final class DaoUtil {
      * <p>
      * This is the {@code long}-ID counterpart of {@link #getCrudReadOps(CrudJoinEntityReadOps)}. It returns the
      * {@link CrudLReadOps} view so the helper's primitive {@code long}-ID {@code gett} paths resolve to the
-     * primitive {@code gett(long)} overloads (avoiding boxing) rather than the boxed {@code gett(Long)} ones.
+     * primitive {@code gett(long)} overloads (keeping dispatch on the {@code long}-ID view) rather than the boxed {@code gett(Long)} ones.
      *
      * @param <T> the entity type managed by this DAO
      * @param <TD> the DAO type
@@ -551,7 +568,7 @@ public final class DaoUtil {
      * <p>
      * This is the {@code long}-ID counterpart of {@link #getCrudReadOps(UncheckedCrudJoinEntityReadOps)}. It
      * returns the {@link UncheckedCrudLReadOps} view so the helper's primitive {@code long}-ID {@code gett}
-     * paths resolve to the primitive {@code gett(long)} overloads (avoiding boxing).
+     * paths resolve to the primitive {@code gett(long)} overloads (keeping dispatch on the {@code long}-ID view).
      *
      * @param <T> the entity type managed by this DAO
      * @param <TD> the DAO type

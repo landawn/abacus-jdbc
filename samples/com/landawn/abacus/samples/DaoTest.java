@@ -1174,7 +1174,7 @@ public class DaoTest {
 
         userFromDB = userDao.gett(100L);
         Beans.copy(userFromDB);
-        userDao.loadJoinEntitiesIfAbsent(userFromDB);
+        userDao.loadAllJoinEntitiesIfAbsent(userFromDB);
         System.out.println(userFromDB);
 
         userFromDB = userDao.gett(100L);
@@ -1229,7 +1229,7 @@ public class DaoTest {
         users2 = Stream.of(users).map(Beans::copy).toList();
         users3 = Stream.of(users).map(Beans::copy).toList();
 
-        userDao.loadJoinEntitiesIfAbsent(users2);
+        userDao.loadAllJoinEntitiesIfAbsent(users2);
         users2.forEach(Fn.println());
 
         users2 = Stream.of(users).map(Beans::copy).toList();

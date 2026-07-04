@@ -37,7 +37,8 @@ import java.lang.annotation.Target;
  *
  * <p>If the resolved id list contains an entry that is also declared by a {@link SqlScript}
  * field on the DAO type, DAO initialization fails with {@code IllegalArgumentException} — every
- * id must be unique across both sources.</p>
+ * id must be unique across both sources. Every loaded id must also be a valid Java identifier;
+ * punctuated ids fail DAO initialization as well.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

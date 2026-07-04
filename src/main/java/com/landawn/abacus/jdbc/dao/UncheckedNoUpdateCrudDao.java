@@ -36,6 +36,10 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * delete-related methods are <b>absent from the type</b> — calling them is a compile error rather than a runtime
  * {@link UnsupportedOperationException}.</p>
  *
+ * <p>The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads accept only
+ * {@code SELECT} and {@code INSERT} statements at runtime (any other SQL kind fails with
+ * {@link UnsupportedOperationException}), enforced centrally by the DAO proxy.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface AuditLogDao extends UncheckedNoUpdateCrudDao<AuditLog, Long, AuditLogDao> {

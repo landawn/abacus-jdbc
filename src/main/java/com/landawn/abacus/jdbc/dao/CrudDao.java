@@ -237,7 +237,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws SQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws SQLException {
         return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -267,9 +267,11 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code uniquePropNamesForQuery} is not a property of the entity class
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key
      * @throws SQLException if a database access error occurs
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws SQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize)
+            throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
@@ -277,21 +279,23 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             return new ArrayList<>();
         }
 
+        final List<String> uniquePropNameList = uniquePropNamesForQuery instanceof List ? (List<String>) uniquePropNamesForQuery
+                : new ArrayList<>(uniquePropNamesForQuery);
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
-        final PropInfo uniquePropInfo = entityInfo.getPropInfo(uniquePropNamesForQuery.get(0));
+        final PropInfo uniquePropInfo = entityInfo.getPropInfo(uniquePropNameList.get(0));
 
         if (uniquePropInfo == null) {
-            throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(0) + "' in class: " + cls.getName());
+            throw new IllegalArgumentException("No property found with name: '" + uniquePropNameList.get(0) + "' in class: " + cls.getName());
         }
 
-        final List<PropInfo> uniquePropInfos = N.map(uniquePropNamesForQuery, entityInfo::getPropInfo);
+        final List<PropInfo> uniquePropInfos = N.map(uniquePropNameList, entityInfo::getPropInfo);
 
         for (int i = 0; i < uniquePropInfos.size(); i++) {
             if (uniquePropInfos.get(i) == null) {
-                throw new IllegalArgumentException("No property found with name: '" + uniquePropNamesForQuery.get(i) + "' in class: " + cls.getName());
+                throw new IllegalArgumentException("No property found with name: '" + uniquePropNameList.get(i) + "' in class: " + cls.getName());
             }
         }
 
@@ -308,12 +312,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             return entityId;
         };
 
-        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNamesForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
+        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNameList.size() == 1 ? singleKeyExtractor : entityIdExtractor;
 
-        final List<T> dbEntities = uniquePropNamesForQuery.size() == 1
+        final List<T> dbEntities = uniquePropNameList.size() == 1
                 ? Seq.of(entities, SQLException.class)
                         .split(batchSize)
-                        .flatmap(it -> list(Filters.in(uniquePropNamesForQuery.get(0), N.map(it, singleKeyExtractor))))
+                        .flatmap(it -> list(Filters.in(uniquePropNameList.get(0), N.map(it, singleKeyExtractor))))
                         .toList()
                 : Seq.of(entities, SQLException.class) //
                         .split(batchSize)

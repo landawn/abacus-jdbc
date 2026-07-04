@@ -24,10 +24,15 @@ import com.landawn.abacus.annotation.Beta;
  * calling them is a compile error rather than a runtime {@link UnsupportedOperationException}.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
- * <p>This is an "unchecked" DAO variant. Read and insert methods redeclared by this interface throw
+ * <p>This is an "unchecked" DAO variant. Read and insert methods redeclared by this interface or its
+ * unchecked parents throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of checked {@link java.sql.SQLException},
  * providing a more convenient API for developers who prefer unchecked exceptions. Inherited methods that are
- * not redeclared here keep their checked-exception contract.</p>
+ * not redeclared keep their checked-exception contract.</p>
+ *
+ * <p>The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads accept only
+ * {@code SELECT} and {@code INSERT} statements at runtime (any other SQL kind fails with
+ * {@link UnsupportedOperationException}), enforced centrally by the DAO proxy.</p>
  *
  * <p>This is useful for DAOs where update and delete operations should be prevented,
  * such as append-only data stores, immutable records, or when you want to ensure data is never modified

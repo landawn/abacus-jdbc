@@ -18,7 +18,7 @@ package com.landawn.abacus.jdbc;
 
 /**
  * Internal constants container providing the standardized parameter-name string literals
- * used by argument-validation calls (e.g., {@code N.checkArgNotNull(arg, cs.handler)})
+ * used by argument-validation calls (e.g., {@code N.checkArgNotNull(handler, cs.handler)})
  * throughout the Abacus JDBC framework.
  *
  * <p>This utility class centralizes the textual identifiers that appear in error messages
@@ -50,10 +50,6 @@ public final class cs { // NOSONAR
         // utility class - prevent instantiation
     }
 
-    /**
-     * Parameter name for ResultSet objects in query processing.
-     */
-    public static final String ResultSet = "ResultSet";
     /**
      * Parameter name for action callbacks and operations.
      */
@@ -123,10 +119,6 @@ public final class cs { // NOSONAR
      */
     public static final String daoInterface = "daoInterface";
     /**
-     * Parameter name for DataSource objects used to obtain database connections.
-     */
-    public static final String dataSource = "dataSource";
-    /**
      * Parameter name for default column value extraction functions.
      */
     public static final String defaultColumnGetter = "defaultColumnGetter";
@@ -134,6 +126,10 @@ public final class cs { // NOSONAR
      * Parameter name for downstream collectors or operations in stream processing.
      */
     public static final String downstream = "downstream";
+    /**
+     * Parameter name for DataSource objects used to obtain database connections.
+     */
+    public static final String ds = "ds";
     /**
      * Parameter name for entity objects representing database records or domain models.
      */
@@ -170,6 +166,14 @@ public final class cs { // NOSONAR
      * Parameter name for functions that extract unique identifier values from entities.
      */
     public static final String idExtractor = "idExtractor";
+    /**
+     * Parameter name for the single property name used to identify entities to merge.
+     */
+    public static final String idPropNameForMerge = "idPropNameForMerge";
+    /**
+     * Parameter name for the property names forming the composite key used to identify entities to merge.
+     */
+    public static final String idPropNamesForMerge = "idPropNamesForMerge";
     /**
      * Parameter name for predicates that test whether an ID value is the default/unset value.
      */
@@ -286,6 +290,10 @@ public final class cs { // NOSONAR
      * Parameter name for the third row mapper function in multi-mapper operations.
      */
     public static final String rowMapper3 = "rowMapper3";
+    /**
+     * Parameter name for ResultSet objects in query processing.
+     */
+    public static final String rs = "rs";
     /**
      * Parameter name for SQL query strings.
      */

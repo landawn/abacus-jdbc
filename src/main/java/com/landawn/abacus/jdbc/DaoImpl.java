@@ -458,21 +458,32 @@ final class DaoImpl {
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return {@code true} if the method should be dispatched as a list query, {@code false} otherwise
      * @throws UnsupportedOperationException if {@code op} is {@link OP#list} or {@link OP#listAll} but the return
-     *         type is not a proper {@link Collection} subtype
+     *         type is neither a proper {@link Collection} subtype nor one of the supported exemptions
+     *         ({@code Map} via {@link MappedByKey}, {@code Tuple2} for procedures with out parameters)
      */
     private static boolean isListQuery(final Method method, final Class<?> returnType, final OP op, final String fullClassMethodName) {
         final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final int paramLen = paramTypes.length;
 
+        // Checked before the list-OP Collection requirement: @MappedByKey methods return a Map built
+        // from the listed rows and explicitly support OP.list.
+        if (method.getAnnotation(MappedByKey.class) != null) {
+            return true;
+        }
+
         if (op == OP.list || op == OP.listAll) {
+            // Tuple2<..., OutParamResult> returns are legal for procedures with list OPs; they are handled
+            // by the dedicated procedure dispatch, not the plain list dispatch.
+            if (Tuple2.class.isAssignableFrom(returnType)) {
+                return false;
+            }
+
             if (Collection.class.equals(returnType) || !(Collection.class.isAssignableFrom(returnType))) {
                 throw new UnsupportedOperationException(
                         "The result type of list OP must be sub type of Collection, can't be: " + returnType + " in method: " + fullClassMethodName);
             }
 
-            return true;
-        } else if (method.getAnnotation(MappedByKey.class) != null) {
             return true;
         } else if (op != OP.DEFAULT) {
             return false;
@@ -570,7 +581,8 @@ final class DaoImpl {
             return true;
         }
 
-        return op == OP.DEFAULT && method.getName().startsWith("findOnlyOne");
+        // Both "OnlyOne" prefixes from singleQueryPrefix promise at-most-one-row semantics.
+        return op == OP.DEFAULT && (method.getName().startsWith("findOnlyOne") || method.getName().startsWith("selectOnlyOne"));
     }
 
     private static boolean isQueryForUnique(final Method method, final OP op) {
@@ -590,7 +602,8 @@ final class DaoImpl {
     }
 
     @SuppressWarnings("rawtypes")
-    private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createSingleQueryFunction(final Class<?> returnType) {
+    private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createSingleQueryFunction(final Class<?> returnType, final Method method,
+            final OP op) {
         if (u.OptionalBoolean.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
         } else if (u.OptionalChar.class.isAssignableFrom(returnType)) {
@@ -607,11 +620,16 @@ final class DaoImpl {
             return (preparedQuery, args) -> (R) preparedQuery.queryForFloat();
         } else if (u.OptionalDouble.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForDouble();
-        } else if (u.Optional.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(returnType);
-        } else if (u.Nullable.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForSingleValue(returnType);
         } else {
+            // u.Optional/u.Nullable returns never reach here: the sole caller handles them (with the
+            // element type, not the wrapper class) before falling back to this function.
+
+            // Bare scalar returns must still honor the uniqueness contract of findOnlyOne/queryForUnique
+            // (DuplicateResultException on more than one row) instead of silently reading the first row.
+            if (isQueryForUnique(method, op) || isFindOnlyOne(method, op)) {
+                return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueValue(returnType).orElse(N.defaultValueOf(returnType));
+            }
+
             return (preparedQuery, args) -> (R) preparedQuery.queryForSingleValue(returnType).orElse(N.defaultValueOf(returnType));
         }
     }
@@ -633,8 +651,8 @@ final class DaoImpl {
         final boolean isExists = isExistsQuery(method, op, fullClassMethodName);
 
         if ((op == OP.stream && !Stream.class.isAssignableFrom(returnType))
-                || (op == OP.query && !(Dataset.class.isAssignableFrom(returnType) || lastParamType == null
-                        || Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)))) {
+                || (op == OP.query && !(Dataset.class.isAssignableFrom(returnType) || Tuple2.class.isAssignableFrom(returnType) || (lastParamType != null
+                        && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)))))) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
         }
@@ -1100,6 +1118,8 @@ final class DaoImpl {
                 return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
             }
         } else if (isListQuery) {
+            checkReturnEleTypeResolved(firstReturnEleType, returnType, fullClassMethodName);
+
             if (returnType.equals(List.class)) {
                 return (preparedQuery, args) -> (R) preparedQuery.list(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
             } else {
@@ -1113,9 +1133,13 @@ final class DaoImpl {
                 return (preparedQuery, args) -> (R) preparedQuery.query();
             }
         } else if (Stream.class.isAssignableFrom(returnType)) {
+            checkReturnEleTypeResolved(firstReturnEleType, returnType, fullClassMethodName);
+
             return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
         } else if (u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType)
                 || Nullable.class.isAssignableFrom(returnType)) {
+            checkReturnEleTypeResolved(firstReturnEleType, returnType, fullClassMethodName);
+
             if (Nullable.class.isAssignableFrom(returnType)) {
                 if (isQueryForUnique(method, op)) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueValue(firstReturnEleType);
@@ -1153,8 +1177,17 @@ final class DaoImpl {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();
                 }
             } else {
-                return createSingleQueryFunction(returnType);
+                return createSingleQueryFunction(returnType, method, op);
             }
+        }
+    }
+
+    // Fails DAO creation instead of every invocation when a raw or wildcard generic return type (e.g.
+    // List, Stream, Nullable<?>) leaves the element type unresolved.
+    private static void checkReturnEleTypeResolved(final Class<?> firstReturnEleType, final Class<?> returnType, final String fullClassMethodName) {
+        if (firstReturnEleType == null) {
+            throw new UnsupportedOperationException("The element type of the return type: " + returnType + " in method: " + fullClassMethodName
+                    + " can't be resolved. Raw or wildcard generic return types are not supported");
         }
     }
 
@@ -1443,13 +1476,13 @@ final class DaoImpl {
         if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
             if (queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_NOW)) {
                 if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_NOW, Dates.currentTimestamp());
+                    parametersSetter = (preparedQuery, args) -> setSysTimestampParam(preparedQuery, JdbcUtil.PN_NOW);
                 } else {
                     final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
 
                     parametersSetter = (preparedQuery, args) -> {
                         tmp.accept(preparedQuery, args);
-                        ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_NOW, Dates.currentTimestamp());
+                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_NOW);
                     };
                 }
 
@@ -1457,13 +1490,13 @@ final class DaoImpl {
 
             if (queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_TIME)) {
                 if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_SYS_TIME, Dates.currentTimestamp());
+                    parametersSetter = (preparedQuery, args) -> setSysTimestampParam(preparedQuery, JdbcUtil.PN_SYS_TIME);
                 } else {
                     final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
 
                     parametersSetter = (preparedQuery, args) -> {
                         tmp.accept(preparedQuery, args);
-                        ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_SYS_TIME, Dates.currentTimestamp());
+                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_SYS_TIME);
                     };
                 }
 
@@ -1471,13 +1504,13 @@ final class DaoImpl {
 
             if (queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_DATE)) {
                 if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setDate(JdbcUtil.PN_SYS_DATE, Dates.currentDate());
+                    parametersSetter = (preparedQuery, args) -> setSysDateParam(preparedQuery, JdbcUtil.PN_SYS_DATE);
                 } else {
                     final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
 
                     parametersSetter = (preparedQuery, args) -> {
                         tmp.accept(preparedQuery, args);
-                        ((NamedQuery) preparedQuery).setDate(JdbcUtil.PN_SYS_DATE, Dates.currentDate());
+                        setSysDateParam(preparedQuery, JdbcUtil.PN_SYS_DATE);
                     };
                 }
 
@@ -1485,6 +1518,24 @@ final class DaoImpl {
         }
 
         return parametersSetter == null ? Jdbc.BiParametersSetter.DO_NOTHING : parametersSetter;
+    }
+
+    // A procedure whose SQL uses named parameters is prepared as a CallableQuery, not a NamedQuery;
+    // both declare named setters but share no common interface for them.
+    private static void setSysTimestampParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName) throws SQLException {
+        if (preparedQuery instanceof CallableQuery) {
+            ((CallableQuery) preparedQuery).setTimestamp(parameterName, Dates.currentTimestamp());
+        } else {
+            ((NamedQuery) preparedQuery).setTimestamp(parameterName, Dates.currentTimestamp());
+        }
+    }
+
+    private static void setSysDateParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName) throws SQLException {
+        if (preparedQuery instanceof CallableQuery) {
+            ((CallableQuery) preparedQuery).setDate(parameterName, Dates.currentDate());
+        } else {
+            ((NamedQuery) preparedQuery).setDate(parameterName, Dates.currentDate());
+        }
     }
 
     @SuppressWarnings({ "rawtypes", "unused" })
@@ -1568,13 +1619,13 @@ final class DaoImpl {
                     if (hasNow || hasSysTime || hasSysDate) {
                         preparedQuery.configAddBatchAction((q, s) -> {
                             if (hasNow) {
-                                ((NamedQuery) q).setTimestamp(JdbcUtil.PN_NOW, Dates.currentTimestamp());
+                                setSysTimestampParam((AbstractQuery) q, JdbcUtil.PN_NOW);
                             }
                             if (hasSysTime) {
-                                ((NamedQuery) q).setTimestamp(JdbcUtil.PN_SYS_TIME, Dates.currentTimestamp());
+                                setSysTimestampParam((AbstractQuery) q, JdbcUtil.PN_SYS_TIME);
                             }
                             if (hasSysDate) {
-                                ((NamedQuery) q).setDate(JdbcUtil.PN_SYS_DATE, Dates.currentDate());
+                                setSysDateParam((AbstractQuery) q, JdbcUtil.PN_SYS_DATE);
                             }
                             ((PreparedStatement) s).addBatch();
                         });
@@ -1635,11 +1686,9 @@ final class DaoImpl {
         Jdbc.BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
 
         if (keyExtractor == null) {
-            if (dao instanceof CrudDao) {
-                keyExtractor = N.defaultIfNull(((CrudDao) dao).idExtractor(), defaultIdExtractor);
-            } else {
-                keyExtractor = defaultIdExtractor;
-            }
+            // idExtractor() is declared on CrudReadOps, so this must cover every insert-capable CRUD
+            // variant (e.g. NoUpdateCrudDao), not just full CrudDao implementations.
+            keyExtractor = N.defaultIfNull((Jdbc.BiRowMapper<Object>) DaoUtil.getDeclaredIdExtractor(dao), defaultIdExtractor);
 
             idExtractorHolder.setValue(keyExtractor);
         }
@@ -1776,7 +1825,7 @@ final class DaoImpl {
     static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
             final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
-        N.checkArgNotNull(ds, cs.dataSource);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(dsl, "dsl");
 
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
@@ -1812,7 +1861,7 @@ final class DaoImpl {
         @SuppressWarnings("UnnecessaryLocalVariable")
         final javax.sql.DataSource primaryDataSource = ds;
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
-        final DBVersion dbVersion = dbProductInfo.version();
+        final DBVersion dbVersion = dbProductInfo.dbVersion();
 
         if (daoLogger.isDebugEnabled()) {
             daoLogger.debug("Resolved database product for Dao proxy(interface={}): name={}, version={}, dbVersion={}", daoClassName,
@@ -2301,7 +2350,9 @@ final class DaoImpl {
                             N.checkArgNotNull(args[0], "namedSql");
                             sqlToCheck = ((ParsedSql) args[0]).originalSql();
                         } else {
-                            sqlToCheck = (String) args[0];
+                            // Validated before the SQL-kind check so null/empty SQL fails with the same IAE
+                            // a full DAO would throw, not a misleading "Only SELECT ..." UOE.
+                            sqlToCheck = N.checkArgNotEmpty((String) args[0], cs.sql);
                         }
 
                         if (prepareSqlGate == 1) {
@@ -2931,7 +2982,7 @@ final class DaoImpl {
                                             final Object val = rowMapper.apply(rs);
 
                                             if (rs.next()) {
-                                                throw new DuplicateResultException("At least two results found for query: " + sp.query());
+                                                throw new DuplicateResultException("More than one record found for query: " + sp.query());
                                             }
 
                                             return Optional.of(val);
@@ -4391,7 +4442,7 @@ final class DaoImpl {
                                             final Object val = rowMapper.apply(rs);
 
                                             if (rs.next()) {
-                                                throw new com.landawn.abacus.exception.DuplicateResultException("At least two results found for query by id");
+                                                throw new com.landawn.abacus.exception.DuplicateResultException("More than one record found for query by id");
                                             }
 
                                             return Optional.of(val);
@@ -5153,8 +5204,7 @@ final class DaoImpl {
 
                     final MappedByKey mappedByKeyAnno = method.getAnnotation(MappedByKey.class);
                     final String mappedByKey = mappedByKeyAnno == null ? null
-                            : Strings.isNotEmpty(mappedByKeyAnno.value()) ? mappedByKeyAnno.value()
-                                    : (Strings.isNotEmpty(mappedByKeyAnno.keyName()) ? mappedByKeyAnno.keyName() : oneIdPropName);
+                            : Strings.isNotEmpty(mappedByKeyAnno.keyName()) ? mappedByKeyAnno.keyName() : oneIdPropName;
 
                     if (mappedByKeyAnno != null && Strings.isEmpty(mappedByKey)) {
                         throw new IllegalArgumentException("Mapped Key name can't be null or empty in method: " + fullClassMethodName);
@@ -5252,6 +5302,13 @@ final class DaoImpl {
                                     + ") annotated by @PrefixFieldMapping must be: Optional/List/Collection<? super "
                                     + ClassUtil.getSimpleClassName(entityClass) + ">/Dataset/" + ClassUtil.getSimpleClassName(entityClass) + ". It can't be: "
                                     + method.getGenericReturnType());
+                        }
+
+                        // A Dataset is only built through the entity class (where the prefix mapping applies) when
+                        // fetchColumnByEntityClass is enabled; otherwise the annotation would be silently ignored.
+                        if (Dataset.class.isAssignableFrom(returnType) && !fetchColumnByEntityClass) {
+                            throw new IllegalArgumentException("@PrefixFieldMapping on the Dataset-returning method (" + fullClassMethodName
+                                    + ") requires fetchColumnByEntityClass=true (see @FetchColumnByEntityClass/DaoConfig)");
                         }
                     }
 
@@ -5497,7 +5554,7 @@ final class DaoImpl {
                         }
                     } else {
                         throw new UnsupportedOperationException(
-                                "Unsupported sql annotation: " + sqlAnno.annotationType() + " in method: " + fullClassMethodName);
+                                "Unsupported combination of SQL kind, op (" + op + ") and return type (" + returnType + ") in method: " + fullClassMethodName);
                     }
                 }
 
@@ -5944,7 +6001,7 @@ final class DaoImpl {
                         .prepend(Stream.of(daoClassHandlerList).filter(h -> Stream.of(h.filter()).anyMatch(filterByMethodNameContains)))
                         .map(handlerAnno -> Tuple.of((Jdbc.Handler) (Strings.isNotEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
-                                : HandlerFactory.getOrCreate(handlerAnno.type())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))
+                                : HandlerFactory.getOrCreate(handlerAnno.impl())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))
                         .onEach(handler -> N.checkArgNotNull(handler._1,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .toList();

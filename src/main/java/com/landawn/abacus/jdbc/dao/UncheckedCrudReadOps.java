@@ -38,7 +38,7 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 
 /**
- * Unchecked-exception read capability of {@link CrudDao} (throws {@link com.landawn.abacus.exception.UncheckedSQLException}).
+ * Unchecked-exception read capability of {@link UncheckedCrudDao} (throws {@link com.landawn.abacus.exception.UncheckedSQLException}).
  *
  * @param <T> entity type
  * @param <ID> id type
@@ -375,14 +375,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param <V> the target value type
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @param targetValueClass the class of the target value type
+     * @param targetValueType the class of the target value type
      * @return a {@code Nullable} containing the converted value (which holds {@code null} when the value is SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     @Override
-    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws UncheckedSQLException;
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
@@ -398,13 +398,13 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param <V> the value type
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @param targetValueClass the class of the target value type
+     * @param targetValueType the class of the target value type
      * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
-    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
             throws UncheckedSQLException;
 
     /**
@@ -447,7 +447,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param <V> the value type
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @param targetValueClass the class of the target value type
+     * @param targetValueType the class of the target value type
      * @return a {@code Nullable} containing the unique result value (which holds {@code null} when the value is SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
@@ -455,7 +455,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
     @Override
-    <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
+    <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
@@ -474,14 +474,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param <V> the value type
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @param targetValueClass the class of the target value type
+     * @param targetValueType the class of the target value type
      * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
-    <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
+    <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
@@ -603,7 +603,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * }</pre>
      *
      * @param ids the collection of entity IDs
-     * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
@@ -625,7 +625,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param ids the collection of entity IDs
      * @param batchSize the size of each batch
-     * @return a list of found entities (order is not guaranteed to match the input IDs)
+     * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
@@ -648,7 +648,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select, or {@code null} to select all
-     * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs)
+     * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
@@ -674,7 +674,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @param batchSize the size of each batch
-     * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs)
+     * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
@@ -781,6 +781,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param entity the entity to refresh (must have ID set)
      * @return {@code true} if the entity was found and refreshed, {@code false} if not found
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws DuplicateResultException if the id of the entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -808,6 +809,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param propNamesToRefresh the properties to refresh from the database
      * @return {@code false} if no record found by the ID in the specified entity, {@code true} otherwise
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
+     * @throws DuplicateResultException if the id of the entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -833,6 +835,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param entities the collection of entities to refresh
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -856,6 +859,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -882,6 +886,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -913,6 +918,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive
+     * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

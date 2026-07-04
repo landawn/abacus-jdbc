@@ -119,7 +119,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param entitiesToSave the collection of entities to save
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -154,7 +154,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param entitiesToSave the collection of entities to save
      * @param propNamesToSave the properties to save for each entity
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -192,7 +192,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param namedInsertSql the named insert SQL statement
      * @param entitiesToSave the collection of entities to save
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta

@@ -27,15 +27,15 @@ import java.lang.annotation.Target;
  *
  * <p>The DAO proxy ({@code DaoImpl}) reads the {@code @HandlerList} (whether explicit or
  * compiler-synthesized), resolves each {@link Handler#qualifier() qualifier} or
- * {@link Handler#type() type} to a {@code Jdbc.Handler} instance, then composes them into an
+ * {@link Handler#impl() impl} to a {@code Jdbc.Handler} instance, then composes them into an
  * <em>onion-style</em> interceptor chain around the actual DAO call: outer handlers see the
  * invocation first on the way in and last on the way out (see "Execution flow" below).</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * @Handler(type = LoggingHandler.class)
- * @Handler(type = SecurityHandler.class)
- * @Handler(type = CacheHandler.class, filter = {"find.*", "get.*"})
+ * @Handler(impl = LoggingHandler.class)
+ * @Handler(impl = SecurityHandler.class)
+ * @Handler(impl = CacheHandler.class, filter = {"find.*", "get.*"})
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // All three handlers will be applied according to their configurations
  * }
@@ -83,15 +83,15 @@ public @interface HandlerList {
      * HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class);
      * if (handlers != null) {
      *     for (Handler handler : handlers.value()) {
-     *         System.out.println("Handler type: " + handler.type());
+     *         System.out.println("Handler impl: " + handler.impl());
      *         System.out.println("Filter: " + Arrays.toString(handler.filter()));
      *     }
      * }
      *
      * // Multiple handlers are automatically wrapped in HandlerList
-     * @Handler(type = LoggingHandler.class)
-     * @Handler(type = SecurityHandler.class)
-     * @Handler(type = CacheHandler.class)
+     * @Handler(impl = LoggingHandler.class)
+     * @Handler(impl = SecurityHandler.class)
+     * @Handler(impl = CacheHandler.class)
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     // The compiler wraps these in a HandlerList annotation
      * }

@@ -19,6 +19,7 @@ import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 
 import javax.sql.DataSource;
@@ -361,7 +362,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @throws DuplicateResultException if more than one record matches
      * @see #upsert(Object, Condition)
      */
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException {
+    default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 

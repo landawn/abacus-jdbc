@@ -31,7 +31,7 @@ import com.landawn.abacus.annotation.Beta;
  * </ul>
  *
  * <p>Update, upsert, and delete operations — along with the generated-keys {@code prepareQuery}/
- * {@code prepareNamedQuery} overloads (which are full-{@link CrudDao}-only) — are <b>absent from the type</b>
+ * {@code prepareNamedQuery} overloads (which are full-{@link Dao}-only) — are <b>absent from the type</b>
  * — calling them is a compile error rather than a runtime {@link UnsupportedOperationException}. Read operations
  * (find, exists, query) and insert operations remain functional. (The inherited raw-SQL
  * {@code prepareQuery}/{@code prepareNamedQuery} overloads accept only {@code SELECT} and {@code INSERT}
@@ -108,7 +108,6 @@ import com.landawn.abacus.annotation.Beta;
  * @see CrudInsertOps
  * @see com.landawn.abacus.query.Filters
  */
-@SuppressWarnings("RedundantThrows")
 @Beta
 public non-sealed interface NoUpdateCrudDao<T, ID, TD extends NoUpdateCrudDao<T, ID, TD>>
         extends NoUpdateDao<T, TD>, CrudReadOps<T, ID, TD>, CrudInsertOps<T, ID, TD> {

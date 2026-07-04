@@ -58,8 +58,9 @@ package com.landawn.abacus.jdbc.dao;
  * }
  * }</pre>
  *
- * <p>This interface extends {@link UncheckedReadOnlyJoinEntityHelper} and {@link UncheckedCrudJoinEntityReadOps},
- * inheriting read operations from both; modification operations are absent from the type (a compile error if called).</p>
+ * <p>This interface extends {@link UncheckedReadOnlyJoinEntityHelper}, {@link ReadOnlyCrudJoinEntityHelper} and
+ * {@link UncheckedCrudJoinEntityReadOps}, inheriting read operations from all of them; modification operations
+ * are absent from the type (a compile error if called).</p>
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
@@ -69,5 +70,5 @@ package com.landawn.abacus.jdbc.dao;
  * @see UncheckedCrudDao
  */
 public non-sealed interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedReadOnlyCrudDao<T, ID, TD>>
-        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, UncheckedCrudJoinEntityReadOps<T, ID, TD> {
+        extends UncheckedReadOnlyJoinEntityHelper<T, TD>, ReadOnlyCrudJoinEntityHelper<T, ID, TD>, UncheckedCrudJoinEntityReadOps<T, ID, TD> {
 }

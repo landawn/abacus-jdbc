@@ -86,8 +86,8 @@ import com.landawn.abacus.annotation.JoinedBy;
  * <ul>
  *   <li>Single ID field (most common case)</li>
  *   <li>Composite IDs &mdash; auto-detected from the entity's {@code @Id}-annotated fields (or
- *       standard id naming conventions); the deprecated {@link #value()} parameter is only a manual
- *       override and is not required</li>
+ *       standard id naming conventions); the optional {@link #value()} element is only needed to
+ *       merge by non-id properties</li>
  *   <li>Multiple levels of nesting</li>
  *   <li>Both LEFT and INNER joins</li>
  * </ul>
@@ -107,37 +107,29 @@ import com.landawn.abacus.annotation.JoinedBy;
 public @interface MergedById {
 
     /**
-     * Specifies the ID field(s) to use for merging rows.
-     * For composite keys, provide a comma-separated list of field names.
+     * Specifies the property name(s) whose values identify rows to merge.
+     * For a composite key, provide a comma-separated list of property names.
      *
-     * <p><strong>Deprecated:</strong> This parameter is no longer needed in most cases.
-     * The framework automatically detects ID fields from entity class annotations
-     * (such as {@code @Id}) or standard naming conventions, making explicit specification unnecessary.</p>
+     * <p>This is optional when merging by the entity's declared id: left empty, the framework falls
+     * back to the property names annotated with {@code @Id} on the target entity (or, when combined
+     * with {@link MappedByKey}, to that annotation's key). Specify it explicitly to merge by
+     * properties that are not the entity's id — e.g. {@code @MergedById("ID, firstName")}.</p>
      *
-     * <p>The automatic ID detection works for:</p>
-     * <ul>
-     *   <li>Single ID fields annotated with {@code @Id}</li>
-     *   <li>Composite keys using {@code @Id} on multiple fields</li>
-     *   <li>Standard naming conventions (e.g., "id" field name)</li>
-     * </ul>
-     *
-     * <p>Example with composite key (legacy usage):</p>
+     * <p>Examples:</p>
      * <pre>{@code
-     * // Old way (deprecated) - manually specify composite key
-     * @Query("SELECT * FROM order_items WHERE order_date = :date")
-     * @MergedById("orderId, productId")
-     * List<OrderItem> findByDate(@Bind("date") Date date) throws SQLException;
-     *
-     * // New way (recommended) - let framework detect ID fields
+     * // Merge by the entity's @Id property(ies) - no value needed
      * @Query("SELECT * FROM order_items WHERE order_date = :date")
      * @MergedById
      * List<OrderItem> findByDate(@Bind("date") Date date) throws SQLException;
-     * // OrderItem class should have @Id annotations on orderId and productId fields
+     *
+     * // Merge by an explicit composite key
+     * @Query("SELECT * FROM order_items WHERE order_date = :date")
+     * @MergedById("orderId, productId")
+     * List<OrderItem> findByDateByKey(@Bind("date") Date date) throws SQLException;
      * }</pre>
      *
-     * @return comma-separated list of ID field names, or empty string if using automatic detection
-     * @deprecated The framework automatically detects ID fields from entity metadata. Use {@code @MergedById} without the value parameter.
+     * @return comma-separated list of property names to merge by, or empty string to use the
+     *         entity's id property(ies)
      */
-    @Deprecated
     String value() default "";
 }

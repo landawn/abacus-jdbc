@@ -1010,11 +1010,12 @@ public final class Jdbc {
          * @param <T> entity type
          * @param targetClass the class of the entities to create and merge
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null} or not a bean/entity class
          * @see Dataset#toMergedEntities(Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, cs.targetClass);
+            N.checkArgument(Beans.isBeanClass(targetClass), "{} is not a valid entity class with getter/setter methods", targetClass);
 
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
@@ -1038,11 +1039,14 @@ public final class Jdbc {
          * @param targetClass the class of the entities to create and merge
          * @param idPropNameForMerge the property name to use for identifying unique entities to merge
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null} or not a bean/entity class,
+         *         or if {@code idPropNameForMerge} is {@code null} or empty
          * @see Dataset#toMergedEntities(String, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final String idPropNameForMerge) {
             N.checkArgNotNull(targetClass, cs.targetClass);
+            N.checkArgument(Beans.isBeanClass(targetClass), "{} is not a valid entity class with getter/setter methods", targetClass);
+            N.checkArgNotEmpty(idPropNameForMerge, cs.idPropNameForMerge);
 
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
@@ -1068,11 +1072,14 @@ public final class Jdbc {
          * @param targetClass the class of the entities to create and merge
          * @param idPropNamesForMerge the collection of property names that form the composite key for merging
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null} or not a bean/entity class,
+         *         or if {@code idPropNamesForMerge} is {@code null} or empty
          * @see Dataset#toMergedEntities(Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, cs.targetClass);
+            N.checkArgument(Beans.isBeanClass(targetClass), "{} is not a valid entity class with getter/setter methods", targetClass);
+            N.checkArgNotEmpty(idPropNamesForMerge, cs.idPropNamesForMerge);
 
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
@@ -1093,10 +1100,11 @@ public final class Jdbc {
          *
          * @param entityClassForExtractor the class used to map column names to property types
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
-         * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null}
+         * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or not a bean/entity class
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor) {
-            N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
+            N.checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
+            N.checkArgument(Beans.isBeanClass(entityClassForExtractor), "{} is not a valid entity class with getter/setter methods", entityClassForExtractor);
 
             return rs -> JdbcUtil.extractData(rs, RowExtractor.forType(entityClassForExtractor));
         }
@@ -1116,10 +1124,11 @@ public final class Jdbc {
          * @param entityClassForExtractor the class used to map fields from columns
          * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name.
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
-         * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null}
+         * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or not a bean/entity class
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
-            N.checkArgNotNull(entityClassForExtractor, "entityClassForExtractor");
+            N.checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
+            N.checkArgument(Beans.isBeanClass(entityClassForExtractor), "{} is not a valid entity class with getter/setter methods", entityClassForExtractor);
 
             return rs -> JdbcUtil.extractData(rs, RowExtractor.forType(entityClassForExtractor, prefixAndFieldNameMap));
         }
@@ -2101,17 +2110,17 @@ public final class Jdbc {
                         columnTypes = new Type[columnCount];
 
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClass);
                         PropInfo propInfo = null;
 
                         for (int i = 0; i < columnCount; i++) {
                             propInfo = entityInfo.getPropInfo(columnLabels.get(i));
 
                             if (propInfo == null) {
-                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+                                String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -3224,7 +3233,7 @@ public final class Jdbc {
                         }
                     };
                 }
-            } else if (Beans.isBeanClass(targetClass) || Beans.isRecordClass(targetClass)) {
+            } else if (Beans.isBeanClass(targetClass)) { // isBeanClass already covers records
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
                 return new BiRowMapper<>() {
@@ -3236,7 +3245,7 @@ public final class Jdbc {
                     @Override
                     public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                         if (columnLabels == null) {
-                            final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
+                            final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(targetClass);
 
                             columnCount = columnLabelList.size();
                             columnLabels = columnLabelList.toArray(new String[columnCount]);
@@ -3250,10 +3259,10 @@ public final class Jdbc {
                                     propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
 
                                     if (propInfos[i] == null) {
-                                        String fieldName = column2FieldNameMap.get(columnLabels[i]);
+                                        String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                         if (Strings.isEmpty(fieldName)) {
-                                            fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
                                         }
 
                                         if (Strings.isNotEmpty(fieldName)) {
@@ -3266,10 +3275,10 @@ public final class Jdbc {
                                         propInfos[i] = JdbcUtil.getSubPropInfo(targetClass, newColumnName);
 
                                         if (propInfos[i] == null) {
-                                            String fieldName = column2FieldNameMap.get(newColumnName);
+                                            String fieldName = columnToPropNameMap.get(newColumnName);
 
                                             if (Strings.isEmpty(fieldName)) {
-                                                fieldName = column2FieldNameMap.get(newColumnName.toLowerCase());
+                                                fieldName = columnToPropNameMap.get(newColumnName.toLowerCase());
                                             }
 
                                             if (Strings.isNotEmpty(fieldName)) {
@@ -3421,7 +3430,7 @@ public final class Jdbc {
                 public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
 
                     if (columnLabels == null) {
-                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClass);
 
                         columnCount = columnLabelList.size();
                         columnLabels = columnLabelList.toArray(new String[columnCount]);
@@ -3432,10 +3441,10 @@ public final class Jdbc {
                             propInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
 
                             if (propInfos[i] == null) {
-                                String fieldName = column2FieldNameMap.get(columnLabels[i]);
+                                String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -3448,10 +3457,10 @@ public final class Jdbc {
                                 propInfos[i] = JdbcUtil.getSubPropInfo(entityClass, newColumnName);
 
                                 if (propInfos[i] == null) {
-                                    String fieldName = column2FieldNameMap.get(newColumnName);
+                                    String fieldName = columnToPropNameMap.get(newColumnName);
 
                                     if (Strings.isEmpty(fieldName)) {
-                                        fieldName = column2FieldNameMap.get(newColumnName.toLowerCase());
+                                        fieldName = columnToPropNameMap.get(newColumnName.toLowerCase());
                                     }
 
                                     if (Strings.isNotEmpty(fieldName)) {
@@ -3951,17 +3960,17 @@ public final class Jdbc {
                         columnTypes = new Type[columnCount];
 
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClass);
                         PropInfo propInfo = null;
 
                         for (int i = 0; i < columnCount; i++) {
                             propInfo = entityInfo.getPropInfo(columnLabels.get(i));
 
                             if (propInfo == null) {
-                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+                                String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -4417,7 +4426,7 @@ public final class Jdbc {
                             return (T) m;
                         }
                     };
-                } else if (Beans.isBeanClass(targetClass) || Beans.isRecordClass(targetClass))
+                } else if (Beans.isBeanClass(targetClass)) // isBeanClass already covers records
 
                 {
                     return new BiRowMapper<>() {
@@ -4437,16 +4446,16 @@ public final class Jdbc {
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] localPropInfos = new PropInfo[rsColumnCount];
 
-                                final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(targetClass);
+                                final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(targetClass);
 
                                 for (int i = 0; i < rsColumnCount; i++) {
                                     localPropInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
 
                                     if (localPropInfos[i] == null) {
-                                        String fieldName = column2FieldNameMap.get(columnLabels[i]);
+                                        String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                         if (Strings.isEmpty(fieldName)) {
-                                            fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
                                         }
 
                                         if (Strings.isNotEmpty(fieldName)) {
@@ -4708,17 +4717,17 @@ public final class Jdbc {
                         columnTypes = new Type[columnCount];
 
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClass);
                         PropInfo propInfo = null;
 
                         for (int i = 0; i < columnCount; i++) {
                             propInfo = entityInfo.getPropInfo(columnLabels.get(i));
 
                             if (propInfo == null) {
-                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+                                String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -4909,17 +4918,17 @@ public final class Jdbc {
                         columnTypes = new Type[columnCount];
 
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClass);
+                        final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClass);
                         PropInfo propInfo = null;
 
                         for (int i = 0; i < columnCount; i++) {
                             propInfo = entityInfo.getPropInfo(columnLabels.get(i));
 
                             if (propInfo == null) {
-                                String fieldName = column2FieldNameMap.get(columnLabels.get(i));
+                                String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = column2FieldNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -5287,7 +5296,7 @@ public final class Jdbc {
                 @Override
                 public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
                     if (columnTypes == null) {
-                        final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClassForFetch);
+                        final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClassForFetch);
                         final List<String> columnLabelList = N.isEmpty(columnLabels) ? JdbcUtil.getColumnLabels(rs) : columnLabels;
                         columnCount = columnLabelList.size();
                         final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
@@ -5299,10 +5308,10 @@ public final class Jdbc {
                             propInfo = entityInfo.getPropInfo(columnLabels[i]);
 
                             if (propInfo == null) {
-                                String fieldName = column2FieldNameMap.get(columnLabels[i]);
+                                String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -5315,14 +5324,28 @@ public final class Jdbc {
 
                                 propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, newColumnName);
 
+                                // Mirror BiRowMapper.to: the stripped name must also be resolvable through the
+                                // column->prop map before falling back to the original label.
+                                if (propInfo == null) {
+                                    String fieldName = columnToPropNameMap.get(newColumnName);
+
+                                    if (Strings.isEmpty(fieldName)) {
+                                        fieldName = columnToPropNameMap.get(newColumnName.toLowerCase());
+                                    }
+
+                                    if (Strings.isNotEmpty(fieldName)) {
+                                        propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, fieldName);
+                                    }
+                                }
+
                                 if (propInfo == null) {
                                     propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, columnLabels[i]);
 
                                     if (propInfo == null) {
-                                        String fieldName = column2FieldNameMap.get(columnLabels[i]);
+                                        String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                         if (Strings.isEmpty(fieldName)) {
-                                            fieldName = column2FieldNameMap.get(columnLabels[i].toLowerCase());
+                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
                                         }
 
                                         if (Strings.isNotEmpty(fieldName)) {

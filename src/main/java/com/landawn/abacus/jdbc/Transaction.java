@@ -258,36 +258,4 @@ public interface Transaction {
          */
         FAILED_ROLLBACK
     }
-
-    /**
-     * Enumeration representing the terminal action to take on a transaction.
-     * Used to signal the desired outcome (commit or rollback) of a transactional operation.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * Action action = shouldCommit ? Action.COMMIT : Action.ROLLBACK;
-     * if (action == Action.COMMIT) {
-     *     transaction.commit();
-     * } else {
-     *     transaction.rollback();
-     * }
-     * }</pre>
-     *
-     */
-    enum Action {
-        /**
-         * Indicates that the transaction should be committed.
-         * When this action is specified, all changes made within the
-         * transaction scope will be permanently saved to the database.
-         */
-        COMMIT,
-
-        /**
-         * Indicates that the transaction should be rolled back.
-         * When this action is specified, all changes made within the
-         * transaction scope will be undone and the database will be
-         * restored to its state before the transaction began.
-         */
-        ROLLBACK
-    }
 }

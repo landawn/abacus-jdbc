@@ -55,7 +55,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *
  *     // Default: REQUIRED + database-default isolation.
  *     @Transactional
- *     default void placeOrder(Order order, List<OrderItem> items) {
+ *     default void placeOrder(Order order, List<OrderItem> items) throws SQLException {
  *         insert(order);
  *         itemDao().batchInsert(items);          // joins the same transaction.
  *     }
