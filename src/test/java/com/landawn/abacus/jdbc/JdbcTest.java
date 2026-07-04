@@ -938,6 +938,33 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
+    public void testBiRowMapperToBeanWithNullReturningConverter() throws SQLException {
+        when(mockResultSet.getLong(1)).thenReturn(1L);
+        when(mockResultSet.getString(2)).thenReturn("John");
+        when(mockResultSet.getInt(3)).thenReturn(25);
+        // BiRowMapper.to() internally uses getObject to read column values
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("John");
+        when(mockResultSet.getObject(3)).thenReturn(25);
+
+        // A converter that returns null signals "skip this column". Before the fix the bean branch
+        // dereferenced the null label (columnLabels[i].toLowerCase()) and threw NPE on the first row;
+        // the Array/List/Map sibling branches already defended this case. With ignoreUnmatchedColumns
+        // the null-converter column must be skipped, and the matched columns populated normally.
+        final Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, null, c -> c.startsWith("_") ? null : c, true);
+        final List<String> columnLabels = Arrays.asList("id", "name", "age", "_internal");
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(4);
+        when(mockResultSetMetaData.getColumnLabel(4)).thenReturn("_internal");
+
+        final TestEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals(Long.valueOf(1L), result.getId());
+        assertEquals("John", result.getName());
+        assertEquals(Integer.valueOf(25), result.getAge());
+    }
+
+    @Test
     public void testBiRowMapperToArray2() throws SQLException {
         when(mockResultSet.getObject(1)).thenReturn(1);
         when(mockResultSet.getObject(2)).thenReturn("John");

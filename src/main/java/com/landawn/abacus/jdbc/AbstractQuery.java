@@ -152,6 +152,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     static final Set<Class<?>> stmtParameterClasses = new HashSet<>();
 
+    /**
+     * The set of standard {@code java.sql.Types} / {@link java.sql.JDBCType} vendor type numbers.
+     * Used to validate the {@code sqlType} argument of {@link #setObject(int, Object, int)} and its
+     * int-{@code sqlType} overloads so an invalid type is rejected up front with a clear
+     * {@link IllegalArgumentException} rather than a driver-level failure. Vendor-specific type codes
+     * outside this standard set are not accepted by those overloads.
+     */
+    static final Set<Integer> VALID_SQL_TYPES = new HashSet<>();
+
     static {
         final Method[] methods = PreparedStatement.class.getDeclaredMethods();
 
@@ -172,6 +181,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
 
         stmtParameterClasses.remove(Object.class);
+
+        for (final java.sql.JDBCType t : java.sql.JDBCType.values()) {
+            VALID_SQL_TYPES.add(t.getVendorTypeNumber());
+        }
     }
 
     @SuppressWarnings("rawtypes")
@@ -2133,10 +2146,19 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
      * @see java.sql.Types
      */
     public This setObject(final int parameterIndex, final Object value, final int sqlType) throws SQLException {
-        stmt.setObject(parameterIndex, value, sqlType);
+        checkSqlType(sqlType);
+
+        if (value == null) {
+            // Route null through the dedicated setNull path: some drivers handle setObject(i, null, sqlType)
+            // inconsistently, while setNull(i, sqlType) is the spec'd way to write a typed SQL NULL.
+            stmt.setNull(parameterIndex, sqlType);
+        } else {
+            stmt.setObject(parameterIndex, value, sqlType);
+        }
 
         return (This) this;
     }
@@ -2155,10 +2177,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
      * @see java.sql.Types
      */
     public This setObject(final int parameterIndex, final Object value, final int sqlType, final int scaleOrLength) throws SQLException {
-        stmt.setObject(parameterIndex, value, sqlType, scaleOrLength);
+        checkSqlType(sqlType);
+
+        if (value == null) {
+            // scale/length is irrelevant for a SQL NULL, so route to the dedicated setNull path (see setObject(int, Object, int)).
+            stmt.setNull(parameterIndex, sqlType);
+        } else {
+            stmt.setObject(parameterIndex, value, sqlType, scaleOrLength);
+        }
 
         return (This) this;
     }
@@ -2177,8 +2207,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param sqlType the SQL type to use
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null}
      */
     public This setObject(final int parameterIndex, final Object value, final SQLType sqlType) throws SQLException {
+        N.checkArgNotNull(sqlType, cs.sqlType);
+
+        // PreparedStatement has no setNull(int, SQLType), so a null value is passed through to
+        // setObject(int, Object, SQLType) whose default implementation converts the SQLType to its vendor
+        // type number and handles SQL NULL. The guard above prevents an NPE in that conversion.
         stmt.setObject(parameterIndex, value, sqlType);
 
         return (This) this;
@@ -2198,8 +2234,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null}
      */
     public This setObject(final int parameterIndex, final Object value, final SQLType sqlType, final int scaleOrLength) throws SQLException {
+        N.checkArgNotNull(sqlType, cs.sqlType);
+
+        // See setObject(int, Object, SQLType): there is no setNull(int, SQLType), so a null value is passed
+        // through. The guard above prevents an NPE when the default implementation reads the SQLType.
         stmt.setObject(parameterIndex, value, sqlType, scaleOrLength);
 
         return (This) this;
@@ -10046,6 +10087,35 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     protected void checkArg(final boolean b, final String errorMsg) {
         if (!b) {
             final IllegalArgumentException iae = new IllegalArgumentException(errorMsg);
+
+            try {
+                close();
+            } catch (final Exception e) {
+                logger.error(e, "Failed to close Query");
+                iae.addSuppressed(e);
+            }
+
+            throw iae;
+        }
+    }
+
+    /**
+     * Validates that the given {@code sqlType} is one of the standard {@code java.sql.Types} /
+     * {@link java.sql.JDBCType} constants. Vendor-specific type codes outside that standard set are
+     * rejected. Used by the {@code setObject(int, Object, int, ...)} setters to reject a bad SQL type up
+     * front rather than letting it propagate to the driver as an opaque failure.
+     *
+     * <p>Consistent with {@link #checkArg(boolean, String)} and {@link #checkArgNotNull(Object, String)},
+     * this method closes the query before throwing the {@link IllegalArgumentException}, so a bad
+     * {@code sqlType} invalidates the statement.</p>
+     *
+     * @param sqlType the SQL type code to validate
+     * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
+     */
+    private void checkSqlType(final int sqlType) {
+        if (!VALID_SQL_TYPES.contains(sqlType)) {
+            final IllegalArgumentException iae = new IllegalArgumentException(
+                    "Invalid SQL type " + sqlType + "; must be one of the standard java.sql.Types constants");
 
             try {
                 close();

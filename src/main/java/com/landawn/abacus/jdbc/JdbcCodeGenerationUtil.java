@@ -408,7 +408,8 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
-    public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
+    public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config)
+            throws UncheckedSQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              ResultSet rs = stmt.executeQuery()) {
 
@@ -1018,7 +1019,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
-    public static String generateSelectSql(final Connection conn, final String tableName) {
+    public static String generateSelectSql(final Connection conn, final String tableName) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1027,6 +1028,10 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
+
+            // Guard the zero-column case (e.g. a view with no columns, or all columns filtered out) so we
+            // throw a clear IAE here rather than emitting malformed "SELECT  FROM ...".
+            checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ", " FROM " + checkTableName(tableName, dbProductInfo));
         } catch (final SQLException e) {
@@ -1155,7 +1160,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
-    public static String generateInsertSql(final Connection conn, final String tableName) {
+    public static String generateInsertSql(final Connection conn, final String tableName) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1164,6 +1169,9 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
+
+            // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
+            checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
@@ -1223,7 +1231,8 @@ public final class JdbcCodeGenerationUtil {
      * @see #generateInsertSql(DataSource, String, Collection)
      * @see #generateNamedInsertSql(Connection, String, Collection)
      */
-    public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
+    public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames)
+            throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1291,7 +1300,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
-    public static String generateNamedInsertSql(final Connection conn, final String tableName) {
+    public static String generateNamedInsertSql(final Connection conn, final String tableName) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1300,6 +1309,9 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
+
+            // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
+            checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
@@ -1360,7 +1372,8 @@ public final class JdbcCodeGenerationUtil {
      * @see #generateNamedInsertSql(DataSource, String, Collection)
      * @see #generateInsertSql(Connection, String, Collection)
      */
-    public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
+    public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames)
+            throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1431,7 +1444,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
-    public static String generateUpdateSql(final Connection conn, final String tableName) {
+    public static String generateUpdateSql(final Connection conn, final String tableName) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final String query = createQueryByTableName(tableName, dbProductInfo);
 
@@ -1493,7 +1506,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
-    public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
+    public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1589,7 +1602,7 @@ public final class JdbcCodeGenerationUtil {
      * @see #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
-            final Collection<String> keyColumnNames, final String whereClause) {
+            final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1682,7 +1695,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
-    public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
+    public static String generateNamedUpdateSql(final Connection conn, final String tableName) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1747,7 +1760,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
-    public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
+    public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1840,7 +1853,7 @@ public final class JdbcCodeGenerationUtil {
      * @see #generateUpdateSql(Connection, String, Collection, Collection, String)
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
-            final Collection<String> keyColumnNames, final String whereClause) {
+            final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
         final String query = createQueryByTableName(tableName, dbProductInfo);

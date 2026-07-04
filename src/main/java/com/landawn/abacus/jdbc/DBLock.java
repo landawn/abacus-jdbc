@@ -250,6 +250,7 @@ public final class DBLock {
                     try {
                         int refreshed = 0;
                         int staleRemoved = 0;
+                        int failed = 0;
 
                         for (final Map.Entry<String, LockInfo> entry : m.entrySet()) {
                             final LockInfo info = entry.getValue();
@@ -257,33 +258,43 @@ public final class DBLock {
                                 continue;
                             }
 
-                            final Timestamp now = Dates.currentTimestamp();
-                            final Timestamp expiry = expiryTimestamp(now, info.liveTime);
+                            // Guard each entry individually: one failing refresh (e.g. a transient DB error
+                            // for a single target) must not abort the entire batch and leave the remaining
+                            // locks un-refreshed.
+                            try {
+                                final Timestamp now = Dates.currentTimestamp();
+                                final Timestamp expiry = expiryTimestamp(now, info.liveTime);
 
-                            final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code);
+                                final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code);
 
-                            if (updated == 0) {
-                                // Remove from pool only if the cached lock instance is still present
-                                if (targetCodePool.remove(entry.getKey(), info)) {
-                                    staleRemoved++;
+                                if (updated == 0) {
+                                    // Remove from pool only if the cached lock instance is still present
+                                    if (targetCodePool.remove(entry.getKey(), info)) {
+                                        staleRemoved++;
 
-                                    if (logger.isWarnEnabled()) {
-                                        logger.warn("Removed stale lock from pool(target={})", entry.getKey());
+                                        if (logger.isWarnEnabled()) {
+                                            logger.warn("Removed stale lock from pool(target={})", entry.getKey());
+                                        }
                                     }
+                                } else {
+                                    refreshed++;
                                 }
-                            } else {
-                                refreshed++;
+                            } catch (final SQLException e) {
+                                failed++;
+
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn(e, "Failed to refresh DB lock(target={})", entry.getKey());
+                                }
                             }
                         }
 
-                        if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0)) {
-                            logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, active={})", refreshed, staleRemoved, targetCodePool.size());
-                        }
-                    } catch (final SQLException e) {
-                        if (logger.isWarnEnabled()) {
-                            logger.warn(e, "Failed to refresh DB locks(active={})", targetCodePool.size());
+                        if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0 || failed > 0)) {
+                            logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, failed={}, active={})", refreshed, staleRemoved, failed,
+                                    targetCodePool.size());
                         }
                     } finally {
+                        // releaseConnection belongs in finally so a per-entry failure (or any other exception
+                        // escaping the loop) still releases the refresh connection.
                         JdbcUtil.releaseConnection(refreshConn, ds);
                     }
                 } catch (final Exception e) {

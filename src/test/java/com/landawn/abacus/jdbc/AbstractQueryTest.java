@@ -22,6 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLType;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -114,6 +115,42 @@ public class AbstractQueryTest extends TestBase {
         assertSame(query, result);
         verify(preparedStatement).setNull(1, Types.INTEGER);
         verify(preparedStatement).setNull(3, Types.INTEGER);
+    }
+
+    // setObject(int, Object, int) validates sqlType against the standard java.sql.Types / JDBCType
+    // constants (rejecting garbage up front with a clear IAE) and routes a null value through the spec'd
+    // setNull path rather than setObject(i, null, sqlType).
+    @Test
+    public void testSetObject_IntSqlType_NonNull_PassesThrough() throws SQLException {
+        query.setObject(1, "x", Types.VARCHAR);
+
+        verify(preparedStatement).setObject(1, "x", Types.VARCHAR);
+        verify(preparedStatement, never()).setNull(1, Types.VARCHAR);
+    }
+
+    @Test
+    public void testSetObject_IntSqlType_Null_RoutesToSetNull() throws SQLException {
+        query.setObject(1, null, Types.VARCHAR);
+
+        verify(preparedStatement).setNull(1, Types.VARCHAR);
+        verify(preparedStatement, never()).setObject(1, null, Types.VARCHAR);
+    }
+
+    @Test
+    public void testSetObject_IntSqlType_Invalid_ThrowsIAE() {
+        // 99999 is not a standard java.sql.Types / JDBCType constant.
+        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", 99999));
+    }
+
+    @Test
+    public void testSetObject_IntSqlType_Scale_Invalid_ThrowsIAE() {
+        // The 4-arg int overload validates sqlType too.
+        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", 99999, 2));
+    }
+
+    @Test
+    public void testSetObject_SQLType_Null_ThrowsIAE() {
+        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", (SQLType) null));
     }
 
     @Test

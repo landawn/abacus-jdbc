@@ -6714,8 +6714,9 @@ public final class Jdbc {
          * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found,
          * it attempts to retrieve it from the Spring application context if available.
          *
-         * <p>A handler resolved from the Spring context is then cached into the internal registry, replacing
-         * any existing entry for this qualifier.</p>
+         * <p>A handler resolved from the Spring context is cached into the internal registry only if no
+         * entry already exists for this qualifier (first-wins), so a Spring bean can never silently
+         * overwrite a handler explicitly registered via {@link #register(String, Handler)}.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -6742,7 +6743,9 @@ public final class Jdbc {
                     if (bean instanceof Handler) {
                         result = (Handler<?>) bean;
 
-                        handlerPool.put(qualifier, result);
+                        // putIfAbsent (first-wins) so a Spring bean can never silently overwrite a handler
+                        // explicitly registered via register(...) -- register() itself uses putIfAbsent.
+                        handlerPool.putIfAbsent(qualifier, result);
                     }
                 } catch (final Exception e) {
                     // Spring context lookup failed (no such bean, context not ready, or bean creation error) — return null
