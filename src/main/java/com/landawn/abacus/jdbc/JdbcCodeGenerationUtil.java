@@ -474,9 +474,10 @@ public final class JdbcCodeGenerationUtil {
         // (type, fieldName, skipInCopy): static/final fields can't be re-assigned by the generated copy().
         final List<Tuple3<String, String, Boolean>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
                 : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
-                        // Only whole-line comments are skipped; stripping any trailing "//" would corrupt
-                        // declarations whose string initializers contain "//" (e.g. "https://...").
-                        .map(it -> Strings.strip(it).startsWith("//") ? "" : it)
+                        // Strip trailing line comments so a declaration written as "private Set<X> s; // note"
+                        // still parses (and gets its import + copy() assignment). stripLineComment ignores any
+                        // "//" inside a string/char literal, so initializers like "https://..." are preserved.
+                        .map(JdbcCodeGenerationUtil::stripLineComment)
                         .map(Strings::strip)
                         // .peek(Fn.println())
                         .filter(Fn.notEmpty())
@@ -2064,6 +2065,45 @@ public final class JdbcCodeGenerationUtil {
         }
 
         throw new IllegalArgumentException("Unclosed parenthesis in SQL: " + sql);
+    }
+
+    /**
+     * Strips a trailing line comment ({@code //...}) from a single source line, ignoring any {@code //}
+     * that appears inside a string or character literal (e.g. an initializer like {@code "https://..."}).
+     * Returns the line unchanged when it contains no line comment outside a literal.
+     *
+     * @param line the source line to process
+     * @return the line with any trailing line comment removed
+     */
+    private static String stripLineComment(final String line) {
+        boolean inString = false;
+        boolean inChar = false;
+
+        for (int i = 0, len = line.length(); i < len; i++) {
+            final char ch = line.charAt(i);
+
+            if (inString) {
+                if (ch == '\\') {
+                    i++; // skip the escaped character
+                } else if (ch == '"') {
+                    inString = false;
+                }
+            } else if (inChar) {
+                if (ch == '\\') {
+                    i++; // skip the escaped character
+                } else if (ch == '\'') {
+                    inChar = false;
+                }
+            } else if (ch == '"') {
+                inString = true;
+            } else if (ch == '\'') {
+                inChar = true;
+            } else if (ch == '/' && i + 1 < len && line.charAt(i + 1) == '/') {
+                return line.substring(0, i);
+            }
+        }
+
+        return line;
     }
 
     private static List<String> splitSqlList(final String sqlList, final String insertSql) {
