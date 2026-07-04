@@ -1,7 +1,7 @@
-# abacus-jdbc API Index (v4.8.0)
+# abacus-jdbc API Index (v4.8.1)
 - Build: unknown
 - Java: 17
-- Generated: 2026-07-01
+- Generated: 2026-07-04
 
 ## Packages
 - com.landawn.abacus.jdbc
@@ -815,8 +815,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `type` (`Type<T>`) — the Type handler for custom serialization. Must not be {@code null} .
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code type} is {@code null} or the type handler cannot set the value
-  - `java.sql.SQLException` — if a database access error occurs
+  - `java.lang.IllegalArgumentException` — if {@code type} is {@code null}
+  - `java.sql.SQLException` — if a database access error occurs (including a failure inside the {@code type} handler)
 ##### setParameters(...) -> This
 - **Signature:** `public This setParameters(final String param1, final String param2) throws SQLException`
 - **Summary:** Sets two String parameters starting from index 1.
@@ -1249,7 +1249,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Contract:**
   - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter.
 - **Parameters:**
-  - `batchParameters` (`Collection<?>`) — Collection where each element is one batch row. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter
+  - `batchParameters` (`Collection<?>`) — Collection where each element is one batch row. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter An empty {@code collection} adds no batch rows and returns this query.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters is null
@@ -1258,7 +1258,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Adds multiple sets of typed parameters for batch execution.
 - **Parameters:**
   - `batchParameters` (`Collection<? extends T>`) — Collection of parameters
-  - `type` (`Class<T>`) — the class type of the parameters
+  - `type` (`Class<T>`) — the class type of the parameters An empty {@code collection} adds no batch rows and returns this query.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters or type is null
@@ -1268,7 +1268,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Contract:**
   - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter.
 - **Parameters:**
-  - `batchParameters` (`Iterator<?>`) — Iterator over batch rows. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter
+  - `batchParameters` (`Iterator<?>`) — Iterator over batch rows. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter An empty {@code iterator} adds no batch rows and returns this query.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters is null
@@ -1355,7 +1355,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Contract:**
   - Sets the number of rows that should be fetched from the database when more rows are needed.
 - **Parameters:**
-  - `fetchSize` (`int`) — the number of rows to fetch. Use 0 to let the JDBC driver choose. A negative value is rejected by the JDBC driver with a {@code SQLException} .
+  - `fetchSize` (`int`) — the number of rows to fetch. Use 0 to let the JDBC driver choose. Most drivers reject a negative value with a {@code SQLException} ; MySQL/MariaDB accept {@code Integer.MIN_VALUE} to enable row-by-row streaming.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is already closed
@@ -1850,7 +1850,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** The result produced by applying the function to the {@code Dataset}
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if {@code func} is {@code null} , or if {@code entityClassForExtractor} is {@code null}
+  - `java.lang.IllegalArgumentException` — if {@code entityClassForExtractor} is {@code null} , or if {@code func} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
   - `E` — if the function throws an exception
 - **See also:** Jdbc.ResultExtractor#toDataset(Class)
@@ -2643,6 +2643,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if rowFilter or rowConsumer is null
   - `java.sql.SQLException` — if a database access error occurs
+- **See also:** #forEach(BiRowConsumer)
 ##### foreach(...) -> void
 - **Signature:** `@Beta public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException`
 - **Summary:** Iterates over each row and applies the given Consumer to a DisposableObjArray.
@@ -2722,7 +2723,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated, or if every generated key is a default/invalid value.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** #batchInsert(RowMapper)
+- **See also:** #batchInsert(RowMapper), #batchInsert()
 ##### update(...) -> int
 - **Signature:** `public int update() throws IllegalStateException, SQLException`
 - **Summary:** Executes an UPDATE, INSERT, or DELETE statement and returns the number of affected rows.
@@ -2818,7 +2819,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Executes the SQL statement which may return multiple results.
 - **Contract:**
   - Use this method when the SQL statement may return multiple result sets, update counts, or a combination of both.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code boolean hasResultSet = JdbcUtil.prepareQuery(conn, "CALL complex_procedure(?)") .setInt(1, parameter) .execute(); if (hasResultSet) { // First result is a ResultSet // Use getResultSet() to retrieve it } else { // First result is an update count // Use getUpdateCount() to retrieve it } } </pre> <p> <b> Note: </b> The underlying statement will be closed after execution unless {@link #closeAfterExecution(boolean)} has been set to {@code false} .
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code boolean hasResultSet = JdbcUtil.prepareQuery(conn, "CALL complex_procedure(?)") .setInt(1, parameter) .execute(); if (hasResultSet) { // First result is a ResultSet } else { // First result is an update count (or there are no results) } // Note: the statement is closed when execute() returns (by default), so the // results themselves are no longer retrievable here.
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} if the first result is a ResultSet object; {@code false} if it is an update count or there are no results
@@ -2850,8 +2851,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if the provided function is null
-  - `java.sql.SQLException` — if a database access error occurs
-- **See also:** #executeThenApply(Throwables.Function)
+  - `java.sql.SQLException` — if a database access error occurs or {@code func} throws
+- **See also:** #executeThenApply(Throwables.Function), #execute()
 ##### executeThenAccept(...) -> void
 - **Signature:** `public void executeThenAccept(final Throwables.Consumer<? super Stmt, SQLException> consumer) throws IllegalStateException, IllegalArgumentException, SQLException`
 - **Summary:** Executes the SQL statement and applies the provided consumer to process the statement.
@@ -2863,7 +2864,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if the provided consumer is null
-  - `java.sql.SQLException` — if a database access error occurs
+  - `java.sql.SQLException` — if a database access error occurs or the consumer throws
 - **See also:** #execute(), #executeThenAccept(Throwables.BiConsumer)
 - **Signature:** `public void executeThenAccept(final Throwables.BiConsumer<? super Stmt, Boolean, SQLException> consumer) throws IllegalStateException, IllegalArgumentException, SQLException`
 - **Summary:** Executes the SQL statement and applies the provided bi-consumer to process the statement.
@@ -2874,8 +2875,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if the provided consumer is null
-  - `java.sql.SQLException` — if a database access error occurs
-- **See also:** #executeThenAccept(Throwables.Consumer)
+  - `java.sql.SQLException` — if a database access error occurs or the bi-consumer throws
+- **See also:** #executeThenAccept(Throwables.Consumer), #execute()
 ##### asyncCall(...) -> ContinuableFuture<R>
 - **Signature:** `@Beta public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action using this query instance.
@@ -2897,7 +2898,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if sqlAction or executor is null
-- **See also:** #asyncCall(Throwables.Function)
+- **See also:** #asyncCall(Throwables.Function), #asyncRun(Throwables.Consumer)
 ##### asyncRun(...) -> ContinuableFuture<Void>
 - **Signature:** `@Beta public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action without returning a result.
@@ -2917,7 +2918,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if sqlAction or executor is null
-- **See also:** #asyncRun(Throwables.Consumer)
+- **See also:** #asyncRun(Throwables.Consumer), #asyncCall(Throwables.Function)
 ##### close(...) -> void
 - **Signature:** `@Override public void close()`
 - **Summary:** Closes this query instance and releases any resources associated with it.
@@ -3575,7 +3576,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} or {@code parameterNames} is {@code null} , or if any name in {@code parameterNames} does not correspond to a property of the entity class
   - `java.sql.SQLException` — if a database access error occurs while binding the parameters
-- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#namedParameters(String)
+- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#getNamedParameters(String)
 - **Signature:** `@SuppressWarnings("unchecked") public CallableQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets the parameters of this stored-procedure call from a single object, binding by name.
 - **Parameters:**
@@ -3730,13 +3731,13 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
   - `register` (`Jdbc.ParametersSetter<? super CallableQuery>`) — the {@link Jdbc.ParametersSetter} that will register the OUT parameters. Must not be {@code null} .
 - **Returns:** this CallableQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if register is null
+  - `java.lang.IllegalArgumentException` — if {@code register} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs during parameter registration
 - **Signature:** `public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> register) throws IllegalArgumentException, SQLException`
 - **Summary:** Registers multiple OUT parameters using a bi-functional interface and an additional context object.
 - **Contract:**
   - If an exception occurs during registration, the statement is automatically closed.
-  - } ReportConfig config = new ReportConfig(true, false); query.registerOutParameters(config, (q, cfg) -> { int paramIndex = 1; q.registerOutParameter(paramIndex++, Types.VARCHAR); // always return a status message if (cfg.includeTotal()) { q.registerOutParameter(paramIndex++, Types.DECIMAL); } if (cfg.includeAvg()) { q.registerOutParameter(paramIndex++, Types.DECIMAL, 2); } }).execute(); } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code record ReportConfig(boolean includeTotal, boolean includeAvg) { } ReportConfig config = new ReportConfig(true, false); query.registerOutParameters(config, (q, cfg) -> { int paramIndex = 1; q.registerOutParameter(paramIndex++, Types.VARCHAR); // always return a status message if (cfg.includeTotal()) { q.registerOutParameter(paramIndex++, Types.DECIMAL); } if (cfg.includeAvg()) { q.registerOutParameter(paramIndex++, Types.DECIMAL, 2); } }).execute(); } </pre>
 - **Parameters:**
   - `parameter` (`T`) — the context object to be passed to the {@code BiParametersSetter} .
   - `register` (`Jdbc.BiParametersSetter<? super CallableQuery, ? super T>`) — the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null} .
@@ -3778,7 +3779,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Summary:** Executes the stored procedure and applies the provided consumer to the executed CallableStatement.
 - **Contract:**
   - This method is useful when you need to perform side effects with the statement but don't need to return a value.
-  - boolean isResultSet = stmt.getResultSet() != null; int updateCount; while (isResultSet || (updateCount = stmt.getUpdateCount()) != -1) { if (isResultSet) { // Process stmt.getResultSet() } isResultSet = stmt.getMoreResults(); } }); } </pre>
+  - ResultSet rs = stmt.getResultSet(); while (rs != null || stmt.getUpdateCount() != -1) { if (rs != null) { // Process rs } rs = stmt.getMoreResults() ?
 - **Parameters:**
   - `consumer` (`Throwables.Consumer<? super CallableStatement, SQLException>`) — the consumer to apply to the executed CallableStatement. Must not be {@code null} .
 - **Throws:**
@@ -3818,9 +3819,11 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 ##### queryAndGetOutParameters(...) -> Tuple2<Dataset, Jdbc.OutParamResult>
 - **Signature:** `public Tuple2<Dataset, Jdbc.OutParamResult> queryAndGetOutParameters() throws SQLException`
 - **Summary:** Executes the stored procedure and returns both the first result set (as a Dataset) and OUT parameters.
+- **Contract:**
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Tuple2<Dataset, Jdbc.OutParamResult> result = query.queryAndGetOutParameters(); Dataset dataset = result._1; // null if the procedure returned no result set Jdbc.OutParamResult outParams = result._2; // Process the data set if (dataset != null) { dataset.forEach(row -> { System.out.println(row.get(0) + ": " + row.get(1)); }); } // Get OUT parameters int totalCount = outParams.getOutParamValue("totalCount"); } </pre>
 - **Parameters:**
   - (none)
-- **Returns:** a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element)
+- **Returns:** a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element). The first element may be {@code null} if the procedure does not return a result set.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #queryAndGetOutParameters(Jdbc.ResultExtractor), Dataset
@@ -3831,7 +3834,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Returns:** a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element). The first element may be {@code null} if no result set is returned.
 - **Throws:**
   - `java.lang.IllegalStateException` — if this CallableQuery is closed
-  - `java.lang.IllegalArgumentException` — if resultExtractor is null
+  - `java.lang.IllegalArgumentException` — if {@code resultExtractor} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** Jdbc.ResultExtractor
 - **Signature:** `public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws IllegalStateException, IllegalArgumentException, SQLException`
@@ -3841,7 +3844,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Returns:** a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element). The first element may be {@code null} if no result set is returned.
 - **Throws:**
   - `java.lang.IllegalStateException` — if this CallableQuery is closed
-  - `java.lang.IllegalArgumentException` — if resultExtractor is null
+  - `java.lang.IllegalArgumentException` — if {@code resultExtractor} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** Jdbc.BiResultExtractor
 ##### queryAllResultSetsAndGetOutParameters(...) -> Tuple2<List<Dataset>, Jdbc.OutParamResult>
@@ -3862,7 +3865,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Returns:** a {@link Tuple2} containing a list of extracted results and OUT parameters
 - **Throws:**
   - `java.lang.IllegalStateException` — if this CallableQuery is closed
-  - `java.lang.IllegalArgumentException` — if resultExtractor is null
+  - `java.lang.IllegalArgumentException` — if {@code resultExtractor} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** Jdbc.ResultExtractor
 - **Signature:** `public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws IllegalStateException, IllegalArgumentException, SQLException`
@@ -3907,12 +3910,13 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
   - `java.sql.SQLException` — if a database access error occurs or the stored procedure fails
 - **See also:** #query2ResultSetsAndGetOutParameters(BiResultExtractor, BiResultExtractor), #queryAllResultSetsAndGetOutParameters(BiResultExtractor)
 ##### listAndGetOutParameters(...) -> Tuple2<List<T>, Jdbc.OutParamResult>
-- **Signature:** `public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws IllegalArgumentException, SQLException`
+- **Signature:** `public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Class<? extends T> targetType) throws IllegalStateException, IllegalArgumentException, SQLException`
 - **Summary:** Executes the stored procedure and returns the first result set as a list of objects along with any OUT parameters.
 - **Parameters:**
   - `targetType` (`Class<? extends T>`) — the class of type T to map each row to. Must not be {@code null} . The class must have a default constructor.
 - **Returns:** a {@code Tuple2} containing: <ul> <li> First element: List of mapped objects from the result set </li> <li> Second element: {@code Jdbc.OutParamResult} containing all OUT parameters </li> </ul>
 - **Throws:**
+  - `java.lang.IllegalStateException` — if this query has already been closed
   - `java.lang.IllegalArgumentException` — if {@code targetType} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs, the stored procedure fails, or the mapping fails
 - **See also:** #listAndGetOutParameters(RowMapper), #listAndGetOutParameters(BiRowMapper)
@@ -4130,7 +4134,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - The column order in the SQL statement must be consistent with the column order in the Dataset.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `targetDataSource` (`javax.sql.DataSource`) — the DataSource to obtain database connections
+  - `targetDataSource` (`javax.sql.DataSource`) — the DataSource to obtain database connections from
   - `insertSql` (`String`) — the SQL insert statement with placeholders; column order must match the Dataset
 - **Returns:** the number of rows successfully imported
 - **Throws:**
@@ -4536,7 +4540,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to the database (will not be closed by this method)
   - `selectSql` (`String`) — the SQL query to execute for retrieving data
-  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export (null for all columns)
+  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
   - `output` (`File`) — the File to write the CSV data to (will be created if doesn't exist)
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
@@ -4555,7 +4559,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Summary:** Exports selected columns from the database to a CSV file using the provided PreparedStatement.
 - **Parameters:**
   - `stmt` (`PreparedStatement`) — the PreparedStatement to execute (will not be closed by this method)
-  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export (null for all columns)
+  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
   - `output` (`File`) — the File to write the CSV data to (will be created if doesn't exist)
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
@@ -4577,7 +4581,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - If a specified column is not found in the ResultSet, an IllegalArgumentException will be thrown.
 - **Parameters:**
   - `rs` (`ResultSet`) — the ResultSet containing the data to export (will not be closed by this method)
-  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export (null for all columns)
+  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
   - `output` (`File`) — the File to write the CSV data to (will be created if doesn't exist)
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
@@ -4620,34 +4624,6 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any specified column name is not found in the ResultSet
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta public static CsvExportBuilder exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql)`
-- **Summary:** Creates a fluent builder for exporting the rows of a SELECT query (run against the given {@link javax.sql.DataSource} ) to CSV.
-- **Contract:**
-  - A connection is obtained when a terminal {@code to(...)} runs and released before it returns.
-- **Parameters:**
-  - `sourceDataSource` (`javax.sql.DataSource`) — the DataSource to obtain a connection from (must not be {@code null} )
-  - `selectSql` (`String`) — the SQL query to execute (must not be {@code null} )
-- **Returns:** a {@link CsvExportBuilder}
-- **See also:** #exportCsv(Connection, String)
-- **Signature:** `@Beta public static CsvExportBuilder exportCsv(final Connection conn, final String selectSql)`
-- **Summary:** Creates a fluent builder for exporting the rows of a SELECT query (run against the given {@link Connection} ) to CSV.
-- **Parameters:**
-  - `conn` (`Connection`) — the Connection to run the query against (must not be {@code null} ; not closed by the builder)
-  - `selectSql` (`String`) — the SQL query to execute (must not be {@code null} )
-- **Returns:** a {@link CsvExportBuilder}
-- **See also:** #exportCsv(javax.sql.DataSource, String)
-- **Signature:** `@Beta public static CsvExportBuilder exportCsv(final PreparedStatement stmt)`
-- **Summary:** Creates a fluent builder for exporting the result of executing the given {@link PreparedStatement} to CSV.
-- **Contract:**
-  - The statement is executed when a terminal {@code to(...)} runs; the statement is NOT closed by the builder (the {@code ResultSet} it produces is).
-- **Parameters:**
-  - `stmt` (`PreparedStatement`) — the PreparedStatement to execute (must not be {@code null} ; not closed by the builder)
-- **Returns:** a {@link CsvExportBuilder}
-- **Signature:** `@Beta public static CsvExportBuilder exportCsv(final ResultSet rs)`
-- **Summary:** Creates a fluent builder for exporting the rows of the given {@link ResultSet} to CSV, starting from its current position.
-- **Parameters:**
-  - `rs` (`ResultSet`) — the ResultSet to export (must not be {@code null} ; not closed by the builder)
-- **Returns:** a {@link CsvExportBuilder}
 ##### copy(...) -> long
 - **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String tableName) throws SQLException`
 - **Summary:** Copies all data from a table in the source data source to a table with the same name in the target data source.
@@ -4688,7 +4664,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetDataSource` (`javax.sql.DataSource`) — the data source to which to copy data
   - `sourceTableName` (`String`) — the name of the table in the source data source
   - `targetTableName` (`String`) — the name of the table in the target data source
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to copy
+  - `selectColumnNames` (`Collection<String>`) — the collection of column names to copy; {@code null} or empty copies all columns
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs or any specified column doesn't exist
@@ -4699,7 +4675,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetDataSource` (`javax.sql.DataSource`) — the data source to which to copy data
   - `sourceTableName` (`String`) — the name of the table in the source data source
   - `targetTableName` (`String`) — the name of the table in the target data source
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to copy
+  - `selectColumnNames` (`Collection<String>`) — the collection of column names to copy; {@code null} or empty copies all columns
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
@@ -4735,7 +4711,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `selectSql` (`String`) — the SQL query to select data from the source data source
   - `targetDataSource` (`javax.sql.DataSource`) — the data source to which to copy data
   - `insertSql` (`String`) — the SQL query to insert data into the target data source
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement from the result set
+  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement from the result set; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4749,7 +4725,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL query to insert data into the target data source
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement
+  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4792,7 +4768,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetConn` (`Connection`) — the connection to the target database
   - `sourceTableName` (`String`) — the name of the source table to copy data from
   - `targetTableName` (`String`) — the name of the target table to copy data to
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be copied
+  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be copied; {@code null} or empty copies all columns
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs or any specified column doesn't exist
@@ -4803,7 +4779,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetConn` (`Connection`) — the connection to the target database
   - `sourceTableName` (`String`) — the name of the source table to copy data from
   - `targetTableName` (`String`) — the name of the target table to copy data to
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be copied
+  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be copied; {@code null} or empty copies all columns
   - `batchSize` (`int`) — the number of rows to be copied in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
@@ -4839,7 +4815,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `selectSql` (`String`) — the SQL query to select data from the source database
   - `targetConn` (`Connection`) — the connection to the target database
   - `insertSql` (`String`) — the SQL query to insert data into the target database
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement
+  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4853,7 +4829,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL query to insert data into the target database
   - `batchSize` (`int`) — the number of rows to be copied in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement
+  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4891,7 +4867,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Parameters:**
   - `iter` (`Iterator<? extends T>`) — the iterator whose elements will be imported (must not be {@code null} )
 - **Returns:** a {@link RowImportBuilder} over the iterator's elements
-- **See also:** #importData(Iterator, java.sql.PreparedStatement, int, long, Throwables.BiConsumer)
+- **See also:** #importData(Iterator, PreparedStatement, int, long, Throwables.BiConsumer)
 ##### importCsvFrom(...) -> RowImportBuilder<String\[\]>
 - **Signature:** `@Beta public static RowImportBuilder<String[]> importCsvFrom(final File file)`
 - **Summary:** Creates a fluent builder for importing the rows of a CSV {@link File} into a database table.
@@ -4907,19 +4883,48 @@ Utility class for database import/export operations, CSV processing, and data co
   - `reader` (`Reader`) — the reader supplying CSV data (must not be {@code null} ); not closed by this builder
 - **Returns:** a {@link RowImportBuilder} over the CSV rows ( {@code String\[\]} per row)
 - **See also:** #importCsvFrom(File)
+##### exportCsvFrom(...) -> CsvExportBuilder
+- **Signature:** `@Beta public static CsvExportBuilder exportCsvFrom(final javax.sql.DataSource sourceDataSource, final String selectSql)`
+- **Summary:** Creates a fluent builder for exporting the rows of a SELECT query (run against the given {@link javax.sql.DataSource} ) to CSV.
+- **Contract:**
+  - A connection is obtained when a terminal {@code to(...)} runs and released before it returns.
+- **Parameters:**
+  - `sourceDataSource` (`javax.sql.DataSource`) — the DataSource to obtain a connection from (must not be {@code null} )
+  - `selectSql` (`String`) — the SQL query to execute (must not be {@code null} )
+- **Returns:** a {@link CsvExportBuilder}
+- **See also:** #exportCsvFrom(Connection, String)
+- **Signature:** `@Beta public static CsvExportBuilder exportCsvFrom(final Connection conn, final String selectSql)`
+- **Summary:** Creates a fluent builder for exporting the rows of a SELECT query (run against the given {@link Connection} ) to CSV.
+- **Parameters:**
+  - `conn` (`Connection`) — the Connection to run the query against (must not be {@code null} ; not closed by the builder)
+  - `selectSql` (`String`) — the SQL query to execute (must not be {@code null} )
+- **Returns:** a {@link CsvExportBuilder}
+- **See also:** #exportCsvFrom(javax.sql.DataSource, String)
+- **Signature:** `@Beta public static CsvExportBuilder exportCsvFrom(final PreparedStatement stmt)`
+- **Summary:** Creates a fluent builder for exporting the result of executing the given {@link PreparedStatement} to CSV.
+- **Contract:**
+  - The statement is executed when a terminal {@code to(...)} runs; the statement is NOT closed by the builder (the {@code ResultSet} it produces is).
+- **Parameters:**
+  - `stmt` (`PreparedStatement`) — the PreparedStatement to execute (must not be {@code null} ; not closed by the builder)
+- **Returns:** a {@link CsvExportBuilder}
+- **Signature:** `@Beta public static CsvExportBuilder exportCsvFrom(final ResultSet rs)`
+- **Summary:** Creates a fluent builder for exporting the rows of the given {@link ResultSet} to CSV, starting from its current position.
+- **Parameters:**
+  - `rs` (`ResultSet`) — the ResultSet to export (must not be {@code null} ; not closed by the builder)
+- **Returns:** a {@link CsvExportBuilder}
 ##### copyFrom(...) -> CopyFromDataSource
 - **Signature:** `@Beta public static CopyFromDataSource copyFrom(final javax.sql.DataSource sourceDataSource, final String selectSql)`
 - **Summary:** Creates a fluent builder for copying the rows of a SELECT query from a source {@link javax.sql.DataSource} into a target table, using explicit SELECT and INSERT SQL.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the data source to read from (must not be {@code null} )
-  - `selectSql` (`String`) — the SQL query selecting the rows to copy
+  - `selectSql` (`String`) — the SQL query selecting the rows to copy (must not be {@code null} )
 - **Returns:** a {@link CopyFromDataSource} for configuring and running the copy
 - **See also:** CopyFromDataSource, #copy(javax.sql.DataSource, String, javax.sql.DataSource, String)
 - **Signature:** `@Beta public static CopyFromConnection copyFrom(final Connection sourceConn, final String selectSql)`
 - **Summary:** Creates a fluent builder for copying the rows of a SELECT query from a source {@link Connection} into a target table on another {@link Connection} , using explicit SELECT and INSERT SQL.
 - **Parameters:**
   - `sourceConn` (`Connection`) — the connection to read from (must not be {@code null} )
-  - `selectSql` (`String`) — the SQL query selecting the rows to copy
+  - `selectSql` (`String`) — the SQL query selecting the rows to copy (must not be {@code null} )
 - **Returns:** a {@link CopyFromConnection} for configuring and running the copy
 - **See also:** CopyFromConnection, #copy(Connection, String, Connection, String)
 - **Signature:** `@Beta public static CopyFromStatement copyFrom(final PreparedStatement selectStmt)`
@@ -4933,14 +4938,14 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Summary:** Creates a fluent builder for copying a whole table (or selected columns) from a source {@link javax.sql.DataSource} to a target table, generating the SELECT and INSERT SQL from the table schema.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the data source to read from (must not be {@code null} )
-  - `sourceTableName` (`String`) — the name of the source table
+  - `sourceTableName` (`String`) — the name of the source table (must not be blank)
 - **Returns:** a {@link CopyTableFromDataSource} for configuring and running the copy
 - **See also:** CopyTableFromDataSource, #copy(javax.sql.DataSource, javax.sql.DataSource, String, String)
 - **Signature:** `@Beta public static CopyTableFromConnection copyTable(final Connection sourceConn, final String sourceTableName)`
 - **Summary:** Creates a fluent builder for copying a whole table (or selected columns) from a source {@link Connection} to a target table on another {@link Connection} , generating the SELECT and INSERT SQL from the table schema.
 - **Parameters:**
   - `sourceConn` (`Connection`) — the connection to read from (must not be {@code null} )
-  - `sourceTableName` (`String`) — the name of the source table
+  - `sourceTableName` (`String`) — the name of the source table (must not be blank)
 - **Returns:** a {@link CopyTableFromConnection} for configuring and running the copy
 - **See also:** CopyTableFromConnection, #copy(Connection, Connection, String, String)
 
@@ -6159,7 +6164,7 @@ A functional interface for mapping the current row of a {@code ResultSet} to an 
   - It should not be cached, shared across different query structures, or used in parallel streams.
 - **Parameters:**
   - `targetClass` (`Class<? extends T>`) — the class to map rows to
-  - `ignoreUnmatchedColumns` (`boolean`) — if {@code true} , columns without a corresponding property in {@code targetClass} are silently skipped; if {@code false} , an {@code IllegalArgumentException} is thrown for any unmatched column.
+  - `ignoreUnmatchedColumns` (`boolean`) — if {@code true} , columns without a corresponding property in {@code targetClass} are silently skipped; if {@code false} , an {@code IllegalArgumentException} is thrown for any unmatched column (only relevant for bean targets).
 - **Returns:** a new stateful {@code BiRowMapper} . Do not cache or reuse across different query structures.
 - **Signature:** `@SequentialOnly @Stateful static <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final Predicate<? super String> columnNameFilter, final Function<? super String, String> columnNameConverter)`
 - **Summary:** Creates a stateful {@code BiRowMapper} with custom filtering and conversion for column names before mapping them to object properties.
@@ -6418,6 +6423,8 @@ A fluent builder for creating customized, stateful {@code BiRowMapper} instances
 ##### get(...) -> BiRowMapperBuilder
 - **Signature:** `public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException`
 - **Summary:** Configures the mapper to use a custom {@code ColumnGetter} for the specified column name.
+- **Contract:**
+  - <p> The column name is matched against the ResultSet's column labels case-insensitively when no exact-case match is found.
 - **Parameters:**
   - `columnName` (`String`) — the name of the column
   - `columnGetter` (`ColumnGetter<?>`) — the custom {@code ColumnGetter} to use for this column
@@ -6686,6 +6693,7 @@ A functional interface for extracting data from the current row of a {@code Resu
 - **Summary:** Creates a stateful {@code RowExtractor} with comprehensive customization options, including an entity class for type mapping, an explicit list of column labels, and a prefix map for complex mappings.
 - **Contract:**
   - It should not be reused across queries with different column structures or in parallel streams.
+  - </p> <p> The returned extractor writes column values into positions {@code 0..columnCount-1} of the {@code outputRow} passed to {@code accept} , so that array must be at least as long as the number of mapped columns; an undersized array raises {@code ArrayIndexOutOfBoundsException} .
 - **Parameters:**
   - `entityClassForFetch` (`Class<?>`) — the entity class for type mapping.
   - `columnLabels` (`List<String>`) — an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet} .
@@ -6957,7 +6965,7 @@ Represents an output parameter for a stored procedure call.
 
 #### Public Instance Methods
 ##### <init>(...) -> void
-- **Signature:** `class OutParam { /** * The 1-based index of the parameter in the stored procedure call. */ private int parameterIndex; /** * The name of the parameter. This is optional and used for named parameter calls. */ private String parameterName; /** * The SQL type of the parameter, as defined in {@code java.sql.Types}. */ private int sqlType; /** * The database-specific type name. This is generally used for user-defined or complex types. */ private String typeName; /** * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types. */ private int scale; /** * A factory method to create an {@code OutParam} with the specified index and SQL type. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParam idOut = OutParam.of(1, Types.INTEGER); * int idx = idOut.getParameterIndex(); // returns 1 * int type = idOut.getSqlType(); // returns Types.INTEGER * String name = idOut.getParameterName(); // returns null (index-based registration) * * // parameterIndex is 1-based and must be greater than 0. * OutParam bad = OutParam.of(0, Types.INTEGER); // throws IllegalArgumentException * }</pre> * * @param parameterIndex the 1-based index of the parameter (must be {@code > 0}). * @param sqlType the SQL type from {@code java.sql.Types}. * @return a new {@code OutParam} instance. * @throws IllegalArgumentException if {@code parameterIndex <= 0} — index is 1-based, * and passing 0 here would cause the downstream consumer to fall through to the * name-based path with a null name, producing an opaque driver error. */ public static OutParam of(int parameterIndex, int sqlType) { N.checkArgument(parameterIndex > 0, "'parameterIndex' must be greater than 0 (1-based), but was: %s", parameterIndex); final OutParam outParam = new OutParam(); outParam.setParameterIndex(parameterIndex); outParam.setSqlType(sqlType); return outParam; } } /** * A container for the values of output parameters produced by a stored procedure * execution. Values can be retrieved by their 1-based parameter index or by parameter name, * depending on how the underlying {@link OutParam} was registered. * * <p>This type is not directly instantiable by callers; instances are produced by the framework * (e.g. by {@code CallableQuery} methods that accept a list of {@code OutParam}s).</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // After executing a stored procedure with output parameters * OutParamResult result = callableQuery.executeAndGetOutParameters(); * * // Retrieve by index * int id = result.getOutParamValue(1); * * // Retrieve by name * String name = result.getOutParamValue("result_name"); * }</pre> * * @see OutParam */ @EqualsAndHashCode @ToString public static final class OutParamResult { private final List<OutParam> outParams; private final Map<Object, Object> outParamValues; /** * Constructs an {@code OutParamResult} with the specified output parameters and their values. * * @param outParams the list of {@code OutParam} definitions. * @param outParamValues a map of output parameter values, keyed by index or name. */ OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) { this.outParams = outParams; this.outParamValues = outParamValues; } /** * Retrieves the value of an output parameter by its 1-based index. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * int id = result.getOutParamValue(1); // returns the value registered at index 1 * Object none = result.getOutParamValue(99); // returns null (no value at index 99) * }</pre> * * @param <T> expected parameter value type * @param parameterIndex the 1-based index of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final int parameterIndex) { return (T) outParamValues.get(parameterIndex); } /** * Retrieves the value of an output parameter by its name. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * String name = result.getOutParamValue("result_name"); // returns the value registered under "result_name" * Object none = result.getOutParamValue("unknown"); // returns null (no such name) * }</pre> * * @param <T> expected parameter value type * @param parameterName the name of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final String parameterName) { return (T) outParamValues.get(parameterName); } /** * Returns a map containing all output parameter values. The keys of the map are * either the parameter index ({@code Integer}) or name ({@code String}). * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * Map<Object, Object> all = result.getOutParamValues(); * Object byIndex = all.get(1); // value keyed by 1-based index * Object byName = all.get("result_name"); // value keyed by parameter name * }</pre> * * @return an unmodifiable view of the map of all output parameter values. */ public Map<Object, Object> getOutParamValues() { return ImmutableMap.wrap(outParamValues); } /** * Returns the list of {@link OutParam} definitions that were used to register the output parameters. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * List<OutParam> defs = result.getOutParams(); * int size = defs.size(); // number of registered out-parameters * int firstIndex = defs.get(0).getParameterIndex(); // 1-based index of the first out-param * }</pre> * * @return an unmodifiable view of the list of {@code OutParam} objects. */ public List<OutParam> getOutParams() { return ImmutableList.wrap(outParams); } } /** * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called. * * <p>Both {@link #beforeInvoke} and {@link #afterInvoke} have empty default implementations, so * implementations only need to override the hooks they care about.</p> * * <p>Implementations should be thread-safe if the same handler instance is registered against * multiple DAO proxies or invoked concurrently.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> loggingHandler = new Handler<>() { * public void beforeInvoke(UserDao proxy, Object[] args, * Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { * System.out.println("Calling method: " + methodSignature._1.getName()); * } * public void afterInvoke(Object result, UserDao proxy, Object[] args, * Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { * System.out.println("Method returned: " + result); * } * }; * }</pre> * * @param <P> DAO proxy type * @see HandlerFactory */ @Beta public interface Handler<P> { /** * This method is invoked before the actual DAO method is called. It can be used for * logging, argument validation, security checks, or transaction management. * * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } /** * This method is invoked after the DAO method completes, whether successfully or with an exception. * It is also invoked for handlers that were entered via {@link #beforeInvoke}, in reverse order; if this * handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke} * is not invoked for it. It can be used for logging results, result transformation, or resource cleanup. * * <p>Exceptions thrown from this method are logged and suppressed onto any underlying invocation failure; * they will not replace a primary exception from the DAO method itself.</p> * * @param result the value returned by the method. Will be {@code null} if the method's return type is * {@code void} or if the method threw an exception (in which case the throwable is not * surfaced here). * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } } /** * A factory for creating and managing {@link Handler} instances. It provides a central registry * for handlers and supports integration with the Spring Framework's application context. * * <p>Handlers can be registered manually via {@link #register(Handler)} or retrieved from * the Spring application context if available. The factory also provides convenience methods * to create handlers from lambda expressions.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Create a handler with before/after actions * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result) * ); * * // Register and retrieve a handler by class * HandlerFactory.register(myHandler); * Handler<?> h = HandlerFactory.get(MyHandler.class); * }</pre> * * @see Handler */ public static final class HandlerFactory { @SuppressWarnings("rawtypes") static final Handler EMPTY = new Handler() { // Do nothing. }; private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>(); private static final SpringApplicationContext springAppContext; static { handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY); handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY); SpringApplicationContext tmp = null; try { tmp = new SpringApplicationContext(); } catch (final Exception | LinkageError e) { // ignore. } springAppContext = tmp; } /** * Registers a handler by creating a new instance of the specified handler class. * The handler is registered using its canonical class name as the qualifier. * The class must have an accessible no-argument constructor; the instance is created * via reflection. * * <p><b>Usage Examples:</b></p> * <pre>{@code * boolean registered = HandlerFactory.register(MyHandler.class); // returns true if newly registered * boolean again = HandlerFactory.register(MyHandler.class); // returns false (already registered) * * HandlerFactory.register((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * @param handlerClass the handler class to instantiate and register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if it is abstract or otherwise cannot be * instantiated (e.g. it has no accessible no-argument constructor). The reflective instantiation is performed * by {@code N.newInstance(Class)}. */ public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { N.checkArgNotNull(handlerClass, cs.handlerClass); return register(N.newInstance(handlerClass)); } /** * Registers a handler instance. The handler is registered using its canonical class name as the qualifier. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<MyDao> handler = new MyHandler(); * boolean registered = HandlerFactory.register(handler); // returns true if newly registered * boolean again = HandlerFactory.register(new MyHandler()); // returns false (same qualifier already present) * * HandlerFactory.register((Handler<?>) null); // throws IllegalArgumentException * }</pre> * * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handler} is {@code null}. */ public static boolean register(final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotNull(handler, cs.handler); return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler); } /** * Registers a handler instance with a specific qualifier string. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<MyDao> handler = new MyHandler(); * boolean registered = HandlerFactory.register("myHandler", handler); // returns true if newly registered * boolean again = HandlerFactory.register("myHandler", new MyHandler()); // returns false (qualifier already present) * * HandlerFactory.register("", handler); // throws IllegalArgumentException (empty qualifier) * }</pre> * * @param qualifier the unique identifier for the handler. * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}. */ public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotEmpty(qualifier, cs.qualifier); N.checkArgNotNull(handler, cs.handler); return handlerPool.putIfAbsent(qualifier, handler) == null; } /** * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found, * it attempts to retrieve it from the Spring application context if available. * * <p><b>Usage Examples:</b></p> * <pre>{@code * HandlerFactory.register("myHandler", new MyHandler()); * Handler<?> h = HandlerFactory.get("myHandler"); // returns the registered handler * Handler<?> none = HandlerFactory.get("no.such.Handler"); // returns null (not registered, no Spring bean) * * HandlerFactory.get(""); // throws IllegalArgumentException (empty qualifier) * }</pre> * * @param qualifier the unique identifier for the handler. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code qualifier} is empty. */ public static Handler<?> get(final String qualifier) { //NOSONAR N.checkArgNotEmpty(qualifier, cs.qualifier); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; handlerPool.put(qualifier, result); } } catch (final Exception e) { // Bean not found in Spring context, return null } } return result; } /** * Retrieves a handler by its class. It first checks the internal registry using the class's * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring * application context. * * <p><b>Usage Examples:</b></p> * <pre>{@code * HandlerFactory.register(new MyHandler()); * Handler<?> h = HandlerFactory.get(MyHandler.class); // returns the registered handler * Handler<?> none = HandlerFactory.get(UnregisteredHandler.class); // returns null (not registered, no Spring bean) * * HandlerFactory.get((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * @param handlerClass the class of the handler to retrieve. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); final String qualifier = ClassUtil.getCanonicalClassName(handlerClass); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { result = springAppContext.getBean(handlerClass); } catch (final Exception e) { // Bean not found in Spring context by class } if (result == null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; } } catch (final Exception e) { // Bean not found in Spring context by qualifier } } if (result != null) { handlerPool.put(qualifier, result); } } return result; } /** * Retrieves a handler by its class. If the handler is not found in the registry or Spring context, * a new instance is created, registered, and returned. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<?> h = HandlerFactory.getOrCreate(MyHandler.class); // creates, registers and returns a new instance * Handler<?> same = HandlerFactory.getOrCreate(MyHandler.class); // returns the same registered instance (h == same) * * HandlerFactory.getOrCreate((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * <p>When a new instance has to be created, this method is race-safe: if another thread registers its own * instance for the same qualifier first, the already-registered instance is returned so that all callers * observe the same once-per-qualifier handler.</p> * * @param handlerClass the class of the handler to retrieve or create. * @return the existing or newly created handler instance. May be {@code null} only if {@code N.newInstance} returns * {@code null} for the given class. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if a new instance has to be created and * the class is abstract or otherwise cannot be instantiated (e.g. it has no accessible no-argument constructor). */ public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); Handler<?> result = get(handlerClass); if (result == null) { result = N.newInstance(handlerClass); if (result != null) { // register(...) returns false if another thread won the race and registered // its own instance first. Without re-fetching, this thread would return its // own unregistered instance — breaking the once-per-qualifier identity // contract callers rely on for stateful handler bookkeeping. if (!register(result)) { final Handler<?> registered = get(handlerClass); if (registered != null) { result = registered; } } } } return result; } /** * Creates a {@code Handler} with a custom action to be executed before method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.createForBeforeInvoke( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName())); * // The handler's beforeInvoke runs the action; afterInvoke is a no-op. * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..." * * HandlerFactory.createForBeforeInvoke((Throwables.TriConsumer<Object, Object[], * Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param beforeInvokeAction the action to perform before the method is called. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}. */ public static <T> Handler<T> createForBeforeInvoke( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> beforeInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with a custom action to be executed after method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.createForAfterInvoke( * (result, proxy, args, sig) -> System.out.println("After: " + result)); * // The handler's afterInvoke runs the action; beforeInvoke is a no-op. * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..." * * HandlerFactory.createForAfterInvoke((Throwables.QuadConsumer<Object, Object, Object[], * Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception). * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}. */ public static <T> Handler<T> createForAfterInvoke( final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with custom actions to be executed both before and after method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result)); * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..." * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..." * * // Both actions are required; passing null for either throws. * HandlerFactory.create((proxy, args, sig) -> {}, null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param <E> exception type that actions can throw * @param beforeInvokeAction the action to perform before the method is called. * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception). * @return a new {@code Handler} instance. * @throws IllegalArgumentException if either action is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction, final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } private HandlerFactory() { // utility class - prevent instantiation. } } /** * An interface for caching the results of DAO method calls. Implementations can provide * various caching strategies (e.g., in-memory, distributed) to improve application performance. * * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p> * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p> * * <p>Two built-in implementations are provided:</p> * <ul> * <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li> * <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li> * </ul> * * @see DefaultDaoCache * @see DaoCacheByMap */ public interface DaoCache { /** * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@link DefaultDaoCache} * which uses a {@link KeyedObjectPool} for in-memory caching with TTL and idle time-based eviction. * * @param capacity the maximum number of entries in the cache. * @param evictDelay the interval in milliseconds for the eviction scheduler to run. * @return a new {@code DaoCache} instance. */ static DaoCache create(final int capacity, final long evictDelay) { return new DefaultDaoCache(capacity, evictDelay); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not * perform automatic eviction. * * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap() { return new DaoCacheByMap(); } /** * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom * map implementations (e.g., {@code ConcurrentHashMap}) for caching. * * @param map the map to use for caching. * @return a new {@code DaoCache} instance backed by the provided map. * @throws IllegalArgumentException if {@code map} is {@code null}. */ static DaoCache createByMap(Map<String, Object> map) { N.checkArgNotNull(map, "map"); return new DaoCacheByMap(map); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap} created with the * given initial capacity. This cache does not perform automatic eviction. * * @param capacity the initial capacity of the backing map. * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap(final int capacity) { return new DaoCacheByMap(capacity); } /** * Retrieves a cached result. The implementation can use the provided parameters to customize * the cache key generation if needed. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A return value of * {@code null} is treated as a cache miss by the framework, so implementations should not store * {@code null} results.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * // defaultCacheKey format: fullMethodName#tableName#jsonArrayOfParameters * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); * if (hit == null) { * // cache miss: execute the query and populate the cache via put(...) * } * }</pre> * * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance on which the method was called. * @param args the arguments passed to the method. * @param methodSignature a tuple containing method metadata. * @return the cached result, or {@code null} if not found. */ Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with default time-to-live (TTL) settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result} * is typically rejected (and not cached), since {@code null} is indistinguishable from a cache miss in * {@link #get(String, Object, Object[], Tuple3)}.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * User user = ...; // result of a query * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // cached == true when the non-null result was stored * }</pre> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with custom time-to-live (TTL) and idle time settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result} * is typically rejected (and not cached). Whether {@code liveTime}/{@code maxIdleTime} are honored depends on * the implementation; map-backed caches such as {@link DaoCacheByMap} ignore them.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * User user = ...; * // Cache for at most 60 seconds, evicting after 10 seconds of inactivity. * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, 60_000L, 10_000L, daoProxy, args, sig); * }</pre> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Updates the cache after a data modification operation (e.g., insert, update, delete). This method * is responsible for invalidating or clearing cache entries that may be affected by the operation. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. Typical implementations * invalidate every entry whose key references the affected table (parsed from {@code defaultCacheKey}), or * clear the whole cache when the table name cannot be determined.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // After updating the "users" table, invalidate the cached entries for that table. * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig); * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null * }</pre> * * @param defaultCacheKey the default cache key from the modification method. * @param result the result of the modification operation (e.g., number of rows affected). * @param daoProxy the DAO proxy instance. * @param args the arguments of the modification method. * @param methodSignature a tuple containing method metadata. */ void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); } /** * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching * with support for time-to-live (TTL) and idle time-based eviction. * * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all * entries associated with the affected table. If the table name cannot be determined from the cache key, * the entire cache is cleared.</p> * * @see DaoCache#create(int, long) */ public static final class DefaultDaoCache implements DaoCache { private final KeyedObjectPool<String, PoolableAdapter<Object>> pool; /** * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay. * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Holds up to 1000 entries; the eviction thread runs every 3 seconds. * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000); * boolean cached = cache.put(key, result, daoProxy, args, sig); // returns true (non-null result cached) * Object hit = cache.get(key, daoProxy, args, sig); // returns the cached result * boolean rejected = cache.put(key2, null, daoProxy, args, sig); // returns false (null result not cached) * }</pre> * * @param capacity the maximum number of entries the cache can hold. * @param evictDelay the interval in milliseconds for the background eviction thread. */ public DefaultDaoCache(final int capacity, final long evictDelay) { pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay); } /** * Retrieves a previously cached result from the backing {@link KeyedObjectPool}. * The {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused by this * implementation; only {@code defaultCacheKey} is consulted. * * @param defaultCacheKey the cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted). */ @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final PoolableAdapter<Object> w = pool.get(defaultCacheKey); return w == null ? null : w.value(); } /** * Caches a result using the framework default TTL ({@code JdbcUtil.DEFAULT_CACHE_LIVE_TIME}) and * default max idle time ({@code JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME}). * * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned, so that a cached * value can never be confused with a miss in {@link #get(String, Object, Object[], Tuple3)}. The * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p> * * @param defaultCacheKey the cache key; must not be {@code null}. * @param result the method result to cache; if {@code null}, nothing is cached. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} * or the backing pool rejected the entry. * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}. */ @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); // Reject null result to match DaoCacheByMap.put — otherwise a cached null is // indistinguishable from a miss (the sentinel-free contract of get()) and the // entry silently poisons cache capacity without ever being useful. if (result == null) { return false; } return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME)); } /** * Caches a result with the given time-to-live and max idle time, honored by the backing {@link KeyedObjectPool}. * * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned. The * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p> * * @param defaultCacheKey the cache key; must not be {@code null}. * @param result the method result to cache; if {@code null}, nothing is cached. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} * or the backing pool rejected the entry. * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}. */ @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime)); } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries whose key references that table (matched case-insensitively). * Otherwise, it clears the entire cache. * No action is taken for built-in update operations that report zero affected rows (an * {@code int}/{@code long} result of {@code 0}). The {@code daoProxy} and {@code args} arguments are unused. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000); * // Cache key format: fullMethodName#tableName#jsonArrayOfParameters * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // An update against the "users" table invalidates all entries for that table. * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig); * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted) * }</pre> * * @param defaultCacheKey the cache key from the modification method (used to extract the affected table name). * @param result the result of the modification operation; a zero row count for a built-in update is treated as a no-op. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { pool.clear(); } else { pool.keySet().stream().filter(k -> cacheKeyMatchesTable(k, updatedTableName)).toList().forEach(pool::remove); } } } /** * A simple implementation of {@link DaoCache} backed by a {@code Map} (defaults to * {@code ConcurrentHashMap}). Unlike {@link DefaultDaoCache}, this implementation does not * support automatic eviction or TTL-based expiration. Entries remain in the cache until explicitly * invalidated by a data modification operation or manual clearing. * * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p> * * @see DaoCache#createByMap() * @see DaoCache#createByMap(Map) */ record DaoCacheByMap(Map<String, Object> cache) implements DaoCache { /** * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}. */ public DaoCacheByMap() { this(new ConcurrentHashMap<>()); } /** * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity. * * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}. */ public DaoCacheByMap(final int capacity) { this(new ConcurrentHashMap<>(capacity)); } /** * Creates a {@code DaoCacheByMap} backed by a provided map instance. * * @param cache the map to be used for caching. * @throws IllegalArgumentException if {@code cache} is {@code null}. */ DaoCacheByMap { N.checkArgNotNull(cache, "cache"); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { return cache.get(defaultCacheKey); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Stores the result in the cache. The {@code liveTime} and {@code maxIdleTime} parameters * are ignored because this implementation does not support TTL-based eviction. */ @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries whose key references that table (matched case-insensitively). * Otherwise, it clears the entire cache. * No action is taken for built-in update operations that report zero affected rows (an * {@code int}/{@code long} result of {@code 0}). */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { cache.clear(); } else { cache.entrySet().removeIf(e -> cacheKeyMatchesTable(e.getKey(), updatedTableName)); } } } private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) { final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); return Strings.isNotEmpty(cachedTableName) && cachedTableName.equalsIgnoreCase(tableName); } }`
+- **Signature:** `class OutParam { /** * The 1-based index of the parameter in the stored procedure call. */ private int parameterIndex; /** * The name of the parameter. This is optional and used for named parameter calls. */ private String parameterName; /** * The SQL type of the parameter, as defined in {@code java.sql.Types}. */ private int sqlType; /** * The database-specific type name. This is generally used for user-defined or complex types. */ private String typeName; /** * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types. */ private int scale; /** * A factory method to create an {@code OutParam} with the specified index and SQL type. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParam idOut = OutParam.of(1, Types.INTEGER); * int idx = idOut.getParameterIndex(); // returns 1 * int type = idOut.getSqlType(); // returns Types.INTEGER * String name = idOut.getParameterName(); // returns null (index-based registration) * * // parameterIndex is 1-based and must be greater than 0. * OutParam bad = OutParam.of(0, Types.INTEGER); // throws IllegalArgumentException * }</pre> * * @param parameterIndex the 1-based index of the parameter (must be {@code > 0}). * @param sqlType the SQL type from {@code java.sql.Types}. * @return a new {@code OutParam} instance. * @throws IllegalArgumentException if {@code parameterIndex <= 0} — index is 1-based, * and passing 0 here would cause the downstream consumer to fall through to the * name-based path with a null name, producing an opaque driver error. */ public static OutParam of(int parameterIndex, int sqlType) { N.checkArgument(parameterIndex > 0, "'parameterIndex' must be greater than 0 (1-based), but was: %s", parameterIndex); final OutParam outParam = new OutParam(); outParam.setParameterIndex(parameterIndex); outParam.setSqlType(sqlType); return outParam; } } /** * A container for the values of output parameters produced by a stored procedure * execution. Values can be retrieved by their 1-based parameter index or by parameter name, * depending on how the underlying {@link OutParam} was registered. * * <p>This type is not directly instantiable by callers; instances are produced by the framework * (e.g. by {@code CallableQuery} methods that accept a list of {@code OutParam}s).</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // After executing a stored procedure with output parameters * OutParamResult result = callableQuery.executeAndGetOutParameters(); * * // Retrieve by index * int id = result.getOutParamValue(1); * * // Retrieve by name * String name = result.getOutParamValue("result_name"); * }</pre> * * @see OutParam */ @EqualsAndHashCode @ToString public static final class OutParamResult { private final List<OutParam> outParams; private final Map<Object, Object> outParamValues; /** * Constructs an {@code OutParamResult} with the specified output parameters and their values. * * @param outParams the list of {@code OutParam} definitions. * @param outParamValues a map of output parameter values, keyed by index or name. */ OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) { this.outParams = outParams; this.outParamValues = outParamValues; } /** * Retrieves the value of an output parameter by its 1-based index. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * int id = result.getOutParamValue(1); // returns the value registered at index 1 * Object none = result.getOutParamValue(99); // returns null (no value at index 99) * }</pre> * * @param <T> expected parameter value type * @param parameterIndex the 1-based index of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final int parameterIndex) { return (T) outParamValues.get(parameterIndex); } /** * Retrieves the value of an output parameter by its name. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * String name = result.getOutParamValue("result_name"); // returns the value registered under "result_name" * Object none = result.getOutParamValue("unknown"); // returns null (no such name) * }</pre> * * @param <T> expected parameter value type * @param parameterName the name of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final String parameterName) { return (T) outParamValues.get(parameterName); } /** * Returns a map containing all output parameter values. The keys of the map are * either the parameter index ({@code Integer}) or name ({@code String}). * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * Map<Object, Object> all = result.getOutParamValues(); * Object byIndex = all.get(1); // value keyed by 1-based index * Object byName = all.get("result_name"); // value keyed by parameter name * }</pre> * * @return an unmodifiable view of the map of all output parameter values. */ public Map<Object, Object> getOutParamValues() { return ImmutableMap.wrap(outParamValues); } /** * Returns the list of {@link OutParam} definitions that were used to register the output parameters. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * List<OutParam> defs = result.getOutParams(); * int size = defs.size(); // number of registered out-parameters * int firstIndex = defs.get(0).getParameterIndex(); // 1-based index of the first out-param * }</pre> * * @return an unmodifiable view of the list of {@code OutParam} objects. */ public List<OutParam> getOutParams() { return ImmutableList.wrap(outParams); } } /** * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called. * * <p>Both {@link #beforeInvoke} and {@link #afterInvoke} have empty default implementations, so * implementations only need to override the hooks they care about.</p> * * <p>Implementations should be thread-safe if the same handler instance is registered against * multiple DAO proxies or invoked concurrently.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> loggingHandler = new Handler<>() { * public void beforeInvoke(UserDao proxy, Object[] args, * Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { * System.out.println("Calling method: " + methodSignature._1.getName()); * } * public void afterInvoke(Object result, UserDao proxy, Object[] args, * Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { * System.out.println("Method returned: " + result); * } * }; * }</pre> * * @param <P> DAO proxy type * @see HandlerFactory */ @Beta public interface Handler<P> { /** * This method is invoked before the actual DAO method is called. It can be used for * logging, argument validation, security checks, or transaction management. * * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } /** * This method is invoked after the DAO method completes, whether successfully or with an exception. * Handlers are invoked in the reverse order of their {@link #beforeInvoke} calls; if this * handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke} * is not invoked for it. It can be used for logging results, result transformation, or resource cleanup. * * <p>Exceptions thrown from this method are logged and attached as suppressed exceptions to any primary * failure from the DAO method itself (they never replace it); if the DAO method completed normally, the * first such exception is propagated to the caller.</p> * * @param result the value returned by the method. Will be {@code null} if the method's return type is * {@code void} or if the method threw an exception (in which case the throwable is not * surfaced here). * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } } /** * A factory for creating and managing {@link Handler} instances. It provides a central registry * for handlers and supports integration with the Spring Framework's application context. * * <p>Handlers can be registered manually via {@link #register(Handler)} or retrieved from * the Spring application context if available. The factory also provides convenience methods * to create handlers from lambda expressions.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Create a handler with before/after actions * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result) * ); * * // Register and retrieve a handler by class * HandlerFactory.register(myHandler); * Handler<?> h = HandlerFactory.get(MyHandler.class); * }</pre> * * @see Handler */ public static final class HandlerFactory { @SuppressWarnings("rawtypes") static final Handler EMPTY = new Handler() { // Do nothing. }; private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>(); private static final SpringApplicationContext springAppContext; static { handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY); handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY); SpringApplicationContext tmp = null; try { tmp = new SpringApplicationContext(); } catch (final Exception | LinkageError e) { // ignore. } springAppContext = tmp; } /** * Registers a handler by creating a new instance of the specified handler class. * The handler is registered using its canonical class name as the qualifier. * The class must have an accessible no-argument constructor; the instance is created * via reflection. * * <p><b>Usage Examples:</b></p> * <pre>{@code * boolean registered = HandlerFactory.register(MyHandler.class); // returns true if newly registered * boolean again = HandlerFactory.register(MyHandler.class); // returns false (already registered) * * HandlerFactory.register((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * @param handlerClass the handler class to instantiate and register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if it is abstract or otherwise cannot be * instantiated (e.g. it has no accessible no-argument constructor). The reflective instantiation is performed * by {@code N.newInstance(Class)}. */ public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { N.checkArgNotNull(handlerClass, cs.handlerClass); return register(N.newInstance(handlerClass)); } /** * Registers a handler instance. The handler is registered using its canonical class name as the qualifier. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<MyDao> handler = new MyHandler(); * boolean registered = HandlerFactory.register(handler); // returns true if newly registered * boolean again = HandlerFactory.register(new MyHandler()); // returns false (same qualifier already present) * * HandlerFactory.register((Handler<?>) null); // throws IllegalArgumentException * }</pre> * * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handler} is {@code null}, or if {@code handler}'s class has no canonical name * (e.g. an anonymous, local, or lambda-built handler); use {@link #register(String, Handler)} with an explicit qualifier for those. */ public static boolean register(final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotNull(handler, cs.handler); return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler); } /** * Registers a handler instance with a specific qualifier string. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<MyDao> handler = new MyHandler(); * boolean registered = HandlerFactory.register("myHandler", handler); // returns true if newly registered * boolean again = HandlerFactory.register("myHandler", new MyHandler()); // returns false (qualifier already present) * * HandlerFactory.register("", handler); // throws IllegalArgumentException (empty qualifier) * }</pre> * * @param qualifier the unique identifier for the handler. * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}. */ public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotEmpty(qualifier, cs.qualifier); N.checkArgNotNull(handler, cs.handler); return handlerPool.putIfAbsent(qualifier, handler) == null; } /** * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found, * it attempts to retrieve it from the Spring application context if available. * * <p>A handler resolved from the Spring context is cached into the internal registry only if no * entry already exists for this qualifier (first-wins), so a Spring bean can never silently * overwrite a handler explicitly registered via {@link #register(String, Handler)}.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * HandlerFactory.register("myHandler", new MyHandler()); * Handler<?> h = HandlerFactory.get("myHandler"); // returns the registered handler * Handler<?> none = HandlerFactory.get("no.such.Handler"); // returns null (not registered, no Spring bean) * * HandlerFactory.get(""); // throws IllegalArgumentException (empty qualifier) * }</pre> * * @param qualifier the unique identifier for the handler. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code qualifier} is empty. */ public static Handler<?> get(final String qualifier) { //NOSONAR N.checkArgNotEmpty(qualifier, cs.qualifier); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; // putIfAbsent (first-wins) so a Spring bean can never silently overwrite a handler // explicitly registered via register(...) -- register() itself uses putIfAbsent. handlerPool.putIfAbsent(qualifier, result); } } catch (final Exception e) { // Spring context lookup failed (no such bean, context not ready, or bean creation error) — return null } } return result; } /** * Retrieves a handler by its class. It first checks the internal registry using the class's * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring * application context. * * <p>A handler resolved from the Spring context is then cached into the internal registry, replacing * any existing entry for this qualifier.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * HandlerFactory.register(new MyHandler()); * Handler<?> h = HandlerFactory.get(MyHandler.class); // returns the registered handler * Handler<?> none = HandlerFactory.get(UnregisteredHandler.class); // returns null (not registered, no Spring bean) * * HandlerFactory.get((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * @param handlerClass the class of the handler to retrieve. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); final String qualifier = ClassUtil.getCanonicalClassName(handlerClass); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { result = springAppContext.getBean(handlerClass); } catch (final Exception e) { // Bean not found in Spring context by class } if (result == null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; } } catch (final Exception e) { // Bean not found in Spring context by qualifier } } if (result != null) { handlerPool.put(qualifier, result); } } return result; } /** * Retrieves a handler by its class. If the handler is not found in the registry or Spring context, * a new instance is created, registered, and returned. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<?> h = HandlerFactory.getOrCreate(MyHandler.class); // creates, registers and returns a new instance * Handler<?> same = HandlerFactory.getOrCreate(MyHandler.class); // returns the same registered instance (h == same) * * HandlerFactory.getOrCreate((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * <p>When a new instance has to be created, this method is race-safe: if another thread registers its own * instance for the same qualifier first, the already-registered instance is returned so that all callers * observe the same once-per-qualifier handler.</p> * * @param handlerClass the class of the handler to retrieve or create. * @return the existing or newly created handler instance. May be {@code null} only if {@code N.newInstance} returns * {@code null} for the given class. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if a new instance has to be created and * the class is abstract or otherwise cannot be instantiated (e.g. it has no accessible no-argument constructor). */ public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); Handler<?> result = get(handlerClass); if (result == null) { result = N.newInstance(handlerClass); if (result != null) { // register(...) returns false if another thread won the race and registered // its own instance first. Without re-fetching, this thread would return its // own unregistered instance — breaking the once-per-qualifier identity // contract callers rely on for stateful handler bookkeeping. if (!register(result)) { final Handler<?> registered = get(handlerClass); if (registered != null) { result = registered; } } } } return result; } /** * Creates a {@code Handler} with a custom action to be executed before method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.createForBeforeInvoke( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName())); * // The handler's beforeInvoke runs the action; afterInvoke is a no-op. * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..." * * HandlerFactory.createForBeforeInvoke((Throwables.TriConsumer<Object, Object[], * Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param beforeInvokeAction the action to perform before the method is called. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}. */ public static <T> Handler<T> createForBeforeInvoke( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> beforeInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with a custom action to be executed after method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.createForAfterInvoke( * (result, proxy, args, sig) -> System.out.println("After: " + result)); * // The handler's afterInvoke runs the action; beforeInvoke is a no-op. * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..." * * HandlerFactory.createForAfterInvoke((Throwables.QuadConsumer<Object, Object, Object[], * Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception). * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}. */ public static <T> Handler<T> createForAfterInvoke( final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with custom actions to be executed both before and after method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result)); * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..." * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..." * * // Both actions are required; passing null for either throws. * HandlerFactory.create((proxy, args, sig) -> {}, null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param <E> exception type that actions can throw * @param beforeInvokeAction the action to perform before the method is called. * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception). * @return a new {@code Handler} instance. * @throws IllegalArgumentException if either action is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction, final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } private HandlerFactory() { // utility class - prevent instantiation. } } /** * An interface for caching the results of DAO method calls. Implementations can provide * various caching strategies (e.g., in-memory, distributed) to improve application performance. * * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p> * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p> * * <p>Two built-in implementations are provided:</p> * <ul> * <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li> * <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li> * </ul> * * @see DefaultDaoCache * @see DaoCacheByMap */ public interface DaoCache { /** * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@link DefaultDaoCache} * which uses a {@link KeyedObjectPool} for in-memory caching with TTL and idle time-based eviction. * * @param capacity the maximum number of entries in the cache. * @param evictDelay the interval in milliseconds for the eviction scheduler to run. * @return a new {@code DaoCache} instance. */ static DaoCache create(final int capacity, final long evictDelay) { return new DefaultDaoCache(capacity, evictDelay); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not * perform automatic eviction. * * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap() { return new DaoCacheByMap(); } /** * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom * map implementations (e.g., {@code ConcurrentHashMap}) for caching. * * <p>The provided map must be thread-safe (e.g., {@code ConcurrentHashMap}) if the DAO is * accessed concurrently, because the framework reads, writes, and invalidates entries from * whatever threads invoke the DAO methods.</p> * * @param map the map to use for caching. * @return a new {@code DaoCache} instance backed by the provided map. * @throws IllegalArgumentException if {@code map} is {@code null}. */ static DaoCache createByMap(Map<String, Object> map) { N.checkArgNotNull(map, "map"); return new DaoCacheByMap(map); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap} created with the * given initial capacity. This cache does not perform automatic eviction. * * @param capacity the initial capacity of the backing map. * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap(final int capacity) { return new DaoCacheByMap(capacity); } /** * Retrieves a cached result. The implementation can use the provided parameters to customize * the cache key generation if needed. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A return value of * {@code null} is treated as a cache miss by the framework, so implementations should not store * {@code null} results.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * // defaultCacheKey format: fullMethodName#tableName#jsonArrayOfParameters * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); * if (hit == null) { * // cache miss: execute the query and populate the cache via put(...) * } * }</pre> * * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance on which the method was called. * @param args the arguments passed to the method. * @param methodSignature a tuple containing method metadata. * @return the cached result, or {@code null} if not found. */ Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with default time-to-live (TTL) settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result} * is typically rejected (and not cached), since {@code null} is indistinguishable from a cache miss in * {@link #get(String, Object, Object[], Tuple3)}.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * User user = ...; // result of a query * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // cached == true when the non-null result was stored * }</pre> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with custom time-to-live (TTL) and idle time settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result} * is typically rejected (and not cached). Whether {@code liveTime}/{@code maxIdleTime} are honored depends on * the implementation; map-backed caches such as {@link DaoCacheByMap} ignore them.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * User user = ...; * // Cache for at most 60 seconds, evicting after 10 seconds of inactivity. * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, 60_000L, 10_000L, daoProxy, args, sig); * }</pre> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Updates the cache after a data modification operation (e.g., insert, update, delete). This method * is responsible for invalidating or clearing cache entries that may be affected by the operation. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. Typical implementations * invalidate every entry whose key references the affected table (parsed from {@code defaultCacheKey}), or * clear the whole cache when the table name cannot be determined.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // After updating the "users" table, invalidate the cached entries for that table. * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig); * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null * }</pre> * * @param defaultCacheKey the default cache key from the modification method. * @param result the result of the modification operation (e.g., number of rows affected). * @param daoProxy the DAO proxy instance. * @param args the arguments of the modification method. * @param methodSignature a tuple containing method metadata. */ void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); } /** * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching * with support for time-to-live (TTL) and idle time-based eviction. * * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all * entries associated with the affected table. If the table name cannot be determined from the cache key, * the entire cache is cleared.</p> * * @see DaoCache#create(int, long) */ public static final class DefaultDaoCache implements DaoCache { private final KeyedObjectPool<String, PoolableAdapter<Object>> pool; /** * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay. * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Holds up to 1000 entries; the eviction thread runs every 3 seconds. * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000); * boolean cached = cache.put(key, result, daoProxy, args, sig); // returns true (non-null result cached) * Object hit = cache.get(key, daoProxy, args, sig); // returns the cached result * boolean rejected = cache.put(key2, null, daoProxy, args, sig); // returns false (null result not cached) * }</pre> * * @param capacity the maximum number of entries the cache can hold. * @param evictDelay the interval in milliseconds for the background eviction thread. */ public DefaultDaoCache(final int capacity, final long evictDelay) { pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay); } /** * Retrieves a previously cached result from the backing {@link KeyedObjectPool}. * The {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused by this * implementation; only {@code defaultCacheKey} is consulted. * * @param defaultCacheKey the cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted). */ @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final PoolableAdapter<Object> w = pool.get(defaultCacheKey); return w == null ? null : w.value(); } /** * Caches a result using the framework default TTL ({@code JdbcUtil.DEFAULT_CACHE_LIVE_TIME}) and * default max idle time ({@code JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME}). * * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned, so that a cached * value can never be confused with a miss in {@link #get(String, Object, Object[], Tuple3)}. The * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p> * * @param defaultCacheKey the cache key; must not be {@code null}. * @param result the method result to cache; if {@code null}, nothing is cached. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} * or the backing pool rejected the entry. * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}. */ @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); // Reject null result to match DaoCacheByMap.put — otherwise a cached null is // indistinguishable from a miss (the sentinel-free contract of get()) and the // entry silently poisons cache capacity without ever being useful. if (result == null) { return false; } return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME)); } /** * Caches a result with the given time-to-live and max idle time, honored by the backing {@link KeyedObjectPool}. * * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned. The * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p> * * @param defaultCacheKey the cache key; must not be {@code null}. * @param result the method result to cache; if {@code null}, nothing is cached. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} * or the backing pool rejected the entry. * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}. */ @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime)); } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries whose key references that table (matched case-insensitively). * Otherwise, it clears the entire cache. * No action is taken for built-in update operations that report zero affected rows (an * {@code int}/{@code long} result of {@code 0}). The {@code daoProxy} and {@code args} arguments are unused. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000); * // Cache key format: fullMethodName#tableName#jsonArrayOfParameters * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // An update against the "users" table invalidates all entries for that table. * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig); * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted) * }</pre> * * @param defaultCacheKey the cache key from the modification method (used to extract the affected table name). * @param result the result of the modification operation; a zero row count for a built-in update is treated as a no-op. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { pool.clear(); } else { pool.keySet().stream().filter(k -> cacheKeyMatchesTable(k, updatedTableName)).toList().forEach(pool::remove); } } } /** * A simple implementation of {@link DaoCache} backed by a {@code Map} (defaults to * {@code ConcurrentHashMap}). Unlike {@link DefaultDaoCache}, this implementation does not * support automatic eviction or TTL-based expiration. Entries remain in the cache until explicitly * invalidated by a data modification operation or manual clearing. * * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p> * * @see DaoCache#createByMap() * @see DaoCache#createByMap(Map) */ record DaoCacheByMap(Map<String, Object> cache) implements DaoCache { /** * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}. */ public DaoCacheByMap() { this(new ConcurrentHashMap<>()); } /** * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity. * * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}. */ public DaoCacheByMap(final int capacity) { this(new ConcurrentHashMap<>(capacity)); } /** * Creates a {@code DaoCacheByMap} backed by a provided map instance. * * @param cache the map to be used for caching. * @throws IllegalArgumentException if {@code cache} is {@code null}. */ DaoCacheByMap { N.checkArgNotNull(cache, "cache"); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { return cache.get(defaultCacheKey); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Stores the result in the cache. The {@code liveTime} and {@code maxIdleTime} parameters * are ignored because this implementation does not support TTL-based eviction. */ @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries whose key references that table (matched case-insensitively). * Otherwise, it clears the entire cache. * No action is taken for built-in update operations that report zero affected rows (an * {@code int}/{@code long} result of {@code 0}). */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { cache.clear(); } else { cache.entrySet().removeIf(e -> cacheKeyMatchesTable(e.getKey(), updatedTableName)); } } } private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) { final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); return Strings.isNotEmpty(cachedTableName) && cachedTableName.equalsIgnoreCase(tableName); } }`
 - **Parameters:**
   - (none)
 
@@ -7022,7 +7030,8 @@ A handler interface for intercepting method invocations on DAO proxies, similar 
 - **Signature:** `@SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)`
 - **Summary:** This method is invoked after the DAO method completes, whether successfully or with an exception.
 - **Contract:**
-  - It is also invoked for handlers that were entered via {@link #beforeInvoke} , in reverse order; if this handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke} is not invoked for it.
+  - Handlers are invoked in the reverse order of their {@link #beforeInvoke} calls; if this handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke} is not invoked for it.
+  - <p> Exceptions thrown from this method are logged and attached as suppressed exceptions to any primary failure from the DAO method itself (they never replace it); if the DAO method completed normally, the first such exception is propagated to the caller.
 - **Parameters:**
   - `result` (`Object`) — the value returned by the method. Will be {@code null} if the method's return type is {@code void} or if the method threw an exception (in which case the throwable is not surfaced here).
   - `proxy` (`P`) — the proxy instance on which the method was invoked.
@@ -7058,7 +7067,7 @@ A factory for creating and managing {@link Handler} instances.
   - `handler` (`Handler<?>`) — the handler instance to register.
 - **Returns:** {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code handler} is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code handler} is {@code null} , or if {@code handler} 's class has no canonical name (e.g. an anonymous, local, or lambda-built handler); use {@link #register(String, Handler)} with an explicit qualifier for those.
 - **Signature:** `public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException`
 - **Summary:** Registers a handler instance with a specific qualifier string.
 - **Contract:**
@@ -7074,6 +7083,7 @@ A factory for creating and managing {@link Handler} instances.
 - **Summary:** Retrieves a handler by its qualifier.
 - **Contract:**
   - It first checks the internal registry, and if not found, it attempts to retrieve it from the Spring application context if available.
+  - <p> A handler resolved from the Spring context is cached into the internal registry only if no entry already exists for this qualifier (first-wins), so a Spring bean can never silently overwrite a handler explicitly registered via {@link #register(String, Handler)} .
 - **Parameters:**
   - `qualifier` (`String`) — the unique identifier for the handler.
 - **Returns:** the handler instance, or {@code null} if not found.
@@ -7147,6 +7157,8 @@ An interface for caching the results of DAO method calls.
 - **Returns:** a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap} .
 - **Signature:** `static DaoCache createByMap(Map<String, Object> map)`
 - **Summary:** Creates a {@code DaoCache} backed by the provided {@code Map} .
+- **Contract:**
+  - <p> The provided map must be thread-safe (e.g., {@code ConcurrentHashMap} ) if the DAO is accessed concurrently, because the framework reads, writes, and invalidates entries from whatever threads invoke the DAO methods.
 - **Parameters:**
   - `map` (`Map<String, Object>`) — the map to use for caching.
 - **Returns:** a new {@code DaoCache} instance backed by the provided map.
@@ -7333,7 +7345,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `entityName` (`String`) — the name of the entity class to generate
   - `query` (`String`) — the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
 - **Returns:** the generated entity class as a string containing the complete Java source code
-- **Signature:** `public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config)`
+- **Signature:** `public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) throws UncheckedSQLException`
 - **Summary:** Generates an entity class using an existing connection, custom SQL query, and configuration.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
@@ -7341,6 +7353,8 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `query` (`String`) — the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
   - `config` (`EntityCodeConfig`) — the configuration for customizing the generated entity class. If {@code null} , default configuration is used
 - **Returns:** the generated entity class as a string containing the complete Java source code
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### generateSelectSql(...) -> String
 - **Signature:** `public static String generateSelectSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table.
@@ -7350,12 +7364,14 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** a SELECT SQL statement string with all columns from the table
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateSelectSql(final Connection conn, final String tableName)`
+- **Signature:** `public static String generateSelectSql(final Connection conn, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table using an existing connection.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the SELECT statement
 - **Returns:** a SELECT SQL statement string with all columns from the table
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **Signature:** `public static String generateSelectSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table, excluding certain columns and applying a WHERE clause.
 - **Parameters:**
@@ -7385,12 +7401,14 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an INSERT SQL statement string with positional parameters for all columns
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateInsertSql(final Connection conn, final String tableName)`
+- **Signature:** `public static String generateInsertSql(final Connection conn, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table using an existing connection.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the INSERT statement
 - **Returns:** an INSERT SQL statement string with positional parameters for all columns
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **Signature:** `public static String generateInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table, excluding certain columns.
 - **Parameters:**
@@ -7400,13 +7418,15 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an INSERT SQL statement string with positional parameters for all included columns
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames)`
+- **Signature:** `public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table, excluding certain columns.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the INSERT statement
   - `excludedColumnNames` (`Collection<String>`) — a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
 - **Returns:** an INSERT SQL statement string with positional parameters for all included columns
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **See also:** #generateInsertSql(Connection, String), #generateInsertSql(DataSource, String, Collection), #generateNamedInsertSql(Connection, String, Collection)
 ##### generateNamedInsertSql(...) -> String
 - **Signature:** `public static String generateNamedInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
@@ -7417,12 +7437,14 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an INSERT SQL statement string with named parameters based on camelCase column names
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateNamedInsertSql(final Connection conn, final String tableName)`
+- **Signature:** `public static String generateNamedInsertSql(final Connection conn, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table using an existing connection.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the named INSERT statement
 - **Returns:** an INSERT SQL statement string with named parameters based on camelCase column names
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **Signature:** `public static String generateNamedInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table, excluding certain columns.
 - **Parameters:**
@@ -7432,13 +7454,15 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an INSERT SQL statement string with named parameters for all included columns
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames)`
+- **Signature:** `public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table using an existing connection, excluding certain columns.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the named INSERT statement
   - `excludedColumnNames` (`Collection<String>`) — a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
 - **Returns:** an INSERT SQL statement string with named parameters for all included columns
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **See also:** #generateNamedInsertSql(Connection, String), #generateNamedInsertSql(DataSource, String, Collection), #generateInsertSql(Connection, String, Collection)
 ##### generateUpdateSql(...) -> String
 - **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
@@ -7452,7 +7476,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName)`
+- **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table using an existing connection.
 - **Contract:**
   - Note: Users should append an appropriate WHERE clause before executing.
@@ -7460,22 +7484,26 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the UPDATE statement
 - **Returns:** an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `tableName` (`String`) — the name of the table for which to generate the UPDATE statement
-  - `keyColumnName` (`String`) — the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+  - `keyColumnName` (`String`) — the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )
 - **Returns:** an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName)`
+- **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the UPDATE statement
-  - `keyColumnName` (`String`) — the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+  - `keyColumnName` (`String`) — the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )
 - **Returns:** an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table through a data source, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
@@ -7488,7 +7516,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **See also:** #generateUpdateSql(Connection, String, String), #generateUpdateSql(Connection, String, Collection, Collection, String), #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
-- **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause)`
+- **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table using an existing connection, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
@@ -7497,6 +7525,8 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `keyColumnNames` (`Collection<String>`) — a collection of column names to use in the WHERE clause. Can be {@code null} or empty
   - `whereClause` (`String`) — an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
 - **Returns:** an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **See also:** #generateUpdateSql(Connection, String, String), #generateUpdateSql(DataSource, String, Collection, Collection, String), #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
 ##### generateNamedUpdateSql(...) -> String
 - **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
@@ -7510,7 +7540,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName)`
+- **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table using an existing connection.
 - **Contract:**
   - Note: Users should append an appropriate WHERE clause before executing.
@@ -7518,22 +7548,26 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the named UPDATE statement
 - **Returns:** an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `tableName` (`String`) — the name of the table for which to generate the named UPDATE statement
-  - `keyColumnName` (`String`) — the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+  - `keyColumnName` (`String`) — the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )
 - **Returns:** an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName)`
+- **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the named UPDATE statement
-  - `keyColumnName` (`String`) — the column name to use in the WHERE clause; this column is excluded from the SET clause and is matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied
+  - `keyColumnName` (`String`) — the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )
 - **Returns:** an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table through a data source, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
@@ -7545,7 +7579,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
-- **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause)`
+- **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table using an existing connection, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
@@ -7554,6 +7588,8 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `keyColumnNames` (`Collection<String>`) — a collection of column names to use in the WHERE clause. Can be {@code null} or empty
   - `whereClause` (`String`) — an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
 - **Returns:** an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
+- **Throws:**
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
 - **See also:** #generateNamedUpdateSql(Connection, String, String), #generateNamedUpdateSql(DataSource, String, Collection, Collection, String), #generateUpdateSql(Connection, String, Collection, Collection, String)
 ##### convertInsertSqlToUpdateSql(...) -> String
 - **Signature:** `@Beta public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql)`
@@ -7623,21 +7659,18 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - (none)
 
 #### Public Static Methods
-##### getDBProductInfo(...) -> SqlDialect.ProductInfo
-- **Signature:** `public static SqlDialect.ProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException`
+##### getDBProductInfo(...) -> ProductInfo
+- **Signature:** `public static ProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Retrieves the database product information from the given DataSource.
-- **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code DataSource dataSource = ...; // Obtain a DataSource instance SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource); System.out.println("Database Product Name: " + dbInfo.name()); System.out.println("Database Product Version: " + dbInfo.version()); } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource from which to obtain a database connection.
 - **Returns:** A {@link SqlDialect.ProductInfo} object containing the database product name and version.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs while trying to connect to the database.
 - **See also:** #getDBProductInfo(Connection), SqlDialect.ProductInfo
-- **Signature:** `public static SqlDialect.ProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException`
+- **Signature:** `public static ProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Retrieves the database product information from the given {@link Connection} .
-- **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Connection connection = ...; // Obtain a database Connection SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection); System.out.println("Database Name: " + dbInfo.name()); System.out.println("Database Version: " + dbInfo.version()); } </pre>
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use for retrieving metadata. It must be an active connection.
 - **Returns:** A {@link SqlDialect.ProductInfo} object containing the database product name and version.
@@ -7684,7 +7717,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** a {@code javax.sql.DataSource} instance configured with C3P0 and custom pool settings
 - **See also:** #createC3p0DataSource(String, String, String), com.mchange.v2.c3p0.ComboPooledDataSource
 ##### createConnection(...) -> Connection
-- **Signature:** `public static Connection createConnection(final String url, final String user, final String password) throws UncheckedSQLException`
+- **Signature:** `public static Connection createConnection(final String url, final String user, final String password) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a new database {@link Connection} using the specified URL, username, and password.
 - **Parameters:**
   - `url` (`String`) — The JDBC URL for the database connection (e.g., "jdbc:mysql://localhost:3306/mydb").
@@ -7692,6 +7725,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `password` (`String`) — The password for database authentication.
 - **Returns:** A new {@link Connection} object.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code url} is empty or the driver class cannot be determined from the URL.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs while creating the connection.
 - **See also:** #createConnection(String, String, String, String), DriverManager#getConnection(String, String, String)
 - **Signature:** `public static Connection createConnection(final String driverClass, final String url, final String user, final String password) throws IllegalArgumentException, UncheckedSQLException`
@@ -7902,7 +7936,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static List<String> getColumnNames(final Connection conn, final String tableName) throws SQLException`
 - **Summary:** Returns an ordered list of column names for a specified table.
 - **Contract:**
-  - If the metadata lookup yields no match, it falls back to running an empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set metadata.
+  - If the metadata lookup yields no match and all name parts are simple identifiers (letters, digits, {@code _} and {@code $} ), it falls back to running an empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set metadata; quoted or otherwise exotic names have no such fallback.
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use.
   - `tableName` (`String`) — The name of the table for which to retrieve column names.
@@ -8003,16 +8037,17 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A {@link List} containing all values from the specified column.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs.
-- **Signature:** `public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws SQLException`
+- **Signature:** `public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException`
 - **Summary:** Retrieves all values from a single column of a {@link ResultSet} by its label and returns them as a list.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to retrieve values from. It will be iterated to the end.
   - `columnLabel` (`String`) — The label of the column to retrieve.
 - **Returns:** A {@link List} containing all values from the specified column.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if the column label does not exist in the result set.
   - `java.sql.SQLException` — if a database access error occurs.
-##### getColumn2FieldNameMap(...) -> ImmutableMap<String, String>
-- **Signature:** `public static ImmutableMap<String, String> getColumn2FieldNameMap(final Class<?> entityClass)`
+##### getColumnToPropNameMap(...) -> ImmutableMap<String, String>
+- **Signature:** `public static ImmutableMap<String, String> getColumnToPropNameMap(final Class<?> entityClass)`
 - **Summary:** Retrieves a mapping from database column names to entity field names for a given entity class.
 - **Parameters:**
   - `entityClass` (`Class<?>`) — The entity class to analyze for column-to-field mappings.
@@ -8351,7 +8386,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `returnColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or returnColumnIndexes is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
@@ -8365,7 +8400,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `returnColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or returnColumnNames is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException`
@@ -8379,7 +8414,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function to create a PreparedStatement with custom configuration
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL is {@code null} , or if {@code stmtCreator} is {@code null}
+  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL is {@code null} or invalid, or if {@code stmtCreator} is {@code null}
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException`
@@ -8415,7 +8450,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `returnColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or returnColumnIndexes is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided Connection and ParsedSql object.
@@ -8427,7 +8462,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `returnColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or returnColumnNames is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query using a custom statement creator with the provided Connection and ParsedSql object.
@@ -8439,7 +8474,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function to create a PreparedStatement with custom configuration
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection or named SQL is {@code null} , or if {@code stmtCreator} is {@code null}
+  - `java.lang.IllegalArgumentException` — if the Connection or named SQL is {@code null} or invalid, or if {@code stmtCreator} is {@code null}
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 ##### prepareNamedQueryForLargeResult(...) -> NamedQuery
 - **Signature:** `@Beta public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql) throws IllegalArgumentException, SQLException`
@@ -8490,7 +8525,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `namedSql` (`ParsedSql`) — The pre-parsed named SQL to prepare
 - **Returns:** A NamedQuery object configured for big result sets
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection or named SQL is {@code null}
+  - `java.lang.IllegalArgumentException` — if the Connection or named SQL is {@code null} or invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 ##### prepareCallableQuery(...) -> CallableQuery
 - **Signature:** `public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException`
@@ -8673,7 +8708,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sql` (`String`) — The SQL string to execute
   - `listOfParameters` (`List<?>`) — A list of parameter sets for the batch update
   - `batchSize` (`int`) — The size of each batch
-- **Returns:** The number of rows affected by the batch update as a long value
+- **Returns:** The total number of rows affected by the batch update across all batches, as a long value (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the DataSource or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
   - `java.sql.SQLException` — if a SQL exception occurs while executing the batch update
@@ -8684,7 +8719,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `conn` (`Connection`) — The Connection to use for the batch update
   - `sql` (`String`) — The SQL string to execute
   - `listOfParameters` (`List<?>`) — A list of parameter sets for the batch update
-- **Returns:** The number of rows affected by the batch update as a long value
+- **Returns:** The total number of rows affected by the batch update across all batches, as a long value (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the Connection or SQL string is {@code null} or empty
   - `java.sql.SQLException` — if a SQL exception occurs while executing the batch update
@@ -8883,7 +8918,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static <T> Stream<T> stream(final ResultSet rs, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException`
 - **Summary:** Creates a stream from the provided ResultSet using the specified BiRowFilter and BiRowMapper.
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code BiRowFilter hasNonNullValues = (rs, columnLabels) -> { for (String label : columnLabels) { if (rs.getObject(label) != null) return true; } return false; }; BiRowMapper<String> csvMapper = (rs, columnLabels) -> columnLabels.stream() .map(label -> rs.getString(label)) .collect(Collectors.joining(",")); JdbcUtil.stream(resultSet, hasNonNullValues, csvMapper) .onClose(Fn.closeQuietly(resultSet)) .forEach(csvRow -> System.out.println(csvRow)); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code BiRowFilter hasNonNullValues = (rs, columnLabels) -> { for (String label : columnLabels) { if (rs.getObject(label) != null) return true; } return false; }; BiRowMapper<String> csvMapper = (rs, columnLabels) -> { StringBuilder sb = new StringBuilder(); for (String label : columnLabels) { if (sb.length() > 0) { sb.append(','); } sb.append(rs.getString(label)); } return sb.toString(); }; JdbcUtil.stream(resultSet, hasNonNullValues, csvMapper) .onClose(Fn.closeQuietly(resultSet)) .forEach(csvRow -> System.out.println(csvRow)); } </pre>
 - **Parameters:**
   - `rs` (`ResultSet`) — the ResultSet to create a stream from
   - `rowFilter` (`BiRowFilter`) — the BiRowFilter to apply while filtering rows. Both ResultSet and column labels are provided
@@ -8939,7 +8974,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the provided arguments are invalid
 ##### queryByPage(...) -> Stream<Dataset>
-- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
@@ -8948,32 +8983,36 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `ds` (`javax.sql.DataSource`) — the DataSource to get the connection from
   - `query` (`String`) — the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
   - `pageSize` (`int`) — the number of rows to fetch per page
-  - `paramSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, Dataset>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, Dataset>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
 - **Returns:** a Stream of Dataset, each representing a page of results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation.
+  - <p> The stream ends when a page's extracted result is empty: a {@code Dataset} , {@code Collection} , {@code Map} , {@code Iterable} or {@code Iterator} result is checked for emptiness; any other non-null result is treated as non-empty.
+  - The extractor should therefore return a container of the page's rows \\u2014 with a scalar result the stream never ends on its own.
   - ORDER BY order_id LIMIT 500"; ResultExtractor<List<Order>> ordersExtractor = rs -> { List<Order> orders = new ArrayList<>(); while (rs.next()) { orders.add(new Order(rs.getLong("order_id"), rs.getDate("order_date"))); } return orders; }; JdbcUtil.queryByPage(dataSource, query, 500, (preparedQuery, previousOrders) -> { if (previousOrders == null) { preparedQuery.setDate(1, startDate); } else { Order lastOrder = previousOrders.get(previousOrders.size() - 1); preparedQuery.setDate(1, lastOrder.getOrderDate()); } }, ordersExtractor) .forEach(orders -> processOrderBatch(orders)); } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the DataSource to get the connection from
   - `query` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
-  - `paramSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.ResultExtractor<R>`) — the ResultExtractor to extract results from the ResultSet
 - **Returns:** a Stream of the extracted results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation.
+  - <p> The stream ends when a page's extracted result is empty: a {@code Dataset} , {@code Collection} , {@code Map} , {@code Iterable} or {@code Iterator} result is checked for emptiness; any other non-null result is treated as non-empty.
+  - The extractor should therefore return a container of the page's rows \\u2014 with a scalar result the stream never ends on its own.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the DataSource to get the connection from
   - `query` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
-  - `paramSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.BiResultExtractor<R>`) — the BiResultExtractor to extract results from the ResultSet
 - **Returns:** a Stream of the extracted results
-- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation.
@@ -8982,33 +9021,38 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `conn` (`Connection`) — the Connection to use for queries
   - `query` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
-  - `paramSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, Dataset>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, Dataset>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
 - **Returns:** a Stream of Dataset, each representing a page of results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
+  - <p> The stream ends when a page's extracted result is empty: a {@code Dataset} , {@code Collection} , {@code Map} , {@code Iterable} or {@code Iterator} result is checked for emptiness; any other non-null result is treated as non-empty.
+  - The extractor should therefore return a container of the page's rows \\u2014 with a scalar result the stream never ends on its own.
   - 0L : previousIds.get(previousIds.size() - 1); preparedQuery.setLong(1, lastId); }, toIds) .forEach(ids -> System.out.println("Got " + ids.size() + " ids")); } // Iteration stops when a page returns no rows.
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to use for queries
   - `query` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
-  - `paramSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.ResultExtractor<R>`) — the ResultExtractor to extract results from the ResultSet
 - **Returns:** a Stream of the extracted results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> paramSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
+- **Contract:**
+  - <p> The stream ends when a page's extracted result is empty: a {@code Dataset} , {@code Collection} , {@code Map} , {@code Iterable} or {@code Iterator} result is checked for emptiness; any other non-null result is treated as non-empty.
+  - The extractor should therefore return a container of the page's rows \\u2014 with a scalar result the stream never ends on its own.
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to use for queries
   - `query` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
-  - `paramSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.BiResultExtractor<R>`) — the BiResultExtractor to extract results from the ResultSet
 - **Returns:** a Stream of the extracted results
 ##### tableExists(...) -> boolean
 - **Signature:** `public static boolean tableExists(final javax.sql.DataSource ds, final String tableName)`
 - **Summary:** Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource} .
 - **Contract:**
-  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
+  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(ds, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} to obtain a connection from; must not be {@code null}
@@ -9018,25 +9062,8 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static boolean tableExists(final Connection conn, final String tableName)`
 - **Summary:** Checks whether a table exists on the given {@link Connection} .
 - **Contract:**
-  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
+  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(connection, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
-- **Parameters:**
-  - `conn` (`Connection`) — the database connection to use for checking table existence
-  - `tableName` (`String`) — the table name (optionally qualified); must not be blank
-- **Returns:** {@code true} if the table exists, {@code false} otherwise
-##### doesTableExist(...) -> boolean
-- **Signature:** `@Deprecated public static boolean doesTableExist(final javax.sql.DataSource ds, final String tableName)`
-- **Summary:** Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource} .
-- **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code boolean exists = JdbcUtil.doesTableExist(dataSource, "account"); // returns true if the table exists boolean missing = JdbcUtil.doesTableExist(dataSource, "no_such_table"); // returns false (does NOT throw) // A qualified name (schema.table) is also accepted.
-- **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the data source to get the connection from
-  - `tableName` (`String`) — the table name (optionally qualified); must not be blank
-- **Returns:** {@code true} if the table exists, {@code false} otherwise
-- **Signature:** `@Deprecated public static boolean doesTableExist(final Connection conn, final String tableName)`
-- **Summary:** Checks whether a table exists on the given {@link Connection} .
-- **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code try (Connection conn = dataSource.getConnection()) { boolean exists = JdbcUtil.doesTableExist(conn, "account"); // returns true if the table exists boolean missing = JdbcUtil.doesTableExist(conn, "no_such_table"); // returns false (does NOT throw) } // A blank table name, or a null connection, is rejected.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use for checking table existence
   - `tableName` (`String`) — the table name (optionally qualified); must not be blank
@@ -9190,8 +9217,8 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code stmt} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs while reading any output parameter, or if a returned {@link Blob} / {@link Clob} exceeds {@link Integer#MAX_VALUE} bytes/characters
-##### namedParameters(...) -> List<String>
-- **Signature:** `public static List<String> namedParameters(final String sql)`
+##### getNamedParameters(...) -> List<String>
+- **Signature:** `public static List<String> getNamedParameters(final String sql)`
 - **Summary:** Extracts the named parameters from the given SQL string.
 - **Parameters:**
   - `sql` (`String`) — the SQL string containing named parameters (e.g., :paramName)
@@ -9254,15 +9281,15 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `entityClass` (`Class<?>`) — the entity class to analyze
   - `excludedPropNames` (`Set<String>`) — property names to exclude from the result
 - **Returns:** a collection of property names suitable for UPDATE operations
-##### blob2String(...) -> String
-- **Signature:** `public static String blob2String(final Blob blob) throws SQLException`
+##### blobToString(...) -> String
+- **Signature:** `public static String blobToString(final Blob blob) throws SQLException`
 - **Summary:** Converts a Blob to a String using UTF-8 encoding and frees the Blob resources.
 - **Parameters:**
   - `blob` (`Blob`) — the Blob object to be converted to a String
 - **Returns:** the String representation of the Blob content, or {@code null} if {@code blob} is {@code null}
 - **Throws:**
   - `java.sql.SQLException` — if a SQL exception occurs while accessing the Blob
-- **Signature:** `public static String blob2String(final Blob blob, final Charset charset) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static String blobToString(final Blob blob, final Charset charset) throws IllegalArgumentException, SQLException`
 - **Summary:** Converts a Blob to a String using the specified character encoding and frees the Blob resources.
 - **Parameters:**
   - `blob` (`Blob`) — the Blob object to be converted to a String
@@ -9281,8 +9308,8 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.sql.SQLException` — if a SQL exception occurs while accessing the Blob
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-##### clob2String(...) -> String
-- **Signature:** `public static String clob2String(final Clob clob) throws SQLException`
+##### clobToString(...) -> String
+- **Signature:** `public static String clobToString(final Clob clob) throws SQLException`
 - **Summary:** Converts a Clob to a String and frees the Clob resources.
 - **Parameters:**
   - `clob` (`Clob`) — the Clob object to be converted to a String
@@ -9309,18 +9336,18 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `value` (`Object`) — the value to check
 - **Returns:** {@code true} if the value is {@code null} or the default value for its type, {@code false} otherwise
-##### turnOffSqlLogGlobally(...) -> void
-- **Signature:** `public static void turnOffSqlLogGlobally()`
+##### disableSqlLogGlobally(...) -> void
+- **Signature:** `public static void disableSqlLogGlobally()`
 - **Summary:** Globally disables SQL logging across all threads in the application.
 - **Parameters:**
   - (none)
-##### turnOffSqlPerfLogGlobally(...) -> void
-- **Signature:** `public static void turnOffSqlPerfLogGlobally()`
+##### disableSqlPerfLogGlobally(...) -> void
+- **Signature:** `public static void disableSqlPerfLogGlobally()`
 - **Summary:** Globally disables SQL performance logging across all threads in the application.
 - **Parameters:**
   - (none)
-##### turnOffDaoMethodPerfLogGlobally(...) -> void
-- **Signature:** `public static void turnOffDaoMethodPerfLogGlobally()`
+##### disableDaoMethodPerfLogGlobally(...) -> void
+- **Signature:** `public static void disableDaoMethodPerfLogGlobally()`
 - **Summary:** Globally disables DAO method performance logging across all threads in the application.
 - **Parameters:**
   - (none)
@@ -9328,7 +9355,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static void enableSqlLog()`
 - **Summary:** Enables SQL logging on the current thread with the default maximum log length ( {@link #DEFAULT_MAX_SQL_LOG_LENGTH} = 1024 characters).
 - **Contract:**
-  - </p> <p> Has no effect if SQL logging has been globally disabled via {@link #turnOffSqlLogGlobally()} .
+  - </p> <p> Has no effect if SQL logging has been globally disabled via {@link #disableSqlLogGlobally()} .
 - **Parameters:**
   - (none)
 - **See also:** #enableSqlLog(int), #disableSqlLog(), #isSqlLogEnabled()
@@ -9422,7 +9449,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Contract:**
   - </li> <li> Spring-managed transactions, when Spring is on the classpath and Spring transaction participation is not disabled on this thread (see {@link #runWithoutUsingSpringTransaction(Throwables.Runnable)} ).
   - </li> </ul> <p> For the Spring check, this method may briefly acquire and release a {@link Connection} from {@code ds} , so callers should not assume it is side-effect-free.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(ds); // ...
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); // ...
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} to check
 - **Returns:** {@code true} if a transaction is active on the current thread for {@code ds} ; {@code false} otherwise
@@ -9433,7 +9460,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - <p> The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes.
   - Always use a try-finally block to ensure the transaction is properly completed even if exceptions occur.
   - </p> <p> <b> Spring Integration: </b> </p> <p> If Spring's transaction management is active, JdbcUtil will automatically participate in the Spring transaction instead of creating a new one.
-  - AND balance >= ?", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException("Insufficient balance"); } JdbcUtil.executeUpdate(dataSource, "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)", accountId, amount, "DEBIT"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error("Transaction failed: " + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(ds); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>
+  - AND balance >= ?", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException("Insufficient balance"); } JdbcUtil.executeUpdate(dataSource, "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)", accountId, amount, "DEBIT"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error("Transaction failed: " + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
 - **Returns:** a {@link SqlTransaction} object representing the new transaction that must be committed or rolled back
@@ -9574,46 +9601,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
   - `E` — if {@code cmd} throws an exception
 - **See also:** #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)
-##### callNotInStartedTransaction(...) -> R
-- **Signature:** `@Deprecated @Beta public static <R, E extends Throwable> R callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given callable outside any active transaction for the specified DataSource and returns its result.
-- **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}
-  - `cmd` (`Throwables.Callable<? extends R, E>`) — the callable to execute outside any active transaction, must not be {@code null}
-- **Returns:** the result returned by {@code cmd}
-- **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
-  - `E` — if {@code cmd} throws an exception
-- **Signature:** `@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given function outside any active transaction for the specified DataSource, passing {@code ds} as an argument, and returns its result.
-- **Contract:**
-  - Boolean exists = JdbcUtil.callNotInStartedTransaction(dataSource, ds -> JdbcUtil.tableExists(ds, "account")); // returns true if the table exists // Inside an active transaction, the command still runs OUTSIDE it.
-- **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}
-  - `cmd` (`Throwables.Function<javax.sql.DataSource, T, E>`) — the function to execute outside any active transaction, must not be {@code null}
-- **Returns:** the result returned by {@code cmd}
-- **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
-  - `E` — if {@code cmd} throws an exception
-##### runNotInStartedTransaction(...) -> void
-- **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given runnable outside any active transaction for the specified DataSource.
-- **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Write an audit record that must survive even if the enclosing transaction rolls back.
-- **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}
-  - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute outside any active transaction, must not be {@code null}
-- **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
-  - `E` — if {@code cmd} throws an exception
-- **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given consumer outside any active transaction for the specified DataSource, passing {@code ds} as an argument.
-- **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}
-  - `cmd` (`Throwables.Consumer<javax.sql.DataSource, E>`) — the consumer to execute outside any active transaction, must not be {@code null}
-- **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
-  - `E` — if {@code cmd} throws an exception
 ##### runWithoutUsingSpringTransaction(...) -> void
 - **Signature:** `public static <E extends Exception> void runWithoutUsingSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E`
 - **Summary:** Executes the given runnable with Spring's transaction management temporarily disabled for the current thread.
@@ -9666,13 +9653,15 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - (none)
 - **Returns:** the created DaoCache for the current thread
 - **See also:** Jdbc.DaoCache#createByMap(), #closeDaoCacheOnCurrentThread()
-- **Signature:** `public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache)`
+- **Signature:** `public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException`
 - **Summary:** Enables the specified DAO cache for the current thread.
 - **Contract:**
   - Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
 - **Parameters:**
-  - `localThreadCache` (`Jdbc.DaoCache`) — the cache to use for the current thread
+  - `localThreadCache` (`Jdbc.DaoCache`) — the cache to use for the current thread, must not be {@code null}
 - **Returns:** the specified localThreadCache
+- **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code localThreadCache} is {@code null}
 - **See also:** Jdbc.DaoCache#createByMap(), Jdbc.DaoCache#createByMap(Map), #closeDaoCacheOnCurrentThread()
 ##### closeDaoCacheOnCurrentThread(...) -> void
 - **Signature:** `public static void closeDaoCacheOnCurrentThread()`
@@ -9686,7 +9675,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `@SuppressWarnings("rawtypes") public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds)`
 - **Summary:** Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.
 - **Contract:**
-  - ORDER BY created_at DESC") List<User> findByStatus(String status); @Query("SELECT * FROM users WHERE age >= :minAge AND city = :city") Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User("john@example.com", "John Doe"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail("john@example.com"); if (user.isPresent()) { System.out.println("Found: " + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus("ACTIVE"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, "New York")) { long count = stream .filter(u -> u.getEmail().endsWith("@company.com")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus("INACTIVE"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, OrderDao> { // Aggregate queries @Query("SELECT COUNT(*) FROM orders WHERE status = ?") long countByStatus(String status); @Query("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @Query(id = "findOrdersWithCustomerDetails") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start); // Async operations @Query("SELECT * FROM orders WHERE id = ?") CompletableFuture<Optional<Order>> findByIdAsync(Long id); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus("PENDING"); // Async operations CompletableFuture<Optional<Order>> future = orderDao.findByIdAsync(orderId); future.thenAccept(order -> { order.ifPresent(o -> System.out.println("Order: " + o.getId())); }); } </pre> <p> <b> Performance and memory considerations: </b> </p> <p> <i> Initialization is heavy; per-call usage is cheap.
+  - ORDER BY created_at DESC") List<User> findByStatus(String status); @Query("SELECT * FROM users WHERE age >= :minAge AND city = :city") Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User("john@example.com", "John Doe"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail("john@example.com"); if (user.isPresent()) { System.out.println("Found: " + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus("ACTIVE"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, "New York")) { long count = stream .filter(u -> u.getEmail().endsWith("@company.com")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus("INACTIVE"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, OrderDao> { // Aggregate queries @Query("SELECT COUNT(*) FROM orders WHERE status = ?") long countByStatus(String status); @Query("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @Query(id = "findOrdersWithCustomerDetails") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus("PENDING"); // Async operations (inherited from the DAO root interface) ContinuableFuture<Optional<Order>> future = orderDao.asyncCall(dao -> dao.get(orderId)); future.thenRunAsync(order -> { order.ifPresent(o -> System.out.println("Order: " + o.getId())); }); } </pre> <p> <b> Performance and memory considerations: </b> </p> <p> <i> Initialization is heavy; per-call usage is cheap.
   - If you observe heap pressure on an older version, upgrade {@code abacus-query} or set the system property to {@code 2} .
   - If your {@code @Service} classes inject DAOs via constructor (the usual pattern), instantiating the service at startup forces Spring to materialize the constructor-injected DAOs immediately \\u2014 the {@code @Lazy} on the provider is silently overridden.
   - To genuinely defer DAO creation you must <b> also </b> annotate the injection point as {@code @Lazy} , OR enable {@code spring.main.lazy-initialization=true} globally (which has wider side effects \\u2014 it can mask config errors that would otherwise fail-fast).
@@ -9793,12 +9782,6 @@ Manages join relationships between entities in JDBC operations.
   - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection of selected property names (a {@code null} or empty collection yields the default all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a {@link PreparedStatement}
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
-##### getSelectSqlBuilderAndParamSetter(...) -> Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-- **Signature:** `@Deprecated public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlBuilderAndParamSetter(final Dsl sbc)`
-- **Summary:** Retrieves the SQL plan for single-entity select operations.
-- **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
-- **Returns:** a non- {@code null} tuple containing the SQL builder function ( {@code _1} ) and the parameter setter ( {@code _2} ); see {@link #getSelectSqlPlan(Dsl)} for the meaning of each slot
 ##### getBatchSelectSqlPlan(...) -> Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
 - **Signature:** `public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR final Dsl sbc)`
 - **Summary:** Retrieves the SQL plan for batch select operations.
@@ -9806,12 +9789,6 @@ Manages join relationships between entities in JDBC operations.
   - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection of selected property names and the batch size (a {@code null} or empty collection yields the default all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity in the batch onto a {@link PreparedStatement}
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
-##### getBatchSelectSqlBuilderAndParamSetter(...) -> Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-- **Signature:** `@Deprecated public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlBuilderAndParamSetter( //NOSONAR final Dsl sbc)`
-- **Summary:** Retrieves the SQL plan for batch select operations.
-- **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
-- **Returns:** a non- {@code null} tuple containing the batch SQL builder function ( {@code _1} ) and the parameter setter ( {@code _2} ); see {@link #getBatchSelectSqlPlan(Dsl)} for the meaning of each slot
 ##### getDeleteSqlPlan(...) -> Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
 - **Signature:** `public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Dsl sbc)`
 - **Summary:** Retrieves the SQL plan for delete operations.
@@ -9819,12 +9796,6 @@ Manages join relationships between entities in JDBC operations.
   - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple containing the delete SQL ( {@code _1} ), the middle (join) table delete SQL ( {@code _2} , always {@code null} in the current implementation \\u2014 reserved for future use when per-entity cascade-delete control is supported), and the parameter setter ( {@code _3} ) that binds the join key(s) of a single source entity onto a {@link PreparedStatement}
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
-##### getDeleteSqlAndParamSetter(...) -> Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-- **Signature:** `@Deprecated public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Dsl sbc)`
-- **Summary:** Retrieves the SQL plan for delete operations.
-- **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
-- **Returns:** a non- {@code null} tuple containing the delete SQL ( {@code _1} ), the middle (join) table delete SQL ( {@code _2} , always {@code null} ), and the parameter setter ( {@code _3} ); see {@link #getDeleteSqlPlan(Dsl)} for the meaning of each slot
 ##### getBatchDeleteSqlPlan(...) -> Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
 - **Signature:** `public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR final Dsl sbc)`
 - **Summary:** Retrieves the SQL plan for batch delete operations.
@@ -9832,12 +9803,6 @@ Manages join relationships between entities in JDBC operations.
   - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple of (main delete SQL builder ( {@code _1} ), middle/join table delete SQL builder ( {@code _2} , always {@code null} in the current implementation \\u2014 reserved for future use when per-entity cascade-delete control is supported), and parameter setter ( {@code _3} ) that binds the join key(s) of every entity in the batch onto a {@link PreparedStatement} )
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
-##### getBatchDeleteSqlBuilderAndParamSetter(...) -> Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-- **Signature:** `@Deprecated public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlBuilderAndParamSetter( //NOSONAR final Dsl sbc)`
-- **Summary:** Retrieves the SQL plan for batch delete operations.
-- **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
-- **Returns:** a non- {@code null} tuple containing the batch delete SQL builder functions ( {@code _1} , {@code _2} ) and the parameter setter ( {@code _3} ); see {@link #getBatchDeleteSqlPlan(Dsl)} for the meaning of each slot
 ##### setJoinPropEntities(...) -> void
 - **Signature:** `public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities)`
 - **Summary:** Sets join property entities for a collection of source entities.
@@ -9983,7 +9948,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the parameter name is not found in the SQL query
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Deprecated public NamedQuery setInt(final String parameterName, final char value) throws IllegalArgumentException, SQLException`
+- **Signature:** `@Deprecated @Beta public NamedQuery setInt(final String parameterName, final char value) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets the specified named parameter to a char value by converting it to an int.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter to be set (without the ':' prefix)
@@ -9993,7 +9958,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
   - `java.lang.IllegalArgumentException` — if the parameter name is not found in the SQL query
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #setString(String, char)
-- **Signature:** `@Deprecated public NamedQuery setInt(final String parameterName, final Character value) throws IllegalArgumentException, SQLException`
+- **Signature:** `@Deprecated @Beta public NamedQuery setInt(final String parameterName, final Character value) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets the specified named parameter to a Character value by converting it to an int.
 - **Contract:**
   - <p> This method handles {@code null} values by setting the parameter to SQL {@code NULL} if the provided value is {@code null} .
@@ -10668,14 +10633,14 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `@SuppressWarnings("rawtypes") public NamedQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets parameters from various types of objects including beans, maps, collections, arrays, or single values.
 - **Contract:**
-  - <p> This flexible method accepts different parameter sources: <ul> <li> <b> Bean/Entity objects </b> : Properties matching parameter names will be used </li> <li> <b> Map </b> : Entries with keys matching parameter names will be used </li> <li> <b> Collection/Array </b> : Elements will be assigned to parameters in positional order </li> <li> <b> EntityId </b> : Values with keys matching parameter names will be used </li> <li> <b> Single value </b> : Used only if the query has exactly one parameter </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Using a bean User user = new User("John", 30, "john@example.com"); query.setParameters(user); // Using a Map Map<String, Object> params = Map.of("name", "John", "age", 30); query.setParameters(params); // Using an array (parameters set by position) query.setParameters(new Object\[\] {"John", 30, "john@example.com"}); // Using a single value (for queries with one parameter) query.setParameters("John"); } </pre>
+  - <p> This flexible method accepts different parameter sources: <ul> <li> <b> Bean/Entity objects </b> : Properties matching parameter names will be used </li> <li> <b> Map </b> : Entries with keys matching parameter names will be used </li> <li> <b> Collection/Array </b> : Elements will be assigned to parameters in positional order </li> <li> <b> EntityId </b> : Values with keys matching parameter names will be used </li> <li> <b> Single value </b> : Used only if the query has exactly one parameter placeholder (a single named parameter appearing exactly once) </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Using a bean User user = new User("John", 30, "john@example.com"); query.setParameters(user); // Using a Map Map<String, Object> params = Map.of("name", "John", "age", 30); query.setParameters(params); // Using an array (parameters set by position) query.setParameters(new Object\[\] {"John", 30, "john@example.com"}); // Using a single value (for queries with one parameter) query.setParameters("John"); } </pre>
 - **Parameters:**
   - `parameters` (`Object`) — an object containing the parameters (bean, map, collection, array, or single value)
 - **Returns:** this NamedQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code parameters} is {@code null} , is of an unsupported type, or is a bean that lacks a property matching one of the named parameters in the SQL
+  - `java.lang.IllegalArgumentException` — if {@code parameters} is {@code null} , is of an unsupported type, or is a bean that lacks a property matching one of the named parameters in the SQL (except the reserved system date/time parameter names {@code now} , {@code sysTime} and {@code sysDate} , which are skipped and left unbound when no matching property exists \\u2014 bind them separately)
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** JdbcUtil#namedParameters(String)
+- **See also:** JdbcUtil#getNamedParameters(String)
 - **Signature:** `public NamedQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets the specified named parameters from an entity (bean/record) by reading the matching properties.
 - **Contract:**
@@ -10687,7 +10652,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} or {@code parameterNamesToSet} is {@code null} , if {@code entity} is not a bean/record class, if a listed property does not exist on the entity, or if a listed name is not a parameter in the SQL query
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#namedParameters(String)
+- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#getNamedParameters(String)
 - **Signature:** `public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> parametersSetter) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets parameters using a custom parameter setter function.
 - **Contract:**
@@ -10701,7 +10666,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
   - `java.lang.IllegalArgumentException` — if {@code parametersSetter} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs (e.g. propagated from {@code parametersSetter} )
 ##### addBatchParameters(...) -> NamedQuery
-- **Signature:** `@Override public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException`
+- **Signature:** `@Beta @Override public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds a collection of parameter sets for batch execution.
 - **Contract:**
   - Each element in the collection should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> Arrays or Collections for positional parameters </li> </ul> <p> All elements are interpreted in the same way as the first element (see {@link #addBatchParameters(Iterator)} ).
@@ -10710,7 +10675,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
   - `batchParameters` (`Collection<?>`) — a collection of parameter objects for batch processing
 - **Returns:** this NamedQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if batchParameters is {@code null} or contains invalid parameter objects
+  - `java.lang.IllegalArgumentException` — if {@code batchParameters} is {@code null} or contains invalid parameter objects
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #setParameters(Object), #addBatch()
 - **Signature:** `@Beta @Override @SuppressWarnings("rawtypes") public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException`
@@ -10718,13 +10683,13 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Contract:**
   - Each element provided by the iterator should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> Arrays or Collections for positional parameters </li> </ul> <p> The runtime type of the <i> first </i> element determines how every element is interpreted; all remaining elements are assumed to be of the same kind.
   - If the iterator is empty, this is a no-op and no batch is added.
-  - A {@code null} element is only supported when the SQL has exactly one named parameter (it is bound as SQL {@code NULL} ); otherwise an {@link IllegalArgumentException} is thrown.
-  - Note that when the <i> first </i> element is {@code null} , no type-based classification is possible: every remaining element is then bound as a plain single value (bean/Map/Collection/array interpretation is skipped), which also requires the SQL to have exactly one named parameter.
+  - A {@code null} element is only supported when the SQL has exactly one parameter placeholder \\u2014 a single named parameter appearing exactly once (it is bound as SQL {@code NULL} ); otherwise an {@link IllegalArgumentException} is thrown.
+  - Note that when the <i> first </i> element is {@code null} , no type-based classification is possible: every remaining element is then bound as a plain single value (bean/Map/Collection/array interpretation is skipped), which also requires the SQL to have exactly one parameter placeholder.
 - **Parameters:**
   - `batchParameters` (`Iterator<?>`) — an iterator providing parameter objects for batch processing
 - **Returns:** this NamedQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if batchParameters is {@code null} or contains invalid parameter objects
+  - `java.lang.IllegalArgumentException` — if {@code batchParameters} is {@code null} or contains invalid parameter objects
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #setParameters(Object), #addBatchParameters(Collection), #addBatch()
 
@@ -10742,33 +10707,6 @@ Execution modes understood by {@link AbstractQuery} and the {@code op} element o
 
 #### Public Instance Methods
 - (none)
-
-### Enum OnDeleteAction (com.landawn.abacus.jdbc.OnDeleteAction)
-Deprecated enum mirroring common database {@code ON DELETE} actions.
-
-**Thread-safety:** unspecified
-**Nullability:** unspecified
-
-#### Public Constructors
-- (none)
-
-#### Public Static Methods
-##### valueOf(...) -> OnDeleteAction
-- **Signature:** `@Deprecated public static OnDeleteAction valueOf(final int intValue)`
-- **Summary:** Returns the {@code OnDeleteAction} enum constant that corresponds to the given integer value.
-- **Parameters:**
-  - `intValue` (`int`) — the integer code to convert ( {@code 0} for {@link #NO_ACTION} , {@code 1} for {@link #SET_NULL} , {@code 2} for {@link #CASCADE} )
-- **Returns:** the matching {@code OnDeleteAction} constant
-
-#### Public Instance Methods
-##### intValue(...) -> int
-- **Signature:** `@Deprecated public int intValue()`
-- **Summary:** Returns the raw integer value associated with this {@code OnDeleteAction} .
-- **Contract:**
-  - <p> The integer values are: </p> <ul> <li> {@link #NO_ACTION} : 0 </li> <li> {@link #SET_NULL} : 1 </li> <li> {@link #CASCADE} : 2 </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Example: Storing the action value OnDeleteAction action = OnDeleteAction.CASCADE; int actionValue = action.intValue(); System.out.println("Action code: " + actionValue); // Prints: Action code: 2 // Example: Using value for conditional logic if (action.intValue() == 0) { System.out.println("No cascading delete will occur"); } } </pre> <p> This method is useful when writing/reading this enum to and from numeric stores.
-- **Parameters:**
-  - (none)
-- **Returns:** the integer value representing this delete action: {@code NO_ACTION=0} , {@code SET_NULL=1} , or {@code CASCADE=2}
 
 ### Class PreparedQuery (com.landawn.abacus.jdbc.PreparedQuery)
 Fluent wrapper around a {@link PreparedStatement} .
@@ -10911,7 +10849,7 @@ Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 - **Summary:** Commits this transaction scope.
 - **Contract:**
   - The actual JDBC {@code COMMIT} is issued only when the outermost scope commits (reference count reaches zero).
-  - </p> <p> If the transaction has been marked for rollback only (status {@link Status#MARKED_ROLLBACK} because an inner scope rolled back), the outermost commit is converted into a rollback rather than a commit; this method returns normally in that case.
+  - </p> <p> If the transaction has been marked for rollback only (status {@link Status#MARKED_ROLLBACK} because an inner scope rolled back), the outermost commit is converted into a rollback rather than a commit; this method returns normally in that case (or throws {@link UncheckedSQLException} if that rollback itself fails).
   - </p> <p> When the outermost scope actually commits, the status transitions to {@link Status#COMMITTED} on success or {@link Status#FAILED_COMMIT} on failure.
   - After the commit attempt (success or failure) the connection's original auto-commit and isolation level are restored, and the connection is released back to its data source if this transaction was created with connection ownership.
 - **Parameters:**
@@ -10956,21 +10894,6 @@ Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 - **Contract:**
   - This method temporarily removes the transaction from the current thread, executes the callable, and then restores the transaction (only if it was registered on this thread and is still active when {@code cmd} completes).
   - <p> This is useful when you need to perform operations that should not be part of the current transaction and return a result, such as querying data that should not be affected by uncommitted changes.
-- **Parameters:**
-  - `cmd` (`Throwables.Callable<? extends R, E>`) — the {@code Callable} to be executed outside of this transaction, must not be {@code null}
-- **Returns:** the result returned by the {@code Callable}
-- **Throws:**
-  - `E` — if the {@code Callable} throws an exception
-##### runNotInMe(...) -> void
-- **Signature:** `@Deprecated public <E extends Throwable> void runNotInMe(final Throwables.Runnable<E> cmd) throws E`
-- **Summary:** Executes the specified {@code Runnable} outside of this transaction context.
-- **Parameters:**
-  - `cmd` (`Throwables.Runnable<E>`) — the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
-- **Throws:**
-  - `E` — if the {@code Runnable} throws an exception
-##### callNotInMe(...) -> R
-- **Signature:** `@Deprecated public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<? extends R, E> cmd) throws E`
-- **Summary:** Executes the specified {@code Callable} outside of this transaction context and returns its result.
 - **Parameters:**
   - `cmd` (`Throwables.Callable<? extends R, E>`) — the {@code Callable} to be executed outside of this transaction, must not be {@code null}
 - **Returns:** the result returned by the {@code Callable}
@@ -11098,23 +11021,8 @@ Enumeration representing the various states a transaction can be in during its l
 #### Public Instance Methods
 - (none)
 
-### Enum Action (com.landawn.abacus.jdbc.Transaction.Action)
-Enumeration representing the terminal action to take on a transaction.
-
-**Thread-safety:** unspecified
-**Nullability:** unspecified
-
-#### Public Constructors
-- (none)
-
-#### Public Static Methods
-- (none)
-
-#### Public Instance Methods
-- (none)
-
 ### Class cs (com.landawn.abacus.jdbc.cs)
-Internal constants container providing the standardized parameter-name string literals used by argument-validation calls (e.g., {@code N.checkArgNotNull(arg, cs.handler)} ) throughout the Abacus JDBC framework.
+Internal constants container providing the standardized parameter-name string literals used by argument-validation calls (e.g., {@code N.checkArgNotNull(handler, cs.handler)} ) throughout the Abacus JDBC framework.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11148,6 +11056,7 @@ Binds a method parameter to a named parameter in SQL queries.
 - **Contract:**
   - Specifies the named-parameter token (the part after {@code :} ) that this method parameter should be bound to in the SQL.
   - <p> An explicit value is normally required: when a named-query method has more than one statement parameter, every such parameter must carry an {@code @Bind} (or another binding annotation) with a non-empty {@code value} that matches a named parameter in the SQL verbatim.
+  - When a procedure has more than one statement parameter, either give <i> every </i> parameter a non-empty {@code @Bind} name, or omit {@code @Bind} from all of them for purely positional binding &mdash; mixing an empty-valued {@code @Bind} in among named ones is not a supported combination.
 - **Parameters:**
   - (none)
 - **Returns:** the named-parameter token to bind to (without the leading colon); empty by default
@@ -11342,7 +11251,7 @@ Provides DAO-level configuration options that affect query generation and execut
 - **Summary:** Controls whether to automatically call {@code generateId()} for SQL-based entity inserts when the ID field is not set or has a default value.
 - **Contract:**
   - Controls whether to automatically call {@code generateId()} for SQL-based entity inserts when the ID field is not set or has a default value.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(callGenerateIdForInsertWithSqlIfIdNotSet = true) public interface OrderDao extends CrudDao<Order, Long, OrderDao> { default void insertWithAudit(Order order) { String sql = "INSERT INTO orders (id, customer_id, total, created_by) " + "VALUES (:id, :customerId, :total, CURRENT_USER())"; insert(sql, order); // generateId() called if order.id not set } } } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(callGenerateIdForInsertWithSqlIfIdNotSet = true) public interface OrderDao extends CrudDao<Order, Long, OrderDao> { default void insertWithAudit(Order order) throws SQLException { String sql = "INSERT INTO orders (id, customer_id, total, created_by) " + "VALUES (:id, :customerId, :total, CURRENT_USER())"; insert(sql, order); // generateId() called if order.id not set } } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} to auto-generate IDs for SQL-based insert operations
@@ -11352,7 +11261,7 @@ Provides DAO-level configuration options that affect query generation and execut
 - **Contract:**
   - Controls whether framework-managed join operations (driven by {@code @JoinedBy} entity annotations) can be performed when the join key value is {@code null} or the type's default value.
   - When {@code false} (default), an {@code IllegalArgumentException} is thrown at runtime if a null or default join key is encountered.
-  - When {@code true} , such joins are silently skipped rather than raising an error.
+  - When {@code true} , the join query is executed with the null/default key (typically loading no join entities) instead of raising an error.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true) public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> { // @JoinedBy-driven joins are allowed even if the join key is null or zero: // use the inherited JoinEntityHelper methods (e.g.
 - **Parameters:**
   - (none)
@@ -11407,13 +11316,13 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
 - **Signature:** `String qualifier() default ""`
 - **Summary:** Specifies a qualifier used to look up a pre-registered handler instance from {@code HandlerFactory} (or a DAO-class handler map).
 - **Contract:**
-  - When non-empty, the qualifier takes precedence over {@link #type()} ; the framework resolves the handler by this name instead of instantiating one from the {@code type} attribute.
+  - When non-empty, the qualifier takes precedence over {@link #impl()} ; the framework resolves the handler by this name instead of instantiating one from the {@code impl} attribute.
   - <p> This is useful when you want to register a handler instance once (with custom configuration or dependencies) and then reference it from multiple DAO interfaces or methods by name.
 - **Parameters:**
   - (none)
-- **Returns:** the handler qualifier name; empty (default) means resolve a handler by {@link #type()} instead
-##### type(...) -> Class<? extends Jdbc.Handler<? extends DaoBase>>
-- **Signature:** `@SuppressWarnings("rawtypes") Class<? extends Jdbc.Handler<? extends DaoBase>> type() default EmptyHandler.class`
+- **Returns:** the handler qualifier name; empty (default) means resolve a handler by {@link #impl()} instead
+##### impl(...) -> Class<? extends Jdbc.Handler<? extends DaoBase>>
+- **Signature:** `@SuppressWarnings("rawtypes") Class<? extends Jdbc.Handler<? extends DaoBase>> impl() default EmptyHandler.class`
 - **Summary:** Specifies the handler implementation class.
 - **Contract:**
   - The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
@@ -11459,7 +11368,7 @@ Container annotation for multiple {@link Handler} declarations on the same DAO m
 - **Summary:** Returns the array of {@link Handler} annotations contained in this list.
 - **Contract:**
   - <p> When multiple handlers are applied to a DAO or method, they form a chain of interceptors.
-  - </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Accessing HandlerList programmatically via reflection HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class); if (handlers != null) { for (Handler handler : handlers.value()) { System.out.println("Handler type: " + handler.type()); System.out.println("Filter: " + Arrays.toString(handler.filter())); } } // Multiple handlers are automatically wrapped in HandlerList @Handler(type = LoggingHandler.class) @Handler(type = SecurityHandler.class) @Handler(type = CacheHandler.class) public interface UserDao extends CrudDao<User, Long, UserDao> { // The compiler wraps these in a HandlerList annotation } } </pre> <p> This element is mandatory and has no default value.
+  - </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Accessing HandlerList programmatically via reflection HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class); if (handlers != null) { for (Handler handler : handlers.value()) { System.out.println("Handler impl: " + handler.impl()); System.out.println("Filter: " + Arrays.toString(handler.filter())); } } // Multiple handlers are automatically wrapped in HandlerList @Handler(impl = LoggingHandler.class) @Handler(impl = SecurityHandler.class) @Handler(impl = CacheHandler.class) public interface UserDao extends CrudDao<User, Long, UserDao> { // The compiler wraps these in a HandlerList annotation } } </pre> <p> This element is mandatory and has no default value.
   - When the compiler synthesizes the container from repeated {@link Handler @Handler} annotations it always populates this array, and an explicit {@code @HandlerList} must supply at least one {@code @Handler} .
 - **Parameters:**
   - (none)
@@ -11478,21 +11387,14 @@ Transforms query results into a Map structure where each result row is keyed by 
 - (none)
 
 #### Public Instance Methods
-##### value(...) -> String
-- **Signature:** `@Deprecated String value() default ""`
-- **Summary:** Legacy attribute for specifying the key field name.
-- **Parameters:**
-  - (none)
-- **Returns:** the field name to use as map key, or empty string if using {@link #keyName()} instead
 ##### keyName(...) -> String
 - **Signature:** `String keyName() default ""`
 - **Summary:** Specifies the target-entity property name to use as the map key.
 - **Contract:**
-  - </p> <p> If both {@code keyName} and the deprecated {@link #value()} are left empty, the framework falls back to the target entity's single id property name; a DAO whose entity has no id property then fails initialization with {@code IllegalArgumentException} .
-  - When both are set, the deprecated {@link #value()} takes precedence.
+  - </p> <p> If {@code keyName} is left empty, the framework falls back to the target entity's single id property name; a DAO whose entity has no id property then fails initialization with {@code IllegalArgumentException} .
 - **Parameters:**
   - (none)
-- **Returns:** the field name to use as map key, or empty string if using the deprecated {@link #value()} instead
+- **Returns:** the field name to use as map key, or empty string to fall back to the entity's id property
 ##### mapClass(...) -> Class<? extends Map>
 - **Signature:** `@SuppressWarnings("rawtypes") Class<? extends Map> mapClass() default HashMap.class`
 - **Summary:** Specifies the Map implementation class to use for the result.
@@ -11516,13 +11418,13 @@ Merges multiple result rows into single entities based on ID fields.
 
 #### Public Instance Methods
 ##### value(...) -> String
-- **Signature:** `@Deprecated String value() default ""`
-- **Summary:** Specifies the ID field(s) to use for merging rows.
+- **Signature:** `String value() default ""`
+- **Summary:** Specifies the property name(s) whose values identify rows to merge.
 - **Contract:**
-  - </p> <p> The automatic ID detection works for: </p> <ul> <li> Single ID fields annotated with {@code @Id} </li> <li> Composite keys using {@code @Id} on multiple fields </li> <li> Standard naming conventions (e.g., "id" field name) </li> </ul> <p> Example with composite key (legacy usage): </p> <pre> {@code // Old way (deprecated) - manually specify composite key @Query("SELECT * FROM order_items WHERE order_date = :date") @MergedById("orderId, productId") List<OrderItem> findByDate(@Bind("date") Date date) throws SQLException; // New way (recommended) - let framework detect ID fields @Query("SELECT * FROM order_items WHERE order_date = :date") @MergedById List<OrderItem> findByDate(@Bind("date") Date date) throws SQLException; // OrderItem class should have @Id annotations on orderId and productId fields } </pre>
+  - <p> This is optional when merging by the entity's declared id: left empty, the framework falls back to the property names annotated with {@code @Id} on the target entity (or, when combined with {@link MappedByKey} , to that annotation's key).
 - **Parameters:**
   - (none)
-- **Returns:** comma-separated list of ID field names, or empty string if using automatic detection
+- **Returns:** comma-separated list of property names to merge by, or empty string to use the entity's id property(ies)
 
 ### Annotation NonDBOperation (com.landawn.abacus.jdbc.annotation.NonDBOperation)
 Marks methods in DAO interfaces that should not be treated as database operations.
@@ -11538,29 +11440,6 @@ Marks methods in DAO interfaces that should not be treated as database operation
 
 #### Public Instance Methods
 - (none)
-
-### Annotation OnDelete (com.landawn.abacus.jdbc.annotation.OnDelete)
-Deprecated metadata placeholder for declaring delete-cascade behavior in Java.
-
-**Thread-safety:** unspecified
-**Nullability:** unspecified
-
-#### Public Constructors
-- (none)
-
-#### Public Static Methods
-- (none)
-
-#### Public Instance Methods
-##### action(...) -> OnDeleteAction
-- **Signature:** `@Deprecated OnDeleteAction action() default OnDeleteAction.NO_ACTION`
-- **Summary:** Specifies the action to take when a referenced entity is deleted.
-- **Contract:**
-  - Specifies the action to take when a referenced entity is deleted.
-  - <p> <strong> Note: </strong> This functionality should be implemented at the database level using foreign key constraints rather than in the application layer.
-- **Parameters:**
-  - (none)
-- **Returns:** the delete action, defaults to {@link OnDeleteAction#NO_ACTION}
 
 ### Annotation OutParameter (com.landawn.abacus.jdbc.annotation.OutParameter)
 Declares an {@code OUT} or {@code INOUT} parameter for a stored-procedure DAO method.
@@ -11711,7 +11590,7 @@ Declares how a DAO method should execute SQL.
 - **Signature:** `String[] value() default {}`
 - **Summary:** Specifies the inline SQL statement(s) to execute.
 - **Contract:**
-  - <p> An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry (across {@code value} and {@link #id()} ) fails DAO initialization with {@link UnsupportedOperationException} .
+  - <p> An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry (across {@code value} and {@link #id()} ) fails DAO initialization with {@link IllegalArgumentException} .
   - When the annotated method is a {@code default} method whose last parameter is a {@code String\[\]} , all entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if applicable, and passed to that {@code String\[\]} parameter at runtime.
   - </p> <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList} ); set {@link #fragmentsContainNamedParameters()} to {@code true} if the replaced fragments contain named parameters </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.
   - </li> <li> Database-specific SQL extensions and functions </li> </ul> <p> Named parameter examples: </p> <pre> {@code // Simple parameter binding @Query("SELECT * FROM users WHERE age > :minAge") List<User> findByAge(@Bind("minAge") int minAge); // Multiple parameters @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge") List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max); // Nested property paths require a single unannotated bean parameter // (filter.getUser().getId() and filter.getStatus() supply the values) @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status") List<Order> findOrders(OrderFilter filter) throws SQLException; // IN clause with collection (uses {ids} template variable expanded via @BindList) @Query("SELECT * FROM users WHERE id IN ({ids})") List<User> findByIds(@BindList("ids") List<Long> ids); } </pre> <p> Complex SQL examples: </p> <pre> {@code // JOIN with aggregation @Query("SELECT u.*, COUNT(o.id) as order_count " + "FROM users u LEFT JOIN orders o ON u.id = o.user_id " + "WHERE u.created_date > :startDate " + "GROUP BY u.id HAVING COUNT(o.id) > :minOrders") List<UserStats> findUserStats(@Bind("startDate") Date startDate, @Bind("minOrders") int minOrders); // Common Table Expression (CTE) @Query("WITH recent_orders AS ( " + " SELECT user_id, COUNT(*) as order_count " + " FROM orders WHERE order_date > :since " + " GROUP BY user_id " + ") " + "SELECT u.*, ro.order_count " + "FROM users u JOIN recent_orders ro ON u.id = ro.user_id") List<UserOrderSummary> findActiveUserSummary(@Bind("since") Date since); // Window function @Query("SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank " + "FROM employees WHERE department = :dept") List<Employee> rankEmployeesByDepartment(@Bind("dept") String department); } </pre> <p> Note: Exactly one of {@code value} or {@link #id()} must be non-empty; specifying both or neither causes initialization to fail with an {@code IllegalArgumentException} .
@@ -11723,7 +11602,7 @@ Declares how a DAO method should execute SQL.
 - **Summary:** Specifies SQL statement identifier lines defined in an external SQL mapper.
 - **Contract:**
   - Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER} .
-  - <p> An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry (across {@link #value()} and {@code id} ) fails DAO initialization with {@link UnsupportedOperationException} .
+  - <p> An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry (across {@link #value()} and {@code id} ) fails DAO initialization with {@link IllegalArgumentException} .
   - When the annotated method is a {@code default} method whose last parameter is a {@code String\[\]} , all entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if applicable, and passed to that {@code String\[\]} parameter at runtime.
   - // </sql> } </pre> <p> Note: Exactly one of {@link #value()} or {@code id} must be non-empty; specifying both or neither causes initialization to fail with an {@code IllegalArgumentException} .
 - **Parameters:**
@@ -11950,7 +11829,7 @@ Marks a {@code static final String} field as a named SQL script \\u2014 an inlin
 - **Contract:**
   - Supplies an optional identifier that overrides the annotated field name when the SQL is registered.
   - When left empty, the declaration name (for example {@code sql_listUserWithBiggerId} ) becomes the key.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code @SqlScript(id = "sql_listUserWithBiggerId") static final String listUserWithBiggerId = PSC.selectFrom(User.class).where(Filters.gt("id")).sql(); } </pre> <p> When supplied, the id must be a non-empty, whitespace-free Java identifier that is unique among all {@link SqlScript} fields on the DAO and does not collide with any id loaded via {@link SqlSource} ; otherwise DAO initialization fails with {@code IllegalArgumentException} .
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code @SqlScript(id = "sql_listUserWithBiggerId") static final String listUserWithBiggerId = PSC.selectFrom(User.class).where(Filters.gt("id")).sql(); } </pre> <p> When supplied, the id must be a non-empty, valid Java identifier, unique among all {@link SqlScript} fields on the DAO, and must not collide with any id loaded via {@link SqlSource} ; otherwise DAO initialization fails with {@code IllegalArgumentException} .
 - **Parameters:**
   - (none)
 - **Returns:** the identifier used by {@link Query#id()} ; empty means the annotated field name is used
@@ -12062,21 +11941,21 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
 - **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws SQLException`
+- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws SQLException`
 - **Summary:** Performs batch upsert based on the specified unique properties for matching.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify each entity (must not be empty)
+  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each entity (must not be empty)
 - **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws SQLException`
+- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize) throws SQLException`
 - **Summary:** Performs batch upsert based on the specified unique properties with a custom batch size.
 - **Contract:**
   - When both inserts and updates are needed (or either set is large), the operation is wrapped in a transaction.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify each entity (must not be empty)
+  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each entity (must not be empty)
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
 - **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
@@ -12216,7 +12095,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Signature:** `@Beta @NonDBOperation default CallableQuery prepareCallableQuery(final String sql) throws SQLException`
 - **Summary:** Creates a CallableQuery for executing stored procedures or functions.
 - **Contract:**
-  - The query should use the JDBC escape syntax: {@code {call procedure_name(?, ?)}} <p> <b> Usage Examples: </b> </p> <pre> {@code CallableQuery query = dao.prepareCallableQuery("{call get_user_count(?)}"); query.registerOutParameter(1, Types.INTEGER); query.execute(); int count = query.getInt(1); } </pre>
+  - The query should use the JDBC escape syntax: {@code {call procedure_name(?, ?)}} <p> <b> Usage Examples: </b> </p> <pre> {@code Jdbc.OutParamResult outParams = dao.prepareCallableQuery("{call get_user_count(?)}") .registerOutParameter(1, Types.INTEGER) .executeAndGetOutParameters(); int count = outParams.getOutParamValue(1); } </pre>
 - **Parameters:**
   - `sql` (`String`) — the stored procedure call string
 - **Returns:** a CallableQuery instance
@@ -12231,14 +12110,14 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### upsert(...) -> T
-- **Signature:** `default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException`
+- **Signature:** `default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws SQLException`
 - **Summary:** Performs an upsert operation - inserts if not exists, updates if exists.
 - **Contract:**
   - Performs an upsert operation - inserts if not exists, updates if exists.
   - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User("john@example.com", "John Doe"); User saved = dao.upsert(user, Arrays.asList("email")); // Inserts if email doesn't exist, updates if it does } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-  - `uniquePropNamesForQuery` (`List<String>`) — property names that uniquely identify the record
+  - `uniquePropNamesForQuery` (`Collection<String>`) — property names that uniquely identify the record
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -12457,6 +12336,14 @@ Internal utility class providing helper methods for DAO operations.
 - **Parameters:**
   - `daoInterface` (`Class<?>`) — the DAO interface to inspect.
 - **Returns:** {@code true} if {@code daoInterface} extends {@link CrudReadOps} ; otherwise {@code false} .
+##### getDeclaredIdExtractor(...) -> Jdbc.BiRowMapper
+- **Signature:** `@SuppressWarnings("rawtypes") public static Jdbc.BiRowMapper getDeclaredIdExtractor(final DaoBase dao)`
+- **Summary:** Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-read-capable DAO (any {@link CrudReadOps} variant, including the no-update and read-only composites), otherwise {@code null} .
+- **Contract:**
+  - Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-read-capable DAO (any {@link CrudReadOps} variant, including the no-update and read-only composites), otherwise {@code null} .
+- **Parameters:**
+  - `dao` (`DaoBase`) — the DAO instance to inspect.
+- **Returns:** the DAO's declared id extractor, or {@code null} if the DAO has none.
 ##### isCrudJoinEntityReadOps(...) -> boolean
 - **Signature:** `public static boolean isCrudJoinEntityReadOps(final Class<?> daoInterface)`
 - **Summary:** Returns whether the specified DAO interface exposes readable CRUD join-entity helper operations.
@@ -12674,13 +12561,13 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Returns:** the inserted or updated entity
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException`
+- **Signature:** `@Override default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException`
 - **Summary:** Performs an upsert operation: inserts the entity if it doesn't exist based on the specified unique properties, otherwise updates the existing entity.
 - **Contract:**
   - Performs an upsert operation: inserts the entity if it doesn't exist based on the specified unique properties, otherwise updates the existing entity.
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-  - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify the record
+  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify the record
 - **Returns:** the inserted or updated entity
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
@@ -12714,19 +12601,21 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException`
+- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException`
 - **Summary:** Batch upserts multiple entities based on the specified unique properties.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify each record
+  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each record
 - **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws UncheckedSQLException`
+- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize) throws UncheckedSQLException`
 - **Summary:** Batch upserts multiple entities based on the specified unique properties using the specified batch size.
+- **Contract:**
+  - Performing batch insert and batch update operations <p> When both inserts and updates are needed (or either set is larger than {@code batchSize} ), the operation is wrapped in a transaction.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify each record
+  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each record
   - `batchSize` (`int`) — the size of each batch
 - **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
@@ -12761,13 +12650,13 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 
 #### Public Instance Methods
 ##### upsert(...) -> T
-- **Signature:** `@Override default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException`
+- **Signature:** `@Override default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
 - **Contract:**
   - Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-  - `uniquePropNamesForQuery` (`List<String>`) — the list of property names that uniquely identify the record
+  - `uniquePropNamesForQuery` (`Collection<String>`) — the list of property names that uniquely identify the record
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
