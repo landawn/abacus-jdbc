@@ -60,7 +60,7 @@ import com.landawn.abacus.util.stream.Stream;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T, TD>
-        permits CrudDao, CrudLReadOps, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
+        permits CrudDao, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
     /**
      * Returns a {@link Jdbc.BiRowMapper} that extracts the ID from a database row.
      * This mapper is used internally to extract ID values from query results (for example,

@@ -1871,7 +1871,6 @@ final class DaoImpl {
         final AsyncExecutor asyncExecutor = executor == null ? JdbcUtil.asyncExecutor : new AsyncExecutor(executor);
         final boolean isUncheckedDao = DaoUtil.isUncheckedReadOps(daoInterface);
         final boolean isCrudDao = DaoUtil.isCrudReadOps(daoInterface);
-        final boolean isCrudLDao = DaoUtil.isCrudLReadOps(daoInterface);
         // Restriction level for centralizing the prepareQuery/prepareNamedQuery SQL-kind gate (formerly per-method overrides in ReadOnlyDao/NoUpdateDao).
         final boolean isReadOnlyDao = ReadOnlyDao.class.isAssignableFrom(daoInterface);
         final boolean isNoUpdateDao = !isReadOnlyDao && NoUpdateDao.class.isAssignableFrom(daoInterface);
@@ -1992,7 +1991,7 @@ final class DaoImpl {
 
             if (isCrudDao) {
                 final List<String> idFieldNames = QueryUtil.getIdPropNames((Class) typeArguments[0]);
-                final Class<?> declaredIdClass = isCrudLDao ? Long.class : (Class) typeArguments[1];
+                final Class<?> declaredIdClass = (Class) typeArguments[1];
 
                 if (idFieldNames.size() == 0) {
                     throw new IllegalArgumentException("To support CRUD operations by extending CrudDao interface, the entity class: " + typeArguments[0]
@@ -2030,7 +2029,7 @@ final class DaoImpl {
         final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
         final String tableName = entityInfo == null ? null : getTableName(entityClass, entityInfo, namingPolicy, targetTableName);
 
-        final Class<?> idClass = isCrudDao ? (isCrudLDao ? Long.class : (Class) typeArguments[1]) : null;
+        final Class<?> idClass = isCrudDao ? (Class) typeArguments[1] : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
         final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 

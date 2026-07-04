@@ -49,7 +49,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
 sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudReadOps<T, ID, TD>, UncheckedReadOps<T, TD>
-        permits UncheckedCrudDao, UncheckedCrudLReadOps, UncheckedNoUpdateCrudDao, UncheckedReadOnlyCrudDao {
+        permits UncheckedCrudDao, UncheckedNoUpdateCrudDao, UncheckedReadOnlyCrudDao {
     /**
      * Generates a new ID for entity insertion.
      *

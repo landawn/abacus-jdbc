@@ -106,16 +106,6 @@ public final class DaoUtil {
     }
 
     /**
-     * Returns whether the specified DAO interface exposes readable CRUD operations with a {@code long} ID type.
-     *
-     * @param daoInterface the DAO interface to inspect.
-     * @return {@code true} if {@code daoInterface} extends {@link CrudLReadOps}; otherwise {@code false}.
-     */
-    public static boolean isCrudLReadOps(final Class<?> daoInterface) {
-        return CrudLReadOps.class.isAssignableFrom(daoInterface);
-    }
-
-    /**
      * Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-read-capable DAO
      * (any {@link CrudReadOps} variant, including the no-update and read-only composites), otherwise {@code null}.
      *
@@ -543,45 +533,76 @@ public final class DaoUtil {
     }
 
     /**
-     * Casts a {@link CrudLJoinEntityHelper} to a {@link CrudLReadOps} instance.
+     * Retrieves the join information for an entity class.
      * <p>
-     * This is the {@code long}-ID counterpart of {@link #getCrudReadOps(CrudJoinEntityReadOps)}. It returns the
-     * {@link CrudLReadOps} view so the helper's primitive {@code long}-ID {@code gett} paths resolve to the
-     * primitive {@code gett(long)} overloads (keeping dispatch on the {@code long}-ID view) rather than the boxed {@code gett(Long)} ones.
+     * This method delegates to {@link JoinInfo#getEntityJoinInfo(Class, Class, String)} to retrieve
+     * metadata about join relationships for the target entity. The returned map contains property names
+     * as keys and their corresponding {@link JoinInfo} objects as values, which describe how to join
+     * related entities.
+     * </p>
      *
-     * @param <T> the entity type managed by this DAO
-     * @param <TD> the DAO type
-     * @param dao the CrudLJoinEntityHelper instance to cast
-     * @return the DAO instance cast to CrudLReadOps
-     * @throws UnsupportedOperationException if the DAO does not implement CrudLReadOps interface
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get join info for a User entity with DAO interface
+     * Map<String, JoinInfo> joinInfo = DaoUtil.getEntityJoinInfo(
+     *     UserDao.class,
+     *     User.class,
+     *     "users"
+     * );
+     *
+     * // Access join information for specific properties
+     * JoinInfo addressJoinInfo = joinInfo.get("address");
+     * JoinInfo ordersJoinInfo = joinInfo.get("orders");
+     * }</pre>
+     *
+     * @param targetDaoInterface the DAO interface class for the target entity
+     * @param targetEntityClass the entity class to get join information for
+     * @param targetTableName the database table name for the entity
+     * @return a map of property names to their corresponding {@link JoinInfo} objects
      */
-    static <T, TD extends CrudLDao<T, TD>> CrudLReadOps<T, TD> getCrudReadOps(final CrudLJoinEntityHelper<T, TD> dao) {
-        if (dao instanceof CrudLReadOps) {
-            return (CrudLReadOps<T, TD>) dao;
-        } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement CrudLReadOps interface"); //NOSONAR
-        }
+    static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName) {
+        return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
     }
 
     /**
-     * Casts an {@link UncheckedCrudLJoinEntityHelper} to an {@link UncheckedCrudLReadOps} instance.
+     * Retrieves the property names for join entities of a specific type.
      * <p>
-     * This is the {@code long}-ID counterpart of {@link #getCrudReadOps(UncheckedCrudJoinEntityReadOps)}. It
-     * returns the {@link UncheckedCrudLReadOps} view so the helper's primitive {@code long}-ID {@code gett}
-     * paths resolve to the primitive {@code gett(long)} overloads (keeping dispatch on the {@code long}-ID view).
+     * This method delegates to {@link JoinInfo#getJoinEntityPropNamesByType(Class, Class, String, Class)}
+     * to find all properties in the target entity class that represent joins to entities of the specified
+     * type. This is useful when you need to identify which properties should be populated when loading
+     * related entities of a particular type.
+     * </p>
      *
-     * @param <T> the entity type managed by this DAO
-     * @param <TD> the DAO type
-     * @param dao the UncheckedCrudLJoinEntityHelper instance to cast
-     * @return the DAO instance cast to UncheckedCrudLReadOps
-     * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudLReadOps interface
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get property names for all Address-type join entities in User
+     * List<String> addressPropNames = DaoUtil.getJoinEntityPropNamesByType(
+     *     UserDao.class,
+     *     User.class,
+     *     "users",
+     *     Address.class
+     * );
+     * // Returns: ["homeAddress", "workAddress"] if User has multiple Address properties
+     *
+     * // Get property names for Order-type join entities
+     * List<String> orderPropNames = DaoUtil.getJoinEntityPropNamesByType(
+     *     UserDao.class,
+     *     User.class,
+     *     "users",
+     *     Order.class
+     * );
+     * // Returns: ["orders"] if User has a List<Order> property
+     * }</pre>
+     *
+     * @param targetDaoInterface the DAO interface class for the target entity
+     * @param targetEntityClass the entity class to search for join properties
+     * @param targetTableName the database table name for the target entity
+     * @param joinEntityClass the class of the join entity to find properties for
+     * @return a list of property names that represent joins to the specified entity type
      */
-    static <T, TD extends UncheckedCrudLDao<T, TD>> UncheckedCrudLReadOps<T, TD> getCrudReadOps(final UncheckedCrudLJoinEntityHelper<T, TD> dao) {
-        if (dao instanceof UncheckedCrudLReadOps) {
-            return (UncheckedCrudLReadOps<T, TD>) dao;
-        } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedCrudLReadOps interface"); //NOSONAR
-        }
+    static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName,
+            final Class<?> joinEntityClass) {
+        return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, targetTableName, joinEntityClass);
     }
 
     /**
@@ -806,78 +827,5 @@ public final class DaoUtil {
         }
 
         return Math.toIntExact(result);
-    }
-
-    /**
-     * Retrieves the join information for an entity class.
-     * <p>
-     * This method delegates to {@link JoinInfo#getEntityJoinInfo(Class, Class, String)} to retrieve
-     * metadata about join relationships for the target entity. The returned map contains property names
-     * as keys and their corresponding {@link JoinInfo} objects as values, which describe how to join
-     * related entities.
-     * </p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Get join info for a User entity with DAO interface
-     * Map<String, JoinInfo> joinInfo = DaoUtil.getEntityJoinInfo(
-     *     UserDao.class,
-     *     User.class,
-     *     "users"
-     * );
-     *
-     * // Access join information for specific properties
-     * JoinInfo addressJoinInfo = joinInfo.get("address");
-     * JoinInfo ordersJoinInfo = joinInfo.get("orders");
-     * }</pre>
-     *
-     * @param targetDaoInterface the DAO interface class for the target entity
-     * @param targetEntityClass the entity class to get join information for
-     * @param targetTableName the database table name for the entity
-     * @return a map of property names to their corresponding {@link JoinInfo} objects
-     */
-    static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName) {
-        return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
-    }
-
-    /**
-     * Retrieves the property names for join entities of a specific type.
-     * <p>
-     * This method delegates to {@link JoinInfo#getJoinEntityPropNamesByType(Class, Class, String, Class)}
-     * to find all properties in the target entity class that represent joins to entities of the specified
-     * type. This is useful when you need to identify which properties should be populated when loading
-     * related entities of a particular type.
-     * </p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Get property names for all Address-type join entities in User
-     * List<String> addressPropNames = DaoUtil.getJoinEntityPropNamesByType(
-     *     UserDao.class,
-     *     User.class,
-     *     "users",
-     *     Address.class
-     * );
-     * // Returns: ["homeAddress", "workAddress"] if User has multiple Address properties
-     *
-     * // Get property names for Order-type join entities
-     * List<String> orderPropNames = DaoUtil.getJoinEntityPropNamesByType(
-     *     UserDao.class,
-     *     User.class,
-     *     "users",
-     *     Order.class
-     * );
-     * // Returns: ["orders"] if User has a List<Order> property
-     * }</pre>
-     *
-     * @param targetDaoInterface the DAO interface class for the target entity
-     * @param targetEntityClass the entity class to search for join properties
-     * @param targetTableName the database table name for the target entity
-     * @param joinEntityClass the class of the join entity to find properties for
-     * @return a list of property names that represent joins to the specified entity type
-     */
-    static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName,
-            final Class<?> joinEntityClass) {
-        return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, targetTableName, joinEntityClass);
     }
 }

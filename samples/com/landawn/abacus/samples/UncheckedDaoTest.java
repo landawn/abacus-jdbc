@@ -21,7 +21,6 @@ import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao;
 import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao2;
 import static com.landawn.abacus.samples.JdbcTest.projectDao;
 import static com.landawn.abacus.samples.JdbcTest.uncheckedUserDao;
-import static com.landawn.abacus.samples.JdbcTest.uncheckedUserDao2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -297,27 +296,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.deleteById(id);
 
         assertFalse(uncheckedUserDao.exists(id));
-    }
-
-    @Test
-    public void test_save_insert_2() {
-        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        uncheckedUserDao2.save(user, N.asList("id", "firstName", "lastName", "email"));
-
-        User userFromDB = uncheckedUserDao2.gett(100L);
-        System.out.println(userFromDB);
-        assertNotNull(userFromDB);
-
-        uncheckedUserDao2.deleteById(100);
-
-        final long id = uncheckedUserDao2.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = uncheckedUserDao2.gett(id);
-        System.out.println(userFromDB);
-        assertNotNull(userFromDB);
-        uncheckedUserDao2.deleteById(id);
-
-        assertFalse(uncheckedUserDao2.exists(id));
-
     }
 
     //    @SuppressWarnings("deprecation")

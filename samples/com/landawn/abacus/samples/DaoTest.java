@@ -24,7 +24,6 @@ import static com.landawn.abacus.samples.JdbcTest.myUserDaoA;
 import static com.landawn.abacus.samples.JdbcTest.noUpdateUserDao;
 import static com.landawn.abacus.samples.JdbcTest.projectDao;
 import static com.landawn.abacus.samples.JdbcTest.userDao;
-import static com.landawn.abacus.samples.JdbcTest.userDao2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -719,26 +718,6 @@ public class DaoTest {
         userDao.deleteById(id);
 
         assertFalse(userDao.exists(id));
-    }
-
-    @Test
-    public void test_save_insert_2() throws SQLException {
-        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao2.save(user, N.asList("id", "firstName", "lastName", "email"));
-
-        User userFromDB = userDao2.gett(100L);
-        System.out.println(userFromDB);
-        assertNotNull(userFromDB);
-
-        userDao2.deleteById(100);
-
-        final long id = userDao2.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = userDao2.gett(id);
-        System.out.println(userFromDB);
-        assertNotNull(userFromDB);
-        userDao2.deleteById(id);
-
-        assertFalse(userDao2.exists(id));
     }
 
     //    @SuppressWarnings("deprecation")

@@ -48,9 +48,7 @@ import com.landawn.abacus.samples.dao.NoUpdateUserDao;
 import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
 import com.landawn.abacus.samples.dao.UncheckedUserDao;
-import com.landawn.abacus.samples.dao.UncheckedUserCrudLDao;
 import com.landawn.abacus.samples.dao.UserDao;
-import com.landawn.abacus.samples.dao.UserCrudLDao;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Fn;
@@ -73,17 +71,14 @@ public class JdbcTest {
                 (result, obj, args, methodSignature) -> N.println("<<<handler2.afterInvoke: method: " + methodSignature._1.getName() + ". result: " + result)));
 
         JdbcUtil.setIdExtractorForDao(EmployeeDao.class, rs -> rs.getInt(1));
-        JdbcUtil.setIdExtractorForDao(UserCrudLDao.class, rs -> rs.getLong(1));
     }
 
     static final DataSource dataSource = JdbcUtil.createHikariDataSource("jdbc:h2:~/test", "sa", "");
     static final DataSource dataSource2 = JdbcUtil.createC3p0DataSource("jdbc:h2:~/test", "sa", "");
     static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
     static final UserDao userDao12 = JdbcUtil.createDao(UserDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().targetTableName("user2").build());
-    static final UserCrudLDao userDao2 = JdbcUtil.createDao(UserCrudLDao.class, dataSource);
     static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource);
     static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
-    static final UncheckedUserCrudLDao uncheckedUserDao2 = JdbcUtil.createDao(UncheckedUserCrudLDao.class, dataSource);
     static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
     static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
 

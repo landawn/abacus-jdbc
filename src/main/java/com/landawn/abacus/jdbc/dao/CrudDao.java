@@ -52,9 +52,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <p>All database operations declared here are <i>checked</i>: they propagate {@link SQLException}
  * to the caller. For a variant whose methods instead throw the unchecked
  * {@link com.landawn.abacus.exception.UncheckedSQLException}, see {@link UncheckedCrudDao}. For variants
- * that forbid mutating operations, see {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDao}. When the
- * entity's ID is a {@code long}/{@code Long}, the convenience sub-interface {@link CrudLDao} adds
- * primitive-{@code long} id overloads.</p>
+ * that forbid mutating operations, see {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDao}.</p>
  *
  * <p><b>ID semantics:</b> the entity class must declare one or more {@code @Id} properties. A single id
  * property maps directly to the {@code <ID>} type (for example {@code Long} or {@code String}), whereas a
@@ -83,7 +81,6 @@ import com.landawn.abacus.util.stream.Stream;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
- * @see CrudLDao
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
