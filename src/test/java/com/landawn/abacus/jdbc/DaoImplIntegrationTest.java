@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -673,9 +674,14 @@ public class DaoImplIntegrationTest extends TestBase {
     public void testCreateDao() throws SQLException {
         SqlDialect sqlDialect = SqlDialect.builder().productInfo(ProductInfo.of("SQL Server", "10")).build();
         final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds, sqlDialect);
+        // createDao with an explicit SqlDialect returns a usable proxy...
+        assertNotNull(bindDao);
         dao.insert(newUser("Bind", "Me", 77));
 
-        bindDao.findFirst(Filters.eq("firstName", "me"));
+        // ...that executes queries against the datasource without error.
+        assertDoesNotThrow(() -> {
+            bindDao.findFirst(Filters.eq("firstName", "me"));
+        });
     }
 
     @Test

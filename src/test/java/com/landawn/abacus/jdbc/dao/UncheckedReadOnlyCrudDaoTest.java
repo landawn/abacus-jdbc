@@ -42,11 +42,6 @@ public class UncheckedReadOnlyCrudDaoTest extends TestBase {
         assertEquals(3, UncheckedReadOnlyCrudDao.class.getTypeParameters().length);
     }
 
-    @Test
-    public void testHasDeclaredMethods() {
-        assertTrue(UncheckedCrudReadOps.class.isAssignableFrom(UncheckedReadOnlyCrudDao.class));
-    }
-
     @SuppressWarnings("unchecked")
     private static <T> T createDefaultMethodProxy(final Class<T> interfaceType) {
         final InvocationHandler handler = (proxy, method, args) -> {

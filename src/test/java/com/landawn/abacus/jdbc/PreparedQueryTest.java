@@ -156,12 +156,6 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testCloseAfterExecutionOnClosedQuery() {
-        query.close();
-        assertThrows(IllegalStateException.class, () -> query.closeAfterExecution(false));
-    }
-
-    @Test
     public void testOnClose() {
         // Test single handler
         boolean[] handlerCalled = { false };
@@ -187,13 +181,6 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testOnCloseNullHandler() {
         assertThrows(IllegalArgumentException.class, () -> query.onClose(null));
-    }
-
-    @Test
-    public void testOnCloseOnClosedQuery() {
-        query.close();
-        assertThrows(IllegalStateException.class, () -> query.onClose(() -> {
-        }));
     }
 
     @Test

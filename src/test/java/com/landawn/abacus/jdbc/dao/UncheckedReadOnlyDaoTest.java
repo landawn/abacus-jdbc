@@ -37,11 +37,6 @@ public class UncheckedReadOnlyDaoTest extends TestBase {
         assertEquals(2, UncheckedReadOnlyDao.class.getTypeParameters().length);
     }
 
-    @Test
-    public void testHasDeclaredMethods() {
-        assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedReadOnlyDao.class));
-    }
-
     @SuppressWarnings("unchecked")
     private static <T> T createDefaultMethodProxy(final Class<T> interfaceType) {
         final InvocationHandler handler = (proxy, method, args) -> {

@@ -37,11 +37,6 @@ public class NoUpdateCrudDaoTest extends TestBase {
         assertEquals(3, NoUpdateCrudDao.class.getTypeParameters().length);
     }
 
-    @Test
-    public void testHasDeclaredMethods() {
-        assertTrue(CrudReadOps.class.isAssignableFrom(NoUpdateCrudDao.class));
-    }
-
     @SuppressWarnings("unchecked")
     private static <T> T createDefaultMethodProxy(final Class<T> interfaceType) {
         final InvocationHandler handler = (proxy, method, args) -> {

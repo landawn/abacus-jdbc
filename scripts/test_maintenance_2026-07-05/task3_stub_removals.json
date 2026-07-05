@@ -1,0 +1,3 @@
+[
+  {"file": "src/test/java/com/landawn/abacus/jdbc/csTest.java", "method": "testGetterConstant", "start_line": 163, "reason": "dead stub: empty body testing cs.getter, which does not exist (only cs.columnGetter/defaultColumnGetter exist, each already covered); cs.java is a source class and cannot be modified to add the constant"}
+]

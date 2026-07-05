@@ -1,0 +1,50 @@
+{
+  "total_tests": 3273,
+  "zero_assertion_count": 6,
+  "trivial_assertion_count": 0,
+  "zero_assertion": [
+    {
+      "file": "src/test/java/com/landawn/abacus/CodeHelper.java",
+      "class": "CodeHelper",
+      "name": "replace_parameter_string",
+      "start_line": 74,
+      "end_line": 174
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/JavaDocHelper.java",
+      "class": "JavaDocHelper",
+      "name": "remove_since_author",
+      "start_line": 36,
+      "end_line": 60
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/JavaDocHelper.java",
+      "class": "JavaDocHelper",
+      "name": "add_code_for_words",
+      "start_line": 62,
+      "end_line": 110
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/JavaDocHelper.java",
+      "class": "JavaDocHelper",
+      "name": "format_jdoc",
+      "start_line": 112,
+      "end_line": 137
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/JavaDocHelper.java",
+      "class": "JavaDocHelper",
+      "name": "remove_useless_comments",
+      "start_line": 210,
+      "end_line": 288
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/JavaDocHelper.java",
+      "class": "JavaDocHelper",
+      "name": "remove_empty_jdoc",
+      "start_line": 290,
+      "end_line": 329
+    }
+  ],
+  "trivial_assertion": []
+}

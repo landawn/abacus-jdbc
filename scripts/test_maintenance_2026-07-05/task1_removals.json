@@ -1,0 +1,10 @@
+[
+  {"file": "src/test/java/com/landawn/abacus/jdbc/PreparedQueryTest.java", "method": "testCloseAfterExecutionOnClosedQuery", "start_line": 158, "reason": "cross-class dup of AbstractQueryTest.testCloseAfterExecution_ClosedQuery; closeAfterExecution is owned by AbstractQuery"},
+  {"file": "src/test/java/com/landawn/abacus/jdbc/PreparedQueryTest.java", "method": "testOnCloseOnClosedQuery", "start_line": 192, "reason": "cross-class dup of AbstractQueryTest.testOnClose_AfterClose_ThrowsIllegalStateException; onClose is owned by AbstractQuery"},
+  {"file": "src/test/java/com/landawn/abacus/jdbc/dao/UncheckedNoUpdateCrudDaoTest.java", "method": "testHasDeclaredMethods", "start_line": 45, "reason": "within-class dup of testExtendsUncheckedCrudDao (misnamed copy)"},
+  {"file": "src/test/java/com/landawn/abacus/jdbc/dao/UncheckedReadOnlyCrudDaoTest.java", "method": "testHasDeclaredMethods", "start_line": 45, "reason": "within-class dup of testExtendsUncheckedNoUpdateCrudDao (misnamed copy)"},
+  {"file": "src/test/java/com/landawn/abacus/jdbc/dao/UncheckedNoUpdateDaoTest.java", "method": "testHasDeclaredMethods", "start_line": 40, "reason": "within-class dup of testExtendsUncheckedDao (misnamed copy)"},
+  {"file": "src/test/java/com/landawn/abacus/jdbc/dao/UncheckedReadOnlyDaoTest.java", "method": "testHasDeclaredMethods", "start_line": 40, "reason": "within-class dup of testExtendsUncheckedNoUpdateDao (misnamed copy)"},
+  {"file": "src/test/java/com/landawn/abacus/jdbc/dao/NoUpdateCrudDaoTest.java", "method": "testHasDeclaredMethods", "start_line": 40, "reason": "within-class dup of testExtendsCrudDao (misnamed copy)"},
+  {"file": "src/test/java/com/landawn/abacus/jdbc/dao/ReadOnlyCrudDaoTest.java", "method": "testHasDeclaredMethods", "start_line": 40, "reason": "within-class dup of testExtendsNoUpdateCrudDao (misnamed copy)"}
+]

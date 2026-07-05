@@ -967,9 +967,10 @@ public class AbstractQueryTest extends TestBase {
         when(meta.getColumnCount()).thenReturn(0);
         when(rs.next()).thenReturn(false);
 
-        // No rows so consumer is never invoked — just verify no exception
-        query.foreach(String.class, arr -> {
-        });
+        // No rows, so the consumer must never be invoked and the delegation must not throw.
+        final boolean[] consumed = { false };
+        assertDoesNotThrow(() -> query.foreach(String.class, arr -> consumed[0] = true));
+        assertFalse(consumed[0]);
     }
 
     // foreach(Class, Consumer<DisposableObjArray>) — null entityClass must throw IllegalArgumentException (bug fix)

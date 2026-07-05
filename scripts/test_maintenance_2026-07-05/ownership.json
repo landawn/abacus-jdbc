@@ -1,0 +1,188 @@
+{
+  "scattered_source_classes": {
+    "DaoImpl": [
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/DaoImplIntegrationTest.java",
+        "class": "DaoImplIntegrationTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 43,
+        "forbidden_pkg": false
+      },
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/DaoImplTest.java",
+        "class": "DaoImplTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 56,
+        "forbidden_pkg": false
+      }
+    ],
+    "DataTransferUtil": [
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/DataTransferUtilIntegrationTest.java",
+        "class": "DataTransferUtilIntegrationTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 32,
+        "forbidden_pkg": false
+      },
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/DataTransferUtilTest.java",
+        "class": "DataTransferUtilTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 66,
+        "forbidden_pkg": false
+      }
+    ],
+    "Jdbc": [
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/JdbcMySQLTest.java",
+        "class": "JdbcMySQLTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 36,
+        "forbidden_pkg": false
+      },
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/JdbcTest.java",
+        "class": "JdbcTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 233,
+        "forbidden_pkg": false
+      }
+    ],
+    "JdbcUtil": [
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/JdbcUtilIntegrationTest.java",
+        "class": "JdbcUtilIntegrationTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 44,
+        "forbidden_pkg": false
+      },
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/JdbcUtilTest.java",
+        "class": "JdbcUtilTest",
+        "package": "com.landawn.abacus.jdbc",
+        "n_tests": 259,
+        "forbidden_pkg": false
+      }
+    ],
+    "JoinEntityHelper": [
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/dao/JoinEntityHelperIntegrationTest.java",
+        "class": "JoinEntityHelperIntegrationTest",
+        "package": "com.landawn.abacus.jdbc.dao",
+        "n_tests": 9,
+        "forbidden_pkg": false
+      },
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/dao/JoinEntityHelperTest.java",
+        "class": "JoinEntityHelperTest",
+        "package": "com.landawn.abacus.jdbc.dao",
+        "n_tests": 136,
+        "forbidden_pkg": false
+      }
+    ],
+    "ReadOnlyJoinEntityHelper": [
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/dao/ReadOnlyJoinEntityHelperIntegrationTest.java",
+        "class": "ReadOnlyJoinEntityHelperIntegrationTest",
+        "package": "com.landawn.abacus.jdbc.dao",
+        "n_tests": 4,
+        "forbidden_pkg": false
+      },
+      {
+        "file": "src/test/java/com/landawn/abacus/jdbc/dao/ReadOnlyJoinEntityHelperTest.java",
+        "class": "ReadOnlyJoinEntityHelperTest",
+        "package": "com.landawn.abacus.jdbc.dao",
+        "n_tests": 4,
+        "forbidden_pkg": false
+      }
+    ]
+  },
+  "orphan_test_files": [
+    {
+      "file": "src/test/java/com/landawn/abacus/CodeHelper.java",
+      "class": "CodeHelper",
+      "package": "com.landawn.abacus",
+      "n_tests": 2,
+      "forbidden_pkg": true
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/JavaDocHelper.java",
+      "class": "JavaDocHelper",
+      "package": "com.landawn.abacus",
+      "n_tests": 5,
+      "forbidden_pkg": true
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/jdbc/dao/CapabilityGatingTest.java",
+      "class": "CapabilityGatingTest",
+      "package": "com.landawn.abacus.jdbc.dao",
+      "n_tests": 8,
+      "forbidden_pkg": false
+    }
+  ],
+  "infra_no_test_files": [
+    {
+      "file": "src/test/java/com/landawn/abacus/AbacusJdbcTestSuite.java",
+      "class": "AbacusJdbcTestSuite",
+      "package": "com.landawn.abacus",
+      "n_tests": 0,
+      "forbidden_pkg": true
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/Maven.java",
+      "class": "Maven",
+      "package": "com.landawn.abacus",
+      "n_tests": 0,
+      "forbidden_pkg": true
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/TestBase.java",
+      "class": "TestBase",
+      "package": "com.landawn.abacus",
+      "n_tests": 0,
+      "forbidden_pkg": true
+    },
+    {
+      "file": "src/test/java/com/landawn/abacus/jdbc/SqlExecutorTest.java",
+      "class": "SqlExecutorTest",
+      "package": "com.landawn.abacus.jdbc",
+      "n_tests": 0,
+      "forbidden_pkg": false
+    }
+  ],
+  "source_classes_without_test": [
+    "CrudDeleteOps",
+    "CrudInsertOps",
+    "CrudJoinEntityReadOps",
+    "CrudReadOps",
+    "CrudUpdateOps",
+    "DaoBase",
+    "DeleteOps",
+    "InsertOps",
+    "JoinEntityBase",
+    "JoinEntityReadOps",
+    "ReadOps",
+    "SqlExecutor",
+    "UncheckedCrudDeleteOps",
+    "UncheckedCrudInsertOps",
+    "UncheckedCrudJoinEntityReadOps",
+    "UncheckedCrudReadOps",
+    "UncheckedCrudUpdateOps",
+    "UncheckedDaoBase",
+    "UncheckedDeleteOps",
+    "UncheckedInsertOps",
+    "UncheckedJoinEntityDeleteOps",
+    "UncheckedJoinEntityReadOps",
+    "UncheckedReadOps",
+    "UncheckedUpdateOps",
+    "UpdateOps"
+  ],
+  "counts": {
+    "source_classes": 92,
+    "covered": 67,
+    "scattered": 6,
+    "orphans": 3,
+    "infra": 4,
+    "missing_test": 25
+  }
+}

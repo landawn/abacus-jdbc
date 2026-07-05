@@ -32,7 +32,6 @@ import org.mockito.MockitoAnnotations;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.util.Throwables;
 
 public class SqlTransactionTest extends TestBase {
 

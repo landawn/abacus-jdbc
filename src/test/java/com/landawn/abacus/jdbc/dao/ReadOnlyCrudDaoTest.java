@@ -37,11 +37,6 @@ public class ReadOnlyCrudDaoTest extends TestBase {
         assertEquals(3, ReadOnlyCrudDao.class.getTypeParameters().length);
     }
 
-    @Test
-    public void testHasDeclaredMethods() {
-        assertTrue(CrudReadOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
-    }
-
     @SuppressWarnings("unchecked")
     private static <T> T createDefaultMethodProxy(final Class<T> interfaceType) {
         final InvocationHandler handler = (proxy, method, args) -> {

@@ -2106,7 +2106,7 @@ public class CallableQueryTest extends TestBase {
     public void testSetParameters_ByObject_Bean() throws SQLException {
         SimpleTestBean bean = new SimpleTestBean();
         bean.setName("Alice");
-        CallableQuery result = callableQuery.setParameters((Object) bean);
+        CallableQuery result = callableQuery.setParameters(bean);
         assertSame(callableQuery, result);
         verify(callableStatement).setString("name", "Alice");
     }
@@ -2162,8 +2162,8 @@ public class CallableQueryTest extends TestBase {
         assertFalse(rs.next());
         assertFalse(rs.wasNull());
         assertFalse(rs.getBoolean(1)); // boolean → false
-        assertEquals(0, (int) rs.getByte(1)); // byte → (byte) 0
-        assertEquals(0, (int) rs.getShort(1)); // short → (short) 0
+        assertEquals(0, rs.getByte(1)); // byte → (byte) 0
+        assertEquals(0, rs.getShort(1)); // short → (short) 0
         assertEquals(0, rs.getInt(1)); // int → 0
         assertEquals(0L, rs.getLong(1)); // long → 0L
         assertEquals(0F, rs.getFloat(1)); // float → 0F

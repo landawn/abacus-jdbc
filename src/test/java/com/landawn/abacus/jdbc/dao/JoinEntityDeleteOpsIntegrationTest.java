@@ -326,7 +326,7 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     public void testDeleteJoinEntities_EmptyPropNames() throws SQLException {
         seedDjUser(1, "EmptyProps", 2);
 
-        assertEquals(0, djUserDao.deleteJoinEntities(djUser(1), new ArrayList<String>()));
+        assertEquals(0, djUserDao.deleteJoinEntities(djUser(1), new ArrayList<>()));
         assertEquals(2, djOrderCount(1)); // untouched
     }
 
@@ -335,7 +335,7 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     public void testDeleteJoinEntities_EmptyPropNames_WithExecutor() throws SQLException {
         seedDjUser(1, "EmptyPropsExec", 2);
 
-        assertEquals(0, djUserDao.deleteJoinEntities(djUser(1), new ArrayList<String>(), DIRECT_EXECUTOR));
+        assertEquals(0, djUserDao.deleteJoinEntities(djUser(1), new ArrayList<>(), DIRECT_EXECUTOR));
         assertEquals(2, djOrderCount(1));
     }
 
@@ -344,8 +344,8 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     public void testDeleteJoinEntities_Collection_EmptyArgs() throws SQLException {
         seedDjUser(1, "CollEmpty", 2);
 
-        assertEquals(0, djUserDao.deleteJoinEntities(new ArrayList<DJUser>(), List.of("orders")));
-        assertEquals(0, djUserDao.deleteJoinEntities(List.of(djUser(1)), new ArrayList<String>()));
+        assertEquals(0, djUserDao.deleteJoinEntities(new ArrayList<>(), List.of("orders")));
+        assertEquals(0, djUserDao.deleteJoinEntities(List.of(djUser(1)), new ArrayList<>()));
         assertEquals(2, djOrderCount(1)); // untouched
     }
 
@@ -372,7 +372,7 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     public void testDeleteJoinEntities_Collection_EmptyArgs_WithExecutor() throws SQLException {
         seedDjUser(1, "CollEmptyExec", 2);
 
-        assertEquals(0, djUserDao.deleteJoinEntities(new ArrayList<DJUser>(), List.of("orders"), DIRECT_EXECUTOR));
+        assertEquals(0, djUserDao.deleteJoinEntities(new ArrayList<>(), List.of("orders"), DIRECT_EXECUTOR));
         assertEquals(2, djOrderCount(1));
     }
 
@@ -409,7 +409,7 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     // deleteAllJoinEntities(entities) early-returns 0 for an empty collection (L585).
     @Test
     public void testDeleteAllJoinEntities_Collection_Empty() {
-        assertEquals(0, djUserDao.deleteAllJoinEntities(new ArrayList<DJUser>()));
+        assertEquals(0, djUserDao.deleteAllJoinEntities(new ArrayList<>()));
     }
 
     // deleteAllJoinEntities(entities) over a collection (L588).
@@ -439,7 +439,7 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     // deleteAllJoinEntities(entities, Executor) early-returns 0 for an empty collection (L644).
     @Test
     public void testDeleteAllJoinEntities_Collection_Empty_WithExecutor() {
-        assertEquals(0, djUserDao.deleteAllJoinEntities(new ArrayList<DJUser>(), DIRECT_EXECUTOR));
+        assertEquals(0, djUserDao.deleteAllJoinEntities(new ArrayList<>(), DIRECT_EXECUTOR));
     }
 
     // deleteAllJoinEntities(entities, Executor) -> deleteJoinEntities(entities, propNames, executor) (L647).
@@ -460,8 +460,8 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     @Test
     public void testLoadAllJoinEntities_Collection_EmptyCollection() {
         assertDoesNotThrow(() -> {
-            djUserDao.loadAllJoinEntities(new ArrayList<DJUser>());
-            djUserDao.loadAllJoinEntities(new ArrayList<DJUser>(), DIRECT_EXECUTOR);
+            djUserDao.loadAllJoinEntities(new ArrayList<>());
+            djUserDao.loadAllJoinEntities(new ArrayList<>(), DIRECT_EXECUTOR);
         });
     }
 
@@ -481,11 +481,11 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     @Test
     public void testLoadJoinEntitiesIfAbsent_EmptyCollections() {
         assertDoesNotThrow(() -> {
-            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<DJUser>(), DJOrder.class); // L1102
-            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<DJUser>(), "orders"); // L1223
-            djUserDao.loadJoinEntitiesIfAbsent(new DJUser(), new ArrayList<String>(), DIRECT_EXECUTOR); // L1327
-            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<DJUser>(), List.of("orders")); // L1359
-            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<DJUser>(), List.of("orders"), DIRECT_EXECUTOR); // L1427
+            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<>(), DJOrder.class); // L1102
+            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<>(), "orders"); // L1223
+            djUserDao.loadJoinEntitiesIfAbsent(new DJUser(), new ArrayList<>(), DIRECT_EXECUTOR); // L1327
+            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<>(), List.of("orders")); // L1359
+            djUserDao.loadJoinEntitiesIfAbsent(new ArrayList<>(), List.of("orders"), DIRECT_EXECUTOR); // L1427
         });
     }
 

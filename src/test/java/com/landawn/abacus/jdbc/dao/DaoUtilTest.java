@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -259,7 +260,8 @@ public class DaoUtilTest extends TestBase {
     @Test
     public void testUncheckedComplete_Success() {
         List<ContinuableFuture<Void>> futures = List.of(ContinuableFuture.completed(null));
-        DaoUtil.uncheckedComplete(futures); // should not throw
+        // an already-completed future drains cleanly without raising
+        assertDoesNotThrow(() -> DaoUtil.uncheckedComplete(futures));
     }
 
     @Test
@@ -296,7 +298,8 @@ public class DaoUtilTest extends TestBase {
     @Test
     public void testComplete_Success() throws SQLException {
         List<ContinuableFuture<Void>> futures = List.of(ContinuableFuture.completed(null));
-        DaoUtil.complete(futures); // should not throw
+        // an already-completed future drains cleanly without raising
+        assertDoesNotThrow(() -> DaoUtil.complete(futures));
     }
 
     @Test

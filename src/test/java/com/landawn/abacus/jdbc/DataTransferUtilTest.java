@@ -1293,13 +1293,9 @@ public class DataTransferUtilTest extends TestBase {
         // as we reach finally).
         when(srcConn.getMetaData()).thenThrow(new SQLException("simulated generation failure"));
 
-        try {
-            DataTransferUtil.copy(srcDs, targetDs, "src_table", "dst_table", 100);
-            org.junit.jupiter.api.Assertions.fail("Expected SQLException or RuntimeException to propagate from copy()");
-        } catch (final SQLException | RuntimeException expected) {
-            // Either the generation failure or the close() failure may surface; we don't care
-            // which - we only care that the target connection was still closed.
-        }
+        // copy() must propagate a failure: either the generation SQLException or the RuntimeException
+        // from the source close(). We don't care which surfaces - only that one does.
+        assertThrows(Exception.class, () -> DataTransferUtil.copy(srcDs, targetDs, "src_table", "dst_table", 100));
 
         // The fix guarantees that the target connection's close() is invoked even though the
         // source's close() threw a RuntimeException in the finally block.

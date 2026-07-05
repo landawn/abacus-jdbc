@@ -32,6 +32,7 @@ public class ReadOnlyCrudJoinEntityHelperTest extends TestBase {
 
     @Test
     public void testHasDeclaredMethods() {
-        assertTrue(true, "Interface may inherit all methods without declaring its own");
+        // Composition-only interface: it declares no methods of its own, inheriting them all.
+        assertEquals(0, ReadOnlyCrudJoinEntityHelper.class.getDeclaredMethods().length);
     }
 }
