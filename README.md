@@ -18,8 +18,6 @@ Write SQL as a plain string, or build it type-safely with
 [DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html).
 
 ```java
-import static com.landawn.abacus.query.Dsl.PSC; // PSC: Parameterized SQL, Snake_Case column names
-import com.landawn.abacus.query.Filters;
 
 // Hand-written SQL as a plain string.
 String query = "SELECT id, first_name, last_name, email FROM user WHERE first_name = ?";
