@@ -2210,7 +2210,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
      */
     public This setObject(final int parameterIndex, final Object value, final SQLType sqlType) throws SQLException {
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        checkArgNotNull(sqlType, cs.sqlType);
 
         // PreparedStatement has no setNull(int, SQLType), so a null value is passed through to
         // setObject(int, Object, SQLType) whose default implementation converts the SQLType to its vendor
@@ -2237,7 +2237,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
      */
     public This setObject(final int parameterIndex, final Object value, final SQLType sqlType, final int scaleOrLength) throws SQLException {
-        N.checkArgNotNull(sqlType, cs.sqlType);
+        checkArgNotNull(sqlType, cs.sqlType);
 
         // See setObject(int, Object, SQLType): there is no setNull(int, SQLType), so a null value is passed
         // through. The guard above prevents an NPE when the default implementation reads the SQLType.

@@ -240,7 +240,7 @@ public final class DaoUtil {
      * @return the extracted ID value (simple value for single ID, {@link Seid} for composite ID)
      * @throws IllegalArgumentException if entity is {@code null}
      */
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({ "deprecation", "unchecked" })
     static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
         N.checkArgNotNull(entity, cs.entity);
 
@@ -287,7 +287,7 @@ public final class DaoUtil {
      * @param entityInfo the bean information for the entity class
      * @return a function that extracts ID values from entities
      */
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({ "deprecation", "unchecked" })
     static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final BeanInfo entityInfo) {
         if (idPropNameList.size() == 1) {
             final PropInfo idPropInfo = entityInfo.getPropInfo(idPropNameList.get(0));

@@ -1108,7 +1108,7 @@ public final class JoinInfo {
 
         return entityJoinInfoMap.computeIfAbsent(key, k -> {
             final DaoConfig anno = daoClass.getAnnotation(DaoConfig.class);
-            final boolean allowJoiningByNullOrDefaultValue = !(anno == null || !anno.allowJoiningByNullOrDefaultValue());
+            final boolean allowJoiningByNullOrDefaultValue = anno != null && anno.allowJoiningByNullOrDefaultValue();
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
             final Map<String, JoinInfo> map = new LinkedHashMap<>();
