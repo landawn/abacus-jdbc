@@ -488,7 +488,7 @@ public class AbstractQueryTest extends TestBase {
 
     @Test
     public void testCheckArg_FalseCondition_ThrowsIllegalArgument() {
-        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArg(false, "condition must be true"));
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArgument(false, "condition must be true"));
         assertEquals("condition must be true", iae.getMessage());
     }
 
@@ -499,7 +499,7 @@ public class AbstractQueryTest extends TestBase {
             throw closeEx;
         });
 
-        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArg(false, "bad condition"));
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArgument(false, "bad condition"));
 
         assertEquals("bad condition", iae.getMessage());
         assertEquals(1, iae.getSuppressed().length);

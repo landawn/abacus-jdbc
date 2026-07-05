@@ -3564,10 +3564,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     private void checkParameterIndices(final int... parameterIndices) {
-        checkArg(N.notEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
+        checkArgument(N.notEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
 
         for (final int parameterIndex : parameterIndices) {
-            checkArg(parameterIndex > 0, "'parameterIndices' must all be positive. It can't be: " + N.toString(parameterIndices));
+            checkArgument(parameterIndex > 0, "'parameterIndices' must all be positive. It can't be: " + N.toString(parameterIndices));
         }
     }
 
@@ -6774,7 +6774,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-        checkArg(maxResult >= 0, "'maxResult' can't be negative: " + maxResult);
+        checkArgument(maxResult >= 0, "'maxResult' can't be negative: " + maxResult);
 
         try (ResultSet rs = executeQuery()) {
             final List<T> result = new ArrayList<>();
@@ -6934,7 +6934,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-        checkArg(maxResult >= 0, "'maxResult' can't be negative: " + maxResult);
+        checkArgument(maxResult >= 0, "'maxResult' can't be negative: " + maxResult);
 
         try (ResultSet rs = executeQuery()) {
             final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
@@ -10050,85 +10050,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Validates that the provided argument is not {@code null}.
-     *
-     * <p>If the argument is {@code null}, this method will attempt to close the query
-     * before throwing an IllegalArgumentException.</p>
-     *
-     * @param arg the argument to check
-     * @param argName the name of the argument for error messaging
-     * @throws IllegalArgumentException if arg is null
-     */
-    protected void checkArgNotNull(final Object arg, final String argName) {
-        if (arg == null) {
-            final IllegalArgumentException iae = new IllegalArgumentException("'" + argName + "' can't be null");
-
-            try {
-                close();
-            } catch (final Exception e) {
-                logger.error(e, "Failed to close Query");
-                iae.addSuppressed(e);
-            }
-
-            throw iae;
-        }
-    }
-
-    /**
-     * Validates a boolean condition.
-     *
-     * <p>If the condition is {@code false}, this method will attempt to close the query
-     * before throwing an IllegalArgumentException with the provided error message.</p>
-     *
-     * @param b the condition to check
-     * @param errorMsg the error message to use if the condition is false
-     * @throws IllegalArgumentException if b is false
-     */
-    protected void checkArg(final boolean b, final String errorMsg) {
-        if (!b) {
-            final IllegalArgumentException iae = new IllegalArgumentException(errorMsg);
-
-            try {
-                close();
-            } catch (final Exception e) {
-                logger.error(e, "Failed to close Query");
-                iae.addSuppressed(e);
-            }
-
-            throw iae;
-        }
-    }
-
-    /**
-     * Validates that the given {@code sqlType} is one of the standard {@code java.sql.Types} /
-     * {@link java.sql.JDBCType} constants. Vendor-specific type codes outside that standard set are
-     * rejected. Used by the {@code setObject(int, Object, int, ...)} setters to reject a bad SQL type up
-     * front rather than letting it propagate to the driver as an opaque failure.
-     *
-     * <p>Consistent with {@link #checkArg(boolean, String)} and {@link #checkArgNotNull(Object, String)},
-     * this method closes the query before throwing the {@link IllegalArgumentException}, so a bad
-     * {@code sqlType} invalidates the statement.</p>
-     *
-     * @param sqlType the SQL type code to validate
-     * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
-     */
-    private void checkSqlType(final int sqlType) {
-        if (!VALID_SQL_TYPES.contains(sqlType)) {
-            final IllegalArgumentException iae = new IllegalArgumentException(
-                    "Invalid SQL type " + sqlType + "; must be one of the standard java.sql.Types constants");
-
-            try {
-                close();
-            } catch (final Exception e) {
-                logger.error(e, "Failed to close Query");
-                iae.addSuppressed(e);
-            }
-
-            throw iae;
-        }
-    }
-
-    /**
      * Closes this query instance and releases any resources associated with it.
      *
      * <p>This method closes the underlying PreparedStatement and performs any additional
@@ -10300,6 +10221,110 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     void assertNotClosed() {
         if (isClosed) {
             throw new IllegalStateException("This " + ClassUtil.getSimpleClassName(getClass()) + " has already been closed");
+        }
+    }
+
+    /**
+     * Validates that the provided argument is not {@code null}.
+     *
+     * <p>If the argument is {@code null}, this method will attempt to close the query
+     * before throwing an IllegalArgumentException.</p>
+     *
+     * @param arg the argument to check
+     * @param argName the name of the argument for error messaging
+     * @throws IllegalArgumentException if arg is null
+     */
+    protected void checkArgNotNull(final Object arg, final String argName) {
+        if (arg == null) {
+            final IllegalArgumentException iae = new IllegalArgumentException("'" + argName + "' can't be null");
+
+            try {
+                close();
+            } catch (final Exception e) {
+                logger.error(e, "Failed to close Query");
+                iae.addSuppressed(e);
+            }
+
+            throw iae;
+        }
+    }
+
+    /**
+     * Validates that the provided argument is positive (greater than zero).
+     *
+     * <p>If the argument is not positive, this method will attempt to close the query
+     * before throwing an IllegalArgumentException.</p>
+     *
+     * @param arg the argument to check
+     * @param argName the name of the argument for error messaging
+     * @throws IllegalArgumentException if arg is not positive (i.e. less than or equal to zero)
+     */
+    protected void checkArgPositive(final int arg, final String argName) {
+        if (arg <= 0) {
+            final IllegalArgumentException iae = new IllegalArgumentException("'" + argName + "' can't be negative or zero: " + arg);
+
+            try {
+                close();
+            } catch (final Exception e) {
+                logger.error(e, "Failed to close Query");
+                iae.addSuppressed(e);
+            }
+
+            throw iae;
+        }
+    }
+
+    /**
+     * Validates a boolean condition.
+     *
+     * <p>If the condition is {@code false}, this method will attempt to close the query
+     * before throwing an IllegalArgumentException with the provided error message.</p>
+     *
+     * @param b the condition to check
+     * @param errorMsg the error message to use if the condition is false
+     * @throws IllegalArgumentException if b is false
+     */
+    protected void checkArgument(final boolean b, final String errorMsg) {
+        if (!b) {
+            final IllegalArgumentException iae = new IllegalArgumentException(errorMsg);
+
+            try {
+                close();
+            } catch (final Exception e) {
+                logger.error(e, "Failed to close Query");
+                iae.addSuppressed(e);
+            }
+
+            throw iae;
+        }
+    }
+
+    /**
+     * Validates that the given {@code sqlType} is one of the standard {@code java.sql.Types} /
+     * {@link java.sql.JDBCType} constants. Vendor-specific type codes outside that standard set are
+     * rejected. Used by the {@code setObject(int, Object, int, ...)} setters to reject a bad SQL type up
+     * front rather than letting it propagate to the driver as an opaque failure.
+     *
+     * <p>Consistent with {@link #checkArgument(boolean, String)} and {@link #checkArgNotNull(Object, String)},
+     * this method closes the query before throwing the {@link IllegalArgumentException}, so a bad
+     * {@code sqlType} invalidates the statement.</p>
+     *
+     * @param sqlType the SQL type code to validate
+     * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
+     */
+    protected void checkSqlType(final int sqlType) {
+        if (!VALID_SQL_TYPES.contains(sqlType)) {
+            final IllegalArgumentException iae = new IllegalArgumentException(
+                    "Invalid SQL type " + sqlType + "; must be one of the standard java.sql.Types constants");
+
+            try {
+                close();
+            } catch (final Exception e) {
+                logger.error(e, "Failed to close Query");
+                iae.addSuppressed(e);
+            }
+
+            throw iae;
         }
     }
 }

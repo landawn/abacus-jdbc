@@ -1776,7 +1776,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.Types
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType) throws IllegalArgumentException, SQLException {
-        N.checkArgPositive(parameterIndex, cs.parameterIndex);
+        checkArgPositive(parameterIndex, cs.parameterIndex);
 
         cstmt.registerOutParameter(parameterIndex, sqlType);
 
@@ -1814,7 +1814,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.Types#NUMERIC
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final int scale) throws IllegalArgumentException, SQLException {
-        N.checkArgPositive(parameterIndex, cs.parameterIndex);
+        checkArgPositive(parameterIndex, cs.parameterIndex);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
 
@@ -1852,7 +1852,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final String typeName)
             throws IllegalArgumentException, SQLException {
-        N.checkArgPositive(parameterIndex, cs.parameterIndex);
+        checkArgPositive(parameterIndex, cs.parameterIndex);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
 
@@ -1980,7 +1980,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.JDBCType
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType) throws IllegalArgumentException, SQLException {
-        N.checkArgPositive(parameterIndex, cs.parameterIndex);
+        checkArgPositive(parameterIndex, cs.parameterIndex);
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterIndex, sqlType);
@@ -2014,7 +2014,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.JDBCType#NUMERIC
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final int scale) throws IllegalArgumentException, SQLException {
-        N.checkArgPositive(parameterIndex, cs.parameterIndex);
+        checkArgPositive(parameterIndex, cs.parameterIndex);
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
@@ -2049,7 +2049,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final String typeName)
             throws IllegalArgumentException, SQLException {
-        N.checkArgPositive(parameterIndex, cs.parameterIndex);
+        checkArgPositive(parameterIndex, cs.parameterIndex);
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
@@ -2431,12 +2431,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         throw new SQLException(message);
     }
 
-    private static int getVendorTypeNumber(final SQLType sqlType) {
-        N.checkArgNotNull(sqlType, cs.sqlType);
+    int getVendorTypeNumber(final SQLType sqlType) {
+        checkArgNotNull(sqlType, cs.sqlType);
 
         final Integer vendorTypeNumber = sqlType.getVendorTypeNumber();
 
-        N.checkArgument(vendorTypeNumber != null, "The vendor type number of sqlType must not be null");
+        checkArgument(vendorTypeNumber != null, "The vendor type number of sqlType must not be null");
 
         return vendorTypeNumber;
     }
