@@ -1,178 +1,214 @@
 # abacus-jdbc
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.8.0)
-[![Javadocs](https://img.shields.io/badge/javadoc-4.8.0-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/4.8.0/index.html)
+[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.8.1)
+[![Javadocs](https://img.shields.io/badge/javadoc-4.8.1-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/4.8.1/index.html)
 
-Experience the simplicity of working with SQL/DB as naturally as working with Collections.
+Work with SQL and databases as naturally as you work with Collections.
 
-## Features:
+`abacus-jdbc` is a lightweight layer on top of plain JDBC. It keeps SQL front and center — you write (or generate) real SQL — while removing the boilerplate of preparing statements, binding parameters, mapping result sets, managing transactions, and handling exceptions. There is no ORM magic to fight and no query DSL to learn before you can run your first statement.
 
-This library focuses on three core areas:
+## Features
 
-*  Write or generate `SQL scripts` (optional):: [SqlBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SqlBuilder_view.html), 
-[DynamicSqlBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSqlBuilder_view.html).
+The library is organized around three steps you already take with JDBC — write SQL, prepare a query, execute and map the result. Each step is optional and composable; use as much or as little as you need.
+
+### 1. Write or generate SQL *(optional)*
+
+Write SQL as a plain string, or build it type-safely with
+[SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html) /
+[DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html).
 
 ```java
-// Manually write the sql in plain string.
-String query = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?";
+import static com.landawn.abacus.query.Dsl.PSC; // PSC: Parameterized SQL, Snake_Case column names
+import com.landawn.abacus.query.Filters;
 
-// Or by SqlBuilder
-String query = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(Filters.eq("firstName")).sql();
-// Or if select all columns from user:
+// Hand-written SQL as a plain string.
+String query = "SELECT id, first_name, last_name, email FROM user WHERE first_name = ?";
+
+// Or build it from the entity class (compile-time safe, refactor-friendly).
+String query = PSC.select("id", "firstName", "lastName", "email")
+                  .from(User.class)
+                  .where(Filters.eq("firstName"))
+                  .sql();
+
+// Or select every mapped column:
 String query = PSC.selectFrom(User.class).where(Filters.eq("firstName")).sql();
-
-// Sql scripts can also be placed in sql mapper xml file and then associated with a DAO object.
-UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, PSC, sqlMapper);
-```
-`userSqlMapper.xml`
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<sqlMapper>
-	<sql id="selectUserByFirstName">SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?</sql>
-</sqlMapper>
 ```
 
-<br />
+SQL can also live in an external mapper file and be referenced by id from a DAO — see the `@SqlSource` example below.
 
-*  Prepare `statements/queries`: [PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html), 
-[NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), 
-[CallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CallableQuery_view.html) with a `sql` or `Dao` mapped with `sqls`.
+### 2. Prepare a statement / query
+
+[PreparedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/PreparedQuery_view.html),
+[NamedQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/NamedQuery_view.html), and
+[CallableQuery](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CallableQuery_view.html)
+wrap JDBC statements with a fluent, null-safe, auto-closing API.
 
 ```java
-// sql can be used to create PreparedQuery/NamedQuery/CallableQuery
-PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...); 
-			            //.prepareQuery(connection, query...)		
-			            //.prepareNamedQuery(dataSource, namedQuery...)									   
-			            //.prepareCallableQuery(dataSource, query...)									   
-			            //....	
-				      .setString(1, fistName) // Firstly set query parameters, if needed.
-				    //.setLong(paramName, paramValue) // set named parameters for NamedQuery/CallableQuery.
-				    //.setParameters(entity) // set named parameters by entity with getter/setter methods
-				    //.setParameters(Map<String, ?>) // set named parameters by Map
-				    //.setParameters(param1, param2...) // set several parameters in one line.
-				    //.setParameters(Collection<?> parameters) // set parameters with a Collection.
-				    //.setParameters(ParametersSetter parametersSetter) // set parameters by functional interface. 
-				    //....  									   
-																		   
+PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query)
+        //.prepareQuery(connection, query)               // reuse an existing connection
+        //.prepareNamedQuery(dataSource, namedSql)        // ':param' named parameters
+        //.prepareCallableQuery(dataSource, callSql)      // stored procedures
+        .setString(1, firstName);                         // bind positional parameters
+        //.setLong("id", id)                              // bind a named parameter
+        //.setParameters(entity)                          // bind named params from an entity's getters
+        //.setParameters(paramMap)                        // bind named params from a Map
+        //.setParameters(param1, param2)                  // bind several positional params at once
+        //.setParameters(parametersSetter)                // bind via a functional interface
+```
 
-// Sql can also be associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
+### 3. Execute and retrieve results
+
+Execute directly from a query, or let a
+[Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html) /
+[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html) /
+[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html)
+do it for you. Results map to entities, primitives, or a
+[Dataset](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dataset_view.html)
+via [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html) mappers.
+
+```java
+// Execute directly from a PreparedQuery / NamedQuery / CallableQuery:
+Optional<User> user = preparedQuery.findFirst(User.class);
+        //.findOnlyOne(User.class) / .list(User.class) / .stream(User.class)
+        //.query() / .queryForInt("id") / .queryForString("email") / .queryForSingleValue(...)
+        //.exists() / .ifExists(rowConsumer)
+        //.update() / .batchUpdate(...) / .execute()
+```
+
+A DAO turns your SQL into ready-to-call methods. Dozens of common operations
+(`insert`, `update`, `deleteById`, `list`, `count`, `stream`, `batchInsert`, ...) are already
+defined on the built-in interfaces — no implementation required — and you add your own with `@Query`:
+
+```java
 public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<User, UserDao> {
-    // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
-    // Methods defined in Dao interface don't require implementation. Of course, Customized implemnetation is also supported by default method.
-    @Query("SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
-    List<User> selectUserByFirstName(String firstName) throws SQLException;
-    
-    // Or id of the sql script defined in xml mapper file.
-    @Query(id = "selectUserByFirstName")
+
+    // Inline SQL with a positional parameter.
+    @Query("SELECT id, first_name, last_name, email FROM user WHERE first_name = ?")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
 
-    // Or id of the sql script defined in below nested static class.
-    // Instead of writing sql scripts manually, you can also use SqlBuilder/DynamicSqlBuilder to write sql scripts.
-    @Query(id = "selectUserByFirstName")
-    List<User> selectUserByFirstName(String firstName) throws SQLException;
-    
-    // Multiple updates within transaction.
+    // Or reference SQL by id (from the nested @SqlScript field below,
+    // or from an external mapper declared with @SqlSource on the interface).
+    @Query(id = "selectByLastName")
+    List<User> selectByLastName(@Bind("lastName") String lastName) throws SQLException;
+
+    // Run several statements in one transaction. The trailing String... parameter is
+    // automatically filled with the SQL statements declared in @Query.
     @Transactional
-    @Query({ "update user set first_name = ? where id = ?", 
-            "update user set last_name = ? where id = :id" })
-    default void updateFirstNameLastNameByIds(long idForUpdateFirstName, long idForUpdateLastName, String... sqls) throws SQLException { // Last parameter must be String[]. It will be automatically filled with sqls in @Sql.
-        prepareQuery(sqls[0]).setLong(1, idForUpdateFirstName).update();
-        prepareNamedQuery(sqls[1]).setLong(1, idForUpdateLastName).update();
+    @Query({ "UPDATE user SET first_name = ? WHERE id = ?",
+             "UPDATE user SET last_name = :lastName WHERE id = :id" })
+    default void renameById(long id, String firstName, String lastName, String... sqls) throws SQLException {
+        prepareQuery(sqls[0]).setString(1, firstName).setLong(2, id).update();
+        prepareNamedQuery(sqls[1]).setString("lastName", lastName).setLong("id", id).update();
     }
 
-    // Refer classes in package com.landawn.abacus.jdbc.annotation for more supported annations
-    @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    User selectByIdWithDefine(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id);
-
+    // SQL built with SQLBuilder and stored in a nested field, referenced above via @Query(id = ...).
     static final class SqlTable {
         @SqlScript
-        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(Filters.eq("first")).sql();
+        static final String selectByLastName =
+                PSC.select("id", "firstName", "lastName", "email").from(User.class).where(Filters.eq("lastName")).sql();
     }
 }
 
-UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, PSC, ...);
-```
-<br />
+// Instantiate the DAO — no boilerplate implementation to write.
+UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
 
-* Execute and retrieve results (when needed):
-[Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
-[Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
-[Dataset](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dataset_view.html), 
-[Filters](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Filters_view.html), 
-[JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
-[DataTransferUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataTransferUtil_view.html).
+List<User> users = userDao.selectUserByFirstName(firstName);
+        //.findFirst(Filters.eq("email", email))
+        //.list(Filters.gt("id", 100))
+        //.stream(cond)
+        //.update(user) / .deleteById(userId) / .batchInsert(userList)
+```
+
+To keep SQL out of your Java source entirely, put it in an XML mapper and point the DAO at it
+with [`@SqlSource`](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/latest/com/landawn/abacus/jdbc/annotation/SqlSource.html):
 
 ```java
-// Execute the sql by a PreparedQuery/NamedQuery/CallableQuery
-preparedQuery.findFirst()
-           //.findFirst(User.class)/findFirst(rowMapper)/...
-           //.findOnlyOne()/findOnlyOne(User.class)/findOnlyOne(rowMapper)/...
-           //.list()/list(User.class)/list(rowMapper)/...
-           //.stream()/stream(User.class)/stream(rowMapper)/...
-	   //.query()/qurey(resultExtractor)/queryForInt/queryForString/queryForSingleValue/...
-           //.exists()/ifExists(rowConsumer)
-	   //.update/batchUpdate/execute/...
-																		   
+@SqlSource("sql/UserDao.xml")
+public interface UserDao extends CrudDao<User, Long, UserDao> {
 
-// Sql can also be executed by directly calling DAO methods.
-userDao.selectUserByFirstName(firstName)
-     //.updateFirstNameLastNameByIds(100, 101)
-     //.findFirst(Condition)
-     //.findOnlyOne(Condition)
-     //.list(Condition)
-     //.stream(Condition)
-     //.update(user)/deleteById(userId)/batchInsert(Collection<User>)/...
-
+    @Query(id = "selectUserByFirstName")
+    List<User> selectUserByFirstName(@Bind("firstName") String firstName) throws SQLException;
+}
 ```
-<br />
 
+`sql/UserDao.xml` (on the classpath):
 
-* Code Generation: [CodeGenerationUtil](https://www.javadoc.io/doc/com.landawn.abacus/abacus-common/latest/com/landawn/abacus/util/CodeGenerationUtil.html), [JdbcCodeGenerationUtil](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/latest/com/landawn/abacus/jdbc/JdbcCodeGenerationUtil.html).
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMapper>
+    <sql id="selectUserByFirstName">SELECT id, first_name, last_name, email FROM user WHERE first_name = :firstName</sql>
+</sqlMapper>
+```
+
+See the full annotation set in package
+[`com.landawn.abacus.jdbc.annotation`](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/latest/com/landawn/abacus/jdbc/annotation/package-summary.html)
+(`@Query`, `@Bind`, `@BindList`, `@Transactional`, `@Handler`, `@PerfLog`, `@CacheResult`, `@SqlLogEnabled`, ...).
+
+### Bonus: code generation
+
+Generate entity classes and DAO scaffolding straight from your database schema with
+[CodeGenerationUtil](https://www.javadoc.io/doc/com.landawn.abacus/abacus-common/latest/com/landawn/abacus/util/CodeGenerationUtil.html)
+and
+[JdbcCodeGenerationUtil](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/latest/com/landawn/abacus/jdbc/JdbcCodeGenerationUtil.html).
 
 ## Why abacus-jdbc?
 
-The biggest difference between this library and other data(database) access frameworks is the simplicity/consistency/integrity in the APIs design.
-Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A Comparative Analysis](https://github.com/landawn/abacus-jdbc/blob/master/docs/Abacus-JDBC%20vs%20Spring%20Data%20(JPA%20%26%20JDBC)%2C%20MyBatis%2C%20and%20Hibernate%20%E2%80%93%20A%20Comparative%20Analysis.pdf)
+The biggest difference between this library and other database-access frameworks is the simplicity,
+consistency, and integrity of its API design. For a detailed comparison, see
+[Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A Comparative Analysis](https://github.com/landawn/abacus-jdbc/blob/master/docs/Abacus-JDBC%20vs%20Spring%20Data%20(JPA%20%26%20JDBC)%2C%20MyBatis%2C%20and%20Hibernate%20%E2%80%93%20A%20Comparative%20Analysis.pdf).
 
-## Design and Implementation Considerations:
+### Design considerations
 
-* In general, embedding SQL scripts where they are used is easier to review and maintain than saving them in separate files.
+* Embedding SQL where it is used is generally easier to review and maintain than storing it in separate files — but external mappers are fully supported when you prefer them.
+* High-level abstractions such as JPA or Spring's `CrudRepository` improve productivity, but keeping the ability to write and run plain SQL preserves essential flexibility. SQL is simple, expressive, and powerful, and should be leveraged rather than avoided.
+* Abstractions should simplify code and improve productivity **without** adding complexity or sacrificing performance.
 
-* While high-level abstractions such as JPA or Spring’s `CrudRepository` enhance development productivity, preserving the ability for users to write and execute SQL offers essential flexibility. SQL is a simple, expressive, and powerful language, and should be leveraged instead of being avoided without justification.
+## Download / Installation
 
-* High-level abstraction APIs should simplify implementation, improve productivity, and avoid increasing complexity or reducing performance.
+Requires **JDK 17 or above**. See the [change log](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md) for release notes.
 
-## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
+`abacus-jdbc` declares `abacus-common` and `abacus-query` in `provided` scope, so add all three to your build:
 
-* [Maven](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.8.0)
+### Maven
 
 ```xml
 <dependency>
-	<groupId>com.landawn.abacus</groupId>
-	<artifactId>abacus-jdbc</artifactId>
-	<version>4.8.0</version> 
+    <groupId>com.landawn.abacus</groupId>
+    <artifactId>abacus-jdbc</artifactId>
+    <version>4.8.1</version>
+</dependency>
 <dependency>
+    <groupId>com.landawn.abacus</groupId>
+    <artifactId>abacus-common</artifactId>
+    <version>7.8.5</version>
+</dependency>
+<dependency>
+    <groupId>com.landawn.abacus</groupId>
+    <artifactId>abacus-query</artifactId>
+    <version>4.8.7</version>
+</dependency>
 ```
 
-* Gradle:
+### Gradle
 
 ```gradle
-// JDK 17 or above:
-compile 'com.landawn.abacus:abacus-jdbc:4.8.0'
+implementation 'com.landawn.abacus:abacus-jdbc:4.8.1'
+implementation 'com.landawn.abacus:abacus-common:7.8.5'
+implementation 'com.landawn.abacus:abacus-query:4.8.7'
 ```
 
-## User Guide:
-* [Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html)
-* [More samples/questions(?)](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
+## User guide
 
-## Also See: [abacus-common](https://github.com/landawn/abacus-common), [abacus-entity-manager](https://github.com/landawn/abacus-entity-manager).
+* [Samples and answered questions](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
+* [API documentation (Javadoc)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/latest/index.html)
+* [Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html) (background reading)
 
-## Recommended Java programming libraries/frameworks:
-[lombok](https://github.com/rzwitserloot/lombok), 
-[Apache Druid](https://github.com/apache/druid), 
-[Sharding-JDBC](https://github.com/apache/incubator-shardingsphere)
-... [awesome-java](https://github.com/akullpp/awesome-java#database)
+## Also see
 
+* [abacus-common](https://github.com/landawn/abacus-common) — core utilities, collections, and `Dataset`.
+* [abacus-query](https://github.com/landawn/abacus-query) — `SQLBuilder`, `Filters`, and query conditions.
 
-## Recommended Java programming tools:
-[Spotbugs](https://github.com/spotbugs/spotbugs), [JaCoCo](https://www.eclemma.org/jacoco/)...
+## Recommended libraries and tools
+
+* Libraries: [Lombok](https://github.com/rzwitserloot/lombok), [HikariCP](https://github.com/brettwooldridge/HikariCP), [Apache ShardingSphere](https://github.com/apache/shardingsphere) ... [awesome-java](https://github.com/akullpp/awesome-java#database)
+* Tools: [SpotBugs](https://github.com/spotbugs/spotbugs), [JaCoCo](https://www.eclemma.org/jacoco/)
