@@ -6036,13 +6036,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                final T result = Objects.requireNonNull(getRow(rs, targetType));
+                final T result = getRow(rs, targetType);
 
                 if (rs.next()) {
                     throw new DuplicateResultException("More than one record found");
                 }
 
-                return result;
+                return Objects.requireNonNull(result);
             } else {
                 return null;
             }
@@ -6081,13 +6081,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                final T result = Objects.requireNonNull(rowMapper.apply(rs));
+                final T result = rowMapper.apply(rs);
 
                 if (rs.next()) {
                     throw new DuplicateResultException("More than one record found");
                 }
 
-                return result;
+                return Objects.requireNonNull(result);
             } else {
                 return null;
             }
@@ -6127,13 +6127,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             if (rs.next()) {
-                final T result = Objects.requireNonNull(rowMapper.apply(rs, JdbcUtil.getColumnLabels(rs)));
+                final T result = rowMapper.apply(rs, JdbcUtil.getColumnLabels(rs));
 
                 if (rs.next()) {
                     throw new DuplicateResultException("More than one record found");
                 }
 
-                return result;
+                return Objects.requireNonNull(result);
             } else {
                 return null;
             }

@@ -466,6 +466,59 @@ public class AbstractQueryTest extends TestBase {
         assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(r -> r.getString(1)));
     }
 
+    // Regression for exception-priority inversion in findOnlyOneOrNull: the duplicate-row check
+    // must run BEFORE the null-mapped-value check, so that a query returning 2+ rows (whose first
+    // row maps to null) throws DuplicateResultException, not NullPointerException. Mirrors the
+    // established ordering of queryForUniqueNonNull / queryForUniqueValue.
+    @Test
+    @Tag("2025")
+    public void testFindOnlyOneOrNull_RowMapper_NullMappingWithDuplicate_ThrowsDuplicateNotNpe() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true);
+
+        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(r -> null));
+    }
+
+    @Test
+    @Tag("2025")
+    public void testFindOnlyOneOrNull_RowMapper_NullMappingSingleRow_ThrowsNpe() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+
+        // Exactly one row but the mapper yields null -> documented NullPointerException.
+        assertThrows(NullPointerException.class, () -> query.findOnlyOneOrNull(r -> null));
+    }
+
+    @Test
+    @Tag("2025")
+    public void testFindOnlyOneOrNull_BiRowMapper_NullMappingWithDuplicate_ThrowsDuplicateNotNpe() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnLabel(1)).thenReturn("val");
+
+        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull((r, labels) -> null));
+    }
+
+    @Test
+    @Tag("2025")
+    public void testFindOnlyOneOrNull_BiRowMapper_NullMappingSingleRow_ThrowsNpe() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnLabel(1)).thenReturn("val");
+
+        assertThrows(NullPointerException.class, () -> query.findOnlyOneOrNull((r, labels) -> null));
+    }
+
     @Test
     public void testCheckArgNotNull_NullArg_ThrowsIllegalArgument() {
         IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArgNotNull(null, "myParam"));
