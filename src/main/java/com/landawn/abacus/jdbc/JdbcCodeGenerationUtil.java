@@ -541,7 +541,9 @@ public final class JdbcCodeGenerationUtil {
             final int columnCount = rsmd.getColumnCount();
 
             for (int i = 1; i <= columnCount; i++) {
-                final String columnName = Strings.isEmpty(rsmd.getColumnName(i)) ? rsmd.getColumnLabel(i) : rsmd.getColumnName(i);
+                // Prefer the column label: per JDBC it is the SQL alias when one is specified and the column
+                // name otherwise, which is what query-result mapping keys on (see JdbcUtil.getColumnLabels).
+                final String columnName = Strings.isEmpty(rsmd.getColumnLabel(i)) ? rsmd.getColumnName(i) : rsmd.getColumnLabel(i);
 
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(Locale.ROOT),
                         customizedFieldMap.get(Strings.toCamelCase(columnName).toLowerCase(Locale.ROOT)));

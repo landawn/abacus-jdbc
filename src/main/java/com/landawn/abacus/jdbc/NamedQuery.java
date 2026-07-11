@@ -3851,10 +3851,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets multiple parameters from a Map containing parameter names and their values.
      *
      * <p>For each named parameter declared in the SQL, this method looks the name up in the map;
-     * if the map contains a matching key, {@link #setObject(String, Object)} is called for that
-     * parameter. Map entries whose keys do not correspond to named parameters in the SQL are
-     * ignored. Named parameters that are absent from the map are left unbound and must be bound
-     * before the query is executed.
+     * if the map contains a matching key, its value is bound to that parameter using the default
+     * SQL type mapping (as if by {@code setObject}). Map entries whose keys do not correspond to
+     * named parameters in the SQL are ignored. Named parameters that are absent from the map are
+     * left unbound and must be bound before the query is executed.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

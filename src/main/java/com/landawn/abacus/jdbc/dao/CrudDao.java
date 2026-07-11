@@ -326,6 +326,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         final SqlTransaction tran = (N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate))
                 || (N.notEmpty(entitiesToInsert) && entitiesToInsert.size() > batchSize)
                 || (N.notEmpty(entitiesToUpdate) && entitiesToUpdate.size() > batchSize) ? JdbcUtil.beginTransaction(dataSource()) : null;
+        Throwable failure = null;
 
         try {
             if (N.notEmpty(entitiesToInsert)) {
@@ -354,9 +355,20 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             if (tran != null) {
                 tran.commit();
             }
+        } catch (final Throwable e) { //NOSONAR
+            failure = e;
+            throw e;
         } finally {
             if (tran != null) {
-                tran.rollbackIfNotCommitted();
+                try {
+                    tran.rollbackIfNotCommitted();
+                } catch (final RuntimeException | Error rollbackFailure) {
+                    if (failure == null) {
+                        throw rollbackFailure;
+                    }
+
+                    failure.addSuppressed(rollbackFailure);
+                }
             }
         }
 

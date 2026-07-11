@@ -341,7 +341,7 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @return the number of rows successfully imported
+     * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
@@ -461,7 +461,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
-     * @return the number of rows successfully imported
+     * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
@@ -559,7 +559,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
-     * @return the number of rows successfully imported
+     * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
@@ -682,7 +682,7 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @return the number of rows successfully imported
+     * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
@@ -806,7 +806,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
-     * @return the number of rows successfully imported
+     * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
@@ -948,7 +948,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
-     * @return the number of rows successfully imported
+     * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
@@ -2166,6 +2166,16 @@ public final class DataTransferUtil {
                 throw new IllegalArgumentException(columnNameSet + " are not included in the query result");
             }
 
+            // Duplicate names in selectColumnNames match a single result column, so count the
+            // matched columns rather than trusting selectColumnNames.size().
+            int exportedColumnCount = 0;
+
+            for (final String columnName : columnNames) {
+                if (columnName != null) {
+                    exportedColumnCount++;
+                }
+            }
+
             final char separator = SK._COMMA;
 
             for (int i = 0, j = 0, len = columnNames.length; i < len; i++) {
@@ -2221,7 +2231,7 @@ public final class DataTransferUtil {
 
             bw.flush();
 
-            logger.info("Exported CSV rows(exported={}, columns={})", result, columnNameSet == null ? columnCount : selectColumnNames.size());
+            logger.info("Exported CSV rows(exported={}, columns={})", result, exportedColumnCount);
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         } finally {

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -3180,6 +3181,47 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(2, thrown.getCause().getSuppressed().length, "should have two suppressed exceptions");
         assertEquals(stmtEx, thrown.getCause().getSuppressed()[0], "first suppressed should be from Statement.close()");
         assertEquals(connEx, thrown.getCause().getSuppressed()[1], "second suppressed should be from Connection.close()");
+    }
+
+    // BUG FIX: executeBatchUpdate/executeLargeBatchUpdate(ds, sql, params, batchSize) begin their own
+    // transaction when listOfParameters.size() > batchSize. The unguarded rollbackIfNotCommitted() in
+    // finally used to replace the primary batch failure with the rollback failure; the primary failure
+    // must propagate with the rollback failure attached via addSuppressed (same contract as the
+    // callInTransaction/runInTransaction helpers).
+    @Test
+    @Tag("2025")
+    @DisplayName("executeBatchUpdate(ds, ...): preserves primary batch failure when rollback also fails")
+    public void testExecuteBatchUpdatePreservesPrimaryFailureWhenRollbackFails() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 }, new Object[] { 3 });
+
+        final SQLException primary = new SQLException("primary batch failure");
+        doThrow(primary).when(mockPreparedStatement).executeBatch();
+        doThrow(new SQLException("rollback failed")).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeBatchUpdate(mockDataSource, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(primary, thrown, "the primary batch failure must propagate, not the rollback failure");
+        assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
+        assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+    }
+
+    @Test
+    @Tag("2025")
+    @DisplayName("executeLargeBatchUpdate(ds, ...): preserves primary batch failure when rollback also fails")
+    public void testExecuteLargeBatchUpdatePreservesPrimaryFailureWhenRollbackFails() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 }, new Object[] { 3 });
+
+        final SQLException primary = new SQLException("primary large batch failure");
+        doThrow(primary).when(mockPreparedStatement).executeLargeBatch();
+        doThrow(new SQLException("rollback failed")).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeLargeBatchUpdate(mockDataSource, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(primary, thrown, "the primary batch failure must propagate, not the rollback failure");
+        assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
+        assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
     }
 
     // Regression: tableExists(metadata, ...) used to verify only TABLE_NAME when the pattern contained

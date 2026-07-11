@@ -2457,8 +2457,7 @@ public final class Jdbc {
              * fresh array for each row.
              * </p>
              *
-             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
-             * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
+             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -2645,7 +2644,8 @@ public final class Jdbc {
              * for each subsequent row.
              * </p>
              *
-             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
+             * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code

@@ -1544,6 +1544,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * Iterates over all results using a disposable object array consumer.
      * Convenience method that selects all properties.
      *
+     * <p><b>WARNING:</b> Do not store or cache the array parameter as it is reused for every row.</p>
+     *
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs

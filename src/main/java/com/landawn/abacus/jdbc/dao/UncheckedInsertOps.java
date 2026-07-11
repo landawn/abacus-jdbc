@@ -102,6 +102,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param entitiesToSave the collection of entities to save
      * @throws UncheckedSQLException if a database access error occurs
+     * @see #batchSave(Collection, int)
      */
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {

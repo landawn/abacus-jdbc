@@ -168,8 +168,11 @@ public interface Transaction {
 
     /**
      * Rolls back the transaction if it has not been committed successfully.
-     * This method is safe to call multiple times and will only perform a rollback
-     * if the transaction is still active, marked for rollback, or in a failed-commit state.
+     * Once the transaction has completed (committed or rolled back), further calls are no-ops;
+     * a rollback is only performed while the transaction is still active, marked for rollback,
+     * or in a failed-commit state. Implementations that support nested/re-entrant scopes (such as
+     * {@link SqlTransaction}) treat each call as closing one scope — pair exactly one call with
+     * each begun scope rather than invoking it repeatedly within the same scope.
      *
      * <p>This method is particularly useful in finally blocks or cleanup code
      * where you want to ensure a transaction is not left in an active state.</p>

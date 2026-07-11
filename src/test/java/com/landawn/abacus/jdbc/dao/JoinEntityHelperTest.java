@@ -19,6 +19,7 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
@@ -1994,6 +1995,33 @@ public class JoinEntityHelperTest extends TestBase {
 
             verify(tran, Mockito.never()).commit();
             verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: the multi-prop deleteJoinEntities overloads wrap per-prop deletes in a transaction. The
+    // unguarded rollbackIfNotCommitted() in finally used to replace the primary delete failure with the
+    // rollback failure; the primary failure must propagate with the rollback failure attached via addSuppressed.
+    @Test
+    @Tag("2025")
+    public void testDeleteJoinEntities_MultiProp_PreservesPrimaryFailureWhenRollbackFails() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            final SQLException primary = new SQLException("primary delete failure");
+            Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
+            Mockito.doThrow(new UncheckedSQLException(new SQLException("rollback failed"))).when(tran).rollbackIfNotCommitted();
+
+            final SQLException thrown = assertThrows(SQLException.class, () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
+
+            assertSame(primary, thrown, "the primary delete failure must propagate, not the rollback failure");
+            assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
         }
     }
 

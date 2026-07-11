@@ -66,9 +66,10 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * }</pre>
      *
      * @param entity the entity containing the values to update
-     * @param propNamesToUpdate the property names to update. If {@code null} or empty, all properties will be updated
+     * @param propNamesToUpdate the property names to update (must not be {@code null} or empty)
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
      */
     int update(final T entity, final Collection<String> propNamesToUpdate) throws SQLException;
 
@@ -170,9 +171,10 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * }</pre>
      *
      * @param entities the collection of entities to update
-     * @param propNamesToUpdate the property names to update for all entities
+     * @param propNamesToUpdate the property names to update for all entities (must not be {@code null} or empty)
      * @return the total number of rows updated
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
      */
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws SQLException {
         return batchUpdate(entities, propNamesToUpdate, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -194,11 +196,12 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * }</pre>
      *
      * @param entities the collection of entities to update
-     * @param propNamesToUpdate the property names to update for all entities
+     * @param propNamesToUpdate the property names to update for all entities (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive
      */
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
 

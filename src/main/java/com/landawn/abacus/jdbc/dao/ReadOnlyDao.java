@@ -25,9 +25,10 @@ import com.landawn.abacus.annotation.Beta;
  * {@link InsertOps}/{@code UpdateOps}/{@code DeleteOps},
  * so {@code save}/{@code insert}/{@code update}/{@code upsert}/{@code delete}/{@code batchXxx} (and
  * {@code prepareCallableQuery}) are simply <b>absent from the type</b> — calling them is a compile
- * error rather than a runtime {@link UnsupportedOperationException}. Note this is no longer a
- * {@link NoUpdateDao} (the old subtype edge was a Liskov violation: a read-only DAO cannot stand in
- * for a no-update one, which permits inserts).</p>
+ * error rather than a runtime {@link UnsupportedOperationException}. Note that {@code ReadOnlyDao}
+ * is intentionally not a subtype of {@link NoUpdateDao}: a read-only DAO cannot substitute for a
+ * no-update one (which permits inserts), so such a subtype edge would violate the Liskov
+ * substitution principle.</p>
  *
  * <p>The inherited {@code prepareQuery}/{@code prepareNamedQuery} (and {@code *ForLargeResult})
  * overloads that take a raw SQL {@code String}/{@link com.landawn.abacus.query.ParsedSql} are

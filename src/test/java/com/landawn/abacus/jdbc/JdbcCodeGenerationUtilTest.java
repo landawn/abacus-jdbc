@@ -26,6 +26,7 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -1456,7 +1457,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(stmt.getConnection()).thenReturn(connection);
         when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
         when(pkRs.next()).thenReturn(false);
-        when(resultSetMetaData.getColumnName(1)).thenReturn("payload");
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("payload");
         when(resultSetMetaData.getColumnType(1)).thenReturn(Types.OTHER);
         when(resultSetMetaData.getColumnClassName(1)).thenReturn(""); // empty → Object.class fallback
         when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
@@ -1480,7 +1481,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(stmt.getConnection()).thenReturn(connection);
         when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
         when(pkRs.next()).thenReturn(false);
-        when(resultSetMetaData.getColumnName(1)).thenReturn("ts");
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("ts");
         when(resultSetMetaData.getColumnType(1)).thenReturn(Types.TIMESTAMP);
         when(resultSetMetaData.getColumnClassName(1)).thenReturn("oracle.sql.TIMESTAMP");
         when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
@@ -1504,7 +1505,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(stmt.getConnection()).thenReturn(connection);
         when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
         when(pkRs.next()).thenReturn(false);
-        when(resultSetMetaData.getColumnName(1)).thenReturn("myDate");
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("myDate");
         when(resultSetMetaData.getColumnType(1)).thenReturn(Types.DATE);
         when(resultSetMetaData.getColumnClassName(1)).thenReturn("oracle.sql.DATE");
         when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
@@ -1528,7 +1529,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(stmt.getConnection()).thenReturn(connection);
         when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
         when(pkRs.next()).thenReturn(false);
-        when(resultSetMetaData.getColumnName(1)).thenReturn("myTime");
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("myTime");
         when(resultSetMetaData.getColumnType(1)).thenReturn(Types.TIME);
         when(resultSetMetaData.getColumnClassName(1)).thenReturn("oracle.sql.TIME");
         when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
@@ -1637,6 +1638,28 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         assertTrue(thrown.getMessage().contains("user_id"));
         assertTrue(thrown.getMessage().contains("userId"));
+    }
+
+    // BUG FIX: entity generation used to prefer the physical column name over the SQL alias (result-set
+    // label), so generateEntityClassByQuery produced fields that did not match the labels the query
+    // actually returns. The label (alias-or-name per JDBC) must win; every other generation path in
+    // this class already keys on column labels.
+    @Test
+    @Tag("2025")
+    public void testGenerateEntityClass_PrefersSqlAliasLabelOverPhysicalColumnName() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnName(1)).thenReturn("user_id");
+        when(metadata.getColumnLabel(1)).thenReturn("uid");
+        when(metadata.getColumnClassName(1)).thenReturn(Long.class.getName());
+        when(metadata.getColumnType(1)).thenReturn(Types.BIGINT);
+
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("UserQueryResult", rs, null);
+
+        assertTrue(code.contains(" uid;"), () -> "generated field should be named after the SQL alias 'uid':\n" + code);
+        assertFalse(code.contains("userId"), () -> "physical column name must not override the alias:\n" + code);
     }
 
     // Exercise catch blocks at lines 821–823 (IOException → UncheckedIOException when srcDir is set)

@@ -5249,12 +5249,16 @@ public final class JdbcUtil {
         } else {
             final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);
             int ret = 0;
+            Throwable failure = null;
 
             try {
                 ret = executeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
                 tran2.commit();
+            } catch (final Throwable e) { //NOSONAR
+                failure = e;
+                throw e;
             } finally {
-                tran2.rollbackIfNotCommitted();
+                rollbackAfterTransactionCommand(tran2, failure);
             }
 
             return ret;
@@ -5505,12 +5509,16 @@ public final class JdbcUtil {
         } else {
             final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);
             long ret = 0;
+            Throwable failure = null;
 
             try {
                 ret = executeLargeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
                 tran2.commit();
+            } catch (final Throwable e) { //NOSONAR
+                failure = e;
+                throw e;
             } finally {
-                tran2.rollbackIfNotCommitted();
+                rollbackAfterTransactionCommand(tran2, failure);
             }
 
             return ret;

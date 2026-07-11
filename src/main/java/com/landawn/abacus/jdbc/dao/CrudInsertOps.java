@@ -68,11 +68,10 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * }</pre>
      *
      * @param entity the entity to insert (must not be {@code null})
-     * @param propNamesToInsert the property names to include in the INSERT statement.
-     *                          If {@code null} or empty, all properties will be inserted
+     * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToInsert} is {@code null} or empty
      */
     ID insert(final T entity, final Collection<String> propNamesToInsert) throws SQLException;
 
@@ -91,6 +90,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param entity the entity whose properties will be bound to the named parameters
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
      */
     ID insert(final String namedInsertSql, final T entity) throws SQLException;
 
@@ -146,10 +146,10 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @param propNamesToInsert the property names to include in the INSERT statement.
-     *                          If {@code null} or empty, all properties will be inserted
+     * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty
      */
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws SQLException {
         return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -167,11 +167,12 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @param propNamesToInsert the property names to include in the INSERT statement
+     * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive
      */
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws SQLException;
 

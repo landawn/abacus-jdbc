@@ -72,9 +72,10 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entity the entity containing the values to update
-     * @param propNamesToUpdate the properties to update
+     * @param propNamesToUpdate the property names to update (must not be {@code null} or empty)
      * @return the number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
      */
     @Override
     int update(final T entity, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
@@ -183,9 +184,10 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities to update
-     * @param propNamesToUpdate the properties to update for each entity
+     * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
      * @return the total number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
      */
     @Override
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UncheckedSQLException {
@@ -206,10 +208,11 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities to update
-     * @param propNamesToUpdate the properties to update for each entity
+     * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
      * @param batchSize the size of each batch
      * @return the total number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive
      */
     @Override
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UncheckedSQLException;

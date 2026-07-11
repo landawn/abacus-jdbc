@@ -9,10 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 
+import javax.sql.DataSource;
+
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -20,6 +25,7 @@ import org.mockito.Mockito;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
 public class CrudDaoTest extends TestBase {
@@ -451,6 +457,51 @@ public class CrudDaoTest extends TestBase {
         IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
 
         assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of(), 5));
+    }
+
+    // BUG FIX: batchUpsert(entities, uniquePropNamesForQuery, batchSize) wraps mixed insert+update work
+    // in its own transaction. The unguarded rollbackIfNotCommitted() in finally used to replace the
+    // primary batch failure with the rollback failure; the primary failure must propagate with the
+    // rollback failure attached via addSuppressed.
+    @Test
+    @Tag("2025")
+    public void testBatchUpsert_FullSig_PreservesPrimaryFailureWhenRollbackFails() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        IdAnnotatedEntity toUpdate = new IdAnnotatedEntity();
+        toUpdate.setId(1L);
+        toUpdate.setName("existing");
+        IdAnnotatedEntity toInsert = new IdAnnotatedEntity();
+        toInsert.setId(2L);
+        toInsert.setName("brandNew");
+        List<IdAnnotatedEntity> entities = List.of(toUpdate, toInsert);
+
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("existing");
+
+        // The classification query finds only the "existing" row -> one update + one insert -> transactional path.
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.any(Condition.class));
+
+        DataSource ds = Mockito.mock(DataSource.class);
+        Connection conn = Mockito.mock(Connection.class);
+        DatabaseMetaData metadata = Mockito.mock(DatabaseMetaData.class);
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.getMetaData()).thenReturn(metadata);
+        when(metadata.getDatabaseProductName()).thenReturn("H2");
+        when(metadata.getDatabaseProductVersion()).thenReturn("2");
+        when(conn.getAutoCommit()).thenReturn(true);
+        when(conn.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        Mockito.doThrow(new SQLException("rollback failed")).when(conn).rollback();
+        Mockito.doReturn(ds).when(dao).dataSource();
+
+        final SQLException primary = new SQLException("primary batch-insert failure");
+        Mockito.doThrow(primary).when(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> dao.batchUpsert(entities, List.of("name"), 10));
+
+        assertSame(primary, thrown, "the primary batch failure must propagate, not the rollback failure");
+        assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
     }
 
     // refresh variants validate input and short-circuit empty collections.

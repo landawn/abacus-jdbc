@@ -1387,6 +1387,14 @@ final class DaoImpl {
                     @SuppressWarnings("resource")
                     final String[] paramNames = Stream.of(paramBinds).map(Bind::value).toArray(IntFunctions.ofStringArray());
 
+                    for (int i = 0; i < paramNames.length; i++) {
+                        if (Strings.isEmpty(paramNames[i])) {
+                            throw new UnsupportedOperationException("In method: " + fullClassMethodName + ", parameters[" + stmtParamIndexes[i]
+                                    + "]: @Bind on a procedure parameter must specify a non-empty name when named binding is used"
+                                    + " (bind every parameter with a non-empty @Bind, or none of them for positional binding)");
+                        }
+                    }
+
                     parametersSetter = (preparedQuery, args) -> {
                         final CallableQuery namedQuery = ((CallableQuery) preparedQuery);
 
@@ -4913,7 +4921,7 @@ final class DaoImpl {
                                 if (Strings.isEmpty(tp._2)) {
                                     return joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
                                 } else {
-                                    int result = 0;
+                                    long result = 0;
                                     final SqlTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
                                     Throwable failure = null;
 
@@ -4929,7 +4937,7 @@ final class DaoImpl {
                                         JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
 
-                                    return result;
+                                    return Numbers.toIntExact(result);
                                 }
                             } else {
                                 long result = 0;
@@ -5281,6 +5289,11 @@ final class DaoImpl {
                             && Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) && int.class.equals(paramTypes[stmtParamIndexes[1]])))) {
                         throw new UnsupportedOperationException("For batch operations(" + fullClassMethodName
                                 + "), the first parameter must be Collection. The second parameter is optional, it only can be int if it's set");
+                    }
+
+                    if (isBatch && Stream.of(bindListParamFlags).anyMatch(it -> it)) {
+                        throw new UnsupportedOperationException("For batch operations(" + fullClassMethodName
+                                + "), @BindList parameters are not supported: the Collection parameter supplies the batch rows and cannot also be expanded into IN-clause placeholders");
                     }
 
                     final MappedByKey mappedByKeyAnno = method.getAnnotation(MappedByKey.class);
@@ -6385,8 +6398,8 @@ final class DaoImpl {
             }
         }
 
-        JdbcUtil.logger.warn("No Dao interface/instance found for join operations(entityClass={}, dataSource={}, dao={})", referencedEntityClass, ds,
-                defaultDao.getClass());
+        JdbcUtil.logger.warn("No Dao interface/instance found for join operations(entityClass={}, dataSourceId={}, dao={})", referencedEntityClass,
+                System.identityHashCode(ds), defaultDao.getClass());
 
         // Don't cache defaultDao - the correct DAO may be registered later (e.g., during initialization).
         // Caching the wrong DAO here would permanently prevent the correct one from being found.

@@ -75,8 +75,8 @@ public @interface DaoConfig {
      *
      * <p>When {@code true}, the framework appends:</p>
      * <ul>
-     *   <li>{@code LIMIT 1} for {@code exists(Condition)} and {@code findFirst(...)} variants</li>
-     *   <li>{@code LIMIT 2} for {@code findOnlyOne(...)} variants (so duplicates can still be detected)</li>
+     *   <li>{@code LIMIT 1} for {@code exists(Condition)}, {@code findFirst(...)} and {@code queryForSingleXxx(...)} variants</li>
+     *   <li>{@code LIMIT 2} for {@code findOnlyOne(...)} and {@code queryForUniqueXxx(...)} variants (so duplicates can still be detected)</li>
      * </ul>
      *
      * <p>The LIMIT is <em>not</em> added for {@code count(Condition)} (which already issues a

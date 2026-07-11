@@ -84,6 +84,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
             int result = 0;
             final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+            Throwable failure = null;
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -91,8 +92,19 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                 }
 
                 tran.commit();
+            } catch (final Throwable e) { //NOSONAR
+                failure = e;
+                throw e;
             } finally {
-                tran.rollbackIfNotCommitted();
+                try {
+                    tran.rollbackIfNotCommitted();
+                } catch (final RuntimeException | Error rollbackFailure) {
+                    if (failure == null) {
+                        throw rollbackFailure;
+                    }
+
+                    failure.addSuppressed(rollbackFailure);
+                }
             }
 
             return result;
@@ -138,6 +150,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
             int result = 0;
             final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+            Throwable failure = null;
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -145,8 +158,19 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                 }
 
                 tran.commit();
+            } catch (final Throwable e) { //NOSONAR
+                failure = e;
+                throw e;
             } finally {
-                tran.rollbackIfNotCommitted();
+                try {
+                    tran.rollbackIfNotCommitted();
+                } catch (final RuntimeException | Error rollbackFailure) {
+                    if (failure == null) {
+                        throw rollbackFailure;
+                    }
+
+                    failure.addSuppressed(rollbackFailure);
+                }
             }
 
             return result;
@@ -264,6 +288,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
             int result = 0;
             final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+            Throwable failure = null;
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -271,8 +296,19 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                 }
 
                 tran.commit();
+            } catch (final Throwable e) { //NOSONAR
+                failure = e;
+                throw e;
             } finally {
-                tran.rollbackIfNotCommitted();
+                try {
+                    tran.rollbackIfNotCommitted();
+                } catch (final RuntimeException | Error rollbackFailure) {
+                    if (failure == null) {
+                        throw rollbackFailure;
+                    }
+
+                    failure.addSuppressed(rollbackFailure);
+                }
             }
 
             return result;
@@ -375,6 +411,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
             int result = 0;
             final DataSource ds = DaoUtil.getReadOps(this).dataSource();
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+            Throwable failure = null;
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -382,8 +419,19 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                 }
 
                 tran.commit();
+            } catch (final Throwable e) { //NOSONAR
+                failure = e;
+                throw e;
             } finally {
-                tran.rollbackIfNotCommitted();
+                try {
+                    tran.rollbackIfNotCommitted();
+                } catch (final RuntimeException | Error rollbackFailure) {
+                    if (failure == null) {
+                        throw rollbackFailure;
+                    }
+
+                    failure.addSuppressed(rollbackFailure);
+                }
             }
 
             return result;

@@ -18,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -105,6 +106,16 @@ public class DaoImplTest extends TestBase {
     interface ProcedureDao {
         @Query(value = "call test_proc(?, ?)", isProcedure = true)
         void callProc(@Bind("p1") String first, String second);
+    }
+
+    interface EmptyBindProcedureDao {
+        @Query(value = "call test_proc(?, ?)", isProcedure = true)
+        void callProc(@Bind("p1") String first, @Bind String second);
+    }
+
+    interface BatchBindListDao extends Dao<TestEntity, BatchBindListDao> {
+        @Query(value = "UPDATE test SET status = 1 WHERE id IN ({ids})", isBatch = true)
+        int updateBatch(@com.landawn.abacus.jdbc.annotation.BindList("ids") Collection<Long> ids) throws SQLException;
     }
 
     @SqlSource
@@ -352,6 +363,51 @@ public class DaoImplTest extends TestBase {
 
         assertTrue(ex.getCause() instanceof UnsupportedOperationException);
         assertTrue(ex.getCause().getMessage().contains("either all procedure parameters must be bound"));
+    }
+
+    // BUG FIX: a bare @Bind (empty value) among named procedure parameters used to pass DAO
+    // initialization and then bind the empty string at call time, failing with an obscure driver
+    // error. Bind's documented contract declares the combination unsupported; reject it eagerly
+    // like the sibling all-or-none check above.
+    @Test
+    @Tag("2025")
+    void testProcedureBindRejectsEmptyBindNameAmongNamedOnes() throws Exception {
+        Method daoMethod = EmptyBindProcedureDao.class.getMethod("callProc", String.class, String.class);
+        DaoImpl.QueryInfo queryInfo = new DaoImpl.QueryInfo("call test_proc(?, ?)", null, 0, 0, false, 0, OP.DEFAULT, false, false, false, false, true, false);
+
+        Method factory = DaoImpl.class.getDeclaredMethod("createParametersSetter", DaoImpl.QueryInfo.class, String.class, Method.class, Class[].class,
+                int.class, int.class, int[].class, boolean[].class, int.class);
+        factory.setAccessible(true);
+
+        int[] stmtParamIndexes = new int[] { 0, 1 };
+        boolean[] bindListParamFlags = new boolean[] { false, false };
+
+        InvocationTargetException ex = assertThrows(InvocationTargetException.class, () -> factory.invoke(null, queryInfo, "EmptyBindProcedureDao.callProc",
+                daoMethod, daoMethod.getParameterTypes(), 2, 2, stmtParamIndexes, bindListParamFlags, 2));
+
+        assertTrue(ex.getCause() instanceof UnsupportedOperationException);
+        assertTrue(ex.getCause().getMessage().contains("non-empty"));
+    }
+
+    // BUG FIX: a batch @Query whose Collection parameter also carries @BindList used to pass DAO
+    // initialization even though the collection cannot simultaneously supply the batch rows and be
+    // expanded into IN-clause placeholders — the first call failed with a confusing bind-shape error.
+    // The combination must be rejected at creation time.
+    @Test
+    @Tag("2025")
+    void testBatchWithBindListRejectedAtCreation() throws SQLException {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        Mockito.when(dataSource.getConnection()).thenReturn(connection);
+        Mockito.when(connection.getMetaData()).thenReturn(metadata);
+        Mockito.when(metadata.getDatabaseProductName()).thenReturn("H2");
+        Mockito.when(metadata.getDatabaseProductVersion()).thenReturn("2");
+
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> JdbcUtil.createDao(BatchBindListDao.class, dataSource));
+
+        assertTrue(thrown.getMessage().contains("@BindList"));
     }
 
     @Test

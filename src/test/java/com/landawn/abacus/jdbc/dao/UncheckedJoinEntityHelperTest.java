@@ -12,6 +12,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,12 +20,14 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.SqlTransaction;
@@ -1044,6 +1047,34 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
 
             verify(tran, Mockito.never()).commit();
             verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: the multi-prop deleteJoinEntities overloads wrap per-prop deletes in a transaction. The
+    // unguarded rollbackIfNotCommitted() in finally used to replace the primary delete failure with the
+    // rollback failure; the primary failure must propagate with the rollback failure attached via addSuppressed.
+    @Test
+    @Tag("2025")
+    public void testDeleteJoinEntities_MultiProp_PreservesPrimaryFailureWhenRollbackFails() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            final IllegalStateException primary = new IllegalStateException("primary delete failure");
+            Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
+            Mockito.doThrow(new UncheckedSQLException(new SQLException("rollback failed"))).when(tran).rollbackIfNotCommitted();
+
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
+
+            assertSame(primary, thrown, "the primary delete failure must propagate, not the rollback failure");
+            assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
         }
     }
 
