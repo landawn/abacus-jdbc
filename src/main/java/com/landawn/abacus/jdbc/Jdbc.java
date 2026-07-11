@@ -32,7 +32,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -2123,7 +2125,7 @@ public final class Jdbc {
                                 String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase(Locale.ROOT));
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -2455,7 +2457,8 @@ public final class Jdbc {
              * fresh array for each row.
              * </p>
              *
-             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
+             * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -2653,12 +2656,15 @@ public final class Jdbc {
              * }</pre>
              *
              * @param <R> final result type
-             * @param finisher a function that transforms the row's values into the final result object
+             * @param finisher a function that transforms the row's values into the final result object, must not be {@code null}
              * @return a new stateful {@code RowMapper<R>}
+             * @throws IllegalArgumentException if {@code finisher} is {@code null}
              */
             @SequentialOnly
             @Stateful
             public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
+                N.checkArgNotNull(finisher, "finisher");
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
@@ -2691,7 +2697,8 @@ public final class Jdbc {
              * {@link DisposableObjArray} containing the current row values.
              * </p>
              *
-             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
+             * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -2704,12 +2711,15 @@ public final class Jdbc {
              * }</pre>
              *
              * @param <R> final result type
-             * @param finisher a function that transforms column labels and row values into the final result object
+             * @param finisher a function that transforms column labels and row values into the final result object, must not be {@code null}
              * @return a new stateful {@code RowMapper<R>}
+             * @throws IllegalArgumentException if {@code finisher} is {@code null}
              */
             @SequentialOnly
             @Stateful
             public <R> RowMapper<R> to(final Throwables.BiFunction<List<String>, DisposableObjArray, R, SQLException> finisher) {
+                N.checkArgNotNull(finisher, "finisher");
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private List<String> columnLabels = null;
@@ -3274,7 +3284,7 @@ public final class Jdbc {
                                         String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                         if (Strings.isEmpty(fieldName)) {
-                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
+                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase(Locale.ROOT));
                                         }
 
                                         if (Strings.isNotEmpty(fieldName)) {
@@ -3290,7 +3300,7 @@ public final class Jdbc {
                                             String fieldName = columnToPropNameMap.get(newColumnName);
 
                                             if (Strings.isEmpty(fieldName)) {
-                                                fieldName = columnToPropNameMap.get(newColumnName.toLowerCase());
+                                                fieldName = columnToPropNameMap.get(newColumnName.toLowerCase(Locale.ROOT));
                                             }
 
                                             if (Strings.isNotEmpty(fieldName)) {
@@ -3456,7 +3466,7 @@ public final class Jdbc {
                                 String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase(Locale.ROOT));
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -3472,7 +3482,7 @@ public final class Jdbc {
                                     String fieldName = columnToPropNameMap.get(newColumnName);
 
                                     if (Strings.isEmpty(fieldName)) {
-                                        fieldName = columnToPropNameMap.get(newColumnName.toLowerCase());
+                                        fieldName = columnToPropNameMap.get(newColumnName.toLowerCase(Locale.ROOT));
                                     }
 
                                     if (Strings.isNotEmpty(fieldName)) {
@@ -3986,7 +3996,7 @@ public final class Jdbc {
                                 String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase(Locale.ROOT));
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -4293,7 +4303,7 @@ public final class Jdbc {
                 final Map<String, ColumnGetter<?>> lowerCaseKeyedColumnGetterMap = new HashMap<>(columnGetterMap.size());
 
                 for (final Map.Entry<String, ColumnGetter<?>> entry : columnGetterMap.entrySet()) {
-                    lowerCaseKeyedColumnGetterMap.put(entry.getKey().toLowerCase(), entry.getValue());
+                    lowerCaseKeyedColumnGetterMap.put(entry.getKey().toLowerCase(Locale.ROOT), entry.getValue());
                 }
 
                 final Set<String> lowerCaseColumnLabels = new HashSet<>(rsColumnCount);
@@ -4304,17 +4314,17 @@ public final class Jdbc {
                     columnGetter = columnGetterMap.get(columnLabel);
 
                     if (columnGetter == null) {
-                        columnGetter = lowerCaseKeyedColumnGetterMap.get(columnLabel.toLowerCase());
+                        columnGetter = lowerCaseKeyedColumnGetterMap.get(columnLabel.toLowerCase(Locale.ROOT));
                     }
 
                     rsColumnGetters[i] = columnGetter == null ? defaultColumnGetter : columnGetter;
-                    lowerCaseColumnLabels.add(columnLabel.toLowerCase());
+                    lowerCaseColumnLabels.add(columnLabel.toLowerCase(Locale.ROOT));
                 }
 
                 final List<String> unmatchedColumnNames = new ArrayList<>();
 
                 for (final String configuredColumnName : columnGetterMap.keySet()) {
-                    if (!lowerCaseColumnLabels.contains(configuredColumnName.toLowerCase())) {
+                    if (!lowerCaseColumnLabels.contains(configuredColumnName.toLowerCase(Locale.ROOT))) {
                         unmatchedColumnNames.add(configuredColumnName);
                     }
                 }
@@ -4471,7 +4481,7 @@ public final class Jdbc {
                                         String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                         if (Strings.isEmpty(fieldName)) {
-                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
+                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase(Locale.ROOT));
                                         }
 
                                         if (Strings.isNotEmpty(fieldName)) {
@@ -4743,7 +4753,7 @@ public final class Jdbc {
                                 String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase(Locale.ROOT));
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -4944,7 +4954,7 @@ public final class Jdbc {
                                 String fieldName = columnToPropNameMap.get(columnLabels.get(i));
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels.get(i).toLowerCase(Locale.ROOT));
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -5331,7 +5341,7 @@ public final class Jdbc {
                                 String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                 if (Strings.isEmpty(fieldName)) {
-                                    fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
+                                    fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase(Locale.ROOT));
                                 }
 
                                 if (Strings.isNotEmpty(fieldName)) {
@@ -5350,7 +5360,7 @@ public final class Jdbc {
                                     String fieldName = columnToPropNameMap.get(newColumnName);
 
                                     if (Strings.isEmpty(fieldName)) {
-                                        fieldName = columnToPropNameMap.get(newColumnName.toLowerCase());
+                                        fieldName = columnToPropNameMap.get(newColumnName.toLowerCase(Locale.ROOT));
                                     }
 
                                     if (Strings.isNotEmpty(fieldName)) {
@@ -5365,7 +5375,7 @@ public final class Jdbc {
                                         String fieldName = columnToPropNameMap.get(columnLabels[i]);
 
                                         if (Strings.isEmpty(fieldName)) {
-                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase());
+                                            fieldName = columnToPropNameMap.get(columnLabels[i].toLowerCase(Locale.ROOT));
                                         }
 
                                         if (Strings.isNotEmpty(fieldName)) {
@@ -6197,10 +6207,13 @@ public final class Jdbc {
              * }</pre>
              *
              * @param <T> target type
-             * @param firstColumnType the class of the value in the first column.
+             * @param firstColumnType the class of the value in the first column, must not be {@code null}
              * @return a {@code RowMapper} for the specified type.
+             * @throws IllegalArgumentException if {@code firstColumnType} is {@code null}
              */
             public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
+                N.checkArgNotNull(firstColumnType, "firstColumnType");
+
                 return get(N.typeOf(firstColumnType));
             }
 
@@ -6221,8 +6234,11 @@ public final class Jdbc {
              * @param <T> target type
              * @param type the {@code Type} of the value in the first column; must not be {@code null}
              * @return a {@code RowMapper} for the specified type
+             * @throws IllegalArgumentException if {@code type} is {@code null}
              */
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
+                N.checkArgNotNull(type, "type");
+
                 RowMapper<T> rowMapper = rowMapperPool.get(type);
 
                 if (rowMapper == null) {
@@ -6292,11 +6308,14 @@ public final class Jdbc {
              * }</pre>
              *
              * @param <T> parameter type
-             * @param type the class of the parameter.
+             * @param type the class of the parameter, must not be {@code null}
              * @return a {@code BiParametersSetter} for the specified type.
+             * @throws IllegalArgumentException if {@code type} is {@code null}
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {
+                N.checkArgNotNull(type, "type");
+
                 return set(N.typeOf(type));
             }
 
@@ -6311,11 +6330,14 @@ public final class Jdbc {
              * }</pre>
              *
              * @param <T> parameter type
-             * @param type the {@code Type} of the parameter.
+             * @param type the {@code Type} of the parameter, must not be {@code null}
              * @return a {@code BiParametersSetter} for the specified type.
+             * @throws IllegalArgumentException if {@code type} is {@code null}
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
+                N.checkArgNotNull(type, "type");
+
                 return (preparedQuery, x) -> type.set(preparedQuery.stmt, 1, x);
             }
 
@@ -6447,8 +6469,19 @@ public final class Jdbc {
          * @param outParamValues a map of output parameter values, keyed by index or name.
          */
         OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) {
-            this.outParams = outParams;
-            this.outParamValues = outParamValues;
+            if (N.isEmpty(outParams)) {
+                this.outParams = N.emptyList();
+            } else {
+                this.outParams = new ArrayList<>(outParams.size());
+
+                for (final OutParam outParam : outParams) {
+                    this.outParams.add(outParam == null ? null
+                            : new OutParam(outParam.getParameterIndex(), outParam.getParameterName(), outParam.getSqlType(), outParam.getTypeName(),
+                                    outParam.getScale()));
+                }
+            }
+
+            this.outParamValues = N.isEmpty(outParamValues) ? N.emptyMap() : new LinkedHashMap<>(outParamValues);
         }
 
         /**
@@ -6499,7 +6532,7 @@ public final class Jdbc {
          * Object byName = all.get("result_name");  // value keyed by parameter name
          * }</pre>
          *
-         * @return an unmodifiable view of the map of all output parameter values.
+         * @return an unmodifiable snapshot of the map of all output parameter values.
          */
         public Map<Object, Object> getOutParamValues() {
             return ImmutableMap.wrap(outParamValues);
@@ -6516,7 +6549,9 @@ public final class Jdbc {
          * int firstIndex = defs.get(0).getParameterIndex(); // 1-based index of the first out-param
          * }</pre>
          *
-         * @return an unmodifiable view of the list of {@code OutParam} objects.
+         * @return an unmodifiable snapshot of the list of {@code OutParam} objects. The definitions
+         *         are copied when this result is created, so later changes to the query's registrations
+         *         do not alter this result.
          */
         public List<OutParam> getOutParams() {
             return ImmutableList.wrap(outParams);
@@ -6741,18 +6776,19 @@ public final class Jdbc {
                     final Object bean = springAppContext.getBean(qualifier);
 
                     if (bean instanceof Handler) {
-                        result = (Handler<?>) bean;
+                        final Handler<?> springHandler = (Handler<?>) bean;
+                        final Handler<?> existingHandler = handlerPool.putIfAbsent(qualifier, springHandler);
 
-                        // putIfAbsent (first-wins) so a Spring bean can never silently overwrite a handler
-                        // explicitly registered via register(...) -- register() itself uses putIfAbsent.
-                        handlerPool.putIfAbsent(qualifier, result);
+                        result = existingHandler == null ? springHandler : existingHandler;
                     }
                 } catch (final Exception e) {
-                    // Spring context lookup failed (no such bean, context not ready, or bean creation error) — return null
+                    // Spring lookup is optional; the registry is rechecked below in case registration raced with it.
                 }
             }
 
-            return result;
+            // A registration may have won while Spring lookup was in progress, including while a
+            // failing lookup was unwinding through the catch block.
+            return result == null ? handlerPool.get(qualifier) : result;
         }
 
         /**
@@ -6760,8 +6796,8 @@ public final class Jdbc {
          * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring
          * application context.
          *
-         * <p>A handler resolved from the Spring context is then cached into the internal registry, replacing
-         * any existing entry for this qualifier.</p>
+         * <p>A handler resolved from the Spring context is cached only if no entry already exists for this
+         * qualifier. This preserves an explicitly registered handler if registration races with resolution.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -6787,7 +6823,7 @@ public final class Jdbc {
                 try {
                     result = springAppContext.getBean(handlerClass);
                 } catch (final Exception e) {
-                    // Bean not found in Spring context by class
+                    // Fall back to lookup by qualifier, then recheck the registry.
                 }
 
                 if (result == null) {
@@ -6798,16 +6834,21 @@ public final class Jdbc {
                             result = (Handler<?>) bean;
                         }
                     } catch (final Exception e) {
-                        // Bean not found in Spring context by qualifier
+                        // The registry is rechecked below in case registration raced with Spring lookup.
                     }
                 }
 
                 if (result != null) {
-                    handlerPool.put(qualifier, result);
+                    final Handler<?> existingHandler = handlerPool.putIfAbsent(qualifier, result);
+
+                    if (existingHandler != null) {
+                        result = existingHandler;
+                    }
                 }
             }
 
-            return result;
+            // Recheck after Spring lookup for the same race covered by get(String).
+            return result == null ? handlerPool.get(qualifier) : result;
         }
 
         /**

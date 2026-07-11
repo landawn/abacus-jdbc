@@ -44,6 +44,10 @@ import com.landawn.abacus.util.stream.Stream;
  * <p>This interface contains no operation that modifies the database, so it can be mixed into
  * read-only DAOs (see {@link ReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
  *
+ * <p><b>&#9888; Warning:</b> When selecting only some source properties, include every property used
+ * as a join key. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
+ * caller's thread-bound transaction and may partially populate entities before a task fails.</p>
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *

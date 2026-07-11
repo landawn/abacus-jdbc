@@ -30,6 +30,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -129,6 +130,18 @@ import com.landawn.abacus.util.stream.CharStream;
  * {@link ResultSet} never close the caller-supplied resource; they only close resources they create
  * internally. Methods that accept a {@link javax.sql.DataSource} obtain a connection and release it
  * back to the data source before returning.</p>
+ *
+ * <p><b>&#9888; Warning:</b> Import and copy return values count source rows submitted for execution,
+ * not the sum of JDBC update counts reported by the target database. A successful return therefore
+ * does not prove that every submitted row changed one target row.</p>
+ *
+ * <p><b>&#9888; Warning:</b> These operations do not create an all-or-nothing transaction. If a later
+ * batch fails, earlier batches may already be committed. Supply a connection with an appropriate
+ * active transaction when atomicity is required.</p>
+ *
+ * <p><b>&#9888; Warning:</b> Builders backed by a caller-supplied {@link Reader} or {@link Iterator}
+ * are one-shot because their source is consumed by the terminal operation. Row arrays passed to
+ * callbacks may be reused; copy a row before retaining it beyond the callback.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -950,6 +963,7 @@ public final class DataTransferUtil {
         final int columnCount = dataset.columnNames().size();
         final Object[] row = new Object[columnCount];
         int result = 0;
+        boolean hasExecutedBatch = false;
 
         logger.debug("Importing Dataset(rows={}, columns={}, batchSize={}, batchIntervalInMillis={})", dataset.size(), columnCount, batchSize,
                 batchIntervalInMillis);
@@ -973,15 +987,14 @@ public final class DataTransferUtil {
             stmt.addBatch();
 
             if ((++result % batchSize) == 0) {
+                pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(stmt);
-
-                if (batchIntervalInMillis > 0) {
-                    N.sleepUninterruptibly(batchIntervalInMillis);
-                }
+                hasExecutedBatch = true;
             }
         }
 
         if ((result % batchSize) > 0) {
+            pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
             JdbcUtil.executeBatch(stmt);
         }
 
@@ -1180,6 +1193,7 @@ public final class DataTransferUtil {
 
         final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
         long result = 0;
+        boolean hasExecutedBatch = false;
 
         logger.debug("Importing iterator data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
 
@@ -1197,15 +1211,14 @@ public final class DataTransferUtil {
             stmt.addBatch();
 
             if ((++result % batchSize) == 0) {
+                pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(stmt);
-
-                if (batchIntervalInMillis > 0) {
-                    N.sleepUninterruptibly(batchIntervalInMillis);
-                }
+                hasExecutedBatch = true;
             }
         }
 
         if ((result % batchSize) > 0) {
+            pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
             JdbcUtil.executeBatch(stmt);
         }
 
@@ -1544,7 +1557,7 @@ public final class DataTransferUtil {
      * PreparedStatement stmt = conn.prepareStatement(
      *     "INSERT INTO large_table (id, data, timestamp) VALUES (?, ?, ?)");
      *
-     * long startTime = System.currentTimeMillis();
+     * long startTime = System.nanoTime();
      * long rowsImported = DataTransferUtil.importCsv(reader, stmt, 10000, 200,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
@@ -1552,8 +1565,8 @@ public final class DataTransferUtil {
      *         query.setTimestamp(3, Timestamp.valueOf(row[2]));
      *     });
      *
-     * long duration = System.currentTimeMillis() - startTime;
-     * System.out.println("Imported " + rowsImported + " rows in " + duration + "ms");
+     * long durationMillis = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+     * System.out.println("Imported " + rowsImported + " rows in " + durationMillis + "ms");
      * }</pre>
      *
      * @param reader the Reader to read the CSV data from
@@ -1643,6 +1656,7 @@ public final class DataTransferUtil {
         final boolean isBufferedReader = IOUtil.isBufferedReader(reader);
         final BufferedReader br = isBufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
         long result = 0;
+        boolean hasExecutedBatch = false;
 
         logger.debug("Importing CSV data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
 
@@ -1673,17 +1687,16 @@ public final class DataTransferUtil {
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
+                    pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                     JdbcUtil.executeBatch(stmt);
-
-                    if (batchIntervalInMillis > 0) {
-                        N.sleepUninterruptibly(batchIntervalInMillis);
-                    }
+                    hasExecutedBatch = true;
                 }
 
                 N.fill(output, null);
             }
 
             if ((result % batchSize) > 0) {
+                pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(stmt);
             }
 
@@ -3109,6 +3122,7 @@ public final class DataTransferUtil {
             rs = JdbcUtil.executeQuery(selectStmt);
 
             long cnt = 0;
+            boolean hasExecutedBatch = false;
 
             while (rs.next()) {
                 cnt++;
@@ -3117,15 +3131,14 @@ public final class DataTransferUtil {
                 insertStmt.addBatch();
 
                 if (cnt % batchSize == 0) {
+                    pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                     JdbcUtil.executeBatch(insertStmt);
-
-                    if (batchIntervalInMillis > 0) {
-                        N.sleepUninterruptibly(batchIntervalInMillis);
-                    }
+                    hasExecutedBatch = true;
                 }
             }
 
             if (cnt % batchSize > 0) {
+                pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(insertStmt);
             }
 
@@ -3136,6 +3149,12 @@ public final class DataTransferUtil {
             return cnt;
         } finally {
             JdbcUtil.closeQuietly(rs);
+        }
+    }
+
+    private static void pauseBeforeSubsequentBatch(final boolean hasExecutedBatch, final long batchIntervalInMillis) {
+        if (hasExecutedBatch && batchIntervalInMillis > 0) {
+            N.sleepUninterruptibly(batchIntervalInMillis);
         }
     }
 
@@ -3275,11 +3294,11 @@ public final class DataTransferUtil {
          * parameter placeholders of the insert SQL. Mutually exclusive with {@link #columnTypeMap(Map)}
          * and {@link #stmtSetter(Throwables.BiConsumer)}.
          *
-         * @param selectColumnNames the column names to import; {@code null} or empty imports all columns
+         * @param selectColumnNames the column names to import; {@code null} or empty imports all columns. The supplied collection is copied.
          * @return this builder
          */
         public DatasetImportBuilder selectColumns(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = selectColumnNames;
+            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;
         }
@@ -3325,12 +3344,12 @@ public final class DataTransferUtil {
          * Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
          * Mutually exclusive with {@link #selectColumns(Collection)} and {@link #stmtSetter(Throwables.BiConsumer)}.
          *
-         * @param columnTypeMap a map of column name to {@link Type}; keys must be columns of the dataset
+         * @param columnTypeMap a map of column name to {@link Type}; keys must be columns of the dataset. The supplied map is copied.
          * @return this builder
          */
         @SuppressWarnings("rawtypes")
         public DatasetImportBuilder columnTypeMap(final Map<String, ? extends Type> columnTypeMap) {
-            this.columnTypeMap = columnTypeMap;
+            this.columnTypeMap = N.isEmpty(columnTypeMap) ? null : new LinkedHashMap<>(columnTypeMap);
 
             return this;
         }
@@ -3804,11 +3823,11 @@ public final class DataTransferUtil {
          * Restricts the export to the named columns (matched against the query's result-set column labels), in the
          * order they appear in the result. {@code null} or empty exports all columns.
          *
-         * @param selectColumnNames the column names to export; {@code null} for all columns
+         * @param selectColumnNames the column names to export; {@code null} for all columns. The supplied collection is copied.
          * @return this builder
          */
         public CsvExportBuilder selectColumns(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = selectColumnNames;
+            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;
         }
@@ -4336,11 +4355,11 @@ public final class DataTransferUtil {
         /**
          * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
          *
-         * @param selectColumnNames the column names to copy
+         * @param selectColumnNames the column names to copy. The supplied collection is copied.
          * @return this builder
          */
         public CopyTableFromDataSource selectColumns(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = selectColumnNames;
+            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;
         }
@@ -4397,11 +4416,11 @@ public final class DataTransferUtil {
         /**
          * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
          *
-         * @param selectColumnNames the column names to copy
+         * @param selectColumnNames the column names to copy. The supplied collection is copied.
          * @return this builder
          */
         public CopyTableFromConnection selectColumns(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = selectColumnNames;
+            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;
         }

@@ -79,6 +79,10 @@ import com.landawn.abacus.util.Strings;
  * than constructed directly. The {@link #close()} method should be called when the lock is no
  * longer needed to stop the background refresh task and release any locks still held.</p>
  *
+ * <p><b>&#9888; Warning:</b> Lease timestamps are computed from each participating JVM's wall clock.
+ * Hosts using the same lock table must keep their clocks synchronized; significant skew can make
+ * one host consider another host's actively refreshed lease expired.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Initialize DBLock with a DataSource and a table name
@@ -430,7 +434,8 @@ public final class DBLock {
      * }</pre>
      *
      * @param target the unique identifier of the resource to lock. Must not be {@code null} or empty.
-     * @param liveTime the duration in milliseconds for which the lock is valid. Must be positive.
+     * @param liveTime the lease-expiry window in milliseconds; the background refresh task extends
+     *        this window while the lock remains held. Must be positive.
      * @param timeout the maximum time in milliseconds to wait for the lock. Must be non-negative.
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
      *         could not be acquired within the specified timeout, or if the calling thread was interrupted
@@ -486,7 +491,8 @@ public final class DBLock {
      * }</pre>
      *
      * @param target the unique identifier of the resource to lock. Must not be {@code null} or empty.
-     * @param liveTime the duration in milliseconds for which the lock is valid. Must be positive.
+     * @param liveTime the lease-expiry window in milliseconds; the background refresh task extends
+     *        this window while the lock remains held. Must be positive.
      * @param timeout the maximum time in milliseconds to wait for the lock. Must be non-negative.
      * @param retryInterval the time in milliseconds to wait between retry attempts. A value of 0 means
      *        an internal minimum (1 ms) delay is used to avoid a tight spin loop. Must be non-negative.

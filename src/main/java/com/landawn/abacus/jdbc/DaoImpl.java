@@ -34,11 +34,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -563,8 +565,12 @@ final class DaoImpl {
 
         return isBooleanReturnType && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
                 || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
-                || (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
-                || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8)))));
+                || isNotExistsMethodName(methodName));
+    }
+
+    private static boolean isNotExistsMethodName(final String methodName) {
+        return (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
+                || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8))));
     }
 
     private static boolean isFindFirst(final Method method, final OP op) {
@@ -1112,7 +1118,7 @@ final class DaoImpl {
                         + " is not supported by method annotated with @MergedById. Only Optional/List/Collection are supported at present");
             }
         } else if (isExists) {
-            if (method.getName().startsWith("not")) {
+            if (isNotExistsMethodName(method.getName())) {
                 return (preparedQuery, args) -> (R) (Boolean) preparedQuery.notExists();
             } else {
                 return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
@@ -1680,6 +1686,30 @@ final class DaoImpl {
         }
     }
 
+    private static long sumUpdateCounts(final int[] updateCounts) {
+        long total = 0;
+
+        for (final int updateCount : updateCounts) {
+            if (updateCount > 0) {
+                total += updateCount;
+            }
+        }
+
+        return total;
+    }
+
+    private static long sumUpdateCounts(final long[] updateCounts) {
+        long total = 0;
+
+        for (final long updateCount : updateCounts) {
+            if (updateCount > 0) {
+                total = Math.addExact(total, updateCount);
+            }
+        }
+
+        return total;
+    }
+
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiRowMapper<Object> getIdExtractor(final Holder<Jdbc.BiRowMapper<Object>> idExtractorHolder,
             final Jdbc.BiRowMapper<Object> defaultIdExtractor, final DaoBase dao) {
@@ -1696,12 +1726,12 @@ final class DaoImpl {
         return keyExtractor;
     }
 
-    private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final PerfLog perfLogAnno, final long startTime) {
+    private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final PerfLog perfLogAnno, final long startTimeNanos) {
         if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
-            final long elapsedTime = System.currentTimeMillis() - startTime;
+            final long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
 
             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                daoLogger.info(Strings.concat("[DAO-OP-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime)));
+                daoLogger.info(Strings.concat("[DAO-OP-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime), " ms"));
             }
         }
     }
@@ -2369,7 +2399,9 @@ final class DaoImpl {
                                             + fullClassMethodName);
                         }
 
-                        args[paramLen - 1] = sqls;
+                        // A default method can mutate its varargs array. Sharing the annotation-derived
+                        // array across calls would let one invocation corrupt every later invocation.
+                        args[paramLen - 1] = sqls.clone();
                     }
 
                     return methodHandle.bindTo(proxy).invokeWithArguments(args == null ? N.EMPTY_OBJECT_ARRAY : args);
@@ -2475,6 +2507,7 @@ final class DaoImpl {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
@@ -2484,8 +2517,11 @@ final class DaoImpl {
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -2512,6 +2548,7 @@ final class DaoImpl {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
@@ -2521,8 +2558,11 @@ final class DaoImpl {
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -2545,6 +2585,7 @@ final class DaoImpl {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
@@ -2554,8 +2595,11 @@ final class DaoImpl {
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -4008,6 +4052,7 @@ final class DaoImpl {
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
@@ -4019,8 +4064,11 @@ final class DaoImpl {
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -4080,6 +4128,7 @@ final class DaoImpl {
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
@@ -4091,8 +4140,11 @@ final class DaoImpl {
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -4150,6 +4202,7 @@ final class DaoImpl {
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
@@ -4161,8 +4214,11 @@ final class DaoImpl {
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -4535,18 +4591,24 @@ final class DaoImpl {
                             long result = 0;
 
                             if (entities.size() <= batchSize) {
-                                result = N.sum(proxy.prepareNamedQuery(namedUpdateByIdSQL).addBatchParameters(entities).batchUpdate());
+                                result = sumUpdateCounts(proxy.prepareNamedQuery(namedUpdateByIdSQL).addBatchParameters(entities).batchUpdate());
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
-                                        result = Seq.of(entities).split(batchSize).sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
+                                        result = Seq.of(entities)
+                                                .split(batchSize)
+                                                .sumLong(bp -> sumUpdateCounts(nameQuery.addBatchParameters(bp).batchUpdate()));
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -4569,18 +4631,24 @@ final class DaoImpl {
                             long result = 0;
 
                             if (entities.size() <= batchSize) {
-                                result = N.sum(proxy.prepareNamedQuery(query).addBatchParameters(entities).batchUpdate());
+                                result = sumUpdateCounts(proxy.prepareNamedQuery(query).addBatchParameters(entities).batchUpdate());
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
-                                        result = Seq.of(entities).split(batchSize).sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp).batchUpdate()));
+                                        result = Seq.of(entities)
+                                                .split(batchSize)
+                                                .sumLong(bp -> sumUpdateCounts(nameQuery.addBatchParameters(bp).batchUpdate()));
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
                             }
 
@@ -4616,21 +4684,26 @@ final class DaoImpl {
                             }
 
                             if (idsOrEntities.size() <= batchSize) {
-                                return N.sum(proxy.prepareNamedQuery(namedDeleteByIdSQL).addBatchParameters(idsOrEntities, paramSetter).batchUpdate());
+                                return Numbers.toIntExact(sumUpdateCounts(
+                                        proxy.prepareNamedQuery(namedDeleteByIdSQL).addBatchParameters(idsOrEntities, paramSetter).batchUpdate()));
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 long result = 0;
+                                Throwable failure = null;
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedDeleteByIdSQL).closeAfterExecution(false)) {
                                         result = Seq.of(idsOrEntities)
                                                 .split(batchSize)
-                                                .sumInt(bp -> N.sum(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate()));
+                                                .sumLong(bp -> sumUpdateCounts(nameQuery.addBatchParameters(bp, paramSetter).batchUpdate()));
                                     }
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
 
                                 return Numbers.toIntExact(result);
@@ -4800,14 +4873,18 @@ final class DaoImpl {
                             } else {
                                 long result = 0;
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     result = joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
                                     result += joinEntityDao.prepareQuery(tp._2).setParameters(entity, tp._3).update();
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
 
                                 return Numbers.toIntExact(result);
@@ -4838,14 +4915,18 @@ final class DaoImpl {
                                 } else {
                                     int result = 0;
                                     final SqlTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
+                                    Throwable failure = null;
 
                                     try {
                                         result = joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
                                         result += joinEntityDao.prepareQuery(tp._2).setParameters(first, tp._3).update();
 
                                         tran.commit();
+                                    } catch (final Throwable e) { //NOSONAR
+                                        failure = e;
+                                        throw e;
                                     } finally {
-                                        tran.rollbackIfNotCommitted();
+                                        JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
 
                                     return result;
@@ -4853,23 +4934,27 @@ final class DaoImpl {
                             } else {
                                 long result = 0;
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
+                                Throwable failure = null;
 
                                 try {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                             .getBatchDeleteSqlPlan(parameterizedDsl);
 
-                                    result = Seq.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).sumInt(bp -> {
+                                    result = Seq.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).sumLong(bp -> {
                                         if (tp._2 == null) {
                                             return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
                                         } else {
-                                            return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update()
+                                            return (long) joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update()
                                                     + joinEntityDao.prepareQuery(tp._2.apply(bp.size())).setParameters(bp, tp._3).update();
                                         }
                                     });
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
 
                                 return Numbers.toIntExact(result);
@@ -5396,6 +5481,7 @@ final class DaoImpl {
                                     ids = preparedQuery.batchInsert(keyExtractor, isDefaultIdTester);
                                 } else {
                                     final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                    Throwable failure = null;
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
@@ -5417,8 +5503,11 @@ final class DaoImpl {
                                         }
 
                                         tran.commit();
+                                    } catch (final Throwable e) { //NOSONAR
+                                        failure = e;
+                                        throw e;
                                     } finally {
-                                        tran.rollbackIfNotCommitted();
+                                        JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
                                 }
 
@@ -5511,12 +5600,13 @@ final class DaoImpl {
                                     }
 
                                     if (isLargeUpdate) {
-                                        updatedRecordCount = N.sum(preparedQuery.largeBatchUpdate());
+                                        updatedRecordCount = sumUpdateCounts(preparedQuery.largeBatchUpdate());
                                     } else {
-                                        updatedRecordCount = N.sum(preparedQuery.batchUpdate());
+                                        updatedRecordCount = sumUpdateCounts(preparedQuery.batchUpdate());
                                     }
                                 } else {
                                     final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                    Throwable failure = null;
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
@@ -5527,21 +5617,24 @@ final class DaoImpl {
                                                 updatedRecordCount = Seq.of(batchParameters)
                                                         .split(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate
-                                                                ? N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).largeBatchUpdate())
-                                                                : N.sum(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchUpdate()));
+                                                                ? sumUpdateCounts(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).largeBatchUpdate())
+                                                                : sumUpdateCounts(preparedQuery.addBatchParameters(bp, ColumnOne.SET_OBJECT).batchUpdate()));
                                             } else {
                                                 updatedRecordCount = Seq.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .split(batchSize) //
                                                         .sumLong(bp -> isLargeUpdate
                                                                 //
-                                                                ? N.sum(preparedQuery.addBatchParameters(bp).largeBatchUpdate())
-                                                                : N.sum(preparedQuery.addBatchParameters(bp).batchUpdate()));
+                                                                ? sumUpdateCounts(preparedQuery.addBatchParameters(bp).largeBatchUpdate())
+                                                                : sumUpdateCounts(preparedQuery.addBatchParameters(bp).batchUpdate()));
                                             }
                                         }
 
                                         tran.commit();
+                                    } catch (final Throwable e) { //NOSONAR
+                                        failure = e;
+                                        throw e;
                                     } finally {
-                                        tran.rollbackIfNotCommitted();
+                                        JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
                                 }
 
@@ -5628,7 +5721,7 @@ final class DaoImpl {
                                 JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
-                            final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+                            final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
 
                             try {
                                 return tmp.apply(proxy, args);
@@ -5674,20 +5767,24 @@ final class DaoImpl {
                                 JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
-                            final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+                            final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
 
                             SqlTransaction tran = null;
                             Object result = null;
+                            Throwable failure = null;
 
                             try {
                                 tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 result = tmp.apply(proxy, args);
 
                                 tran.commit();
+                            } catch (final Throwable e) { //NOSONAR
+                                failure = e;
+                                throw e;
                             } finally {
                                 try {
                                     if (tran != null) {
-                                        tran.rollbackIfNotCommitted();
+                                        JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
                                 } finally {
                                     if (hasPerfLogAnno) {
@@ -5712,13 +5809,17 @@ final class DaoImpl {
 
                             final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                             Object result = null;
+                            Throwable failure = null;
 
                             try {
                                 result = tmp.apply(proxy, args);
 
                                 tran.commit();
+                            } catch (final Throwable e) { //NOSONAR
+                                failure = e;
+                                throw e;
                             } finally {
-                                tran.rollbackIfNotCommitted();
+                                JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                             }
 
                             return result;
@@ -5745,20 +5846,24 @@ final class DaoImpl {
                                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
-                                final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+                                final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
 
                                 SqlTransaction tran = null;
                                 Object result = null;
+                                Throwable failure = null;
 
                                 try {
                                     tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                     result = tmp.apply(proxy, args);
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
                                     try {
                                         if (tran != null) {
-                                            tran.rollbackIfNotCommitted();
+                                            JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                         }
                                     } finally {
                                         if (hasPerfLogAnno) {
@@ -5776,13 +5881,17 @@ final class DaoImpl {
                             } else {
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 Object result = null;
+                                Throwable failure = null;
 
                                 try {
                                     result = tmp.apply(proxy, args);
 
                                     tran.commit();
+                                } catch (final Throwable e) { //NOSONAR
+                                    failure = e;
+                                    throw e;
                                 } finally {
-                                    tran.rollbackIfNotCommitted();
+                                    JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
 
                                 return result;
@@ -5815,7 +5924,7 @@ final class DaoImpl {
                                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
-                                final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
+                                final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
 
                                 try {
                                     return tmp.apply(proxy, args);
@@ -5884,7 +5993,7 @@ final class DaoImpl {
 
                     final String transferAttr = cacheResultAnno == null ? (kryoParser != null ? "kryo" : "json") : cacheResultAnno.transfer();
 
-                    if (!(Strings.isEmpty(transferAttr) || SUPPORTED_TRANSFER_FOR_CACHE.contains(transferAttr.toLowerCase()))) {
+                    if (!(Strings.isEmpty(transferAttr) || SUPPORTED_TRANSFER_FOR_CACHE.contains(transferAttr.toLowerCase(Locale.ROOT)))) {
                         throw new UnsupportedOperationException(
                                 "Unsupported 'transfer' : " + transferAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
                     }
@@ -6144,7 +6253,7 @@ final class DaoImpl {
 
                                 return result;
                             } finally {
-                                isInDaoMethod_TL.set(false);
+                                isInDaoMethod_TL.remove();
                             }
                         }
                     };
@@ -6264,11 +6373,12 @@ final class DaoImpl {
         final String key = ClassUtil.getCanonicalClassName(referencedEntityClass) + "_" + System.identityHashCode(ds);
         final DaoBase joinEntityDao = joinEntityDaoPool.get(key);
 
-        if (joinEntityDao != null && joinEntityDao.dataSource().equals(ds)) {
+        if (joinEntityDao != null && Objects.equals(joinEntityDao.targetEntityClass(), referencedEntityClass)
+                && Objects.equals(joinEntityDao.dataSource(), ds)) {
             return joinEntityDao;
         } else {
             for (final DaoBase dao : daoPool.values()) {
-                if (dao.targetEntityClass().equals(referencedEntityClass) && dao.dataSource().equals(ds)) {
+                if (Objects.equals(dao.targetEntityClass(), referencedEntityClass) && Objects.equals(dao.dataSource(), ds)) {
                     joinEntityDaoPool.put(key, dao);
                     return dao;
                 }
@@ -6349,7 +6459,7 @@ final class DaoImpl {
             isNamedQuery = N.notEmpty(this.parsedSql.namedParameters()) || fragmentsContainNamedParameters;
 
             if (fragmentsContainNamedParameters && (this.parsedSql.parameterCount() > 0 && N.isEmpty(this.parsedSql.namedParameters()))) {
-                throw new IllegalArgumentException("'fragmentsContainNamedParameters' is set to true for Non-named sql: " + sql);
+                throw new IllegalArgumentException("'fragmentsContainNamedParameters' is true, but the resolved SQL has no named parameters");
             }
         }
     }

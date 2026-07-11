@@ -2560,7 +2560,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
-            final List<Jdbc.OutParam> outParamsToUse = outParams == null ? N.emptyList() : outParams;
+            final List<Jdbc.OutParam> outParamsToUse = copyOutParams();
 
             return func.apply(cstmt, outParamsToUse, isFirstResultSet);
         } finally {
@@ -2681,12 +2681,28 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
-            final List<Jdbc.OutParam> outParamsToUse = outParams == null ? N.emptyList() : outParams;
+            final List<Jdbc.OutParam> outParamsToUse = copyOutParams();
 
             consumer.accept(cstmt, outParamsToUse, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }
+    }
+
+    private List<Jdbc.OutParam> copyOutParams() {
+        if (N.isEmpty(outParams)) {
+            return N.emptyList();
+        }
+
+        final List<Jdbc.OutParam> copy = new ArrayList<>(outParams.size());
+
+        for (final Jdbc.OutParam outParam : outParams) {
+            copy.add(outParam == null ? null
+                    : new Jdbc.OutParam(outParam.getParameterIndex(), outParam.getParameterName(), outParam.getSqlType(), outParam.getTypeName(),
+                            outParam.getScale()));
+        }
+
+        return copy;
     }
 
     /**
@@ -2967,8 +2983,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             final List<R> resultList = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -3040,8 +3056,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             final List<R> resultList = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -3118,12 +3134,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             R1 result1 = null;
             R2 result2 = null;
 
-            if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result1 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor1);
             }
 
-            if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result2 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor2);
             }
 
             // If the procedure produced more than two result sets (or trailing update counts), they
@@ -3212,16 +3228,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             R2 result2 = null;
             R3 result3 = null;
 
-            if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result1 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor1);
             }
 
-            if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result2 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor2);
             }
 
-            if (iter.hasNext()) {
-                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result3 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor3);
             }
 
             // If the procedure produced more than three result sets (or trailing update counts),
@@ -3639,8 +3655,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             final List<List<T>> resultList = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.BiResultExtractor.toList(targetType)));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.BiResultExtractor.toList(targetType)));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -3714,8 +3730,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             final List<List<T>> resultList = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.ResultExtractor.toList(rowMapper)));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.ResultExtractor.toList(rowMapper)));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -3792,8 +3808,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             final List<List<T>> resultList = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.ResultExtractor.toList(rowFilter, rowMapper)));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.ResultExtractor.toList(rowFilter, rowMapper)));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -3874,8 +3890,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             final List<List<T>> resultList = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.BiResultExtractor.toList(rowMapper)));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.BiResultExtractor.toList(rowMapper)));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -3972,8 +3988,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             final List<List<T>> resultList = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.BiResultExtractor.toList(rowFilter, rowMapper)));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.BiResultExtractor.toList(rowFilter, rowMapper)));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));

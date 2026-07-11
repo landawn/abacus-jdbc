@@ -42,6 +42,10 @@ import com.landawn.abacus.util.stream.Stream;
  * <p>Contains no database-modifying operation, so it can be mixed into read-only unchecked DAOs
  * (see {@link UncheckedReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
  *
+ * <p><b>&#9888; Warning:</b> When selecting only some source properties, include every property used
+ * as a join key. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
+ * caller's thread-bound transaction and may partially populate entities before a task fails.</p>
+ *
  * @param <T> the entity type that this helper manages
  * @param <TD> the DAO self-type, bounded by {@link UncheckedDaoBase}, that owns this helper
  * @see JoinEntityReadOps

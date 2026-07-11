@@ -1111,6 +1111,18 @@ public class NamedQueryTest extends TestBase {
     }
 
     @Test
+    public void testSetParametersMapBindsEachRepeatedPlaceholderOnce() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1", "param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(2);
+        final NamedQuery queryWithRepeatedName = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        queryWithRepeatedName.setParameters(Map.of("param1", "value"));
+
+        verify(mockPreparedStatement).setString(1, "value");
+        verify(mockPreparedStatement).setString(2, "value");
+    }
+
+    @Test
     public void testSetParametersMapNull() {
         assertThrows(IllegalArgumentException.class, () -> {
             namedQuery.setParameters((Map<String, ?>) null);

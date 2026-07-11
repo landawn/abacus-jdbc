@@ -1700,6 +1700,26 @@ public class ResultSetProxyTest extends TestBase {
         Mockito.verify(blob).free();
     }
 
+    @Test
+    public void testGetObjectByIndex_BlobReadFailureRemainsPrimaryWhenFreeFails() throws SQLException {
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        final Blob blob = Mockito.mock(Blob.class);
+        final SQLException readFailure = new SQLException("read failed");
+        final SQLException freeFailure = new SQLException("free failed");
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(1)).thenReturn(blob);
+        when(blob.length()).thenReturn(3L);
+        when(blob.getBytes(1, 3)).thenThrow(readFailure);
+        Mockito.doThrow(freeFailure).when(blob).free();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> proxy.getObject(1));
+
+        assertSame(readFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(freeFailure, thrown.getSuppressed()[0]);
+    }
+
     // Regression: pre-fix, getObject(String) on a Blob column returned the raw Blob on row 1
     // AND every subsequent row (label path's getter was `rs -> rs.getObject(idx)`), while
     // getObject(int) returned byte[] on rows 2+. Fix routes label-path through
@@ -1718,6 +1738,15 @@ public class ResultSetProxyTest extends TestBase {
         Object first = proxy.getObject("data");
         org.junit.jupiter.api.Assertions.assertArrayEquals(new byte[] { 7, 8, 9 }, (byte[]) first);
         Mockito.verify(blob).free();
+    }
+
+    @Test
+    public void testGetObjectByLabel_SimpleValueDoesNotReadMetadata() throws SQLException {
+        when(delegate.findColumn("name")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn("Ada");
+
+        assertEquals("Ada", proxy.getObject("name"));
+        Mockito.verify(delegate, Mockito.never()).getMetaData();
     }
 
     // Regression: pre-fix, the java.sql.Date branch only checked "java.sql.Timestamp" metadata —
@@ -1813,6 +1842,27 @@ public class ResultSetProxyTest extends TestBase {
 
         assertEquals("abc", proxy.getObject("c"));
         Mockito.verify(clob).free();
+    }
+
+    @Test
+    public void testGetObjectByLabel_ClobReadFailureRemainsPrimaryWhenFreeFails() throws SQLException {
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        final Clob clob = Mockito.mock(Clob.class);
+        final SQLException readFailure = new SQLException("read failed");
+        final SQLException freeFailure = new SQLException("free failed");
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("c")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn(clob);
+        when(clob.length()).thenReturn(3L);
+        when(clob.getSubString(1, 3)).thenThrow(readFailure);
+        Mockito.doThrow(freeFailure).when(clob).free();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> proxy.getObject("c"));
+
+        assertSame(readFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(freeFailure, thrown.getSuppressed()[0]);
     }
 
     @Test

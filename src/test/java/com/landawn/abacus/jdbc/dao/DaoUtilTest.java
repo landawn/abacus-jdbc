@@ -327,6 +327,54 @@ public class DaoUtilTest extends TestBase {
     }
 
     @Test
+    public void testCompletionMethodsPreserveLaterFailuresAsSuppressed() {
+        final SQLException firstComplete = new SQLException("first");
+        final SQLException secondComplete = new SQLException("second");
+        SQLException thrown = assertThrows(SQLException.class, () -> DaoUtil.complete(Arrays.asList(ContinuableFuture.run(() -> {
+            throw firstComplete;
+        }), ContinuableFuture.run(() -> {
+            throw secondComplete;
+        }))));
+        assertSame(firstComplete, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(secondComplete, thrown.getSuppressed()[0]);
+
+        final SQLException firstSum = new SQLException("first sum");
+        final SQLException secondSum = new SQLException("second sum");
+        thrown = assertThrows(SQLException.class, () -> DaoUtil.completeSum(Arrays.asList(ContinuableFuture.call(() -> {
+            throw firstSum;
+        }), ContinuableFuture.call(() -> {
+            throw secondSum;
+        }))));
+        assertSame(firstSum, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(secondSum, thrown.getSuppressed()[0]);
+
+        final SQLException firstUnchecked = new SQLException("first unchecked");
+        final SQLException secondUnchecked = new SQLException("second unchecked");
+        UncheckedSQLException uncheckedThrown = assertThrows(UncheckedSQLException.class,
+                () -> DaoUtil.uncheckedComplete(Arrays.asList(ContinuableFuture.run(() -> {
+                    throw firstUnchecked;
+                }), ContinuableFuture.run(() -> {
+                    throw secondUnchecked;
+                }))));
+        assertSame(firstUnchecked, uncheckedThrown.getCause());
+        assertEquals(1, firstUnchecked.getSuppressed().length);
+        assertSame(secondUnchecked, firstUnchecked.getSuppressed()[0]);
+
+        final SQLException firstUncheckedSum = new SQLException("first unchecked sum");
+        final SQLException secondUncheckedSum = new SQLException("second unchecked sum");
+        uncheckedThrown = assertThrows(UncheckedSQLException.class, () -> DaoUtil.uncheckedCompleteSum(Arrays.asList(ContinuableFuture.call(() -> {
+            throw firstUncheckedSum;
+        }), ContinuableFuture.call(() -> {
+            throw secondUncheckedSum;
+        }))));
+        assertSame(firstUncheckedSum, uncheckedThrown.getCause());
+        assertEquals(1, firstUncheckedSum.getSuppressed().length);
+        assertSame(secondUncheckedSum, firstUncheckedSum.getSuppressed()[0]);
+    }
+
+    @Test
     public void testCompleteSum_ThrowsOnOverflow() {
         final List<ContinuableFuture<Integer>> futures = Arrays.asList(ContinuableFuture.completed(Integer.MAX_VALUE), ContinuableFuture.completed(1));
 

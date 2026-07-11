@@ -126,6 +126,8 @@ public class JdbcUtilTest extends TestBase {
         // Clean up any thread-local state
         JdbcUtil.disableSqlLog();
         JdbcUtil.closeDaoCacheOnCurrentThread();
+        JdbcUtil.setSqlLogHandler(null);
+        JdbcUtil.setSqlExtractor(null);
     }
 
     @Test
@@ -457,6 +459,16 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testSkipDoesNotRewindAfterLastCursor() throws SQLException {
+        final ResultSet exhausted = mock(ResultSet.class);
+        when(exhausted.isAfterLast()).thenReturn(true);
+        when(exhausted.getRow()).thenReturn(0, 2);
+
+        assertEquals(0, JdbcUtil.skip(exhausted, 2L));
+        verify(exhausted, never()).absolute(anyInt());
+    }
+
+    @Test
     public void testGetColumnCount() throws SQLException {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(5);
 
@@ -513,6 +525,26 @@ public class JdbcUtilTest extends TestBase {
 
         final List<String> cols = JdbcUtil.getColumnNames(mockConnection, "mycat.myschema.users");
         assertEquals(Arrays.asList("id"), cols);
+    }
+
+    @Test
+    public void testGetColumnNamesRejectsCatalogAndSchemaWildcardFalsePositive() throws Exception {
+        final ResultSet colsRs = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getColumns("my_cat", "my_app", "users", null)).thenReturn(colsRs);
+        when(colsRs.next()).thenReturn(true, false);
+        when(colsRs.getString("TABLE_NAME")).thenReturn("users");
+        when(colsRs.getString("TABLE_SCHEM")).thenReturn("myXapp");
+        when(colsRs.getString("TABLE_CAT")).thenReturn("myXcat");
+        when(colsRs.getString("COLUMN_NAME")).thenReturn("wrong_id");
+
+        final java.lang.reflect.Method method = JdbcUtil.class.getDeclaredMethod("getColumnNamesFromMetadata", DatabaseMetaData.class, String.class,
+                String.class, String.class);
+        method.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        final List<String> columns = (List<String>) method.invoke(null, mockDatabaseMetaData, "my_cat", "my_app", "users");
+
+        assertTrue(columns.isEmpty());
     }
 
     // When neither the metadata lookups nor the SELECT fallback yield any column, a SQLException is
@@ -1284,6 +1316,22 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testGetOutParametersBitUsesBooleanMapping() throws SQLException {
+        final OutParam namedBit = new OutParam();
+        namedBit.setParameterName("enabled");
+        namedBit.setSqlType(Types.BIT);
+        when(mockCallableStatement.getBoolean(1)).thenReturn(true);
+        when(mockCallableStatement.getBoolean("enabled")).thenReturn(false);
+
+        final OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, List.of(OutParam.of(1, Types.BIT), namedBit));
+
+        assertEquals(Boolean.TRUE, result.getOutParamValue(1));
+        assertEquals(Boolean.FALSE, result.getOutParamValue("enabled"));
+        verify(mockCallableStatement, never()).getByte(1);
+        verify(mockCallableStatement, never()).getByte("enabled");
+    }
+
+    @Test
     public void testGetOutParameters_floatTypeUsesGetDouble() throws SQLException {
         // Regression: per the JDBC spec (Appendix B), SQL FLOAT is an 8-byte, double-precision type that
         // maps to Java double (synonym of Types.DOUBLE), while SQL REAL is the 4-byte type mapping to Java
@@ -1667,6 +1715,52 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testHandleSqlLogUsesMonotonicElapsedTimeForHandler() throws SQLException {
+        final long[] timestamps = new long[2];
+        final long startTimeMillis = 1_000L;
+        final long startTimeNanos = System.nanoTime() - TimeUnit.MILLISECONDS.toNanos(25);
+
+        JdbcUtil.setSqlLogHandler((sql, start, end) -> {
+            timestamps[0] = start;
+            timestamps[1] = end;
+        });
+
+        try {
+            JdbcUtil.handleSqlLog(mockStatement, new SqlLogConfig(-1L, 128), startTimeMillis, startTimeNanos);
+        } finally {
+            JdbcUtil.setSqlLogHandler(null);
+        }
+
+        assertEquals(startTimeMillis, timestamps[0]);
+        assertTrue(timestamps[1] - timestamps[0] >= 20L);
+    }
+
+    @Test
+    public void testSqlExtractorFailureDoesNotMaskDatabaseFailure() throws SQLException {
+        JdbcUtil.setSqlLogHandler((sql, start, end) -> {
+            // Enable the SQL logging path.
+        });
+        JdbcUtil.setSqlExtractor(stmt -> {
+            throw new SQLException("extractor failure");
+        });
+        when(mockPreparedStatement.executeUpdate()).thenThrow(new SQLException("database failure"));
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> JdbcUtil.executeUpdate(mockPreparedStatement));
+
+        assertEquals("database failure", thrown.getMessage());
+    }
+
+    @Test
+    public void testSqlLogHandlerFailureDoesNotFailSuccessfulExecution() throws SQLException {
+        JdbcUtil.setSqlLogHandler((sql, start, end) -> {
+            throw new IllegalStateException("handler failure");
+        });
+        when(mockPreparedStatement.executeUpdate()).thenReturn(3);
+
+        assertEquals(3, JdbcUtil.executeUpdate(mockPreparedStatement));
+    }
+
+    @Test
     public void testSetMinExecutionTimeForSqlPerfLog() {
         JdbcUtil.setMinExecutionTimeForSqlPerfLog(500);
         assertEquals(500, JdbcUtil.getMinExecutionTimeForSqlPerfLog());
@@ -1703,6 +1797,14 @@ public class JdbcUtilTest extends TestBase {
 
         assertEquals("test", result);
         assertTrue(JdbcUtil.isSqlLogEnabled());
+    }
+
+    @Test
+    public void testScopedExecutionHelpersRejectNullCallbacks() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.runWithSqlLogDisabled((Throwables.Runnable<Exception>) null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.callWithSqlLogDisabled((Throwables.Callable<Object, Exception>) null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.runWithoutUsingSpringTransaction((Throwables.Runnable<Exception>) null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.callWithoutUsingSpringTransaction((Throwables.Callable<Object, Exception>) null));
     }
 
     @Test
@@ -1767,6 +1869,21 @@ public class JdbcUtilTest extends TestBase {
     public void testCallInTransaction() throws SQLException {
         String result = JdbcUtil.callInTransaction(mockDataSource, () -> "test");
         assertEquals("test", result);
+    }
+
+    @Test
+    public void testCallInTransactionPreservesCallbackFailureWhenRollbackFails() throws SQLException {
+        final IllegalStateException callbackFailure = new IllegalStateException("business failure");
+        doThrow(new SQLException("rollback failure")).when(mockConnection).rollback();
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> JdbcUtil.callInTransaction(mockDataSource, () -> {
+            throw callbackFailure;
+        }));
+
+        assertTrue(thrown == callbackFailure);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+        assertEquals("rollback failure", thrown.getSuppressed()[0].getCause().getMessage());
     }
 
     @Test
@@ -3151,6 +3268,10 @@ public class JdbcUtilTest extends TestBase {
 
         // jdbc:sqlserver URL with database "mysql_audit" — pre-fix would route to MySQL.
         assertResolvesToVendorDriver(m, "jdbc:sqlserver://host:1433;Database=mysql_audit", "SQLServerDriver", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+
+        // A property value can contain a complete vendor token; only the leading JDBC scheme identifies the driver.
+        assertResolvesToVendorDriver(m, "jdbc:sqlserver://host:1433;applicationName=:mysql:", "SQLServerDriver",
+                "com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
         // Sanity: legitimate MySQL URL still resolves to the MySQL driver.
         assertResolvesToVendorDriver(m, "jdbc:mysql://host:3306/anything", "mysql", "com.mysql.cj.jdbc.Driver");

@@ -1002,6 +1002,34 @@ public class CallableQueryTest extends TestBase {
         assertTrue(called[0]);
     }
 
+    @Test
+    public void testExecuteThenApplyCannotClearRegisteredOutParameters() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false, false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.closeAfterExecution(false).registerOutParameter(1, Types.INTEGER);
+
+        callableQuery.executeThenApply((stmt, definitions, isResultSet) -> {
+            definitions.clear();
+            return null;
+        });
+
+        final Jdbc.OutParamResult result = callableQuery.executeAndGetOutParameters();
+        assertEquals(1, result.getOutParams().size());
+        assertEquals(1, result.getOutParams().get(0).getParameterIndex());
+    }
+
+    @Test
+    public void testExecuteThenAcceptCannotMutateRegisteredOutParameterDefinition() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false, false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.closeAfterExecution(false).registerOutParameter(1, Types.INTEGER);
+
+        callableQuery.executeThenAccept((stmt, definitions, isResultSet) -> definitions.get(0).setParameterIndex(2));
+
+        final Jdbc.OutParamResult result = callableQuery.executeAndGetOutParameters();
+        assertEquals(1, result.getOutParams().get(0).getParameterIndex());
+    }
+
     // --- executeAndGetOutParameters() (L2374) ---
 
     @Test
@@ -1328,6 +1356,17 @@ public class CallableQueryTest extends TestBase {
                 .queryAllResultSetsAndGetOutParameters();
         assertNotNull(result);
         assertEquals(0, result._1.size());
+    }
+
+    @Test
+    public void testQueryAllResultSetsPreservesCheckedSqlExceptionContract() throws SQLException {
+        final SQLException failure = new SQLException("advance failed");
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenThrow(failure);
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> callableQuery.queryAllResultSetsAndGetOutParameters());
+
+        assertSame(failure, thrown);
     }
 
     // --- queryAllResultSetsAndGetOutParameters(ResultExtractor): empty path (L2592-2615) ---

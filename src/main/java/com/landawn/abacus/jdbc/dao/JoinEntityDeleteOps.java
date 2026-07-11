@@ -38,6 +38,10 @@ import com.landawn.abacus.util.stream.Stream;
  * It is intentionally omitted from read-only DAOs so that join-entity deletion is unavailable at
  * compile time rather than throwing at runtime.</p>
  *
+ * <p><b>&#9888; Warning:</b> Parallel delete operations may continue after another task fails and are
+ * not automatically part of the caller's thread-bound transaction. Partial database deletion is
+ * therefore possible unless the application supplies stronger coordination.</p>
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *

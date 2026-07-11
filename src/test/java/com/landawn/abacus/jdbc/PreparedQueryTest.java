@@ -62,6 +62,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -3024,6 +3025,18 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
+    public void testAsyncCallRejectedByExecutorClosesStatement() throws SQLException {
+        final RejectedExecutionException rejection = new RejectedExecutionException("rejected");
+
+        final RejectedExecutionException thrown = assertThrows(RejectedExecutionException.class, () -> query.asyncCall(q -> 1, command -> {
+            throw rejection;
+        }));
+
+        assertSame(rejection, thrown);
+        verify(mockStmt).close();
+    }
+
+    @Test
     public void testAsyncRun() throws Exception {
         when(mockStmt.executeUpdate()).thenReturn(1);
 
@@ -3050,6 +3063,20 @@ public class PreparedQueryTest extends TestBase {
 
         future.get();
         assertEquals(Arrays.asList(true), captured);
+    }
+
+    @Test
+    public void testAsyncRunRejectedByExecutorClosesStatement() throws SQLException {
+        final RejectedExecutionException rejection = new RejectedExecutionException("rejected");
+
+        final RejectedExecutionException thrown = assertThrows(RejectedExecutionException.class, () -> query.asyncRun(q -> {
+            // The rejected task must never execute.
+        }, command -> {
+            throw rejection;
+        }));
+
+        assertSame(rejection, thrown);
+        verify(mockStmt).close();
     }
 
     @Test

@@ -40,6 +40,10 @@ import com.landawn.abacus.util.stream.Stream;
  * carries the unchecked read side; {@link UncheckedJoinEntityHelper} completes the picture by adding
  * {@link JoinEntityHelper}. It is intentionally omitted from read-only unchecked DAOs.</p>
  *
+ * <p><b>&#9888; Warning:</b> Parallel delete operations may continue after another task fails and are
+ * not automatically part of the caller's thread-bound transaction. Partial database deletion is
+ * therefore possible unless the application supplies stronger coordination.</p>
+ *
  * @param <T> the entity type that this helper manages
  * @param <TD> the companion {@link UncheckedDao} type that owns this helper
  * @see JoinEntityDeleteOps

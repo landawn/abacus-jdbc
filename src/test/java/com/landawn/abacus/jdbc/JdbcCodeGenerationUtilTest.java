@@ -895,6 +895,19 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("import com.example.MyAnnotation;"));
     }
 
+    @Test
+    public void testGenerateEntityClass_CustomImportUsesExactDuplicateMatching() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                // This is a prefix of the built-in ReadOnly import but is still a distinct requested import.
+                .classNamesToImport(Arrays.asList("com.landawn.abacus.annotation.Read"))
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("import com.landawn.abacus.annotation.Read;"));
+    }
+
     // Jakarta annotation in headPart triggers extra LINE_SEPARATOR (L597)
     // and custom tableAnnotationClass = jakarta.persistence.Table covers L542 path
     @Test
@@ -1606,6 +1619,26 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("TestEntity", rs, null));
     }
 
+    @Test
+    public void testGenerateEntityClassRejectsColumnsThatMapToDuplicateFieldNames() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(2);
+        when(metadata.getColumnName(1)).thenReturn("user_id");
+        when(metadata.getColumnName(2)).thenReturn("userId");
+        when(metadata.getColumnClassName(1)).thenReturn(String.class.getName());
+        when(metadata.getColumnClassName(2)).thenReturn(String.class.getName());
+        when(metadata.getColumnType(1)).thenReturn(Types.VARCHAR);
+        when(metadata.getColumnType(2)).thenReturn(Types.VARCHAR);
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass("TestEntity", rs, null));
+
+        assertTrue(thrown.getMessage().contains("user_id"));
+        assertTrue(thrown.getMessage().contains("userId"));
+    }
+
     // Exercise catch blocks at lines 821–823 (IOException → UncheckedIOException when srcDir is set)
     @Test
     public void testGenerateEntityClass_WithSrcDir_WrapsIOException() throws Exception {
@@ -1994,13 +2027,13 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     // An opening parenthesis with no matching close -> findClosingParenthesis scans to the end and
-    // throws "Unclosed parenthesis in SQL" (L2000-2034).
+    // Reports an unclosed parenthesis without echoing the full SQL text.
     @Test
     public void testConvertInsertSqlToUpdateSql_UnclosedParenthesis() throws SQLException {
         final DataSource ds = dataSourceReturningConnection();
         final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a"));
-        assertTrue(ex.getMessage().contains("Unclosed parenthesis in SQL"), ex.getMessage());
+        assertTrue(ex.getMessage().contains("unclosed parenthesis"), ex.getMessage());
     }
 
     // An empty token in the column list -> "Empty item in SQL list" (L2107).

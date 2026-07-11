@@ -129,7 +129,9 @@ public final class SpringApplicationContext {
      * @see ApplicationContext#getBean(String)
      */
     public Object getBean(final String name) {
-        return appContext == null ? null : appContext.getBean(name);
+        final ApplicationContext context = appContext;
+
+        return context == null ? null : context.getBean(name);
     }
 
     /**
@@ -150,7 +152,9 @@ public final class SpringApplicationContext {
      * @see ApplicationContext#getBean(Class)
      */
     public <T> T getBean(final Class<T> requiredType) {
-        return appContext == null ? null : appContext.getBean(requiredType);
+        final ApplicationContext context = appContext;
+
+        return context == null ? null : context.getBean(requiredType);
     }
 
     /**
@@ -174,6 +178,8 @@ public final class SpringApplicationContext {
      * @see ApplicationContext#getBean(String, Class)
      */
     public <T> T getBean(final String name, final Class<T> requiredType) {
-        return appContext == null ? null : appContext.getBean(name, requiredType);
+        final ApplicationContext context = appContext;
+
+        return context == null ? null : context.getBean(name, requiredType);
     }
 }

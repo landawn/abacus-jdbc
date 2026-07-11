@@ -66,6 +66,15 @@ public class SpringApplicationContextTest extends TestBase {
         assertNull(target.getBean(String.class));
     }
 
+    @Test
+    public void testGetBean_NameAndClass() throws Exception {
+        when(appContext.getBean("beanName", String.class)).thenReturn("bean");
+
+        setApplicationContext(appContext);
+
+        assertSame("bean", target.getBean("beanName", String.class));
+    }
+
     private void setApplicationContext(final ApplicationContext context) throws Exception {
         final Field field = SpringApplicationContext.class.getDeclaredField("appContext");
         field.setAccessible(true);

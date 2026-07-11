@@ -47,6 +47,14 @@ import com.landawn.abacus.util.u.OptionalShort;
  * Unchecked-exception read capability: the {@link ReadOps} operations re-declared to throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of {@link java.sql.SQLException}.
  *
+ * <p><b>&#9888; Warning:</b> The caller owns streams returned by this API and must close them. Fetch
+ * size is a driver hint, not a portable guarantee of cursor streaming or bounded memory use.
+ * Database failures raised during lazy consumption are reported as unchecked SQL exceptions.</p>
+ *
+ * <p><b>&#9888; Warning:</b> Callback overloads that expose {@link DisposableObjArray} may reuse the
+ * same array for subsequent rows; copy it before retaining it. Results described as the "first"
+ * rows are deterministic only when the query supplies an ordering.</p>
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
  * @see ReadOps

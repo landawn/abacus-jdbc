@@ -58,6 +58,14 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testIdsAreUniqueWhenTransactionsStartInSameClockTick() throws SQLException {
+        final SqlTransaction first = new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, false);
+        final SqlTransaction second = new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, false);
+
+        assertNotEquals(first.id(), second.id());
+    }
+
+    @Test
     public void testConnection() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 

@@ -3875,9 +3875,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         checkArgNotNull(parameters, cs.parameters);
 
         try {
-            for (final String paramName : parameterNames) {
+            for (int i = 0; i < parameterCount; i++) {
+                final String paramName = parameterNames.get(i);
+
                 if (parameters.containsKey(paramName)) {
-                    setObject(paramName, parameters.get(paramName));
+                    // Bind each physical placeholder once. Calling the name-based overload here
+                    // rebinds every occurrence on every encounter, making repeated names O(n^2).
+                    setObject(i + 1, parameters.get(paramName));
                 }
             }
         } catch (final Exception e) {
@@ -3897,9 +3901,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     void setParameters(final EntityId entityId) throws SQLException {
         try {
-            for (final String paramName : parameterNames) {
+            for (int i = 0; i < parameterCount; i++) {
+                final String paramName = parameterNames.get(i);
+
                 if (entityId.containsKey(paramName)) {
-                    setObject(paramName, entityId.get(paramName));
+                    setObject(i + 1, entityId.get(paramName));
                 }
             }
         } catch (final Exception e) {

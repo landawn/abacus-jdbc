@@ -38,7 +38,7 @@ public interface Transaction {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String transactionId = transaction.id();
-     * logger.info("Starting transaction: " + transactionId);
+     * logger.info("Starting transaction: {}", transactionId);
      * }</pre>
      *
      * @return the unique identifier of the transaction, never {@code null}
@@ -152,7 +152,7 @@ public interface Transaction {
      *     performRiskyOperation();
      * } catch (Exception e) {
      *     transaction.rollback();
-     *     logger.warn("Transaction rolled back due to: " + e.getMessage());
+     *     logger.warn(e, "Transaction rolled back");
      * }
      * }</pre>
      *

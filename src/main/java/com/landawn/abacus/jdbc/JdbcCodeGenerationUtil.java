@@ -28,8 +28,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -394,7 +396,7 @@ public final class JdbcCodeGenerationUtil {
      * EntityCodeConfig config = EntityCodeConfig.builder()
      *     .srcDir("./src/main/java")
      *     .packageName("com.example.entity")
-     *     .fieldNameConverter((table, column) -> Strings.toCamelCase(column.toLowerCase()))
+     *     .fieldNameConverter((table, column) -> Strings.toCamelCase(column.toLowerCase(Locale.ROOT)))
      *     .build();
      * String entityCode = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "ComplexEntity", query, config);
      * }</pre>
@@ -432,7 +434,7 @@ public final class JdbcCodeGenerationUtil {
         final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
 
         final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFields()),
-                tp -> tp._1.toLowerCase());
+                tp -> tp._1.toLowerCase(Locale.ROOT));
 
         final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
 
@@ -532,6 +534,7 @@ public final class JdbcCodeGenerationUtil {
         final List<String> columnNameList = new ArrayList<>();
         final List<String> columnClassNameList = new ArrayList<>();
         final List<String> fieldNameList = new ArrayList<>();
+        final Map<String, String> fieldNameToColumnName = new HashMap<>();
 
         try {
             final ResultSetMetaData rsmd = rs.getMetaData();
@@ -540,14 +543,21 @@ public final class JdbcCodeGenerationUtil {
             for (int i = 1; i <= columnCount; i++) {
                 final String columnName = Strings.isEmpty(rsmd.getColumnName(i)) ? rsmd.getColumnLabel(i) : rsmd.getColumnName(i);
 
-                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(),
-                        customizedFieldMap.get(Strings.toCamelCase(columnName).toLowerCase()));
+                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(Locale.ROOT),
+                        customizedFieldMap.get(Strings.toCamelCase(columnName).toLowerCase(Locale.ROOT)));
 
                 final String fieldName = customizedField == null || Strings.isEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
                         : customizedField._2;
 
                 if (N.notEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
                     continue;
+                }
+
+                final String previousColumnName = fieldNameToColumnName.putIfAbsent(fieldName, columnName);
+
+                if (previousColumnName != null) {
+                    throw new IllegalArgumentException("Columns '" + previousColumnName + "' and '" + columnName + "' both map to generated field '" + fieldName
+                            + "'. Configure distinct names with fieldNameConverter or customizedFields");
                 }
 
                 final String columnClassName = customizedField == null || customizedField._3 == null
@@ -613,7 +623,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append("package ").append(packageName).append(";");
             }
 
-            String headPart = "";
+            final StringBuilder headPartBuilder = new StringBuilder();
 
             for (final Tuple3<String, String, Boolean> tp : additionalFields) {
                 if (tp._1.indexOf('<') > 0) { //NOSONAR
@@ -621,8 +631,7 @@ public final class JdbcCodeGenerationUtil {
 
                     try { //NOSONAR
                         if (ClassUtil.forName("java.util." + clsName) != null) {
-                            //noinspection StringConcatenationInLoop
-                            headPart += LINE_SEPARATOR + "import java.util." + clsName + ";"; //NOSONAR
+                            headPartBuilder.append(LINE_SEPARATOR).append("import java.util.").append(clsName).append(';');
                         }
                     } catch (final Exception e) {
                         // ignore.
@@ -630,14 +639,20 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            if (Strings.isNotEmpty(headPart)) {
-                headPart += LINE_SEPARATOR;
+            if (headPartBuilder.length() > 0) {
+                headPartBuilder.append(LINE_SEPARATOR);
             }
 
-            headPart += LINE_SEPARATOR + eccImports;
+            headPartBuilder.append(LINE_SEPARATOR).append(eccImports);
+
+            String headPart = headPartBuilder.toString();
 
             String finalHeadPart = headPart;
-            List<String> classNamesToImport = Stream.of(configToUse.getClassNamesToImport()).filter(it -> !finalHeadPart.contains(it)).distinct().toList();
+            List<String> classNamesToImport = Stream.of(configToUse.getClassNamesToImport())
+                    .filter(Strings::isNotEmpty)
+                    .filter(it -> !finalHeadPart.contains("import " + it + ";"))
+                    .distinct()
+                    .toList();
 
             if (N.notEmpty(classNamesToImport)) {
                 headPart += Stream.of(classNamesToImport).map(it -> "import " + it + ";").join(LINE_SEPARATOR, LINE_SEPARATOR, LINE_SEPARATOR);
@@ -2077,7 +2092,7 @@ public final class JdbcCodeGenerationUtil {
             }
         }
 
-        throw new IllegalArgumentException("Unclosed parenthesis in SQL: " + sql);
+        throw new IllegalArgumentException("SQL contains an unclosed parenthesis");
     }
 
     /**

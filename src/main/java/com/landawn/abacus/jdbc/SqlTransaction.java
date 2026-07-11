@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
@@ -43,11 +44,15 @@ import com.landawn.abacus.util.Throwables;
  * (such as DAO calls and {@code JdbcUtil} queries against the same data source on that thread)
  * automatically enlist in it.</p>
  *
+ * <p><b>&#9888; Warning:</b> A transaction and its connection must be used only on the thread that
+ * started it. Transaction context is not propagated to executor tasks or other threads.</p>
+ *
  * <p><b>Nested scopes:</b> beginning a transaction again on the same thread and data source does
  * not start a brand-new transaction; instead it re-enters this one and increments an internal
- * reference count. Each scope should call {@link #commit()} and pair it with
+ * reference count. Each scope must be completed exactly once: call {@link #commit()} and pair it with
  * {@link #rollbackIfNotCommitted()} in a {@code finally} block (calling only one of them may leave
- * the scope open if the other path is skipped by an exception); the
+ * the scope open if the other path is skipped by an exception). Additional cleanup calls can consume
+ * another nested scope and must not be used as a general idempotent close operation. The
  * underlying JDBC {@code COMMIT}/{@code ROLLBACK} is issued only when the outermost scope completes
  * (the reference count reaches zero). If any inner scope rolls back, the transaction is marked
  * rollback-only and the outermost commit is converted into a rollback. A nested scope may request a
@@ -84,6 +89,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(SqlTransaction.class);
 
     private static final Map<String, SqlTransaction> threadTransactionMap = new ConcurrentHashMap<>();
+
+    // Millisecond timestamps alone are not unique: a fast transaction loop can create multiple
+    // transactions on the same thread and data source during one clock tick. Keep the timestamp
+    // for diagnostics and append this process-local sequence to make id()/equals()/hashCode()
+    // collision-free within the JVM.
+    private static final AtomicLong transactionIdSequence = new AtomicLong();
 
     private final String _id; //NOSONAR
 
@@ -145,7 +156,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         N.checkArgument(ds != null || !closeConnection, "'dataSource' must not be null when 'closeConnection' is true");
 
         _id = getTransactionId(ds, creator);
-        _timedId = _id + "_" + System.currentTimeMillis();
+        _timedId = _id + "_" + System.currentTimeMillis() + "_" + transactionIdSequence.incrementAndGet();
         _ds = ds;
         _conn = conn;
         _isolationLevel = isolationLevel;
@@ -198,7 +209,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <pre>{@code
      * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * String transactionId = tran.id();
-     * logger.info("Starting transaction: " + transactionId);
+     * logger.info("Starting transaction: {}", transactionId);
      * }</pre>
      *
      * @return the unique transaction identifier, never {@code null}
@@ -454,9 +465,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * If the underlying {@code Connection.rollback()} fails, the status becomes
      * {@link Status#FAILED_ROLLBACK} and an {@link UncheckedSQLException} is thrown.</p>
      *
-     * <p><b>Note:</b> Prefer {@link #rollbackIfNotCommitted()} in finally blocks; it is
-     * idempotent and avoids double-decrement bugs when the rollback path is also reached after
-     * a failed commit.</p>
+     * <p><b>&#9888; Warning:</b> Prefer one {@link #rollbackIfNotCommitted()} call in the matching
+     * {@code finally} block. It safely consumes the one-shot marker left by this scope's explicit
+     * commit or rollback, but extra cleanup calls are not generally idempotent for nested scopes.</p>
      *
      * <p>Example of preferred usage:</p>
      * <pre>{@code
@@ -525,8 +536,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     /**
      * Rolls back the transaction if it has not been committed successfully.
-     * This method is safe to call multiple times and will only perform a rollback
-     * if the transaction is still active, marked for rollback, or in a failed-commit state.
+     * It rolls back when the transaction is still active, marked for rollback, or in a failed-commit state.
+     *
+     * <p><b>&#9888; Warning:</b> Call this once from the {@code finally} block paired with the current
+     * transaction scope. Repeated calls are not a general-purpose idempotent operation for nested scopes.</p>
      *
      * <p>This method is particularly useful in finally blocks or cleanup code
      * where you want to ensure a transaction is not left in an active state.
@@ -1064,7 +1077,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * logger.debug("Transaction details: " + tran.toString());
+     * logger.debug("Transaction details: {}", tran);
      * // Output: SqlTransaction={id=...}
      * }</pre>
      *

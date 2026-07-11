@@ -26,6 +26,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -215,6 +216,36 @@ public class DataTransferUtilTest extends TestBase {
         // Verify
         assertEquals(1, result);
         verify(mockConnection).prepareStatement(insertSql);
+    }
+
+    @Test
+    public void testDatasetImportBuilderSnapshotsSelectedColumns() throws SQLException {
+        final List<String> selectedColumns = new ArrayList<>(List.of("col1"));
+        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).selectColumns(selectedColumns);
+
+        selectedColumns.add("missing");
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        assertEquals(1, builder.to(mockPreparedStatement));
+    }
+
+    @Test
+    public void testDatasetImportBuilderSnapshotsColumnTypeMap() throws SQLException {
+        final Map<String, Type> columnTypes = new HashMap<>();
+        columnTypes.put("col1", N.typeOf(String.class));
+        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).columnTypeMap(columnTypes);
+
+        columnTypes.put("missing", N.typeOf(String.class));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.getColumnIndex("col1")).thenReturn(0);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        assertEquals(1, builder.to(mockPreparedStatement));
     }
 
     @Test
@@ -1463,7 +1494,7 @@ public class DataTransferUtilTest extends TestBase {
         verify(mockPreparedStatement, never()).addBatch();
     }
 
-    // importCsv with batchSize=1 and a positive interval exercises the post-batch sleep branch
+    // importCsv with batchSize=1 and a positive interval exercises the pause between batch executions
     // (DataTransferUtil L1918).
     @Test
     public void testImportCsv_BatchInterval() throws Exception {

@@ -46,6 +46,17 @@ import com.landawn.abacus.util.RegExUtil;
  * declared with {@link OutParameter} / {@link OutParameterList}; and template placeholders are filled
  * with {@link SqlFragment} / {@link SqlFragmentList}.</p>
  *
+ * <p><b>&#9888; Warning:</b> A method returning a stream transfers ownership of its JDBC resources to
+ * the caller. Consume it in try-with-resources or close it explicitly. Database failures raised while
+ * the stream is consumed are reported as unchecked SQL exceptions.</p>
+ *
+ * <p><b>&#9888; Warning:</b> SQL fragments are textual substitutions, not bind parameters. Never place
+ * untrusted input in a fragment; validate against an application-controlled allowlist. Fetch size and
+ * query timeout are JDBC driver hints and may be ignored or interpreted differently by a driver.</p>
+ *
+ * <p><b>&#9888; Warning:</b> Batch execution is not automatically all-or-nothing. Earlier chunks may
+ * succeed before a later chunk fails unless the call participates in an appropriate transaction.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {

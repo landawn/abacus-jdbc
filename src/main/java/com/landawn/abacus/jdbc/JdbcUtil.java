@@ -812,37 +812,36 @@ public final class JdbcUtil {
     private static Class<? extends Driver> getDriverClassByUrl(final String url) {
         N.checkArgNotEmpty(url, cs.url);
 
-        // Anchor each check to the `:<vendor>:` token so a connection string containing another
-        // vendor's name in a database/property value (e.g., `jdbc:sqlserver://h/db=oracle_audit`)
-        // doesn't match the wrong driver.
+        // Only the leading JDBC subprotocol identifies the driver. Connection properties can
+        // contain arbitrary text, including another vendor's complete `:<vendor>:` token.
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
-        if (Strings.indexOfIgnoreCase(url, ":mysql:") >= 0) {
+        if (Strings.startsWithIgnoreCase(url, "jdbc:mysql:")) {
             driverClass = ClassUtil.forName("com.mysql.cj.jdbc.Driver");
             // jdbc:mariadb://localhost:3306/abacustest
-        } else if (Strings.indexOfIgnoreCase(url, ":mariadb:") >= 0) {
+        } else if (Strings.startsWithIgnoreCase(url, "jdbc:mariadb:")) {
             driverClass = ClassUtil.forName("org.mariadb.jdbc.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
-        } else if (Strings.indexOfIgnoreCase(url, ":postgresql:") >= 0) {
+        } else if (Strings.startsWithIgnoreCase(url, "jdbc:postgresql:")) {
             driverClass = ClassUtil.forName("org.postgresql.Driver");
             // jdbc:hsqldb:hsql://localhost/abacustest
-        } else if (Strings.indexOfIgnoreCase(url, ":hsqldb:") >= 0) {
+        } else if (Strings.startsWithIgnoreCase(url, "jdbc:hsqldb:")) {
             driverClass = ClassUtil.forName("org.hsqldb.jdbc.JDBCDriver");
             // jdbc:h2:tcp://<host>:<port>/<database>
-        } else if (Strings.indexOfIgnoreCase(url, ":h2:") >= 0) {
+        } else if (Strings.startsWithIgnoreCase(url, "jdbc:h2:")) {
             driverClass = ClassUtil.forName("org.h2.Driver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
-        } else if (Strings.indexOfIgnoreCase(url, ":oracle:") >= 0) {
+        } else if (Strings.startsWithIgnoreCase(url, "jdbc:oracle:")) {
             driverClass = ClassUtil.forName("oracle.jdbc.driver.OracleDriver");
             // url=jdbc:sqlserver://localhost:1433;Database=abacustest
-        } else if (Strings.indexOfIgnoreCase(url, ":sqlserver:") >= 0) {
+        } else if (Strings.startsWithIgnoreCase(url, "jdbc:sqlserver:")) {
             driverClass = ClassUtil.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             // jdbc:db2://localhost:50000/abacustest
-        } else if (Strings.indexOfIgnoreCase(url, ":db2:") >= 0) {
+        } else if (Strings.startsWithIgnoreCase(url, "jdbc:db2:")) {
             driverClass = ClassUtil.forName("com.ibm.db2.jcc.DB2Driver");
         } else {
-            throw new IllegalArgumentException("Cannot identify the driver class from URL: " + url
-                    + ". Only MySQL, MariaDB, PostgreSQL, H2, HSQLDB, Oracle, SQL Server, and DB2 are supported");
+            throw new IllegalArgumentException(
+                    "Unsupported JDBC URL subprotocol. Supported vendors: MySQL, MariaDB, PostgreSQL, H2, HSQLDB, Oracle, SQL Server, and DB2");
         }
         return driverClass;
     }
@@ -1688,6 +1687,10 @@ public final class JdbcUtil {
                 return skipped;
             }
 
+            if (currentRow == 0 && rs.isAfterLast()) {
+                return 0;
+            }
+
             long skipped = 0;
 
             if ((rowsToSkip > Integer.MAX_VALUE) || (rowsToSkip > Integer.MAX_VALUE - currentRow)
@@ -1901,19 +1904,22 @@ public final class JdbcUtil {
 
             while (rows.next()) {
                 tableNameInMetadata = rows.getString("TABLE_NAME");
+                final String schemaInMetadata = rows.getString("TABLE_SCHEM");
+                final String catalogInMetadata = rows.getString("TABLE_CAT");
 
-                // Case-insensitive match still blocks '_'-wildcard false positives (getColumns treats '_' as
-                // a single-char wildcard) while accepting mixed-case stored names the three-variant check missed.
-                if (!tableNamePattern.equalsIgnoreCase(tableNameInMetadata)) {
+                // JDBC metadata arguments are patterns, so verify every requested identifier against
+                // the concrete row before accepting columns returned through '_'/'%' expansion.
+                if (!tableNamePattern.equalsIgnoreCase(tableNameInMetadata) || (schemaPattern != null && !schemaPattern.equalsIgnoreCase(schemaInMetadata))
+                        || (catalog != null && !catalog.equalsIgnoreCase(catalogInMetadata))) {
                     continue;
                 }
 
                 if (currentTableName == null) {
                     currentTableName = tableNameInMetadata;
-                    currentSchema = rows.getString("TABLE_SCHEM");
-                    currentCatalog = rows.getString("TABLE_CAT");
-                } else if (!N.equals(currentTableName, tableNameInMetadata) || !N.equals(currentSchema, rows.getString("TABLE_SCHEM"))
-                        || !N.equals(currentCatalog, rows.getString("TABLE_CAT"))) {
+                    currentSchema = schemaInMetadata;
+                    currentCatalog = catalogInMetadata;
+                } else if (!N.equals(currentTableName, tableNameInMetadata) || !N.equals(currentSchema, schemaInMetadata)
+                        || !N.equals(currentCatalog, catalogInMetadata)) {
                     continue;
                 }
 
@@ -4848,7 +4854,7 @@ public final class JdbcUtil {
 
     private static void validateNamedSql(final ParsedSql namedSql) {
         if (namedSql.namedParameters().size() != namedSql.parameterCount()) {
-            throw new IllegalArgumentException("\"" + namedSql.originalSql() + "\" is not a valid named SQL");
+            throw new IllegalArgumentException("Named SQL contains positional or otherwise unnamed parameters");
         }
     }
 
@@ -5853,14 +5859,15 @@ public final class JdbcUtil {
         final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTime = System.currentTimeMillis();
+            final long startTimeMillis = System.currentTimeMillis();
+            final long startTimeNanos = System.nanoTime();
 
             try {
                 // return stmt.executeQuery();
                 // For better performance.
                 return ResultSetProxy.wrap(stmt.executeQuery());
             } finally {
-                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
+                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
 
                 clearParameters(stmt);
             }
@@ -5879,12 +5886,13 @@ public final class JdbcUtil {
         final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTime = System.currentTimeMillis();
+            final long startTimeMillis = System.currentTimeMillis();
+            final long startTimeNanos = System.nanoTime();
 
             try {
                 return stmt.executeUpdate();
             } finally {
-                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
+                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
 
                 clearParameters(stmt);
             }
@@ -5901,12 +5909,13 @@ public final class JdbcUtil {
         final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTime = System.currentTimeMillis();
+            final long startTimeMillis = System.currentTimeMillis();
+            final long startTimeNanos = System.nanoTime();
 
             try {
                 return stmt.executeLargeUpdate();
             } finally {
-                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
+                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
 
                 clearParameters(stmt);
             }
@@ -5923,12 +5932,13 @@ public final class JdbcUtil {
         final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTime = System.currentTimeMillis();
+            final long startTimeMillis = System.currentTimeMillis();
+            final long startTimeNanos = System.nanoTime();
 
             try {
                 return stmt.executeBatch();
             } finally {
-                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
+                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
 
                 try {
                     stmt.clearBatch();
@@ -5953,12 +5963,13 @@ public final class JdbcUtil {
         final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTime = System.currentTimeMillis();
+            final long startTimeMillis = System.currentTimeMillis();
+            final long startTimeNanos = System.nanoTime();
 
             try {
                 return stmt.executeLargeBatch();
             } finally {
-                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
+                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
 
                 try {
                     stmt.clearBatch();
@@ -6028,12 +6039,13 @@ public final class JdbcUtil {
         final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTime = System.currentTimeMillis();
+            final long startTimeMillis = System.currentTimeMillis();
+            final long startTimeNanos = System.nanoTime();
 
             try {
                 return stmt.execute();
             } finally {
-                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
+                JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
 
                 clearParameters(stmt);
             }
@@ -7323,6 +7335,22 @@ public final class JdbcUtil {
         };
     }
 
+    static boolean hasNextResultSet(final ObjIteratorEx<ResultSet> iter) throws SQLException {
+        try {
+            return iter.hasNext();
+        } catch (final UncheckedSQLException e) {
+            throw e.getCause();
+        }
+    }
+
+    static ResultSet nextResultSet(final ObjIteratorEx<ResultSet> iter) throws SQLException {
+        try {
+            return iter.next();
+        } catch (final UncheckedSQLException e) {
+            throw e.getCause();
+        }
+    }
+
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
      * The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
@@ -7747,12 +7775,12 @@ public final class JdbcUtil {
         sqlTypeGetterMap.put(Types.BIT, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getByte(outParameterIndex);
+                return stmt.getBoolean(outParameterIndex);
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getByte(outParameterName);
+                return stmt.getBoolean(outParameterName);
             }
         });
         sqlTypeGetterMap.put(Types.TINYINT, new OutParameterGetter() {
@@ -8566,25 +8594,30 @@ public final class JdbcUtil {
      * Creates a new {@link DBLock} backed by the specified database table for implementing
      * cross-process / cross-JVM advisory locks.
      *
-     * <p>The lock table must already exist (this method does not create it). See {@link DBLock} for the
-     * required schema. A successful {@code lock(target)} call returns a unique lock code that the caller
-     * must pass back to {@code unlock(target, code)} to release the lock.</p>
+     * <p>The lock table is created automatically when it does not exist. A successful
+     * {@code lock(target)} call returns a unique lock code that the caller must pass back to
+     * {@code unlock(target, code)} to release the lock. Close the returned instance when it is no
+     * longer needed so its refresh task stops and any remaining locks are released.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "distributed_locks");
-     * String lockCode = dbLock.lock("job_processor");
-     * if (lockCode != null) {
-     *     try {
-     *         // Perform exclusive operation
-     *     } finally {
-     *         dbLock.unlock("job_processor", lockCode);
+     * try {
+     *     String lockCode = dbLock.lock("job_processor");
+     *     if (lockCode != null) {
+     *         try {
+     *             // Perform exclusive operation
+     *         } finally {
+     *             dbLock.unlock("job_processor", lockCode);
+     *         }
      *     }
+     * } finally {
+     *     dbLock.close();
      * }
      * }</pre>
      *
      * @param ds the {@link javax.sql.DataSource} to use for acquiring connections
-     * @param tableName the name of the existing table that stores lock records
+     * @param tableName the name of the table that stores lock records; created when absent
      * @return a new {@link DBLock} instance bound to {@code ds} and {@code tableName}
      * @see DBLock
      */
@@ -9811,22 +9844,24 @@ public final class JdbcUtil {
         }
     }
 
-    static void handleSqlLog(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTime) throws SQLException {
-        final long endTime = System.currentTimeMillis();
-        final long elapsedTime = endTime - startTime;
+    static void handleSqlLog(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTimeMillis, final long startTimeNanos) {
+        // nanoTime is monotonic and therefore safe for durations even when the wall clock is
+        // adjusted while a statement is running. Reconstruct an epoch-style end timestamp so
+        // the public SQL log handler keeps its existing (startMillis, endMillis) contract.
+        final long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+        final long endTimeMillis = startTimeMillis + elapsedTime;
         String sql = null;
 
         final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
 
         if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0
                 && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
-            // A custom extractor registered via setSqlExtractor may return null.
-            sql = N.defaultIfNull(sqlExtractor.apply(stmt), "");
+            sql = extractSqlForLog(stmt, sqlExtractor);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
-                sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", sql));
+                sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), " ms, ", sql));
             } else {
-                sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), ", ", Strings.abbreviate(sql, sqlLogConfig.maxSqlLogLength)));
+                sqlLogger.info(Strings.concat("[SQL-PERF]: ", String.valueOf(elapsedTime), " ms, ", Strings.abbreviate(sql, sqlLogConfig.maxSqlLogLength)));
             }
         }
 
@@ -9834,10 +9869,29 @@ public final class JdbcUtil {
 
         if (sqlLogHandler != null) {
             if (sql == null) {
-                sql = N.defaultIfNull(sqlExtractor.apply(stmt), "");
+                sql = extractSqlForLog(stmt, sqlExtractor);
             }
 
-            sqlLogHandler.accept(sql, startTime, endTime);
+            try {
+                sqlLogHandler.accept(sql, startTimeMillis, endTimeMillis);
+            } catch (final RuntimeException e) {
+                // Observability hooks must not turn a successful database operation into a failure or
+                // replace the SQLException thrown by the JDBC driver.
+                logger.warn(e, "Failed to invoke SQL log handler");
+            }
+        }
+    }
+
+    private static String extractSqlForLog(final Statement stmt, final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
+        try {
+            // A custom extractor registered via setSqlExtractor may return null.
+            return N.defaultIfNull(sqlExtractor.apply(stmt), "");
+        } catch (final Exception e) {
+            // SQL extraction is diagnostic only. In particular, do not let it mask a JDBC failure
+            // while this method is executing from a finally block.
+            logger.warn(e, "Failed to extract SQL for logging");
+
+            return "";
         }
     }
 
@@ -9992,9 +10046,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the specified action with SQL logging temporarily disabled.
-     * This is useful for executing sensitive queries or reducing log verbosity for specific operations.
-     * Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
+     * Executes the specified action with the standard SQL log temporarily disabled on the current thread.
+     *
+     * <p><b>&#9888; Warning:</b> This does not disable SQL performance logging or a configured SQL log handler,
+     * and it does not redact SQL. Do not treat it as a security boundary for sensitive statements. The setting
+     * is thread-local and is not inherited by work dispatched to another thread.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10007,10 +10063,13 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <E> the type of exception that the action may throw
-     * @param sqlAction the action to execute without SQL logging
+     * @param sqlAction the action to execute without the standard SQL log, must not be {@code null}
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws E if the action throws an exception
      */
     public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E {
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
+
         if (isSqlLogEnabled()) {
             final int savedMaxSqlLogLength = isSQLLogEnabled_TL.get().maxSqlLogLength;
             disableSqlLog();
@@ -10026,9 +10085,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the specified callable with SQL logging temporarily disabled and returns its result.
-     * This is useful for executing sensitive queries that return values without logging.
-     * Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
+     * Executes the specified callable with the standard SQL log temporarily disabled on the current thread.
+     *
+     * <p><b>&#9888; Warning:</b> This does not disable SQL performance logging or a configured SQL log handler,
+     * and it does not redact SQL. Do not treat it as a security boundary for sensitive statements. The setting
+     * is thread-local and is not inherited by work dispatched to another thread.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10043,11 +10104,14 @@ public final class JdbcUtil {
      *
      * @param <R> the type of result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param sqlAction the callable to execute without SQL logging
+     * @param sqlAction the callable to execute without the standard SQL log, must not be {@code null}
      * @return the result of the callable
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws E if the callable throws an exception
      */
     public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws E {
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
+
         if (isSqlLogEnabled()) {
             final int savedMaxSqlLogLength = isSQLLogEnabled_TL.get().maxSqlLogLength;
             disableSqlLog();
@@ -10393,12 +10457,16 @@ public final class JdbcUtil {
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
         R result = null;
+        Throwable failure = null;
 
         try {
             result = cmd.call();
             tran.commit();
+        } catch (final Throwable e) { //NOSONAR
+            failure = e;
+            throw e;
         } finally {
-            tran.rollbackIfNotCommitted();
+            rollbackAfterTransactionCommand(tran, failure);
         }
 
         return result;
@@ -10454,12 +10522,16 @@ public final class JdbcUtil {
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
+        Throwable failure = null;
 
         try {
             result = cmd.apply(tran.connection());
             tran.commit();
+        } catch (final Throwable e) { //NOSONAR
+            failure = e;
+            throw e;
         } finally {
-            tran.rollbackIfNotCommitted();
+            rollbackAfterTransactionCommand(tran, failure);
         }
 
         return result;
@@ -10518,12 +10590,16 @@ public final class JdbcUtil {
         N.checkArgNotNull(cmd, cs.cmd);
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+        Throwable failure = null;
 
         try {
             cmd.run();
             tran.commit();
+        } catch (final Throwable e) { //NOSONAR
+            failure = e;
+            throw e;
         } finally {
-            tran.rollbackIfNotCommitted();
+            rollbackAfterTransactionCommand(tran, failure);
         }
     }
 
@@ -10573,12 +10649,28 @@ public final class JdbcUtil {
         N.checkArgNotNull(cmd, cs.cmd);
 
         final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+        Throwable failure = null;
 
         try {
             cmd.accept(tran.connection());
             tran.commit();
+        } catch (final Throwable e) { //NOSONAR
+            failure = e;
+            throw e;
         } finally {
+            rollbackAfterTransactionCommand(tran, failure);
+        }
+    }
+
+    static void rollbackAfterTransactionCommand(final SqlTransaction tran, final Throwable commandFailure) {
+        try {
             tran.rollbackIfNotCommitted();
+        } catch (final RuntimeException | Error rollbackFailure) {
+            if (commandFailure == null) {
+                throw rollbackFailure;
+            }
+
+            commandFailure.addSuppressed(rollbackFailure);
         }
     }
 
@@ -10941,7 +11033,7 @@ public final class JdbcUtil {
      * classpath, or if Spring transaction management is already disabled on this thread, the
      * runnable is executed directly without any flag manipulation.</p>
      *
-     * <p><b>Thread safety:</b> the flag is stored in a {@link ThreadLocal}. Do <em>not</em>
+     * <p><b>&#9888; Warning:</b> The flag is stored in a {@link ThreadLocal}. Do <em>not</em>
      * pass {@code sqlAction} to another thread (e.g., via {@code CompletableFuture} or an
      * {@link java.util.concurrent.Executor}) — the receiving thread will not inherit the
      * disabled state.</p>
@@ -10964,11 +11056,14 @@ public final class JdbcUtil {
      * @param <E> the type of exception that the runnable may throw
      * @param sqlAction the runnable to execute with Spring transaction participation disabled,
      *                  must not be {@code null}; must not be dispatched to another thread
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws E if {@code sqlAction} throws an exception
      * @see #callWithoutUsingSpringTransaction(Throwables.Callable)
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
     public static <E extends Exception> void runWithoutUsingSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E {
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
+
         if (isSpringTransactionalNotUsed()) {
             sqlAction.run();
         } else {
@@ -11016,11 +11111,14 @@ public final class JdbcUtil {
      * @param sqlAction the callable to execute with Spring transaction participation disabled,
      *                  must not be {@code null}; must not be dispatched to another thread
      * @return the result returned by {@code sqlAction}
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws E if {@code sqlAction} throws an exception
      * @see #runWithoutUsingSpringTransaction(Throwables.Runnable)
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      */
     public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<? extends R, E> sqlAction) throws E {
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
+
         if (isSpringTransactionalNotUsed()) {
             return sqlAction.call();
         } else {
@@ -11053,7 +11151,11 @@ public final class JdbcUtil {
                 }
             }
 
-            isSpringTransactionalDisabled_TL.set(b);
+            if (b) {
+                isSpringTransactionalDisabled_TL.set(true);
+            } else {
+                isSpringTransactionalDisabled_TL.remove();
+            }
         } else {
             logger.debug("Spring framework not detected or unable to retrieve Spring transaction context");
         }

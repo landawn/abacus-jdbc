@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -48,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.ApplicationContext;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
@@ -145,6 +147,10 @@ public class JdbcTest extends TestBase {
     }
 
     public record NameRecord(String firstName, String lastName) {
+    }
+
+    public static final class SpringRaceHandler implements Jdbc.Handler<Object> {
+        // Marker handler used by the deterministic registration-race test.
     }
 
     // ParametersSetter Tests
@@ -777,6 +783,13 @@ public class JdbcTest extends TestBase {
 
         String result = mapper.apply(mockResultSet);
         assertEquals("1-John", result);
+    }
+
+    @Test
+    public void testRowMapperBuilderRejectsNullFinishers() {
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.RowMapper.builder().to((Throwables.Function<DisposableObjArray, Object, SQLException>) null));
+        assertThrows(IllegalArgumentException.class,
+                () -> Jdbc.RowMapper.builder().to((Throwables.BiFunction<List<String>, DisposableObjArray, Object, SQLException>) null));
     }
 
     // BiRowMapper Tests
@@ -1765,6 +1778,14 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
+    public void testColumnOneFactoriesRejectNullTypes() {
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.Columns.ColumnOne.get((Class<Object>) null));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.Columns.ColumnOne.get((com.landawn.abacus.type.Type<Object>) null));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.Columns.ColumnOne.set((Class<Object>) null));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.Columns.ColumnOne.set((com.landawn.abacus.type.Type<Object>) null));
+    }
+
+    @Test
     public void testColumnOneRemainingGetters() throws SQLException {
         when(mockResultSet.getByte(1)).thenReturn((byte) 7);
         when(mockResultSet.getShort(1)).thenReturn((short) 200);
@@ -1909,6 +1930,25 @@ public class JdbcTest extends TestBase {
         assertEquals("Success", result.getOutParamValue("message"));
         assertEquals(outParams, result.getOutParams());
         assertEquals(values, result.getOutParamValues());
+    }
+
+    @Test
+    public void testOutParamResultSnapshotsMutableInputs() {
+        final Jdbc.OutParam originalParam = new Jdbc.OutParam(1, "result", Types.INTEGER, null, 0);
+        final List<Jdbc.OutParam> outParams = new ArrayList<>();
+        outParams.add(originalParam);
+        final Map<Object, Object> values = new HashMap<>();
+        values.put(1, 100);
+
+        final Jdbc.OutParamResult result = new Jdbc.OutParamResult(outParams, values);
+
+        originalParam.setParameterIndex(2);
+        outParams.clear();
+        values.put(1, 200);
+
+        assertEquals(1, result.getOutParams().size());
+        assertEquals(1, result.getOutParams().get(0).getParameterIndex());
+        assertEquals(100, (Integer) result.getOutParamValue(1));
     }
 
     // Handler Tests
@@ -3558,6 +3598,48 @@ public class JdbcTest extends TestBase {
         }
     }
 
+    @Test
+    public void testHandlerFactoryGetByQualifierReturnsConcurrentRegistrationWinner() {
+        final String qualifier = JdbcTest.class.getName() + ".qualifierRace." + System.nanoTime();
+        final Jdbc.Handler<Object> winner = new Jdbc.Handler<>() {
+        };
+        final Jdbc.Handler<Object> springBean = new Jdbc.Handler<>() {
+        };
+        final ApplicationContext applicationContext = Mockito.mock(ApplicationContext.class);
+
+        when(applicationContext.getBean(qualifier)).thenAnswer(invocation -> {
+            assertTrue(Jdbc.HandlerFactory.register(qualifier, winner));
+            return springBean;
+        });
+
+        new SpringApplicationContext().setApplicationContext(applicationContext);
+
+        try {
+            assertSame(winner, Jdbc.HandlerFactory.get(qualifier));
+        } finally {
+            new SpringApplicationContext().setApplicationContext(null);
+        }
+    }
+
+    @Test
+    public void testHandlerFactoryGetByClassReturnsConcurrentRegistrationWinner() {
+        final SpringRaceHandler winner = new SpringRaceHandler();
+        final ApplicationContext applicationContext = Mockito.mock(ApplicationContext.class);
+
+        when(applicationContext.getBean(SpringRaceHandler.class)).thenAnswer(invocation -> {
+            assertTrue(Jdbc.HandlerFactory.register(winner));
+            throw new IllegalStateException("simulated Spring lookup failure after concurrent registration");
+        });
+
+        new SpringApplicationContext().setApplicationContext(applicationContext);
+
+        try {
+            assertSame(winner, Jdbc.HandlerFactory.get(SpringRaceHandler.class));
+        } finally {
+            new SpringApplicationContext().setApplicationContext(null);
+        }
+    }
+
     // Regression: OutParam.of(0, sqlType) used to be silently accepted. Downstream
     // JdbcUtil.getOutParameters then took the name-based fallback with a null name, producing
     // an opaque driver error. The fix rejects index <= 0 with a clear IllegalArgumentException.
@@ -3595,6 +3677,19 @@ public class JdbcTest extends TestBase {
 
         public void setUserName(final String userName) {
             this.userName = userName;
+        }
+    }
+
+    public static class LocaleMappedEntity {
+        @com.landawn.abacus.annotation.Column("user_id")
+        private Long id;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
         }
     }
 
@@ -3665,5 +3760,24 @@ public class JdbcTest extends TestBase {
         final NameRecord result = mapper.apply(mockResultSet, Arrays.asList("firstName", "lastName"));
 
         assertEquals(new NameRecord("Grace", "Hopper"), result);
+    }
+
+    @Test
+    public void testRowMapperColumnLookupIsLocaleIndependent() throws SQLException {
+        final Locale previousLocale = Locale.getDefault();
+
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+            when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("USER_ID");
+            when(mockResultSet.getObject(1)).thenReturn("7");
+
+            final Jdbc.RowMapper<DisposableObjArray> mapper = Jdbc.RowMapper.toDisposableObjArray(LocaleMappedEntity.class);
+            final DisposableObjArray row = mapper.apply(mockResultSet);
+
+            assertEquals(7L, row.get(0));
+        } finally {
+            Locale.setDefault(previousLocale);
+        }
     }
 }

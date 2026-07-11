@@ -5202,7 +5202,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final V result = targetValueType.get(rs, 1);
 
                 if (rs.next()) {
-                    throw new DuplicateResultException("More than one record found");
+                    throw new DuplicateResultException("Expected at most one row, but the query returned multiple rows");
                 }
 
                 return Nullable.of(result);
@@ -5300,7 +5300,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final V result = targetValueType.get(rs, 1);
 
                 if (rs.next()) {
-                    throw new DuplicateResultException("More than one record found");
+                    throw new DuplicateResultException("Expected at most one row, but the query returned multiple rows");
                 }
 
                 return Optional.of(result);
@@ -5505,12 +5505,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             R1 result1 = null;
             R2 result2 = null;
 
-            if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result1 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor1);
             }
 
-            if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result2 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor2);
             }
 
             return Tuple.of(result1, result2);
@@ -5574,16 +5574,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             R2 result2 = null;
             R3 result3 = null;
 
-            if (iter.hasNext()) {
-                result1 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor1);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result1 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor1);
             }
 
-            if (iter.hasNext()) {
-                result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result2 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor2);
             }
 
-            if (iter.hasNext()) {
-                result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                result3 = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor3);
             }
 
             return Tuple.of(result1, result2, result3);
@@ -5660,8 +5660,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             final List<R> result = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                result.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor));
             }
 
             return result;
@@ -5716,8 +5716,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             final List<R> result = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                result.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor));
             }
 
             return result;
@@ -6039,7 +6039,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = getRow(rs, targetType);
 
                 if (rs.next()) {
-                    throw new DuplicateResultException("More than one record found");
+                    throw new DuplicateResultException("Expected at most one row, but the query returned multiple rows");
                 }
 
                 return Objects.requireNonNull(result);
@@ -6084,7 +6084,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = rowMapper.apply(rs);
 
                 if (rs.next()) {
-                    throw new DuplicateResultException("More than one record found");
+                    throw new DuplicateResultException("Expected at most one row, but the query returned multiple rows");
                 }
 
                 return Objects.requireNonNull(result);
@@ -6130,7 +6130,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = rowMapper.apply(rs, JdbcUtil.getColumnLabels(rs));
 
                 if (rs.next()) {
-                    throw new DuplicateResultException("More than one record found");
+                    throw new DuplicateResultException("Expected at most one row, but the query returned multiple rows");
                 }
 
                 return Objects.requireNonNull(result);
@@ -6997,8 +6997,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(targetType);
             final List<List<T>> result = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                result.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return result;
@@ -7052,8 +7052,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Jdbc.ResultExtractor<List<T>> extractor = Jdbc.ResultExtractor.toList(rowMapper);
             final List<List<T>> result = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                result.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return result;
@@ -7106,8 +7106,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Jdbc.ResultExtractor<List<T>> extractor = Jdbc.ResultExtractor.toList(rowFilter, rowMapper);
             final List<List<T>> result = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                result.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return result;
@@ -7163,8 +7163,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(rowMapper);
             final List<List<T>> result = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                result.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return result;
@@ -7224,8 +7224,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(rowFilter, rowMapper);
             final List<List<T>> result = new ArrayList<>();
 
-            while (iter.hasNext()) {
-                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            while (JdbcUtil.hasNextResultSet(iter)) {
+                result.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return result;
@@ -9683,7 +9683,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     int updateCount = stmt.getUpdateCount();
      *     SQLWarning warning = stmt.getWarnings();
      *     if (warning != null) {
-     *         logger.warn("SQL Warning: " + warning.getMessage());
+     *         logger.warn("SQL warning: {}", warning.getMessage());
      *     }
      *     return updateCount;
      * });
@@ -9769,7 +9769,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * preparedQuery.executeThenAccept(stmt -> {
      *     SQLWarning warning = stmt.getWarnings();
      *     while (warning != null) {
-     *         logger.warn("SQL Warning: " + warning.getMessage());
+     *         logger.warn("SQL warning: {}", warning.getMessage());
      *         warning = warning.getNextWarning();
      *     }
      * });
@@ -9893,13 +9893,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return JdbcUtil.asyncExecutor.execute(() -> {
-            try {
-                return sqlAction.apply(q);
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        });
+        try {
+            return JdbcUtil.asyncExecutor.execute(() -> {
+                try {
+                    return sqlAction.apply(q);
+                } finally {
+                    closeAfterExecutionIfAllowed();
+                }
+            });
+        } catch (final RuntimeException | Error e) {
+            closeAfterFailedAsyncSubmission(e);
+            throw e;
+        }
     }
 
     /**
@@ -9944,13 +9949,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return ContinuableFuture.call(() -> {
-            try {
-                return sqlAction.apply(q);
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        }, executor);
+        try {
+            return ContinuableFuture.call(() -> {
+                try {
+                    return sqlAction.apply(q);
+                } finally {
+                    closeAfterExecutionIfAllowed();
+                }
+            }, executor);
+        } catch (final RuntimeException | Error e) {
+            closeAfterFailedAsyncSubmission(e);
+            throw e;
+        }
     }
 
     /**
@@ -9992,13 +10002,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return JdbcUtil.asyncExecutor.execute(() -> {
-            try {
-                sqlAction.accept(q);
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        });
+        try {
+            return JdbcUtil.asyncExecutor.execute(() -> {
+                try {
+                    sqlAction.accept(q);
+                } finally {
+                    closeAfterExecutionIfAllowed();
+                }
+            });
+        } catch (final RuntimeException | Error e) {
+            closeAfterFailedAsyncSubmission(e);
+            throw e;
+        }
     }
 
     /**
@@ -10040,13 +10055,26 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return ContinuableFuture.run(() -> {
-            try {
-                sqlAction.accept(q);
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
-        }, executor);
+        try {
+            return ContinuableFuture.run(() -> {
+                try {
+                    sqlAction.accept(q);
+                } finally {
+                    closeAfterExecutionIfAllowed();
+                }
+            }, executor);
+        } catch (final RuntimeException | Error e) {
+            closeAfterFailedAsyncSubmission(e);
+            throw e;
+        }
+    }
+
+    private void closeAfterFailedAsyncSubmission(final Throwable submissionFailure) {
+        try {
+            closeAfterExecutionIfAllowed();
+        } catch (final RuntimeException | Error closeFailure) {
+            submissionFailure.addSuppressed(closeFailure);
+        }
     }
 
     /**

@@ -675,8 +675,8 @@ public final class DaoUtil {
         for (final ContinuableFuture<Void> f : futures) {
             final Result<Void, Exception> ret = f.getAsResult();
 
-            if (firstException == null && ret.isFailure()) {
-                firstException = ret.getException();
+            if (ret.isFailure()) {
+                firstException = collectFailure(firstException, ret.getException());
             }
         }
 
@@ -722,9 +722,7 @@ public final class DaoUtil {
             ret = f.getAsResult();
 
             if (ret.isFailure()) {
-                if (firstException == null) {
-                    firstException = ret.getException();
-                }
+                firstException = collectFailure(firstException, ret.getException());
             } else {
                 result += ret.orElseIfFailure(0);
             }
@@ -767,8 +765,8 @@ public final class DaoUtil {
         for (final ContinuableFuture<Void> f : futures) {
             final Result<Void, Exception> ret = f.getAsResult();
 
-            if (firstException == null && ret.isFailure()) {
-                firstException = ret.getException();
+            if (ret.isFailure()) {
+                firstException = collectFailure(firstException, ret.getException());
             }
         }
 
@@ -814,9 +812,7 @@ public final class DaoUtil {
             ret = f.getAsResult();
 
             if (ret.isFailure()) {
-                if (firstException == null) {
-                    firstException = ret.getException();
-                }
+                firstException = collectFailure(firstException, ret.getException());
             } else {
                 result += ret.orElseIfFailure(0);
             }
@@ -827,5 +823,17 @@ public final class DaoUtil {
         }
 
         return Math.toIntExact(result);
+    }
+
+    private static Exception collectFailure(final Exception firstException, final Exception nextException) {
+        if (firstException == null) {
+            return nextException;
+        }
+
+        if (firstException != nextException) {
+            firstException.addSuppressed(nextException);
+        }
+
+        return firstException;
     }
 }

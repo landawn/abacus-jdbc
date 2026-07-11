@@ -50,12 +50,12 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  * public class LoggingHandler implements Jdbc.Handler<UserDao> {
  *     @Override
  *     public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
- *         logger.info("Calling method: " + methodSignature._1.getName());
+ *         logger.info("Calling method: {}", methodSignature._1.getName());
  *     }
  *
  *     @Override
  *     public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
- *         logger.info("Method completed: " + methodSignature._1.getName());
+ *         logger.info("Method completed: {}", methodSignature._1.getName());
  *     }
  * }
  *

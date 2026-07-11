@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
@@ -37,6 +39,7 @@ import com.landawn.abacus.jdbc.annotation.OutParameter;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlSource;
+import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.DaoBase;
@@ -163,6 +166,17 @@ public class DaoImplTest extends TestBase {
         String existsAsString();
 
         boolean existsWithMapper(Jdbc.RowMapper<TestEntity> mapper);
+
+        boolean notifyExists();
+    }
+
+    interface RollbackMaskDao extends Dao<TestEntity, RollbackMaskDao> {
+        IllegalStateException PRIMARY_FAILURE = new IllegalStateException("primary DAO failure");
+
+        @Transactional
+        default void failInTransaction() {
+            throw PRIMARY_FAILURE;
+        }
     }
 
     // Interface with a method returning List<T> (TypeVariable) — triggers the ClassCastException bug before fix.
@@ -252,6 +266,16 @@ public class DaoImplTest extends TestBase {
         @NonDBOperation
         default String greeting() {
             return "hello";
+        }
+    }
+
+    interface MultipleSqlDefaultMethodDao extends Dao<TestEntity, MultipleSqlDefaultMethodDao> {
+        @Query({ "SELECT 1", "SELECT 2" })
+        @NonDBOperation
+        default String consumeAndMutateFirstSql(final String... sqls) {
+            final String firstSql = sqls[0];
+            sqls[0] = "mutated";
+            return firstSql;
         }
     }
 
@@ -446,6 +470,23 @@ public class DaoImplTest extends TestBase {
         Object result = classifier.invoke(null, method, OP.DEFAULT, "QueryClassifierDao.existsWithMapper");
 
         assertEquals(false, result);
+    }
+
+    @Test
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void testExistsOperationDoesNotNegateMethodMerelyStartingWithNot() throws Exception {
+        final Method method = QueryClassifierDao.class.getMethod("notifyExists");
+        final Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+        factory.setAccessible(true);
+        final Throwables.BiFunction<AbstractQuery, Object[], Boolean, SQLException> function = (Throwables.BiFunction<AbstractQuery, Object[], Boolean, SQLException>) factory
+                .invoke(null, TestEntity.class, method, null, null, null, false, false, false, OP.exists, false, "QueryClassifierDao.notifyExists");
+        final AbstractQuery query = mock(AbstractQuery.class);
+        org.mockito.Mockito.when(query.exists()).thenReturn(true);
+
+        assertTrue(function.apply(query, new Object[0]));
+        org.mockito.Mockito.verify(query).exists();
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).notExists();
     }
 
     // QueryInfo: sql ends with ";" - trims it (L6536 branch)
@@ -868,6 +909,14 @@ public class DaoImplTest extends TestBase {
     }
 
     @Test
+    public void testCreateDao_MultipleQuerySqlArrayIsIsolatedPerInvocation() throws Exception {
+        MultipleSqlDefaultMethodDao dao = DaoImpl.createDao(MultipleSqlDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
+
+        assertEquals("SELECT 1", dao.consumeAndMutateFirstSql());
+        assertEquals("SELECT 1", dao.consumeAndMutateFirstSql());
+    }
+
+    @Test
     public void testCreateDao_RejectsOutParameterWithNameAndPosition() throws SQLException {
         DataSource ds = mockDataSourceForDaoCreation();
 
@@ -953,6 +1002,27 @@ public class DaoImplTest extends TestBase {
         handleLimit.setAccessible(true);
 
         return (Condition) handleLimit.invoke(null, cond, count);
+    }
+
+    @Test
+    public void testSumUpdateCountsDoesNotOverflowAtIntBoundary() throws Exception {
+        final Method sumUpdateCounts = DaoImpl.class.getDeclaredMethod("sumUpdateCounts", int[].class);
+        sumUpdateCounts.setAccessible(true);
+
+        assertEquals(2L * Integer.MAX_VALUE, sumUpdateCounts.invoke(null, (Object) new int[] { Integer.MAX_VALUE, Integer.MAX_VALUE }));
+        assertEquals(3L, sumUpdateCounts.invoke(null, (Object) new int[] { 2, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1 }));
+    }
+
+    @Test
+    public void testSumLargeUpdateCountsIgnoresJdbcSentinelsAndDetectsOverflow() throws Exception {
+        final Method sumUpdateCounts = DaoImpl.class.getDeclaredMethod("sumUpdateCounts", long[].class);
+        sumUpdateCounts.setAccessible(true);
+
+        assertEquals(3L, sumUpdateCounts.invoke(null, (Object) new long[] { 2, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1 }));
+
+        final InvocationTargetException thrown = assertThrows(InvocationTargetException.class,
+                () -> sumUpdateCounts.invoke(null, (Object) new long[] { Long.MAX_VALUE, 1 }));
+        assertTrue(thrown.getCause() instanceof ArithmeticException);
     }
 
     // Regression: handleLimit's Expression-already-has-limit check used to omit " FETCH FIRST ", so an
@@ -1064,5 +1134,25 @@ public class DaoImplTest extends TestBase {
 
         assertEquals(1, limited.getSetOperations().size());
         assertEquals(2, limited.getLimit().getCount());
+    }
+
+    @Test
+    public void testTransactionalWrapperPreservesPrimaryFailureWhenRollbackFails() throws SQLException {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        Mockito.when(dataSource.getConnection()).thenReturn(connection);
+        Mockito.when(connection.getMetaData()).thenReturn(metadata);
+        Mockito.when(metadata.getDatabaseProductName()).thenReturn("H2");
+        Mockito.when(metadata.getDatabaseProductVersion()).thenReturn("2");
+        Mockito.when(connection.getAutoCommit()).thenReturn(true);
+        Mockito.when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        Mockito.doThrow(new SQLException("rollback failed")).when(connection).rollback();
+        final RollbackMaskDao dao = JdbcUtil.createDao(RollbackMaskDao.class, dataSource);
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, dao::failInTransaction);
+
+        assertSame(RollbackMaskDao.PRIMARY_FAILURE, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
     }
 }

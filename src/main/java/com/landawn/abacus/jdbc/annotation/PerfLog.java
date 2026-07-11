@@ -27,8 +27,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * with optional {@link #filter()} matching).
  *
  * <p>The DAO proxy reads this annotation at build time ({@code DaoImpl}). For each invocation,
- * the proxy snapshots {@code System.currentTimeMillis()} before and after the call and emits a
- * log entry only when:</p>
+ * elapsed time is measured with the monotonic {@code System.nanoTime()} clock and reported in
+ * milliseconds. A log entry is emitted only when:</p>
  * <ul>
  *   <li>The SQL portion of the call exceeded {@link #minExecutionTimeForSql()} milliseconds — the
  *       statement text (capped at {@link #maxSqlLogLength()} characters) is logged at INFO level
