@@ -9852,10 +9852,28 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Writes the {@code [SQL-PERF]} log entry for a completed statement execution if it took at least
+     * {@link SqlLogConfig#minExecutionTimeForSqlPerfLog} milliseconds, and notifies the SQL log handler
+     * registered via {@link #setSqlLogHandler(TriConsumer)}, if any.
+     *
+     * <p>Invoked from a {@code finally} block right after the statement finishes, so it must never throw:
+     * a {@code RuntimeException} from the handler is logged and swallowed rather than allowed to mask the
+     * statement's own outcome.</p>
+     *
+     * <p>The start time is deliberately captured on two clocks because neither can be derived from the other:
+     * {@code startTimeNanos} ({@link System#nanoTime()}) is monotonic and yields a duration that stays correct
+     * even if the wall clock is adjusted while the statement is running, while {@code startTimeMillis}
+     * ({@link System#currentTimeMillis()}) anchors the epoch-based {@code (startTimeMillis, endTimeMillis)}
+     * contract of the SQL log handler. The end timestamp passed to the handler is reconstructed as
+     * {@code startTimeMillis + elapsed} so both values sit on the same epoch timeline.</p>
+     *
+     * @param stmt the statement that was just executed; SQL text is extracted from it for logging
+     * @param sqlLogConfig the per-thread perf-log configuration captured before execution
+     * @param startTimeMillis wall-clock time ({@link System#currentTimeMillis()}) captured just before execution; reported to the SQL log handler
+     * @param startTimeNanos monotonic time ({@link System#nanoTime()}) captured just before execution; used to compute the elapsed duration
+     */
     static void handleSqlLog(final Statement stmt, final SqlLogConfig sqlLogConfig, final long startTimeMillis, final long startTimeNanos) {
-        // nanoTime is monotonic and therefore safe for durations even when the wall clock is
-        // adjusted while a statement is running. Reconstruct an epoch-style end timestamp so
-        // the public SQL log handler keeps its existing (startMillis, endMillis) contract.
         final long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
         final long endTimeMillis = startTimeMillis + elapsedTime;
         String sql = null;

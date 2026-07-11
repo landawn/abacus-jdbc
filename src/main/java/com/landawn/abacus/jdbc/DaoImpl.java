@@ -5734,13 +5734,13 @@ final class DaoImpl {
                                 JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
-                            final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
+                            final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
 
                             try {
                                 return tmp.apply(proxy, args);
                             } finally {
                                 if (hasPerfLogAnno) {
-                                    logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                    logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
                                 }
 
                                 if (hasPerfLogAnno) {
@@ -5780,7 +5780,7 @@ final class DaoImpl {
                                 JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
-                            final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
+                            final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
 
                             SqlTransaction tran = null;
                             Object result = null;
@@ -5801,7 +5801,7 @@ final class DaoImpl {
                                     }
                                 } finally {
                                     if (hasPerfLogAnno) {
-                                        logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                        logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
                                         JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
@@ -5859,7 +5859,7 @@ final class DaoImpl {
                                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
-                                final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
+                                final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
 
                                 SqlTransaction tran = null;
                                 Object result = null;
@@ -5880,7 +5880,7 @@ final class DaoImpl {
                                         }
                                     } finally {
                                         if (hasPerfLogAnno) {
-                                            logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                            logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
                                             JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                         }
 
@@ -5937,13 +5937,13 @@ final class DaoImpl {
                                     JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
-                                final long startTime = hasPerfLogAnno ? System.nanoTime() : -1;
+                                final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
 
                                 try {
                                     return tmp.apply(proxy, args);
                                 } finally {
                                     if (hasPerfLogAnno) {
-                                        logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                        logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
                                     }
 
                                     if (hasPerfLogAnno) {
