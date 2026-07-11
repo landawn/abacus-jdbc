@@ -158,6 +158,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
@@ -171,6 +173,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
@@ -204,6 +208,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws SQLException, IllegalArgumentException;
@@ -219,6 +225,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws SQLException, IllegalArgumentException;
@@ -251,6 +259,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -266,6 +276,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -294,6 +306,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -310,6 +324,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -632,7 +648,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws SQLException;
 
     /**
-     * Queries a single value from one column for the first record matching the condition, mapping it with a custom row mapper.
+     * Queries a single non-null value from one column for the first record matching the condition, mapping it with a custom row mapper.
      * Only the first matching record is read; any remaining matching records are ignored.
      * Provides flexibility in how the single column value is transformed.
      *
@@ -718,7 +734,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws DuplicateResultException, SQLException;
 
     /**
-     * Queries a unique value from one column using a custom row mapper, throwing if more than one record matches.
+     * Queries a unique non-null value from one column using a custom row mapper, throwing if more than one record matches.
      * Ensures uniqueness while allowing custom value transformation.
      *
      * <p><b>Usage Examples:</b></p>

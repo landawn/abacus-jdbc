@@ -1097,4 +1097,23 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
                     Mockito.never());
         }
     }
+
+    // Regression: loadJoinEntitiesIfAbsent(Collection, String, Collection) derives the entity class
+    // from the first element of the collection; a null first element must be rejected with a
+    // meaningful IllegalArgumentException instead of surfacing as a bare NullPointerException.
+    // Mirrors the checked twin's contract (see JoinEntityHelperTest).
+    @Test
+    @Tag("2025")
+    public void testloadJoinEntitiesIfAbsent_CollectionEntity_NullFirstElement_ThrowsIae() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = new ArrayList<>();
+        entities.add(null);
+        entities.add(new TestEntity());
+
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "orders", null));
+        assertTrue(iae.getMessage().contains("first element"));
+
+        Mockito.verify(dao, Mockito.never())
+                .loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
+    }
 }

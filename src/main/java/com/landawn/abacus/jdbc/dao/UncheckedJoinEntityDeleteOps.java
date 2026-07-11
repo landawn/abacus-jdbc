@@ -394,9 +394,9 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param inParallel if {@code true}, join properties are deleted in parallel; if {@code false}, deleted sequentially
-     * @return the total count of deleted records
+     * @return the total count of deleted records, or 0 if {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
@@ -487,10 +487,10 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * );
      * }</pre>
      *
-     * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param entities the collection of entities whose join entities should be deleted. If {@code null} or empty, 0 is returned
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param inParallel if {@code true}, join properties are deleted in parallel; if {@code false}, deleted sequentially
-     * @return the total count of deleted records
+     * @return the total count of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
@@ -667,9 +667,9 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * int deleted = userDao.deleteAllJoinEntities(users, true);
      * }</pre>
      *
-     * @param entities the collection of entities whose all join entities should be deleted
+     * @param entities the collection of entities whose all join entities should be deleted. If {@code null} or empty, 0 is returned
      * @param inParallel if {@code true}, all join properties are deleted in parallel; if {@code false}, deleted sequentially
-     * @return the total count of deleted records
+     * @return the total count of deleted records, or 0 if {@code entities} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};

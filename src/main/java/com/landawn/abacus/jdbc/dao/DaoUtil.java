@@ -60,7 +60,7 @@ import com.landawn.abacus.util.function.Function;
  *   <li>Refresh support — computing the set of properties to select so that ID columns are always
  *       included (see {@link #getRefreshSelectPropNames(Collection, List)})</li>
  *   <li>DAO type casting and validation — narrowing join-entity helpers to their backing
- *       {@link ReadOps}/{@link CrudReadOps} (and unchecked/{@code long}-ID) views</li>
+ *       {@link ReadOps}/{@link CrudReadOps} (and unchecked) views</li>
  *   <li>Asynchronous operation completion and result aggregation — joining batches of futures and
  *       surfacing the first failure as a checked or unchecked SQL exception</li>
  *   <li>Join metadata retrieval — looking up {@link JoinInfo} for an entity's join properties</li>

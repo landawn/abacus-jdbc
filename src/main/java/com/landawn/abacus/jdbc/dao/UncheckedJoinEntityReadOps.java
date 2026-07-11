@@ -641,8 +641,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *     .collect(Collectors.toList());
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for. Can be empty
-     *                 but not {@code null}. If empty, this method returns immediately
+     * @param entities the collection of entities to load join entities for.
+     *                 If {@code null} or empty, no join entities are loaded
      * @param joinEntityPropName the property name of the join entities to load. Must be a valid
      *                           property name that exists in the entity class and is annotated
      *                           with {@code @JoinedBy}
@@ -1214,7 +1214,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class,
+     *                                  or if the first element of {@code entities} is {@code null}
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -1223,7 +1224,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
-        final Class<?> cls = N.firstOrNullIfEmpty(entities).getClass();
+        final T first = N.firstOrNullIfEmpty(entities);
+        N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
+
+        final Class<?> cls = first.getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
 
         if (propInfo == null) {

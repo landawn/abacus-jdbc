@@ -146,6 +146,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row to the desired type
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -174,6 +176,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -216,6 +220,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -240,6 +246,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -279,6 +287,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -302,6 +312,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -348,6 +360,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -374,6 +388,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -1212,7 +1228,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
 
     /**
      * Returns a list of values for a single property from records matching the condition.
-     * This is a convenience method for selecting a single column.
+     * This is a convenience method for selecting a single column; the property type is
+     * automatically detected and used for mapping.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

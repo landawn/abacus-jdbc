@@ -268,7 +268,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the String value, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the String value, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForString()
      */
@@ -289,7 +289,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Date value, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the Date value, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForDate()
      */
@@ -310,7 +310,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Time value, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the Time value, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForTime()
      */
@@ -331,7 +331,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Timestamp value, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the Timestamp value, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForTimestamp()
      */
@@ -353,7 +353,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the byte array value, or Nullable.empty() if no record exists
+     * @return a {@code Nullable} containing the byte array value, or {@code Nullable.empty()} if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForBytes()
      */
@@ -523,7 +523,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * }</pre>
      *
      * @param id the entity ID
-     * @return an Optional containing the entity if found, otherwise empty
+     * @return an {@code Optional} containing the entity if found, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -543,7 +543,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
-     * @return an Optional containing the entity with selected properties if found, otherwise empty
+     * @return an {@code Optional} containing the entity with selected properties if found, otherwise empty
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -565,7 +565,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * }</pre>
      *
      * @param id the entity ID
-     * @return the entity if found, otherwise null
+     * @return the entity if found, otherwise {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -586,7 +586,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
-     * @return the entity with selected properties if found, otherwise null
+     * @return the entity with selected properties if found, otherwise {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -763,7 +763,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     }
 
     /**
-     * Refreshes the specified entity by reloading all its properties from the database.
+     * Refreshes the specified entity by reloading all of its (non-join) properties from the database.
      * The entity must have its ID set. After refresh, the entity will contain the
      * current values from the database.
      *
@@ -807,7 +807,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param entity the entity to refresh (must have ID set)
      * @param propNamesToRefresh the properties to refresh from the database
-     * @return {@code false} if no record found by the ID in the specified entity, {@code true} otherwise
+     * @return {@code true} if the matching database row was found and {@code entity} was updated;
+     *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
      * @throws DuplicateResultException if the id of the entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
@@ -897,9 +898,11 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     /**
      * Batch refreshes only the specified properties of multiple entities using the specified batch size.
      * This method efficiently refreshes large collections by:
-     * 1. Extracting IDs from all entities
-     * 2. Fetching current values from database in batches
-     * 3. Merging the specified properties back into the original entities
+     * <ol>
+     *   <li>Extracting IDs from all entities</li>
+     *   <li>Fetching current values from the database in batches</li>
+     *   <li>Merging the specified properties back into the original entities</li>
+     * </ol>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

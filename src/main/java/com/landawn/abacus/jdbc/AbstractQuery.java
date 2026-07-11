@@ -106,7 +106,7 @@ import com.landawn.abacus.util.stream.Stream;
  * {@code list}, {@code execute}, and similar), regardless of whether the call completes
  * normally or throws an exception. To keep the statement open, invoke
  * {@code closeAfterExecution(false)}. If {@code closeAfterExecution(false)} is not called,
- * there is no need to place the {@code AbstractQuery} instance in a try-catch block for closure.</p>
+ * there is no need to place the {@code AbstractQuery} instance in a try-with-resources block for closure.</p>
  *
  * <p>The {@code stream(...)}/{@code streamAllResultSets(...)} and {@code asyncCall}/{@code asyncRun} families are
  * exceptions to the close-immediately rule: they keep the underlying statement and {@code ResultSet} open until the
@@ -3635,8 +3635,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param batchParameters Collection where each element is one batch row. All rows must have the same shape:
-     *                        {@code Collection}, {@code Object[]}, or a single value bound as the only parameter
-     * An empty {@code collection} adds no batch rows and returns this query.
+     *                        {@code Collection}, {@code Object[]}, or a single value bound as the only parameter.
+     *                        An empty collection adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
      * @throws SQLException if a database access error occurs
@@ -3663,9 +3663,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <T> the type of elements in the batch parameters collection
-     * @param batchParameters Collection of parameters
+     * @param batchParameters Collection of parameters; each element is bound as the single parameter of one batch row.
+     *                        An empty collection adds no batch rows and returns this query unchanged.
      * @param type the class type of the parameters
-     * An empty {@code collection} adds no batch rows and returns this query.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or type is null
      * @throws SQLException if a database access error occurs
@@ -3694,8 +3694,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param batchParameters Iterator over batch rows. All rows must have the same shape: {@code Collection},
-     *                        {@code Object[]}, or a single value bound as the only parameter
-     * An empty {@code iterator} adds no batch rows and returns this query.
+     *                        {@code Object[]}, or a single value bound as the only parameter.
+     *                        An empty iterator adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
      * @throws SQLException if a database access error occurs
@@ -3772,7 +3772,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <T> the type of elements in the batch parameters collection
-     * @param batchParameters Iterator over parameters
+     * @param batchParameters Iterator over parameters; each element is bound as the single parameter of one batch row.
+     *                        An empty iterator adds no batch rows and returns this query unchanged.
      * @param type the class type of the parameters
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or type is null
@@ -5375,6 +5376,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     public Dataset query(final Class<?> entityClassForExtractor) throws SQLException {
+        assertNotClosed();
         checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
 
         return query(Jdbc.ResultExtractor.toDataset(entityClassForExtractor));
@@ -6607,6 +6609,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.BiRowMapper#to(Class)
      */
     public <T> List<T> list(final Class<? extends T> targetType) throws SQLException {
+        assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 
         return list(Jdbc.BiRowMapper.to(targetType));
@@ -6634,6 +6637,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Deprecated
     public <T> List<T> list(final Class<? extends T> targetType, final int maxResult) throws SQLException {
+        assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 
         return list(Jdbc.BiRowMapper.to(targetType), maxResult);
@@ -7557,6 +7561,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @LazyEvaluation
     public <T> Stream<T> stream(final Class<? extends T> targetType) {
+        assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 
         return stream(Jdbc.BiRowMapper.to(targetType));
@@ -8860,6 +8865,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public void foreach(final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
+        assertNotClosed();
         checkArgNotNull(rowConsumer, cs.rowConsumer);
 
         forEach(Jdbc.RowConsumer.oneOff(rowConsumer));
@@ -8911,6 +8917,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
+        assertNotClosed();
         checkArgNotNull(entityClass, cs.entityClass);
         checkArgNotNull(rowConsumer, cs.rowConsumer);
 
@@ -10084,12 +10091,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * cleanup specified by the close handler. If the instance is already closed, this
      * method does nothing (idempotent).</p>
      *
-     * <p>The method will:</p>
+     * <p>The method will, in order:</p>
      * <ul>
-     *   <li>Close the underlying PreparedStatement</li>
-     *   <li>Reset any modified statement properties to their defaults</li>
-     *   <li>Execute any registered close handler</li>
      *   <li>Mark this instance as closed</li>
+     *   <li>Reset any modified statement properties to their defaults</li>
+     *   <li>Close the underlying PreparedStatement</li>
+     *   <li>Execute any registered close handler</li>
      * </ul>
      *
      * <p><b>Note:</b> After calling close(), execution and parameter-setting methods

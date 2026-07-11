@@ -328,9 +328,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param inParallel if {@code true}, join entities will be deleted in parallel
-     * @return the total number of deleted records
+     * @return the total number of deleted records, or 0 if {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
@@ -449,10 +449,10 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), true);
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned
+     * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param inParallel if {@code true}, join entities will be deleted in parallel
-     * @return the total number of deleted records
+     * @return the total number of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
@@ -619,9 +619,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * int deletedCount = userDao.deleteAllJoinEntities(users, true);
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete all join entities
+     * @param entities the collection of entities for which to delete all join entities. If {@code null} or empty, 0 is returned
      * @param inParallel if {@code true}, join entities will be deleted in parallel
-     * @return the total number of deleted records
+     * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
@@ -648,9 +648,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * int deletedCount = userDao.deleteAllJoinEntities(users, massCleanupExecutor);
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete all join entities
+     * @param entities the collection of entities for which to delete all join entities. If {@code null} or empty, 0 is returned
      * @param executor the executor to use for parallel deletion
-     * @return the total number of deleted records
+     * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer

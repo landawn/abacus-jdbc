@@ -822,7 +822,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return {@code true} if the matching database row was found and {@code entity} was updated;
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws DuplicateResultException if the id of an entity matches more than one database record
+     * @throws DuplicateResultException if the id of the entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -853,7 +853,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return {@code true} if the matching database row was found and {@code entity} was updated;
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
-     * @throws DuplicateResultException if the id of an entity matches more than one database record
+     * @throws DuplicateResultException if the id of the entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
     @Beta

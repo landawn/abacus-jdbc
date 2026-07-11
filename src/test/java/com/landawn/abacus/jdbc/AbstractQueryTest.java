@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +50,7 @@ import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
+import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.u.OptionalByte;
 import com.landawn.abacus.util.u.OptionalDouble;
@@ -1738,5 +1740,42 @@ public class AbstractQueryTest extends TestBase {
 
         verify(first).close();
         verify(second).close();
+    }
+
+    // Regression for ISE-vs-IAE priority on thin delegating overloads (query(Class), list(Class),
+    // stream(Class), foreach(...)): they document "@throws IllegalStateException if this query is
+    // closed" but used to run checkArgNotNull before the delegate's assertNotClosed(), so a closed
+    // query with a null argument threw IllegalArgumentException. The closed-state check must win,
+    // matching the established ordering of queryForSingleValue(Class).
+    @Test
+    @Tag("2025")
+    public void testDelegatingOverloads_ClosedQueryWithNullArg_ThrowsIllegalStateNotIllegalArgument() {
+        query.close();
+
+        assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
+        assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null));
+        assertThrows(IllegalStateException.class, () -> query.stream((Class<String>) null));
+        assertThrows(IllegalStateException.class, () -> query.foreach((Consumer<DisposableObjArray>) null));
+        assertThrows(IllegalStateException.class, () -> query.foreach(String.class, null));
+    }
+
+    @Test
+    @Tag("2025")
+    @SuppressWarnings("deprecation")
+    public void testListWithMaxResult_ClosedQueryWithNullArg_ThrowsIllegalStateNotIllegalArgument() {
+        query.close();
+
+        assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null, 10));
+    }
+
+    // The open-query behavior is unchanged: a null argument still fails fast with
+    // IllegalArgumentException, and checkArgNotNull still closes the query before throwing.
+    @Test
+    @Tag("2025")
+    public void testQueryByEntityClass_OpenQueryWithNullArg_StillThrowsIllegalArgumentAndClosesQuery() {
+        assertThrows(IllegalArgumentException.class, () -> query.query((Class<?>) null));
+
+        // checkArgNotNull closed the query, so the same call now reports the closed state.
+        assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
     }
 }

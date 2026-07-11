@@ -94,7 +94,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entity the entity to insert or update
-     * @return the inserted or updated entity
+     * @return the saved entity (either newly inserted or updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
@@ -126,7 +126,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the property names that uniquely identify the record
-     * @return the inserted or updated entity
+     * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches
@@ -164,7 +164,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entity the entity to insert or update
      * @param cond the condition to check for existing record
-     * @return the inserted or updated entity
+     * @return the saved entity: the inserted {@code entity} when no existing record was found,
+     *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the specified condition
@@ -259,9 +260,11 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
     /**
      * Batch upserts multiple entities based on the specified unique properties using the specified batch size.
      * This method efficiently handles large collections by:
-     * 1. Querying existing records in batches
-     * 2. Separating entities into insert and update groups
-     * 3. Performing batch insert and batch update operations
+     * <ol>
+     *   <li>Querying existing records in batches</li>
+     *   <li>Separating entities into insert and update groups</li>
+     *   <li>Performing batch insert and batch update operations</li>
+     * </ol>
      *
      * <p>When both inserts and updates are needed (or either set is larger than {@code batchSize}),
      * the operation is wrapped in a transaction.</p>
