@@ -172,10 +172,10 @@ public @interface Cache {
      *     }
      *
      *     @Override
-     *     public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+     *     public void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
      *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Invalidation hook: called after write operations (see @RefreshCache).
-     *         delegate.update(defaultCacheKey, result, daoProxy, args, methodSignature);
+     *         delegate.invalidate(defaultCacheKey, result, daoProxy, args, methodSignature);
      *     }
      * }
      *

@@ -2975,7 +2975,8 @@ public final class Jdbc {
         /**
          * Creates a stateful {@code BiRowMapper} that maps a row to an instance of the specified {@code targetClass}.
          * It automatically maps column values to the properties of the target object based on matching names.
-         * This factory supports mapping to beans, Maps, Lists, arrays, and primitive wrapper types (for single-column results).
+         * This factory supports mapping to beans, {@code Map}s, {@code List}s, arrays, and (for single-column results)
+         * scalar/value types such as {@code String}, {@code Integer}, or {@code LocalDate}.
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful. It caches metadata (like property and column mappings)
@@ -6196,7 +6197,8 @@ public final class Jdbc {
 
             /**
              * Gets a {@code RowMapper} that extracts a value of the specified type from the first column.
-             * This method uses a cache for commonly used types to improve performance.
+             * This method reuses a cached {@code RowMapper} per type, so repeated calls with the same type
+             * return the same instance.
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code

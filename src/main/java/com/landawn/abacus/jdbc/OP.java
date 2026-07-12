@@ -16,8 +16,9 @@
 package com.landawn.abacus.jdbc;
 
 /**
- * Execution modes understood by {@link AbstractQuery} and the {@code op} element of
- * {@link com.landawn.abacus.jdbc.annotation.Query}.
+ * Execution modes selected through the {@code op} element of
+ * {@link com.landawn.abacus.jdbc.annotation.Query}, each corresponding to a terminal operation of
+ * {@link AbstractQuery}.
  *
  * <p>Each constant selects a particular result-extraction strategy -- for example an existence
  * check, single-row retrieval, list or stream materialization, retrieval of every {@code ResultSet}

@@ -1594,7 +1594,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing ASCII data, or {@code null} to set SQL {@code NULL}
+     * @param value the input stream containing ASCII data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1614,7 +1614,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing ASCII data
+     * @param value the input stream containing ASCII data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1635,7 +1635,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing ASCII data
+     * @param value the input stream containing ASCII data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1657,7 +1657,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing binary data, or {@code null} to set SQL {@code NULL}
+     * @param value the input stream containing binary data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1677,7 +1677,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing binary data
+     * @param value the input stream containing binary data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1698,7 +1698,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing binary data
+     * @param value the input stream containing binary data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1720,7 +1720,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing character data, or {@code null} to set SQL {@code NULL}
+     * @param value the reader containing character data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1740,7 +1740,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing character data
+     * @param value the reader containing character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1761,7 +1761,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing character data
+     * @param value the reader containing character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1783,7 +1783,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing national character data
+     * @param value the reader containing national character data
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1804,7 +1804,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing national character data
+     * @param value the reader containing national character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1847,7 +1847,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing the data for the Blob
+     * @param value the input stream containing the data for the Blob
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1867,7 +1867,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value theinput stream containing the data for the Blob
+     * @param value the input stream containing the data for the Blob
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1909,7 +1909,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing the data for the Clob
+     * @param value the reader containing the data for the Clob
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1928,7 +1928,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing the data for the Clob
+     * @param value the reader containing the data for the Clob
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1971,7 +1971,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing the national character data
+     * @param value the reader containing the national character data
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1991,7 +1991,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param value thereader containing the national character data
+     * @param value the reader containing the national character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs

@@ -158,9 +158,9 @@ import com.landawn.abacus.util.stream.Stream;
  * method's annotation metadata. Supported annotations include {@code @Query} (covering SELECT/INSERT/UPDATE/DELETE
  * and stored-procedure calls) together with helpers such as {@code @Bind}, {@code @BindList}, {@code @SqlScript},
  * {@code @SqlFragment}, {@code @SqlFragmentList}, and {@code @SqlSource}. The SQL operation type is determined from
- * the {@link OP} value supplied in the {@code @Query} annotation, from the leading SQL keyword (e.g., {@code SELECT},
- * {@code INSERT}) detected in the statement text, or from built-in CRUD methods inherited from {@link Dao} and
- * {@link CrudDao}.</p>
+ * the {@link OP} value supplied in the {@code @Query} annotation, from the SQL statement kind (e.g., {@code SELECT},
+ * {@code INSERT}) detected by parsing the statement text (which also recognizes CTE and parenthesized forms), or from
+ * built-in CRUD methods inherited from {@link Dao} and {@link CrudDao}.</p>
  *
  * <p>The DaoImpl class is responsible for:</p>
  * <ul>

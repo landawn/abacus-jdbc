@@ -65,7 +65,7 @@ import com.landawn.abacus.util.stream.CharStream;
  *
  * <p>This class provides static methods for moving data between different sources and targets,
  * including Dataset objects, CSV files, Readers/Writers, Iterators, and database tables.
- * All import methods support configurable batch sizes and batch intervals.</p>
+ * Many import methods offer configurable batch sizes and batch intervals.</p>
  *
  * <p><b>Supported Operations:</b></p>
  * <table border="1" style="border-collapse: collapse;">
@@ -2007,7 +2007,7 @@ public final class DataTransferUtil {
      *
      * @param sourceDataSource the DataSource to obtain database connections from
      * @param selectSql the SQL query to execute for retrieving data
-     * @param output the Writer to write the CSV data to (will not be closed by this method)
+     * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing
@@ -2050,7 +2050,7 @@ public final class DataTransferUtil {
      *
      * @param conn the Connection to the database (will not be closed by this method)
      * @param selectSql the SQL query to execute for retrieving data
-     * @param output the Writer to write the CSV data to (will not be closed by this method)
+     * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing

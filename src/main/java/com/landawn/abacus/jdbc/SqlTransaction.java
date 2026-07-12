@@ -199,7 +199,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     /**
      * Returns the unique identifier of this transaction.
-     * The ID includes timestamp information to ensure uniqueness across time.
+     * The ID combines a timestamp with a process-local sequence number to guarantee uniqueness
+     * (a millisecond timestamp alone is not unique across rapid successive transactions).
      *
      * <p>This same value backs {@link #equals(Object)}, {@link #hashCode()}, and
      * {@link #toString()}, and appears in this class's log messages, so it can be used to correlate
@@ -333,9 +334,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * {@link UncheckedSQLException} if that rollback itself fails).</p>
      *
      * <p>When the outermost scope actually commits, the status transitions to
-     * {@link Status#COMMITTED} on success or {@link Status#FAILED_COMMIT} on failure. After the
-     * commit attempt (success or failure) the connection's original auto-commit and isolation
-     * level are restored, and the connection is released back to its data source if this
+     * {@link Status#COMMITTED} on success. On failure the status first becomes
+     * {@link Status#FAILED_COMMIT} and an automatic rollback is attempted, leaving the status
+     * {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if that rollback also fails).
+     * After the commit attempt (success or failure) the connection's original auto-commit and
+     * isolation level are restored, and the connection is released back to its data source if this
      * transaction was created with connection ownership.</p>
      *
      * <p><b>Usage Examples:</b></p>

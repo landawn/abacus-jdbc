@@ -22,7 +22,7 @@ import com.landawn.abacus.annotation.Beta;
  * interface in the hierarchy.
  *
  * <p>It is a pure capability composite of {@link ReadOps} (reads only). It does <b>not</b> mix in
- * {@link InsertOps}/{@code UpdateOps}/{@code DeleteOps},
+ * {@code InsertOps}/{@code UpdateOps}/{@code DeleteOps},
  * so {@code save}/{@code insert}/{@code update}/{@code upsert}/{@code delete}/{@code batchXxx} (and
  * {@code prepareCallableQuery}) are simply <b>absent from the type</b> — calling them is a compile
  * error rather than a runtime {@link UnsupportedOperationException}. Note that {@code ReadOnlyDao}

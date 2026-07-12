@@ -1827,6 +1827,9 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
+     * @see #generateNamedUpdateSql(Connection, String, String)
+     * @see #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
+     * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames,
             final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException {

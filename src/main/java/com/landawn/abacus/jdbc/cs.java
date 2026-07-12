@@ -155,7 +155,7 @@ public final class cs { // NOSONAR
      */
     public static final String executor = "executor";
     /**
-     * Parameter name for filter predicates used to test and exclude elements.
+     * Parameter name for predicates used to filter elements (retaining those that match).
      */
     public static final String filter = "filter";
     /**
