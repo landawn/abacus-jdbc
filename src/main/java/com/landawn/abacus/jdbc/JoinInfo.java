@@ -763,22 +763,22 @@ public final class JoinInfo {
      * String sql = plan._1.apply(Arrays.asList("id", "name", "description"));
      * }</pre>
      *
-     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection
      *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT),
      *         and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a
      *         {@link PreparedStatement}
-     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(final Dsl sbc) {
-        final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(sbc);
+    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(final Dsl dsl) {
+        final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(dsl);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
         }
 
         return tp;
@@ -800,24 +800,24 @@ public final class JoinInfo {
      * String sql = batchPlan._1.apply(Arrays.asList("id", "name"), employees.size());
      * }</pre>
      *
-     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
      *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
      *         in the batch onto a {@link PreparedStatement}
-     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR
-            final Dsl sbc) {
+            final Dsl dsl) {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSqlBuilderAndParamSetterPool
-                .get(sbc);
+                .get(dsl);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
         }
 
         return tp;
@@ -839,22 +839,22 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deletePlan._3;
      * }</pre>
      *
-     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
      * @return a non-{@code null} tuple containing the delete SQL ({@code _1}), the middle (join) table delete SQL
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future
      *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3}) that
      *         binds the join key(s) of a single source entity onto a {@link PreparedStatement}
-     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Dsl sbc) {
-        final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Dsl dsl) {
+        final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(dsl);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
         }
 
         return tp;
@@ -877,24 +877,24 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDeletePlan._3;
      * }</pre>
      *
-     * @param sbc the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
      * @return a non-{@code null} tuple of (main delete SQL builder ({@code _1}), middle/join table delete SQL builder
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future use when per-entity
      *         cascade-delete control is supported), and parameter setter ({@code _3}) that binds the join key(s) of every
      *         entity in the batch onto a {@link PreparedStatement})
-     * @throws IllegalArgumentException if {@code sbc} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR
-            final Dsl sbc) {
+            final Dsl dsl) {
         final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSqlBuilderAndParamSetterPool
-                .get(sbc);
+                .get(dsl);
 
         if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + sbc);
+            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
         }
 
         return tp;

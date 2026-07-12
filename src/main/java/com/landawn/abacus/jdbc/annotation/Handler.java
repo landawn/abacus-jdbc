@@ -152,8 +152,9 @@ public @interface Handler {
      * Specifies filter patterns for methods when the annotation is applied at the class level.
      * Only methods whose names match at least one of these patterns will be intercepted by this handler.
      *
-     * <p>The patterns support case-insensitive prefix matching and regular expressions.
-     * Multiple patterns are combined with OR logic.</p>
+     * <p>Each entry matches when the method name starts with that entry (case-insensitive) or when the
+     * entry matches the full method name as a regular expression. Multiple patterns are combined with
+     * OR logic — a method is intercepted if it matches at least one entry.</p>
      *
      * <p>This filter is ignored when the annotation is applied at the method level.</p>
      *
