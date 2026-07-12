@@ -32,7 +32,7 @@ import java.sql.Types;
  *
  * <p>The annotation is placed on a stored-procedure DAO method (per its
  * {@link ElementType#METHOD METHOD} target) and is {@link Repeatable repeatable}: declaring several
- * {@code @OutParameter}s on the same method collects them into an {@link OutParameterList}. Exactly one
+ * {@code @OutParameter}s on the same method collects them into an {@link OutParameters}. Exactly one
  * of {@link #name()} or {@link #position()} must be supplied on each instance, while {@link #sqlType()}
  * is always mandatory. The accompanying {@link Query @Query} should declare {@code isProcedure = true}
  * and an {@code op} that retrieves the OUT values (for example {@code OP.executeAndGetOutParameters}).</p>
@@ -49,14 +49,14 @@ import java.sql.Types;
  * }</pre>
  *
  * @see Query
- * @see OutParameterList
+ * @see OutParameters
  * @see CallableStatement#registerOutParameter(String, int)
  * @see CallableStatement#registerOutParameter(int, int)
  * @see Types
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-@Repeatable(OutParameterList.class)
+@Repeatable(OutParameters.class)
 public @interface OutParameter {
 
     /**

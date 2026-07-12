@@ -7160,7 +7160,7 @@ public final class Jdbc {
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * Updates the cache after a data modification operation (e.g., insert, update, delete). This method
+         * Invalidates the cache after a data modification operation (e.g., insert, update, delete). This method
          * is responsible for invalidating or clearing cache entries that may be affected by the operation.
          *
          * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. Typical implementations
@@ -7172,7 +7172,7 @@ public final class Jdbc {
          * DaoCache cache = DaoCache.create(1000, 3000);
          * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
          * // After updating the "users" table, invalidate the cached entries for that table.
-         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
+         * cache.invalidate("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
          * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null
          * }</pre>
          *
@@ -7182,7 +7182,8 @@ public final class Jdbc {
          * @param args the arguments of the modification method.
          * @param methodSignature a tuple containing method metadata.
          */
-        void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
+        void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
     }
 
@@ -7313,7 +7314,7 @@ public final class Jdbc {
          * // Cache key format: fullMethodName#tableName#jsonArrayOfParameters
          * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
          * // An update against the "users" table invalidates all entries for that table.
-         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
+         * cache.invalidate("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
          * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted)
          * }</pre>
          *
@@ -7325,7 +7326,7 @@ public final class Jdbc {
          */
         @Override
         @SuppressWarnings("unused")
-        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+        public void invalidate(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 
@@ -7432,7 +7433,7 @@ public final class Jdbc {
          */
         @Override
         @SuppressWarnings("unused")
-        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+        public void invalidate(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 

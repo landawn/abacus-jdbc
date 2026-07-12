@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
  * Container annotation for repeatable {@link OutParameter} declarations on a single stored-procedure
  * DAO method.
  *
- * <p>You normally do not write {@code @OutParameterList(...)} by hand: the Java compiler
+ * <p>You normally do not write {@code @OutParameters(...)} by hand: the Java compiler
  * synthesizes it automatically when more than one {@link OutParameter @OutParameter} appears on
  * the same method. Direct use is only needed in rare cases (for example, when generating
  * annotations programmatically).</p>
@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Implicit form — preferred. The compiler wraps the two @OutParameters in an @OutParameterList.
+ * // Implicit form — preferred. The compiler wraps the two @OutParameter annotations in an @OutParameters container.
  * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
  *        isProcedure = true, op = OP.executeAndGetOutParameters)
  * @OutParameter(name = "discount",   sqlType = Types.DECIMAL)
@@ -49,7 +49,7 @@ import java.lang.annotation.Target;
  * // Explicit form — equivalent to the above.
  * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
  *        isProcedure = true, op = OP.executeAndGetOutParameters)
- * @OutParameterList({
+ * @OutParameters({
  *     @OutParameter(name = "discount",   sqlType = Types.DECIMAL),
  *     @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
  * })
@@ -63,7 +63,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface OutParameterList {
+public @interface OutParameters {
 
     /**
      * The array of {@link OutParameter} annotations contained in this list.
@@ -71,11 +71,11 @@ public @interface OutParameterList {
      *
      * <p>This array is automatically populated when using multiple {@link OutParameter}
      * annotations on a method via the {@link java.lang.annotation.Repeatable} mechanism;
-     * direct use of {@code @OutParameterList} is rarely needed.</p>
+     * direct use of {@code @OutParameters} is rarely needed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @OutParameterList({
+     * @OutParameters({
      *     @OutParameter(position = 1, sqlType = Types.VARCHAR),
      *     @OutParameter(position = 2, sqlType = Types.INTEGER),
      *     @OutParameter(position = 3, sqlType = Types.DECIMAL)

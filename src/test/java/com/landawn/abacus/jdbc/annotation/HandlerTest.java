@@ -42,7 +42,7 @@ public class HandlerTest extends TestBase {
     public void testRepeatable() {
         Repeatable repeatable = Handler.class.getAnnotation(Repeatable.class);
         assertNotNull(repeatable);
-        assertEquals(HandlerList.class, repeatable.value());
+        assertEquals(Handlers.class, repeatable.value());
     }
 
     @Test

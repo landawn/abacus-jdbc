@@ -43,7 +43,7 @@ import com.landawn.abacus.util.RegExUtil;
  *
  * <p>Method parameters are bound to named parameters in the SQL through {@link Bind} (and
  * {@link BindList} for {@code IN}-clause expansion); stored-procedure {@code OUT} parameters are
- * declared with {@link OutParameter} / {@link OutParameterList}; and template placeholders are filled
+ * declared with {@link OutParameter} / {@link OutParameters}; and template placeholders are filled
  * with {@link SqlFragment} / {@link SqlFragmentList}.</p>
  *
  * <p><b>&#9888; Warning:</b> A method returning a stream transfers ownership of its JDBC resources to
@@ -96,7 +96,7 @@ import com.landawn.abacus.util.RegExUtil;
  * @see Handler
  * @see OP
  * @see OutParameter
- * @see OutParameterList
+ * @see OutParameters
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
@@ -328,7 +328,7 @@ public @interface Query {
      *
      * @return {@code true} if the SQL is a stored procedure call; {@code false} (default) otherwise
      * @see OutParameter
-     * @see OutParameterList
+     * @see OutParameters
      */
     boolean isProcedure() default false;
 

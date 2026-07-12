@@ -256,9 +256,9 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("id", "name", "age", "email"), new Object[][] {{1, "John", 25, "john@email.com"}});
-     * List<String> selectColumns = Arrays.asList("name", "age");
+     * List<String> selectColumnNames = Arrays.asList("name", "age");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * int rowsImported = DataTransferUtil.importData(dataset, selectColumns, connection, insertSql);
+     * int rowsImported = DataTransferUtil.importData(dataset, selectColumnNames, connection, insertSql);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -598,9 +598,9 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("id", "name", "age", "email"), new Object[][] {{1, "John", 25, "john@email.com"}});
-     * List<String> selectColumns = Arrays.asList("name", "age");
+     * List<String> selectColumnNames = Arrays.asList("name", "age");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, selectColumns, stmt);
+     * int rowsImported = DataTransferUtil.importData(dataset, selectColumnNames, stmt);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -2143,7 +2143,7 @@ public final class DataTransferUtil {
         final BufferedCsvWriter bw = isBufferedWriter ? (BufferedCsvWriter) output : Objectory.createBufferedCsvWriter(output);
         long result = 0;
 
-        logger.debug("Exporting ResultSet to CSV(selectColumns={})", selectColumnNames == null ? null : selectColumnNames.size());
+        logger.debug("Exporting ResultSet to CSV(selectColumnNames={})", selectColumnNames == null ? null : selectColumnNames.size());
 
         try {
             final boolean checkDateType = JdbcUtil.checkDateType(rs);
@@ -3250,7 +3250,7 @@ public final class DataTransferUtil {
      *
      * // Equivalent to importData(dataset, cols, filter, conn, insertSql, 1000, 0) run on a connection from dataSource
      * int rowsImported = DataTransferUtil.importFrom(dataset)
-     *         .selectColumns(cols)
+     *         .selectColumnNames(cols)
      *         .filter(row -> ((Integer) row[1]) >= 18)
      *         .batchSize(1000)
      *         .to(dataSource, "INSERT INTO users (name, age) VALUES (?, ?)");
@@ -3276,7 +3276,7 @@ public final class DataTransferUtil {
      * methods, then call one of the terminal {@code to(...)} methods to run the import. Each configuration
      * method returns {@code this}, so calls can be chained.</p>
      *
-     * <p>The three value-mapping strategies &mdash; {@link #selectColumns(Collection)},
+     * <p>The three value-mapping strategies &mdash; {@link #selectColumnNames(Collection)},
      * {@link #columnTypeMap(Map)} and {@link #stmtSetter(Throwables.BiConsumer)} &mdash; are mutually
      * exclusive; configuring more than one causes the terminal {@code to(...)} call to throw
      * {@link IllegalArgumentException}. When none of them is configured, all columns of the dataset are
@@ -3307,7 +3307,7 @@ public final class DataTransferUtil {
          * @param selectColumnNames the column names to import; {@code null} or empty imports all columns. The supplied collection is copied.
          * @return this builder
          */
-        public DatasetImportBuilder selectColumns(final Collection<String> selectColumnNames) {
+        public DatasetImportBuilder selectColumnNames(final Collection<String> selectColumnNames) {
             this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;
@@ -3352,7 +3352,7 @@ public final class DataTransferUtil {
 
         /**
          * Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
-         * Mutually exclusive with {@link #selectColumns(Collection)} and {@link #stmtSetter(Throwables.BiConsumer)}.
+         * Mutually exclusive with {@link #selectColumnNames(Collection)} and {@link #stmtSetter(Throwables.BiConsumer)}.
          *
          * @param columnTypeMap a map of column name to {@link Type}; keys must be columns of the dataset. The supplied map is copied.
          * @return this builder
@@ -3366,7 +3366,7 @@ public final class DataTransferUtil {
 
         /**
          * Supplies a custom setter that maps each row to the statement parameters, giving full control over
-         * how values are bound. Mutually exclusive with {@link #selectColumns(Collection)} and
+         * how values are bound. Mutually exclusive with {@link #selectColumnNames(Collection)} and
          * {@link #columnTypeMap(Map)}.
          *
          * @param stmtSetter a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
@@ -3443,7 +3443,7 @@ public final class DataTransferUtil {
             }
 
             if (configuredStrategies > 1) {
-                throw new IllegalArgumentException("Only one of 'selectColumns', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
+                throw new IllegalArgumentException("Only one of 'selectColumnNames', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
             }
 
             if (stmtSetter != null) {
@@ -3724,13 +3724,13 @@ public final class DataTransferUtil {
      * before it returns.
      *
      * <p>It is an ergonomic alternative to the positional {@code exportCsv(DataSource, String, ...)} overloads and, via
-     * {@link CsvExportBuilder#selectColumns(Collection)}, supports column selection for BOTH
+     * {@link CsvExportBuilder#selectColumnNames(Collection)}, supports column selection for BOTH
      * {@link CsvExportBuilder#to(File) File} and {@link CsvExportBuilder#to(Writer) Writer} targets.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long n = DataTransferUtil.exportCsvFrom(dataSource, "SELECT id, name, email FROM users")
-     *         .selectColumns(List.of("id", "name"))
+     *         .selectColumnNames(List.of("id", "name"))
      *         .to(new File("users.csv"));
      * }</pre>
      *
@@ -3802,7 +3802,7 @@ public final class DataTransferUtil {
      * {@code exportCsvFrom(...)} factory methods ({@link DataTransferUtil#exportCsvFrom(javax.sql.DataSource, String)},
      * {@link DataTransferUtil#exportCsvFrom(Connection, String)}, {@link DataTransferUtil#exportCsvFrom(PreparedStatement)} or
      * {@link DataTransferUtil#exportCsvFrom(ResultSet)}), optionally restrict the columns with
-     * {@link #selectColumns(Collection)}, then write to a {@link File} or a {@link Writer} with a terminal
+     * {@link #selectColumnNames(Collection)}, then write to a {@link File} or a {@link Writer} with a terminal
      * {@code to(...)} call.
      *
      * <p>The exported CSV always starts with a header row of column labels. A caller-supplied
@@ -3836,7 +3836,7 @@ public final class DataTransferUtil {
          * @param selectColumnNames the column names to export; {@code null} for all columns. The supplied collection is copied.
          * @return this builder
          */
-        public CsvExportBuilder selectColumns(final Collection<String> selectColumnNames) {
+        public CsvExportBuilder selectColumnNames(final Collection<String> selectColumnNames) {
             this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;
@@ -4036,7 +4036,7 @@ public final class DataTransferUtil {
      * Creates a fluent builder for copying a whole table (or selected columns) from a source
      * {@link javax.sql.DataSource} to a target table, generating the SELECT and INSERT SQL from the table schema.
      *
-     * <p>The returned {@link CopyTableFromDataSource} lets you configure {@code selectColumns} and
+     * <p>The returned {@link CopyTableFromDataSource} lets you configure {@code selectColumnNames} and
      * {@code batchSize}, then run the copy with {@link CopyTableFromDataSource#to(javax.sql.DataSource, String)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -4046,7 +4046,7 @@ public final class DataTransferUtil {
      *
      * // Copy selected columns with a custom batch size
      * long partial = DataTransferUtil.copyTable(sourceDataSource, "users")
-     *         .selectColumns(List.of("id", "name", "email"))
+     *         .selectColumnNames(List.of("id", "name", "email"))
      *         .batchSize(10000)
      *         .to(targetDataSource, "users_lite");
      * }</pre>
@@ -4073,7 +4073,7 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long copied = DataTransferUtil.copyTable(sourceConn, "users")
-     *         .selectColumns(List.of("id", "name"))
+     *         .selectColumnNames(List.of("id", "name"))
      *         .to(targetConn, "users_backup");
      * }</pre>
      *
@@ -4342,7 +4342,7 @@ public final class DataTransferUtil {
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link javax.sql.DataSource}s,
      * generating the SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link DataTransferUtil#copyTable(javax.sql.DataSource, String)}, optionally chain {@link #selectColumns(Collection)}
+     * {@link DataTransferUtil#copyTable(javax.sql.DataSource, String)}, optionally chain {@link #selectColumnNames(Collection)}
      * and {@link #batchSize(int)}, then call the terminal {@link #to(javax.sql.DataSource, String)} to run the copy.
      * Each configuration method returns {@code this}.
      *
@@ -4368,7 +4368,7 @@ public final class DataTransferUtil {
          * @param selectColumnNames the column names to copy. The supplied collection is copied.
          * @return this builder
          */
-        public CopyTableFromDataSource selectColumns(final Collection<String> selectColumnNames) {
+        public CopyTableFromDataSource selectColumnNames(final Collection<String> selectColumnNames) {
             this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;
@@ -4404,7 +4404,7 @@ public final class DataTransferUtil {
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link Connection}s, generating the
      * SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link DataTransferUtil#copyTable(Connection, String)}, optionally chain {@link #selectColumns(Collection)}
+     * {@link DataTransferUtil#copyTable(Connection, String)}, optionally chain {@link #selectColumnNames(Collection)}
      * and {@link #batchSize(int)}, then call the terminal {@link #to(Connection, String)} to run the copy. Each
      * configuration method returns {@code this}.
      *
@@ -4429,7 +4429,7 @@ public final class DataTransferUtil {
          * @param selectColumnNames the column names to copy. The supplied collection is copied.
          * @return this builder
          */
-        public CopyTableFromConnection selectColumns(final Collection<String> selectColumnNames) {
+        public CopyTableFromConnection selectColumnNames(final Collection<String> selectColumnNames) {
             this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
 
             return this;

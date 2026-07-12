@@ -100,13 +100,13 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users);
      * }</pre>
      *
-     * @param entitiesToSave the collection of entities to save
+     * @param entities the collection of entities to save
      * @throws UncheckedSQLException if a database access error occurs
      * @see #batchSave(Collection, int)
      */
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
-        batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final Collection<? extends T> entities) throws UncheckedSQLException {
+        batchSave(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -119,12 +119,12 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users, 1000);
      * }</pre>
      *
-     * @param entitiesToSave the collection of entities to save
+     * @param entities the collection of entities to save
      * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
+    void batchSave(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
      * Batch saves the specified entities with only the specified properties using the default batch size.
@@ -135,13 +135,13 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entitiesToSave the collection of entities to save
+     * @param entities the collection of entities to save
      * @param propNamesToSave the properties to save for each entity
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UncheckedSQLException {
-        batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws UncheckedSQLException {
+        batchSave(entities, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -153,13 +153,13 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users, Arrays.asList("firstName", "email"), 500);
      * }</pre>
      *
-     * @param entitiesToSave the collection of entities to save
+     * @param entities the collection of entities to save
      * @param propNamesToSave the properties to save for each entity
      * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws UncheckedSQLException;
+    void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws UncheckedSQLException;
 
     /**
      * Batch saves entities using a named insert SQL statement with the default batch size.
@@ -172,13 +172,13 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param namedInsertSql the named insert SQL statement
-     * @param entitiesToSave the collection of entities to save
+     * @param entities the collection of entities to save
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
-        batchSave(namedInsertSql, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entities) throws UncheckedSQLException {
+        batchSave(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -192,12 +192,12 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param namedInsertSql the named insert SQL statement
-     * @param entitiesToSave the collection of entities to save
+     * @param entities the collection of entities to save
      * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
+    void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
 }

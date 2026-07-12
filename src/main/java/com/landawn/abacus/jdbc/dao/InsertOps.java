@@ -23,10 +23,19 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
  * Insert capability of {@link Dao}: {@code save}/{@code batchSave}. Extends {@link DaoBase}.
- * 
+ *
+ * <p><b>{@code save} vs {@code insert}:</b> the {@code save}/{@code batchSave} methods declared here
+ * return {@code void} — they insert the entity without returning any generated id. When the DAO
+ * manages an id, {@link CrudInsertOps} additionally offers {@code insert}/{@code batchInsert}, which
+ * perform the same INSERT but <em>return</em> the generated id(s). The two verbs describe the same
+ * database operation and differ only in whether the generated key is returned; a {@code CrudDao}
+ * therefore exposes both, and its {@code upsert} is implemented on top of {@code insert} while a
+ * plain {@code Dao.upsert} is implemented on top of {@code save}.</p>
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
  * @see Dao
+ * @see CrudInsertOps
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> permits Dao, NoUpdateDao, CrudInsertOps, UncheckedInsertOps {
@@ -90,12 +99,12 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * dao.batchSave(users);
      * }</pre>
      *
-     * @param entitiesToSave the collection of entities to insert
+     * @param entities the collection of entities to insert
      * @throws SQLException if a database access error occurs
      * @see #batchSave(Collection, int)
      */
-    default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException {
-        batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final Collection<? extends T> entities) throws SQLException {
+        batchSave(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -108,48 +117,48 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * dao.batchSave(users, 1000);   // Insert in batches of 1000
      * }</pre>
      *
-     * @param entitiesToSave the collection of entities to insert
+     * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws SQLException if a database access error occurs
      */
-    void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
+    void batchSave(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
     /**
      * Batch saves entities with only the specified properties using default batch size.
      * Only the listed properties will be included in the INSERT statements.
      *
-     * @param entitiesToSave the collection of entities to insert
+     * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include in the INSERT
      * @throws SQLException if a database access error occurs
      */
-    default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws SQLException {
-        batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws SQLException {
+        batchSave(entities, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
      * Batch saves entities with only the specified properties and custom batch size.
      * Combines property selection with batch processing for optimal performance.
      *
-     * @param entitiesToSave the collection of entities to insert
+     * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws SQLException if a database access error occurs
      */
-    void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
+    void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
 
     /**
      * Batch saves entities using a custom named INSERT SQL with default batch size.
      * The SQL should use named parameters matching entity properties.
      *
      * @param namedInsertSql the named INSERT SQL statement
-     * @param entitiesToSave the entities providing parameter values
+     * @param entities the entities providing parameter values
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws SQLException {
-        batchSave(namedInsertSql, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entities) throws SQLException {
+        batchSave(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -157,12 +166,12 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * Provides maximum control over batch insert operations.
      *
      * @param namedInsertSql the named INSERT SQL statement
-     * @param entitiesToSave the entities providing parameter values
+     * @param entities the entities providing parameter values
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
+    void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
 }

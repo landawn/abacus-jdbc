@@ -35,9 +35,9 @@ import com.landawn.abacus.annotation.Beta;
  * method back out</em> of the cache-invalidation set declared at the type level.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the
- * method name starts with that entry, or when the entry matches the full method name as a regular
- * expression. The filter is ignored entirely for method-level usage. The default value already
- * covers the common write-method names emitted by the Abacus DAO base interfaces.</p>
+ * method name starts with that entry (case-insensitive), or when the entry matches the full method name
+ * as a regular expression. The filter is ignored entirely for method-level usage. The default value
+ * already covers the common write-method names emitted by the Abacus DAO base interfaces.</p>
  *
  * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
  *
@@ -108,8 +108,8 @@ public @interface RefreshCache {
     /**
      * Specifies the type-level method-name filter.
      *
-     * <p>Each entry matches when the method name starts with that entry or when the entry
-     * matches the full method name as a regular expression. This filter is ignored for
+     * <p>Each entry matches when the method name starts with that entry (case-insensitive) or when the
+     * entry matches the full method name as a regular expression. This filter is ignored for
      * method-level usage.</p>
      *
      * @return array of filter patterns for method names that should trigger cache refresh;

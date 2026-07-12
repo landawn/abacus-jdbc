@@ -216,12 +216,12 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("Alice", nameOf(1));
     }
 
-    // importFrom(dataset).selectColumns(..).filter(..).batchSize(..).to(conn, insertSql)
+    // importFrom(dataset).selectColumnNames(..).filter(..).batchSize(..).to(conn, insertSql)
     @Test
     public void testImportFrom_SelectColumns_Filter_BatchSize() throws SQLException {
         try (Connection conn = ds.getConnection()) {
             final int imported = DataTransferUtil.importFrom(threeRowDataset())
-                    .selectColumns(List.of("id", "name", "amount"))
+                    .selectColumnNames(List.of("id", "name", "amount"))
                     .filter(row -> ((Double) row[2]) >= 20.0) // drops Alice (10.5)
                     .batchSize(1)
                     .to(conn, CSV_INSERT_SQL);
@@ -267,7 +267,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     public void testImportFrom_MutuallyExclusiveStrategies_Throws() {
         assertThrows(IllegalArgumentException.class,
                 () -> DataTransferUtil.importFrom(threeRowDataset())
-                        .selectColumns(List.of("id", "name", "amount"))
+                        .selectColumnNames(List.of("id", "name", "amount"))
                         .stmtSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
                         .to(ds, CSV_INSERT_SQL));
     }
@@ -337,12 +337,12 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("Alice", copyTgtName(1));
     }
 
-    // copyTable(Connection, table).selectColumns(..).batchSize(..).to(Connection, table)
+    // copyTable(Connection, table).selectColumnNames(..).batchSize(..).to(Connection, table)
     @Test
     public void testCopyTable_Connection_SelectColumns() throws SQLException {
         try (Connection src = ds.getConnection();
              Connection tgt = ds.getConnection()) {
-            final long copied = DataTransferUtil.copyTable(src, "copy_src").selectColumns(List.of("id", "name")).batchSize(2).to(tgt, "copy_tgt");
+            final long copied = DataTransferUtil.copyTable(src, "copy_src").selectColumnNames(List.of("id", "name")).batchSize(2).to(tgt, "copy_tgt");
 
             assertEquals(3, copied);
         }
@@ -466,14 +466,14 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertTrue(csv.contains("Cara"));
     }
 
-    // exportCsv(Connection, sql).selectColumns(..).to(Writer) — column selection drops the 'amount' column.
+    // exportCsv(Connection, sql).selectColumnNames(..).to(Writer) — column selection drops the 'amount' column.
     @Test
     public void testExportCsv_Connection_SelectColumns_ToWriter() throws SQLException {
         final java.io.StringWriter w = new java.io.StringWriter();
 
         try (Connection conn = ds.getConnection()) {
             final long n = DataTransferUtil.exportCsvFrom(conn, "SELECT id AS \"id\", name AS \"name\", amount AS \"amount\" FROM copy_src ORDER BY id")
-                    .selectColumns(List.of("id", "name"))
+                    .selectColumnNames(List.of("id", "name"))
                     .to(w);
 
             assertEquals(3, n);
@@ -528,17 +528,17 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertTrue(w.toString().contains("Cara"));
     }
 
-    // selectColumns naming a column absent from the result -> IllegalArgumentException.
+    // selectColumnNames naming a column absent from the result -> IllegalArgumentException.
     @Test
     public void testExportCsv_SelectColumns_UnknownColumn_Throws() {
         assertThrows(IllegalArgumentException.class,
                 () -> DataTransferUtil.exportCsvFrom(ds, "SELECT id, name FROM copy_src")
-                        .selectColumns(List.of("does_not_exist"))
+                        .selectColumnNames(List.of("does_not_exist"))
                         .to(new java.io.StringWriter()));
     }
 
     // ===== Builder option setters not exercised elsewhere (batchIntervalInMillis / fetchSize / stmtSetter /
-    // selectColumns / to(PreparedStatement)). Each test asserts real row counts and a sampled value. =====
+    // selectColumnNames / to(PreparedStatement)). Each test asserts real row counts and a sampled value. =====
 
     // DatasetImportBuilder.batchIntervalInMillis(..) — the inter-batch pause setter (with batchSize=1 so a batch
     // boundary is crossed for every row).
@@ -624,11 +624,11 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("BOB", copyTgtName(2));
     }
 
-    // CopyTableFromDataSource.selectColumns(..).batchSize(..) — the column-restriction and batchSize setters on the
+    // CopyTableFromDataSource.selectColumnNames(..).batchSize(..) — the column-restriction and batchSize setters on the
     // DataSource table-copy builder (the existing DataSource table-copy test uses neither). 'amount' is dropped.
     @Test
     public void testCopyTable_DataSource_SelectColumns_BatchSize() throws SQLException {
-        final long copied = DataTransferUtil.copyTable(ds, "copy_src").selectColumns(List.of("id", "name")).batchSize(2).to(ds, "copy_tgt");
+        final long copied = DataTransferUtil.copyTable(ds, "copy_src").selectColumnNames(List.of("id", "name")).batchSize(2).to(ds, "copy_tgt");
 
         assertEquals(3, copied);
         assertEquals(3, count("copy_tgt"));

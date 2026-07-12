@@ -57,12 +57,12 @@ import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.FetchColumnByEntityClass;
 import com.landawn.abacus.jdbc.annotation.Handler;
-import com.landawn.abacus.jdbc.annotation.HandlerList;
+import com.landawn.abacus.jdbc.annotation.Handlers;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.OutParameter;
-import com.landawn.abacus.jdbc.annotation.OutParameterList;
+import com.landawn.abacus.jdbc.annotation.OutParameters;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.Query;
@@ -1827,7 +1827,7 @@ final class DaoImpl {
      *   <li>{@code @SqlSource} annotations to load external SQL mapper files</li>
      *   <li>{@code @SqlScript} annotated fields for embedded SQL definitions</li>
      *   <li>{@code @DaoConfig} for configuration options like {@code addLimitForSingleQuery}</li>
-     *   <li>{@code @Handler} and {@code @HandlerList} for custom method handlers</li>
+     *   <li>{@code @Handler} and {@code @Handlers} for custom method handlers</li>
      *   <li>{@code @PerfLog} for performance logging of DAO method invocations</li>
      *   <li>{@code @SqlLogEnabled} for SQL statement logging control</li>
      * </ul>
@@ -2230,8 +2230,8 @@ final class DaoImpl {
         final List<Handler> daoClassHandlerList = Stream.of(allInterfaces)
                 .reversed()
                 .flatMapArray(Class::getAnnotations)
-                .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
-                .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.toList(((HandlerList) anno).value()))
+                .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(Handlers.class))
+                .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.toList(((Handlers) anno).value()))
                 .toList();
 
         final Map<String, Jdbc.Handler<?>> daoClassHandlerMap = Stream.of(allInterfaces)
@@ -2310,11 +2310,11 @@ final class DaoImpl {
         Stream.of(sqlMethods).parallel().filter(method -> Modifier.isPublic(method.getModifiers())).forEach(method -> {
             final boolean isNonDBOperation = Stream.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
 
-            final Predicate<String> filterByMethodNameStartsWith = it -> Strings.isNotEmpty(it)
-                    && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName()));
-
-            final Predicate<String> filterByMethodNameContains = it -> Strings.isNotEmpty(it)
-                    && (Strings.containsIgnoreCase(method.getName(), it) || Pattern.matches(it, method.getName()));
+            // Single, unified method-name filter rule shared by every type-level filter() element
+            // (@Handler, @PerfLog, @SqlLogEnabled, @CacheResult, @RefreshCache): an entry matches when the
+            // method name starts with it (case-insensitive prefix) or when it matches the full name as a regex.
+            final Predicate<String> filterByMethodName = it -> Strings.isNotEmpty(it)
+                    && (Strings.startsWithIgnoreCase(method.getName(), it) || Pattern.matches(it, method.getName()));
 
             final Class<?> declaringClass = method.getDeclaringClass();
             final String methodName = method.getName();
@@ -5254,7 +5254,7 @@ final class DaoImpl {
 
                     final List<OutParameter> outParameterList = Stream.of(method.getAnnotations())
                             .select(OutParameter.class)
-                            .append(Stream.of(method.getAnnotations()).select(OutParameterList.class).flatMapArray(OutParameterList::value))
+                            .append(Stream.of(method.getAnnotations()).select(OutParameters.class).flatMapArray(OutParameters::value))
                             .toList();
 
                     if (N.notEmpty(outParameterList)) {
@@ -5298,7 +5298,7 @@ final class DaoImpl {
 
                     final MappedByKey mappedByKeyAnno = method.getAnnotation(MappedByKey.class);
                     final String mappedByKey = mappedByKeyAnno == null ? null
-                            : Strings.isNotEmpty(mappedByKeyAnno.keyName()) ? mappedByKeyAnno.keyName() : oneIdPropName;
+                            : Strings.isNotEmpty(mappedByKeyAnno.value()) ? mappedByKeyAnno.value() : oneIdPropName;
 
                     if (mappedByKeyAnno != null && Strings.isEmpty(mappedByKey)) {
                         throw new IllegalArgumentException("Mapped Key name can't be null or empty in method: " + fullClassMethodName);
@@ -5693,14 +5693,14 @@ final class DaoImpl {
                 final SqlLogEnabled daoClassSqlLogAnno = Stream.of(allInterfaces)
                         .flatMapArray(Class::getAnnotations)
                         .select(SqlLogEnabled.class)
-                        .filter(it -> Stream.of(it.filter()).anyMatch(filterByMethodNameContains))
+                        .filter(it -> Stream.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
                         .orElseNull();
 
                 final PerfLog daoClassPerfLogAnno = Stream.of(allInterfaces)
                         .flatMapArray(Class::getAnnotations)
                         .select(PerfLog.class)
-                        .filter(it -> Stream.of(it.filter()).anyMatch(filterByMethodNameContains))
+                        .filter(it -> Stream.of(it.filter()).anyMatch(filterByMethodName))
                         .first()
                         .orElseNull();
 
@@ -5969,7 +5969,7 @@ final class DaoImpl {
                         : ((daoClassCacheResultAnno != null //
                                 && daoClassCacheResultAnno.enabled() //
                                 && !Strings.containsAnyIgnoreCase(method.getName(), "page", "paginate") //
-                                && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodNameStartsWith)) //
+                                && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodName)) //
                                         ? daoClassCacheResultAnno
                                         : null);
 
@@ -5977,7 +5977,7 @@ final class DaoImpl {
                 final RefreshCache refreshResultAnno = methodRefreshCacheAnno != null ? (methodRefreshCacheAnno.enabled() ? methodRefreshCacheAnno : null)
                         : ((daoClassRefreshCacheAnno != null //
                                 && daoClassRefreshCacheAnno.enabled() //
-                                && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) //
+                                && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodName)) //
                                         ? daoClassRefreshCacheAnno
                                         : null);
 
@@ -6075,11 +6075,11 @@ final class DaoImpl {
                             } finally {
                                 if (Strings.isNotEmpty(cacheKey)) {
                                     if (isRefreshLocalThreadCacheRequired) {
-                                        localThreadCache.update(cacheKey, result, proxy, args, methodSignature);
+                                        localThreadCache.invalidate(cacheKey, result, proxy, args, methodSignature);
                                     }
 
                                     if (isAnnotatedRefreshResult) {
-                                        daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
+                                        daoCacheToUseInMethod.invalidate(cacheKey, result, proxy, args, methodSignature);
                                     }
                                 }
                             }
@@ -6114,9 +6114,9 @@ final class DaoImpl {
                 }
 
                 final List<Tuple2<Jdbc.Handler, Boolean>> handlerList = Stream.of(method.getAnnotations())
-                        .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(HandlerList.class))
-                        .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.toList(((HandlerList) anno).value()))
-                        .prepend(Stream.of(daoClassHandlerList).filter(h -> Stream.of(h.filter()).anyMatch(filterByMethodNameContains)))
+                        .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(Handlers.class))
+                        .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.toList(((Handlers) anno).value()))
+                        .prepend(Stream.of(daoClassHandlerList).filter(h -> Stream.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> Tuple.of((Jdbc.Handler) (Strings.isNotEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
                                 : HandlerFactory.getOrCreate(handlerAnno.impl())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))

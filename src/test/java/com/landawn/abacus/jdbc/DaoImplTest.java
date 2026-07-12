@@ -231,7 +231,7 @@ public class DaoImplTest extends TestBase {
     }
 
     interface MappedByKeyDao {
-        @MappedByKey(keyName = "id")
+        @MappedByKey("id")
         java.util.Map<Long, TestEntity> findMapped();
     }
 
@@ -670,7 +670,7 @@ public class DaoImplTest extends TestBase {
             }
 
             @Override
-            public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+            public void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
                     Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             }
         };
@@ -713,7 +713,7 @@ public class DaoImplTest extends TestBase {
             }
 
             @Override
-            public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+            public void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
                     Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
                 updateCount.incrementAndGet();
             }

@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
  * Synthesized automatically by the Java compiler from the {@link java.lang.annotation.Repeatable}
  * declaration on {@link Handler}; direct use is rarely necessary.
  *
- * <p>The DAO proxy ({@code DaoImpl}) reads the {@code @HandlerList} (whether explicit or
+ * <p>The DAO proxy ({@code DaoImpl}) reads the {@code @Handlers} (whether explicit or
  * compiler-synthesized), resolves each {@link Handler#qualifier() qualifier} or
  * {@link Handler#impl() impl} to a {@code Jdbc.Handler} instance, then composes them into an
  * <em>onion-style</em> interceptor chain around the actual DAO call: outer handlers see the
@@ -63,7 +63,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
-public @interface HandlerList {
+public @interface Handlers {
 
     /**
      * Returns the array of {@link Handler} annotations contained in this list.
@@ -79,8 +79,8 @@ public @interface HandlerList {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Accessing HandlerList programmatically via reflection
-     * HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class);
+     * // Accessing Handlers programmatically via reflection
+     * Handlers handlers = MyDao.class.getAnnotation(Handlers.class);
      * if (handlers != null) {
      *     for (Handler handler : handlers.value()) {
      *         System.out.println("Handler impl: " + handler.impl());
@@ -88,18 +88,18 @@ public @interface HandlerList {
      *     }
      * }
      *
-     * // Multiple handlers are automatically wrapped in HandlerList
+     * // Multiple handlers are automatically wrapped in Handlers
      * @Handler(impl = LoggingHandler.class)
      * @Handler(impl = SecurityHandler.class)
      * @Handler(impl = CacheHandler.class)
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
-     *     // The compiler wraps these in a HandlerList annotation
+     *     // The compiler wraps these in a Handlers annotation
      * }
      * }</pre>
      *
      * <p>This element is mandatory and has no default value. When the compiler synthesizes the
      * container from repeated {@link Handler @Handler} annotations it always populates this array,
-     * and an explicit {@code @HandlerList} must supply at least one {@code @Handler}.</p>
+     * and an explicit {@code @Handlers} must supply at least one {@code @Handler}.</p>
      *
      * @return the array of {@link Handler} annotations contained in this list
      */

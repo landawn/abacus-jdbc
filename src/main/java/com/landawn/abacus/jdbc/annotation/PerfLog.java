@@ -40,8 +40,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p><b>Lookup precedence:</b> a method-level {@code @PerfLog} overrides a type-level one. When
  * neither is present, the global defaults configured on {@link JdbcUtil} are used.</p>
  *
- * <p><b>Filter semantics (type-level only):</b> each entry matches when it is contained in the
- * method name (case-insensitive) or matches the full method name as a regular expression. The
+ * <p><b>Filter semantics (type-level only):</b> each entry matches when the method name starts with
+ * it (case-insensitive) or matches the full method name as a regular expression. The
  * filter is ignored entirely when the annotation is placed on a single method.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -131,7 +131,7 @@ public @interface PerfLog {
     /**
      * Specifies the type-level method-name filter.
      *
-     * <p>Each entry matches when it is contained in the method name ignoring case, or when
+     * <p>Each entry matches when the method name starts with it (ignoring case), or when
      * it matches the full method name as a regular expression. This filter is ignored for
      * method-level usage.</p>
      *

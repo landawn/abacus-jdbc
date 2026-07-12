@@ -136,7 +136,7 @@ public class DataTransferUtilTest extends TestBase {
     @Test
     public void testImportDataWithSelectedColumns() throws SQLException {
         // Setup
-        List<String> selectColumns = Arrays.asList("col1");
+        List<String> selectColumnNames = Arrays.asList("col1");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(1);
         when(mockDataset.get(anyInt())).thenReturn("value");
@@ -146,7 +146,7 @@ public class DataTransferUtilTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = DataTransferUtil.importData(mockDataset, selectColumns, mockConnection, insertSql);
+        int result = DataTransferUtil.importData(mockDataset, selectColumnNames, mockConnection, insertSql);
 
         // Verify
         assertEquals(1, result);
@@ -156,7 +156,7 @@ public class DataTransferUtilTest extends TestBase {
     @Test
     public void testImportDataWithBatchSizeAndInterval() throws SQLException {
         // Setup
-        List<String> selectColumns = Arrays.asList("col1");
+        List<String> selectColumnNames = Arrays.asList("col1");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(5);
         when(mockDataset.get(anyInt())).thenReturn("value");
@@ -166,7 +166,7 @@ public class DataTransferUtilTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = DataTransferUtil.importData(mockDataset, selectColumns, mockConnection, insertSql, 2, 10);
+        int result = DataTransferUtil.importData(mockDataset, selectColumnNames, mockConnection, insertSql, 2, 10);
 
         // Verify
         assertEquals(5, result);
@@ -176,7 +176,7 @@ public class DataTransferUtilTest extends TestBase {
     @Test
     public void testImportDataWithFilter() throws SQLException, Exception {
         // Setup
-        List<String> selectColumns = Arrays.asList("col1");
+        List<String> selectColumnNames = Arrays.asList("col1");
         Predicate<Object[]> filter = row -> "valid".equals(row[0]);
 
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
@@ -189,7 +189,7 @@ public class DataTransferUtilTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = DataTransferUtil.importData(mockDataset, selectColumns, filter, mockConnection, insertSql, 1, 0);
+        int result = DataTransferUtil.importData(mockDataset, selectColumnNames, filter, mockConnection, insertSql, 1, 0);
 
         // Verify
         assertEquals(2, result); // Only 2 valid rows
@@ -221,7 +221,7 @@ public class DataTransferUtilTest extends TestBase {
     @Test
     public void testDatasetImportBuilderSnapshotsSelectedColumns() throws SQLException {
         final List<String> selectedColumns = new ArrayList<>(List.of("col1"));
-        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).selectColumns(selectedColumns);
+        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).selectColumnNames(selectedColumns);
 
         selectedColumns.add("missing");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
@@ -475,7 +475,7 @@ public class DataTransferUtilTest extends TestBase {
         // Setup
         File tempFile = File.createTempFile("export", ".csv");
         tempFile.deleteOnExit();
-        Collection<String> selectColumns = Arrays.asList("col1");
+        Collection<String> selectColumnNames = Arrays.asList("col1");
 
         when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
@@ -486,7 +486,7 @@ public class DataTransferUtilTest extends TestBase {
         String querySql = "SELECT * FROM test_table";
 
         // Execute
-        long result = DataTransferUtil.exportCsv(mockConnection, querySql, selectColumns, tempFile);
+        long result = DataTransferUtil.exportCsv(mockConnection, querySql, selectColumnNames, tempFile);
 
         // Verify
         assertEquals(1, result);
@@ -654,7 +654,7 @@ public class DataTransferUtilTest extends TestBase {
         Connection targetConnection = mock(Connection.class);
         DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        Collection<String> selectColumns = Arrays.asList("col1", "col2");
+        Collection<String> selectColumnNames = Arrays.asList("col1", "col2");
 
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
@@ -667,7 +667,7 @@ public class DataTransferUtilTest extends TestBase {
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = DataTransferUtil.copy(mockDataSource, targetDataSource, "source_table", "target_table", selectColumns);
+        long result = DataTransferUtil.copy(mockDataSource, targetDataSource, "source_table", "target_table", selectColumnNames);
 
         // Verify
         assertEquals(1, result);
@@ -678,7 +678,7 @@ public class DataTransferUtilTest extends TestBase {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumns = List.of("created-date");
+        final Collection<String> selectColumnNames = List.of("created-date");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
@@ -688,7 +688,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table", selectColumnNames);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `created-date` FROM source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -700,7 +700,7 @@ public class DataTransferUtilTest extends TestBase {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumns = List.of("2024_total");
+        final Collection<String> selectColumnNames = List.of("2024_total");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
@@ -710,7 +710,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "2024_source", "2024_target", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "2024_source", "2024_target", selectColumnNames);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `2024_total` FROM `2024_source`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -722,7 +722,7 @@ public class DataTransferUtilTest extends TestBase {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumns = List.of("created-date");
+        final Collection<String> selectColumnNames = List.of("created-date");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
@@ -732,7 +732,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.source-table", "archive.target-table", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.source-table", "archive.target-table", selectColumnNames);
 
         assertEquals(1, result);
         // Simple parts (sales/archive) stay unquoted so plain qualified names keep resolving on
@@ -746,7 +746,7 @@ public class DataTransferUtilTest extends TestBase {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumns = List.of("created-date");
+        final Collection<String> selectColumnNames = List.of("created-date");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
@@ -756,7 +756,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "\"sales.source-table\"", "\"archive.target-table\"", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "\"sales.source-table\"", "\"archive.target-table\"", selectColumnNames);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales.source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -768,7 +768,7 @@ public class DataTransferUtilTest extends TestBase {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumns = List.of("created\"date");
+        final Collection<String> selectColumnNames = List.of("created\"date");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
@@ -778,7 +778,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "\"archive\"\"target\"", selectColumns);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "\"archive\"\"target\"", selectColumnNames);
 
         assertEquals(1, result);
         verify(mockConnection).prepareStatement("SELECT `created\"date` FROM source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -982,21 +982,21 @@ public class DataTransferUtilTest extends TestBase {
     public void testExportCSVWithInvalidColumn() throws SQLException, IOException {
         // Setup
         Writer writer = new StringWriter();
-        Collection<String> selectColumns = Arrays.asList("invalid_column");
+        Collection<String> selectColumnNames = Arrays.asList("invalid_column");
 
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
 
         // Execute & Verify
         assertThrows(IllegalArgumentException.class, () -> {
-            DataTransferUtil.exportCsv(mockResultSet, selectColumns, writer);
+            DataTransferUtil.exportCsv(mockResultSet, selectColumnNames, writer);
         });
     }
 
     @Test
     public void testImportDataWithNullFilter() throws SQLException, Exception {
         // Setup
-        List<String> selectColumns = Arrays.asList("col1");
+        List<String> selectColumnNames = Arrays.asList("col1");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
         when(mockDataset.get(0)).thenReturn("value");
@@ -1006,7 +1006,7 @@ public class DataTransferUtilTest extends TestBase {
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
         // Execute
-        int result = DataTransferUtil.importData(mockDataset, selectColumns, null, mockConnection, insertSql, 1, 0);
+        int result = DataTransferUtil.importData(mockDataset, selectColumnNames, null, mockConnection, insertSql, 1, 0);
 
         // Verify
         assertEquals(1, result);

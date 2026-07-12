@@ -69,17 +69,17 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
-    default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws SQLException {
+    default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntityClass, final Condition cond) throws SQLException {
         final Optional<T> result = DaoUtil.getReadOps(this).findFirst(selectPropNames, cond);
 
         if (result.isPresent()) {
-            loadJoinEntities(result.get(), joinEntitiesToLoad);
+            loadJoinEntities(result.get(), joinEntityClass);
         }
 
         return result;
@@ -155,19 +155,19 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
-    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
+    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntityClass, final Condition cond)
             throws DuplicateResultException, SQLException {
         final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(selectPropNames, cond);
 
         if (result.isPresent()) {
-            loadJoinEntities(result.get(), joinEntitiesToLoad);
+            loadJoinEntities(result.get(), joinEntityClass);
         }
 
         return result;
@@ -249,21 +249,21 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
      * @return a list of entities matching the condition with the specified join entities loaded
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws SQLException {
+    default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntityClass, final Condition cond) throws SQLException {
         final List<T> result = DaoUtil.getReadOps(this).list(selectPropNames, cond);
 
         if (N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
-                loadJoinEntities(result, joinEntitiesToLoad);
+                loadJoinEntities(result, joinEntityClass);
             } else {
-                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> loadJoinEntities(batchEntities, joinEntitiesToLoad));
+                N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> loadJoinEntities(batchEntities, joinEntityClass));
             }
         }
 
@@ -364,18 +364,18 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the class of the join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
      * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
     @Beta
-    default Stream<T> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
+    default Stream<T> stream(final Collection<String> selectPropNames, final Class<?> joinEntityClass, final Condition cond) {
         return DaoUtil.getReadOps(this)
                 .stream(selectPropNames, cond) //
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE)
                 .onEach(batchEntities -> {
                     try {
-                        loadJoinEntities(batchEntities, joinEntitiesToLoad);
+                        loadJoinEntities(batchEntities, joinEntityClass);
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     }

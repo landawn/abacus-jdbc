@@ -247,7 +247,7 @@ public class csTest extends TestBase {
 
     @Test
     public void testRegisterConstant() {
-        assertEquals("register", cs.register);
+        assertEquals("registrar", cs.registrar);
     }
 
     @Test

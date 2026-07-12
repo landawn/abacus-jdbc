@@ -2022,7 +2022,7 @@ public final class JdbcUtil {
     /**
      * Returns the 1-based index of the column with the given name (or label) in a {@link ResultSet}.
      *
-     * <p>The search iterates columns in order, comparing {@code columnName} case-insensitively against
+     * <p>The search iterates columns in order, comparing {@code columnLabel} case-insensitively against
      * the column's {@link ResultSetMetaData#getColumnLabel(int) label} first and then its
      * {@link ResultSetMetaData#getColumnName(int) name}. The first match wins. Returns {@code -1} when
      * no column matches.</p>
@@ -2038,13 +2038,13 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rs the {@link ResultSet} to search within; must not be {@code null}
-     * @param columnName the column label or name to look up; case-insensitive
+     * @param columnLabel the column label (or name) to look up; case-insensitive
      * @return the 1-based index of the matching column, or {@code -1} if none matches
      * @throws SQLException if a database access error occurs
      * @see #getColumnIndex(ResultSetMetaData, String)
      */
-    public static int getColumnIndex(final ResultSet rs, final String columnName) throws SQLException {
-        return getColumnIndex(rs.getMetaData(), columnName);
+    public static int getColumnIndex(final ResultSet rs, final String columnLabel) throws SQLException {
+        return getColumnIndex(rs.getMetaData(), columnLabel);
     }
 
     /**
@@ -2062,26 +2062,26 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rsmd The {@link ResultSetMetaData} to search within.
-     * @param columnName The name or label of the column to find.
+     * @param columnLabel The label (or name) of the column to find.
      * @return The 1-based index of the column, or -1 if not found.
      * @throws SQLException if a database access error occurs.
      * @see #getColumnIndex(ResultSet, String)
      */
-    public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnName) throws SQLException {
+    public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnLabel) throws SQLException {
         final int columnCount = rsmd.getColumnCount();
 
-        String columnLabel = null;
+        String colName = null;
 
         for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-            columnLabel = rsmd.getColumnLabel(columnIndex);
+            colName = rsmd.getColumnLabel(columnIndex);
 
-            if (columnLabel != null && columnLabel.equalsIgnoreCase(columnName)) {
+            if (colName != null && colName.equalsIgnoreCase(columnLabel)) {
                 return columnIndex;
             }
 
-            columnLabel = rsmd.getColumnName(columnIndex);
+            colName = rsmd.getColumnName(columnIndex);
 
-            if (columnLabel != null && columnLabel.equalsIgnoreCase(columnName)) {
+            if (colName != null && colName.equalsIgnoreCase(columnLabel)) {
                 return columnIndex;
             }
         }
@@ -7123,13 +7123,13 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param rs the ResultSet to create a stream from
-     * @param columnName the name of the column to extract data from
+     * @param columnLabel the label (or name) of the column to extract data from
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet rs, final String columnName) throws IllegalArgumentException {
+    public static <T> Stream<T> stream(final ResultSet rs, final String columnLabel) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
-        N.checkArgNotEmpty(columnName, cs.columnName);
+        N.checkArgNotEmpty(columnLabel, cs.columnLabel);
 
         final RowMapper<? extends T> rowMapper = new RowMapper<>() {
             private int columnIndex = 0;
@@ -7138,10 +7138,10 @@ public final class JdbcUtil {
             @Override
             public T apply(final ResultSet resultSet) throws SQLException {
                 if (columnIndex == 0) {
-                    columnIndex = getColumnIndex(resultSet, columnName);
+                    columnIndex = getColumnIndex(resultSet, columnLabel);
 
                     if (columnIndex < 1) {
-                        throw new IllegalArgumentException("Column not found: '" + columnName + "'");
+                        throw new IllegalArgumentException("Column not found: '" + columnLabel + "'");
                     }
 
                     checkDateType = JdbcUtil.checkDateType(resultSet);
@@ -7381,16 +7381,16 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param ds the DataSource to get the connection from
-     * @param query the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
+     * @param sql the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
      * @param pageSize the number of rows to fetch per page
      * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
-     * @throws IllegalArgumentException if {@code ds} or {@code parametersSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code ds} or {@code parametersSetter} is {@code null}, {@code sql} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
-    public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+    public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
-        return queryByPage(ds, query, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
+        return queryByPage(ds, sql, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -7427,29 +7427,29 @@ public final class JdbcUtil {
      *
      * @param <R> the type of the result extracted from each page
      * @param ds the DataSource to get the connection from
-     * @param query the SQL query to run for each page
+     * @param sql the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code ds}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code ds}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code sql} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+    public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
         N.checkArgNotNull(ds, cs.ds);
-        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
         N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-        final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
+        final boolean isNamedQuery = ParsedSql.parse(sql).namedParameters().size() > 0;
 
         return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
+                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, sql) : JdbcUtil.prepareQuery(ds, sql)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
                                 .settParameters(it.value(), parametersSetter)
@@ -7497,29 +7497,29 @@ public final class JdbcUtil {
      *
      * @param <R> the type of the result extracted from each page
      * @param ds the DataSource to get the connection from
-     * @param query the SQL query to run for each page
+     * @param sql the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code ds}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code ds}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code sql} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+    public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
         N.checkArgNotNull(ds, cs.ds);
-        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
         N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-        final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
+        final boolean isNamedQuery = ParsedSql.parse(sql).namedParameters().size() > 0;
 
         return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, query) : JdbcUtil.prepareQuery(ds, query)) //
+                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(ds, sql) : JdbcUtil.prepareQuery(ds, sql)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
                                 .settParameters(it.value(), parametersSetter)
@@ -7559,16 +7559,16 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param conn the Connection to use for queries
-     * @param query the SQL query to run for each page
+     * @param sql the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
-     * @throws IllegalArgumentException if {@code conn} or {@code parametersSetter} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code conn} or {@code parametersSetter} is {@code null}, {@code sql} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
-    public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize,
+    public static Stream<Dataset> queryByPage(final Connection conn, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
-        return queryByPage(conn, query, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
+        return queryByPage(conn, sql, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -7605,29 +7605,29 @@ public final class JdbcUtil {
      *
      * @param <R> the type of the result extracted from each page
      * @param conn the Connection to use for queries
-     * @param query the SQL query to run for each page
+     * @param sql the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code conn}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code conn}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code sql} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
+    public static <R> Stream<R> queryByPage(final Connection conn, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
         N.checkArgNotNull(conn, cs.conn);
-        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
         N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-        final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
+        final boolean isNamedQuery = ParsedSql.parse(sql).namedParameters().size() > 0;
 
         return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
+                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, sql) : JdbcUtil.prepareQuery(conn, sql)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
                                 .settParameters(it.value(), parametersSetter)
@@ -7676,29 +7676,29 @@ public final class JdbcUtil {
      *
      * @param <R> the type of the result extracted from each page
      * @param conn the Connection to use for queries
-     * @param query the SQL query to run for each page
+     * @param sql the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param parametersSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if {@code conn}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code query} is empty, or {@code pageSize} is not positive
+     * @throws IllegalArgumentException if {@code conn}, {@code parametersSetter}, or {@code resultExtractor} is {@code null}, {@code sql} is empty, or {@code pageSize} is not positive
      */
     @SuppressWarnings("rawtypes")
-    public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
+    public static <R> Stream<R> queryByPage(final Connection conn, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
         N.checkArgNotNull(conn, cs.conn);
-        N.checkArgNotEmpty(query, cs.query);
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
         N.checkArgNotNull(parametersSetter, cs.parametersSetter);
         N.checkArgNotNull(resultExtractor, cs.resultExtractor);
 
-        final boolean isNamedQuery = ParsedSql.parse(query).namedParameters().size() > 0;
+        final boolean isNamedQuery = ParsedSql.parse(sql).namedParameters().size() > 0;
 
         return Stream.of(Holder.of((R) null)) //
                 .cycled()
                 .map(it -> {
                     try {
-                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, query) : JdbcUtil.prepareQuery(conn, query)) //
+                        final R ret = (isNamedQuery ? JdbcUtil.prepareNamedQuery(conn, sql) : JdbcUtil.prepareQuery(conn, sql)) //
                                 .setFetchDirectionToForward()
                                 .setFetchSize(pageSize)
                                 .settParameters(it.value(), parametersSetter)

@@ -5869,6 +5869,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>If the query returns no rows, the result is an empty {@code Optional}. If the query returns
      * more than one row, {@link DuplicateResultException} is thrown.</p>
      *
+     * <p><b>Terminology:</b> across this class the words <i>first</i>, <i>single</i>, <i>onlyOne</i> and
+     * <i>unique</i> pick the row/value returned. {@code findFirst}/{@code queryForSingle*} return the
+     * <i>first</i> matching row/value and silently ignore any extra rows; {@code findOnlyOne}/{@code queryForUnique*}
+     * require <i>at most one</i> match and throw {@link DuplicateResultException} when more than one row is found.
+     * The {@code find*} methods return whole rows/entities, whereas the {@code queryFor*} methods return a single
+     * column value.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find exactly one user by ID

@@ -95,6 +95,10 @@ public final class cs { // NOSONAR
      */
     public static final String columnName = "columnName";
     /**
+     * Parameter name for a result-set column label (the JDBC label, which falls back to the column name).
+     */
+    public static final String columnLabel = "columnLabel";
+    /**
      * Parameter name for condition objects used in query filtering.
      */
     public static final String cond = "cond";
@@ -245,7 +249,7 @@ public final class cs { // NOSONAR
     /**
      * Parameter name for the {@code ParametersSetter} that registers OUT parameters of a callable statement.
      */
-    public static final String register = "register";
+    public static final String registrar = "registrar";
     /**
      * Parameter name for functions that extract results from ResultSet objects.
      */

@@ -2210,7 +2210,7 @@ public class JdbcTest extends TestBase {
         cache.put("method#users#params3", "result3", null, null, methodSignature);
 
         // Update with table name
-        cache.update("method#users#updateParams", 1, null, null, methodSignature);
+        cache.invalidate("method#users#updateParams", 1, null, null, methodSignature);
 
         // Users entries should be removed
         assertNull(cache.get("method#users#params1", null, null, methodSignature));
@@ -2231,7 +2231,7 @@ public class JdbcTest extends TestBase {
         cache.put("method#superusers#params2", "superusers", null, null, methodSignature);
         cache.put("method#orders#[\"users\"]", "orders", null, null, methodSignature);
 
-        cache.update("method#users#updateParams", 1, null, null, methodSignature);
+        cache.invalidate("method#users#updateParams", 1, null, null, methodSignature);
 
         assertNull(cache.get("method#users#params1", null, null, methodSignature));
         assertEquals("superusers", cache.get("method#superusers#params2", null, null, methodSignature));
@@ -2288,7 +2288,7 @@ public class JdbcTest extends TestBase {
         cache.put("method#users#params3", "result3", null, null, methodSignature);
 
         // Update with table name
-        cache.update("method#users#updateParams", 1, null, null, methodSignature);
+        cache.invalidate("method#users#updateParams", 1, null, null, methodSignature);
 
         // Users entries should be removed
         assertNull(cache.get("method#users#params1", null, null, methodSignature));
@@ -2309,7 +2309,7 @@ public class JdbcTest extends TestBase {
         cache.put("method#superusers#params2", "superusers", null, null, methodSignature);
         cache.put("method#orders#[\"users\"]", "orders", null, null, methodSignature);
 
-        cache.update("method#users#updateParams", 1, null, null, methodSignature);
+        cache.invalidate("method#users#updateParams", 1, null, null, methodSignature);
 
         assertNull(cache.get("method#users#params1", null, null, methodSignature));
         assertEquals("superusers", cache.get("method#superusers#params2", null, null, methodSignature));
@@ -2368,7 +2368,7 @@ public class JdbcTest extends TestBase {
         cache.put("entry2", "val2", null, null, methodSignature);
 
         // key without '#' → empty table name → entire cache cleared
-        cache.update("simplekey", 1, null, null, methodSignature);
+        cache.invalidate("simplekey", 1, null, null, methodSignature);
 
         assertNull(cache.get("entry1", null, null, methodSignature));
         assertNull(cache.get("entry2", null, null, methodSignature));
@@ -2391,7 +2391,7 @@ public class JdbcTest extends TestBase {
             cache.put("method#users#params", "cached", null, null, methodSignature);
 
             // result=0 with BUILT_IN_DAO_UPDATE_METHODS method → early return, cache not cleared
-            cache.update("method#users#update", 0, null, null, methodSignature);
+            cache.invalidate("method#users#update", 0, null, null, methodSignature);
 
             // Cache should NOT be cleared (early return occurred)
             assertEquals("cached", cache.get("method#users#params", null, null, methodSignature));
@@ -2410,7 +2410,7 @@ public class JdbcTest extends TestBase {
         cache.put("entry2", "val2", null, null, methodSignature);
 
         // key without '#' → empty table name → entire pool cleared
-        cache.update("simplekey", 1, null, null, methodSignature);
+        cache.invalidate("simplekey", 1, null, null, methodSignature);
 
         assertNull(cache.get("entry1", null, null, methodSignature));
         assertNull(cache.get("entry2", null, null, methodSignature));
@@ -2434,7 +2434,7 @@ public class JdbcTest extends TestBase {
             cache.put("method#users#params", "cached", null, null, methodSignature);
 
             // result=0 with BUILT_IN_DAO_UPDATE_METHODS method → early return, cache not cleared
-            cache.update("method#users#update", 0, null, null, methodSignature);
+            cache.invalidate("method#users#update", 0, null, null, methodSignature);
 
             // Cache should NOT be cleared (early return occurred)
             assertEquals("cached", cache.get("method#users#params", null, null, methodSignature));
@@ -2458,7 +2458,7 @@ public class JdbcTest extends TestBase {
             cache.put("method#users#params", "cached", null, null, methodSignature);
 
             // result=1 (non-zero) → does NOT early return → cache is cleared
-            cache.update("method#users#update", 1, null, null, methodSignature);
+            cache.invalidate("method#users#update", 1, null, null, methodSignature);
 
             // Cache should be cleared
             assertNull(cache.get("method#users#params", null, null, methodSignature));

@@ -25,11 +25,18 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 /**
  * Insert capability of {@link CrudDao}: {@code insert}/{@code batchInsert} returning generated ids.
  * Extends {@link InsertOps}.
- * 
+ *
+ * <p><b>{@code insert} vs {@code save}:</b> {@code insert}/{@code batchInsert} perform the same INSERT
+ * as the inherited {@link InsertOps#save save}/{@code batchSave}, but <em>return</em> the generated
+ * id(s) instead of {@code void}. Use {@code insert} when you need the generated key; use the inherited
+ * {@code save} for fire-and-forget inserts. The two verbs name the same database operation and differ
+ * only in the return value.</p>
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type
  * @see CrudDao
+ * @see InsertOps
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertOps<T, TD> permits CrudDao, NoUpdateCrudDao, UncheckedCrudInsertOps {

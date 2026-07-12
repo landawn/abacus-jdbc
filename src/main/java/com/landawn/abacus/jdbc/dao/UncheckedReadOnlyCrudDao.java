@@ -71,6 +71,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  */
 @Beta
 public non-sealed interface UncheckedReadOnlyCrudDao<T, ID, TD extends UncheckedReadOnlyCrudDao<T, ID, TD>>
-        extends UncheckedReadOnlyDao<T, TD>, UncheckedCrudReadOps<T, ID, TD>, ReadOnlyCrudDao<T, ID, TD> {
+        extends UncheckedCrudReadOps<T, ID, TD>, UncheckedReadOnlyDao<T, TD>, ReadOnlyCrudDao<T, ID, TD> {
 
 }

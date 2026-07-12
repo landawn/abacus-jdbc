@@ -45,17 +45,17 @@ import java.util.Map;
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Map users by their ID
  *     @Query("SELECT * FROM users WHERE status = :status")
- *     @MappedByKey(keyName = "id")
+ *     @MappedByKey("id")
  *     Map<Long, User> findUsersByStatus(@Bind("status") String status) throws SQLException;
  *
  *     // Map users by email (assuming email is unique)
  *     @Query("SELECT * FROM users WHERE created_date > :date")
- *     @MappedByKey(keyName = "email")
+ *     @MappedByKey("email")
  *     Map<String, User> findRecentUsersByEmail(@Bind("date") Date date) throws SQLException;
  *
  *     // Using custom map implementation
  *     @Query("SELECT * FROM users WHERE department = :dept")
- *     @MappedByKey(keyName = "id", mapClass = java.util.LinkedHashMap.class)
+ *     @MappedByKey(value = "id", mapClass = java.util.LinkedHashMap.class)
  *     Map<Long, User> findUsersByDepartment(@Bind("dept") String dept) throws SQLException;
  * }
  *
@@ -85,7 +85,7 @@ public @interface MappedByKey {
      * <p>The value of that property is extracted from each merged result entity and used as the key
      * in the resulting map.</p>
      *
-     * <p>If {@code keyName} is left empty, the framework falls back to the target entity's single id
+     * <p>If left empty, the framework falls back to the target entity's single id
      * property name; a DAO whose entity has no id property then fails initialization with
      * {@code IllegalArgumentException}.</p>
      *
@@ -93,13 +93,13 @@ public @interface MappedByKey {
      * <pre>{@code
      * // Using entity property name
      * @Query("SELECT * FROM products WHERE category = :category")
-     * @MappedByKey(keyName = "productCode")  // Maps to product_code column
+     * @MappedByKey("productCode")  // Maps to product_code column
      * Map<String, Product> getProductsByCategory(@Bind("category") String category) throws SQLException;
      * }</pre>
      *
      * @return the field name to use as map key, or empty string to fall back to the entity's id property
      */
-    String keyName() default "";
+    String value() default "";
 
     /**
      * Specifies the Map implementation class to use for the result.
@@ -117,17 +117,17 @@ public @interface MappedByKey {
      * <pre>{@code
      * // Maintain insertion order
      * @Query("SELECT * FROM users ORDER BY created_date")
-     * @MappedByKey(keyName = "id", mapClass = LinkedHashMap.class)
+     * @MappedByKey(value = "id", mapClass = LinkedHashMap.class)
      * LinkedHashMap<Long, User> getUsersInCreationOrder();
      *
      * // Sorted by key
      * @Query("SELECT * FROM products")
-     * @MappedByKey(keyName = "productCode", mapClass = TreeMap.class)
+     * @MappedByKey(value = "productCode", mapClass = TreeMap.class)
      * TreeMap<String, Product> getProductsSortedByCode();
      *
      * // Thread-safe map
      * @Query("SELECT * FROM config")
-     * @MappedByKey(keyName = "key", mapClass = ConcurrentHashMap.class)
+     * @MappedByKey(value = "key", mapClass = ConcurrentHashMap.class)
      * ConcurrentHashMap<String, Config> getConfigMap();
      * }</pre>
      *

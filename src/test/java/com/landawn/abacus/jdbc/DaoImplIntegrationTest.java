@@ -1071,7 +1071,7 @@ public class DaoImplIntegrationTest extends TestBase {
     // =====================================================================================
     public interface MappedUserDao extends CrudDao<UserAccount, Long, MappedUserDao> {
         @Query("SELECT id, first_name, last_name, age, active FROM user_account ORDER BY id")
-        @com.landawn.abacus.jdbc.annotation.MappedByKey(keyName = "id")
+        @com.landawn.abacus.jdbc.annotation.MappedByKey("id")
         Map<Long, UserAccount> findAllMapped() throws SQLException;
 
         @Query("SELECT id, first_name, last_name, age, active FROM user_account WHERE id = :id")

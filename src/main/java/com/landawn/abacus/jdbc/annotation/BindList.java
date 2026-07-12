@@ -31,7 +31,7 @@ import com.landawn.abacus.annotation.Beta;
  * of the collection into individual parameter bindings.</p>
  *
  * <p><b>Note on the name:</b> despite the {@code List} suffix, {@code @BindList} is <em>not</em> a
- * {@code @Repeatable} container (unlike {@code HandlerList} or {@code OutParameterList}, which hold
+ * {@code @Repeatable} container (unlike {@code Handlers} or {@code OutParameters}, which hold
  * multiple {@code @Handler}/{@code @OutParameter} instances). It is an independent parameter
  * annotation applied to a single collection/array parameter, which it expands into the appropriate
  * number of JDBC placeholders.</p>

@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  * {@link SqlFragment}.
  *
  * <p>Despite the {@code List} suffix in its name, this is <em>not</em> a {@code @Repeatable}
- * container (unlike {@code HandlerList} or {@code OutParameterList}, which hold multiple
+ * container (unlike {@code Handlers} or {@code OutParameters}, which hold multiple
  * {@code @Handler}/{@code @OutParameter} instances). It is an independent parameter annotation
  * applied to a single collection/array parameter whose elements are joined into one SQL fragment.</p>
  *

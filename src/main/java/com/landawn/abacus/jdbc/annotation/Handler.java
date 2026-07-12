@@ -42,7 +42,7 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  *
  * <p>This annotation is {@link java.lang.annotation.Repeatable @Repeatable}: multiple {@code @Handler}
  * declarations may be placed on the same method or type, in which case they are collected into a
- * {@link HandlerList} container and each handler is applied in declaration order.</p>
+ * {@link Handlers} container and each handler is applied in declaration order.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -80,14 +80,14 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  * }
  * }</pre>
  *
- * @see HandlerList
+ * @see Handlers
  * @see Jdbc.Handler
  * @see NonDBOperation
  */
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
-@Repeatable(HandlerList.class)
+@Repeatable(Handlers.class)
 public @interface Handler {
 
     /**
@@ -152,7 +152,7 @@ public @interface Handler {
      * Specifies filter patterns for methods when the annotation is applied at the class level.
      * Only methods whose names match at least one of these patterns will be intercepted by this handler.
      *
-     * <p>The patterns support case-insensitive substring matching and regular expressions.
+     * <p>The patterns support case-insensitive prefix matching and regular expressions.
      * Multiple patterns are combined with OR logic.</p>
      *
      * <p>This filter is ignored when the annotation is applied at the method level.</p>

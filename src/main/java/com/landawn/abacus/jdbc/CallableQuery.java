@@ -1663,27 +1663,27 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param entity the entity object containing the parameter values. Must not be {@code null}.
-     * @param parameterNames a list of parameter names corresponding to properties in the entity.
+     * @param parameterNamesToSet a list of parameter names corresponding to properties in the entity.
      *                       Each name should match a property name in the entity class.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code entity} or {@code parameterNames} is {@code null},
-     *                                  or if any name in {@code parameterNames} does not correspond
+     * @throws IllegalArgumentException if {@code entity} or {@code parameterNamesToSet} is {@code null},
+     *                                  or if any name in {@code parameterNamesToSet} does not correspond
      *                                  to a property of the entity class
      * @throws SQLException if a database access error occurs while binding the parameters
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
      */
-    public CallableQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
+    public CallableQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
-        checkArgNotNull(parameterNames, cs.parameterNames);
+        checkArgNotNull(parameterNamesToSet, cs.parameterNamesToSet);
 
         final Class<?> cls = entity.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         PropInfo propInfo = null;
 
         try {
-            for (final String parameterName : parameterNames) {
+            for (final String parameterName : parameterNamesToSet) {
                 propInfo = entityInfo.getPropInfo(parameterName);
 
                 if (propInfo == null) {
@@ -2177,19 +2177,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }).execute();
      * }</pre>
      *
-     * @param register the {@link Jdbc.ParametersSetter} that will register the OUT parameters.
+     * @param registrar the {@link Jdbc.ParametersSetter} that will register the OUT parameters.
      *                 Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code register} is {@code null}
+     * @throws IllegalArgumentException if {@code registrar} is {@code null}
      * @throws SQLException if a database access error occurs during parameter registration
      */
-    public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> register) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(register, cs.register);
+    public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> registrar) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(registrar, cs.registrar);
 
         boolean noException = false;
 
         try {
-            register.accept(this);
+            registrar.accept(this);
 
             noException = true;
         } finally {
@@ -2233,19 +2233,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <T> the type of the additional parameter object.
      * @param parameter the context object to be passed to the {@code BiParametersSetter}.
-     * @param register the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null}.
+     * @param registrar the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code register} is {@code null}.
+     * @throws IllegalArgumentException if {@code registrar} is {@code null}.
      * @throws SQLException if a database access error occurs during parameter registration.
      */
-    public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> register)
+    public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> registrar)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(register, cs.register);
+        checkArgNotNull(registrar, cs.registrar);
 
         boolean noException = false;
 
         try {
-            register.accept(this, parameter);
+            registrar.accept(this, parameter);
 
             noException = true;
         } finally {

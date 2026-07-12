@@ -43,7 +43,7 @@ public class OutParameterTest extends TestBase {
     public void testOutParameter_IsRepeatable() {
         Repeatable repeatable = OutParameter.class.getAnnotation(Repeatable.class);
         assertNotNull(repeatable);
-        assertEquals(OutParameterList.class, repeatable.value());
+        assertEquals(OutParameters.class, repeatable.value());
     }
 
     @Test
