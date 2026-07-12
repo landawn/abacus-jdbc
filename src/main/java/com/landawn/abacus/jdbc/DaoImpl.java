@@ -224,7 +224,7 @@ final class DaoImpl {
         // utility class - prevent instantiation.
     }
 
-    private static final Set<String> SUPPORTED_TRANSFER_FOR_CACHE = N.asSet("none", "kryo", "json");
+    private static final Set<String> SUPPORTED_SERIALIZER_FOR_CACHE = N.asSet("none", "kryo", "json");
 
     private static final String _1 = "1";
 
@@ -6004,11 +6004,11 @@ final class DaoImpl {
                                 "The return type of method: " + simpleClassMethodName + " is not cacheable: " + method.getReturnType());
                     }
 
-                    final String transferAttr = cacheResultAnno == null ? (kryoParser != null ? "kryo" : "json") : cacheResultAnno.transfer();
+                    final String serializerAttr = cacheResultAnno == null ? (kryoParser != null ? "kryo" : "json") : cacheResultAnno.serializer();
 
-                    if (!(Strings.isEmpty(transferAttr) || SUPPORTED_TRANSFER_FOR_CACHE.contains(transferAttr.toLowerCase(Locale.ROOT)))) {
+                    if (!(Strings.isEmpty(serializerAttr) || SUPPORTED_SERIALIZER_FOR_CACHE.contains(serializerAttr.toLowerCase(Locale.ROOT)))) {
                         throw new UnsupportedOperationException(
-                                "Unsupported 'transfer' : " + transferAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
+                                "Unsupported 'serializer' : " + serializerAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
                     }
 
                     if (cacheResultAnno != null) {
@@ -6029,21 +6029,22 @@ final class DaoImpl {
                         }
                     }
 
-                    final Function<Object, Object> cloneFunc = Strings.isEmpty(transferAttr) || "none".equalsIgnoreCase(transferAttr) ? Fn.identity() : r -> {
-                        final Class<?> cls = r.getClass();
+                    final Function<Object, Object> cloneFunc = Strings.isEmpty(serializerAttr) || "none".equalsIgnoreCase(serializerAttr) ? Fn.identity()
+                            : r -> {
+                                final Class<?> cls = r.getClass();
 
-                        if (!isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls)) {
-                            return r;
-                        } else if ("kryo".equalsIgnoreCase(transferAttr)) {
-                            if (kryoParser == null) {
-                                throw new UnsupportedOperationException(
-                                        "Kryo is not available for cache transfer. Please add Kryo to the classpath or use 'json' transfer instead.");
-                            }
-                            return kryoParser.deepCopy(r);
-                        } else {
-                            return jsonParser.deserialize(jsonParser.serialize(r), r.getClass());
-                        }
-                    };
+                                if (!isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls)) {
+                                    return r;
+                                } else if ("kryo".equalsIgnoreCase(serializerAttr)) {
+                                    if (kryoParser == null) {
+                                        throw new UnsupportedOperationException(
+                                                "Kryo is not available for cache serialization. Please add Kryo to the classpath or use 'json' serializer instead.");
+                                    }
+                                    return kryoParser.deepCopy(r);
+                                } else {
+                                    return jsonParser.deserialize(jsonParser.serialize(r), r.getClass());
+                                }
+                            };
 
                     final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = call;
 
@@ -6119,7 +6120,7 @@ final class DaoImpl {
                         .prepend(Stream.of(daoClassHandlerList).filter(h -> Stream.of(h.filter()).anyMatch(filterByMethodName)))
                         .map(handlerAnno -> Tuple.of((Jdbc.Handler) (Strings.isNotEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
-                                : HandlerFactory.getOrCreate(handlerAnno.impl())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))
+                                : HandlerFactory.getOrCreate(handlerAnno.impl())), handlerAnno.externalCallsOnly()))
                         .onEach(handler -> N.checkArgNotNull(handler._1,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .toList();

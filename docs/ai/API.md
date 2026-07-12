@@ -11194,8 +11194,8 @@ Enables method-level result caching for DAO query methods.
 - **Parameters:**
   - (none)
 - **Returns:** the maximum result size to cache; the default {@link Integer#MAX_VALUE} means no maximum
-##### transfer(...) -> String
-- **Signature:** `String transfer() default "none"`
+##### serializer(...) -> String
+- **Signature:** `String serializer() default "none"`
 - **Summary:** Specifies the serialization strategy for cache storage and retrieval.
 - **Contract:**
   - This determines how objects are copied when stored in or retrieved from cache.
@@ -11339,8 +11339,8 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
 - **Parameters:**
   - (none)
 - **Returns:** array of filter patterns (default matches all methods)
-##### isForInvokeFromOutsideOfDaoOnly(...) -> boolean
-- **Signature:** `boolean isForInvokeFromOutsideOfDaoOnly() default false`
+##### externalCallsOnly(...) -> boolean
+- **Signature:** `boolean externalCallsOnly() default false`
 - **Summary:** Specifies whether this handler should only be applied to external invocations of the DAO.
 - **Contract:**
   - Specifies whether this handler should only be applied to external invocations of the DAO.

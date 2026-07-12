@@ -180,7 +180,7 @@ public @interface Handler {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Handler(impl = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
+     * @Handler(impl = TransactionHandler.class, externalCallsOnly = true)
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     @Query("SELECT * FROM users WHERE id = :id")
      *     User findById(@Bind("id") Long id) throws SQLException;
@@ -197,5 +197,5 @@ public @interface Handler {
      *
      * @return {@code true} if handler only applies to external calls, {@code false} (default) otherwise
      */
-    boolean isForInvokeFromOutsideOfDaoOnly() default false;
+    boolean externalCallsOnly() default false;
 }

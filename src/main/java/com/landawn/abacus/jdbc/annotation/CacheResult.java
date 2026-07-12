@@ -68,7 +68,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *     List<User> findByStatus(@Bind("status") String status) throws SQLException;
  *
  *     // Use Kryo serialization for complex objects
- *     @CacheResult(enabled = true, liveTime = 3600000, transfer = "kryo")
+ *     @CacheResult(enabled = true, liveTime = 3600000, serializer = "kryo")
  *     @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
  *     UserProfile getProfile(@Bind("userId") Long userId) throws SQLException;
  * }
@@ -231,12 +231,12 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Use Kryo for deep copying complex objects
-     * @CacheResult(enabled = true, transfer = "kryo")
+     * @CacheResult(enabled = true, serializer = "kryo")
      * @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
      * UserProfile getComplexProfile(@Bind("userId") Long userId) throws SQLException;
      *
      * // Use JSON for debugging/logging friendly format
-     * @CacheResult(enabled = true, transfer = "json")
+     * @CacheResult(enabled = true, serializer = "json")
      * @Query("SELECT * FROM audit_logs WHERE id = :id")
      * AuditLog getAuditLog(@Bind("id") Long id) throws SQLException;
      * }</pre>
@@ -244,7 +244,7 @@ public @interface CacheResult {
      * @return the serialization strategy name
      * @see <a href="https://github.com/EsotericSoftware/kryo">Kryo Serialization</a>
      */
-    String transfer() default "none";
+    String serializer() default "none";
 
     /**
      * Specifies filter patterns for methods when the annotation is applied at the class level.

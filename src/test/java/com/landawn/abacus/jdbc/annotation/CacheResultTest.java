@@ -63,8 +63,8 @@ public class CacheResultTest extends TestBase {
     }
 
     @Test
-    public void testDefaultTransfer() throws Exception {
-        assertEquals("none", CacheResult.class.getMethod("transfer").getDefaultValue());
+    public void testDefaultSerializer() throws Exception {
+        assertEquals("none", CacheResult.class.getMethod("serializer").getDefaultValue());
     }
 
     @Test

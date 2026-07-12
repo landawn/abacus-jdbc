@@ -21,7 +21,7 @@ import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 @Handler(impl = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
-@Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
+@Handler(qualifier = "handler2", filter = ".*", externalCallsOnly = true)
 @DaoConfig(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
 public interface MyUserDaoA extends UserDao {
 }

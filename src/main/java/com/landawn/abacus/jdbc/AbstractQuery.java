@@ -1594,12 +1594,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing ASCII data, or {@code null} to set SQL {@code NULL}
+     * @param value theinput stream containing ASCII data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setAsciiStream(final int parameterIndex, final InputStream inputStream) throws SQLException {
-        stmt.setAsciiStream(parameterIndex, inputStream);
+    public This setAsciiStream(final int parameterIndex, final InputStream value) throws SQLException {
+        stmt.setAsciiStream(parameterIndex, value);
 
         return (This) this;
     }
@@ -1614,13 +1614,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing ASCII data
+     * @param value theinput stream containing ASCII data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setAsciiStream(final int parameterIndex, final InputStream inputStream, final int length) throws SQLException {
-        stmt.setAsciiStream(parameterIndex, inputStream, length);
+    public This setAsciiStream(final int parameterIndex, final InputStream value, final int length) throws SQLException {
+        stmt.setAsciiStream(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1635,13 +1635,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing ASCII data
+     * @param value theinput stream containing ASCII data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setAsciiStream(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException {
-        stmt.setAsciiStream(parameterIndex, inputStream, length);
+    public This setAsciiStream(final int parameterIndex, final InputStream value, final long length) throws SQLException {
+        stmt.setAsciiStream(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1657,12 +1657,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing binary data, or {@code null} to set SQL {@code NULL}
+     * @param value theinput stream containing binary data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setBinaryStream(final int parameterIndex, final InputStream inputStream) throws SQLException {
-        stmt.setBinaryStream(parameterIndex, inputStream);
+    public This setBinaryStream(final int parameterIndex, final InputStream value) throws SQLException {
+        stmt.setBinaryStream(parameterIndex, value);
 
         return (This) this;
     }
@@ -1677,13 +1677,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing binary data
+     * @param value theinput stream containing binary data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setBinaryStream(final int parameterIndex, final InputStream inputStream, final int length) throws SQLException {
-        stmt.setBinaryStream(parameterIndex, inputStream, length);
+    public This setBinaryStream(final int parameterIndex, final InputStream value, final int length) throws SQLException {
+        stmt.setBinaryStream(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1698,13 +1698,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing binary data
+     * @param value theinput stream containing binary data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setBinaryStream(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException {
-        stmt.setBinaryStream(parameterIndex, inputStream, length);
+    public This setBinaryStream(final int parameterIndex, final InputStream value, final long length) throws SQLException {
+        stmt.setBinaryStream(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1720,12 +1720,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing character data, or {@code null} to set SQL {@code NULL}
+     * @param value thereader containing character data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setCharacterStream(final int parameterIndex, final Reader reader) throws SQLException {
-        stmt.setCharacterStream(parameterIndex, reader);
+    public This setCharacterStream(final int parameterIndex, final Reader value) throws SQLException {
+        stmt.setCharacterStream(parameterIndex, value);
 
         return (This) this;
     }
@@ -1740,13 +1740,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing character data
+     * @param value thereader containing character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setCharacterStream(final int parameterIndex, final Reader reader, final int length) throws SQLException {
-        stmt.setCharacterStream(parameterIndex, reader, length);
+    public This setCharacterStream(final int parameterIndex, final Reader value, final int length) throws SQLException {
+        stmt.setCharacterStream(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1761,13 +1761,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing character data
+     * @param value thereader containing character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setCharacterStream(final int parameterIndex, final Reader reader, final long length) throws SQLException {
-        stmt.setCharacterStream(parameterIndex, reader, length);
+    public This setCharacterStream(final int parameterIndex, final Reader value, final long length) throws SQLException {
+        stmt.setCharacterStream(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1783,12 +1783,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing national character data
+     * @param value thereader containing national character data
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setNCharacterStream(final int parameterIndex, final Reader reader) throws SQLException {
-        stmt.setNCharacterStream(parameterIndex, reader);
+    public This setNCharacterStream(final int parameterIndex, final Reader value) throws SQLException {
+        stmt.setNCharacterStream(parameterIndex, value);
 
         return (This) this;
     }
@@ -1804,13 +1804,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing national character data
+     * @param value thereader containing national character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setNCharacterStream(final int parameterIndex, final Reader reader, final long length) throws SQLException {
-        stmt.setNCharacterStream(parameterIndex, reader, length);
+    public This setNCharacterStream(final int parameterIndex, final Reader value, final long length) throws SQLException {
+        stmt.setNCharacterStream(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1847,12 +1847,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing the data for the Blob
+     * @param value theinput stream containing the data for the Blob
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setBlob(final int parameterIndex, final InputStream inputStream) throws SQLException {
-        stmt.setBlob(parameterIndex, inputStream);
+    public This setBlob(final int parameterIndex, final InputStream value) throws SQLException {
+        stmt.setBlob(parameterIndex, value);
 
         return (This) this;
     }
@@ -1867,13 +1867,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param inputStream the input stream containing the data for the Blob
+     * @param value theinput stream containing the data for the Blob
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setBlob(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException {
-        stmt.setBlob(parameterIndex, inputStream, length);
+    public This setBlob(final int parameterIndex, final InputStream value, final long length) throws SQLException {
+        stmt.setBlob(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1909,12 +1909,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing the data for the Clob
+     * @param value thereader containing the data for the Clob
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setClob(final int parameterIndex, final Reader reader) throws SQLException {
-        stmt.setClob(parameterIndex, reader);
+    public This setClob(final int parameterIndex, final Reader value) throws SQLException {
+        stmt.setClob(parameterIndex, value);
         return (This) this;
     }
 
@@ -1928,13 +1928,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing the data for the Clob
+     * @param value thereader containing the data for the Clob
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setClob(final int parameterIndex, final Reader reader, final long length) throws SQLException {
-        stmt.setClob(parameterIndex, reader, length);
+    public This setClob(final int parameterIndex, final Reader value, final long length) throws SQLException {
+        stmt.setClob(parameterIndex, value, length);
 
         return (This) this;
     }
@@ -1971,12 +1971,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing the national character data
+     * @param value thereader containing the national character data
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setNClob(final int parameterIndex, final Reader reader) throws SQLException {
-        stmt.setNClob(parameterIndex, reader);
+    public This setNClob(final int parameterIndex, final Reader value) throws SQLException {
+        stmt.setNClob(parameterIndex, value);
 
         return (This) this;
     }
@@ -1991,13 +1991,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
-     * @param reader the reader containing the national character data
+     * @param value thereader containing the national character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
-    public This setNClob(final int parameterIndex, final Reader reader, final long length) throws SQLException {
-        stmt.setNClob(parameterIndex, reader, length);
+    public This setNClob(final int parameterIndex, final Reader value, final long length) throws SQLException {
+        stmt.setNClob(parameterIndex, value, length);
 
         return (This) this;
     }

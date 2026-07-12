@@ -44576,12 +44576,12 @@
               "see_also": []
             },
             {
-              "name": "transfer",
+              "name": "serializer",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "String transfer() default \"none\"",
+              "signature": "String serializer() default \"none\"",
               "return_type": "String",
               "type_params": [],
               "params": [],
@@ -44838,12 +44838,12 @@
               "see_also": []
             },
             {
-              "name": "isForInvokeFromOutsideOfDaoOnly",
+              "name": "externalCallsOnly",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "boolean isForInvokeFromOutsideOfDaoOnly() default false",
+              "signature": "boolean externalCallsOnly() default false",
               "return_type": "boolean",
               "type_params": [],
               "params": [],

@@ -62,8 +62,8 @@ public class HandlerTest extends TestBase {
     }
 
     @Test
-    public void testDefaultIsForInvokeFromOutsideOfDaoOnly() throws Exception {
-        assertEquals(false, Handler.class.getMethod("isForInvokeFromOutsideOfDaoOnly").getDefaultValue());
+    public void testDefaultExternalCallsOnly() throws Exception {
+        assertEquals(false, Handler.class.getMethod("externalCallsOnly").getDefaultValue());
     }
 
     @Test
