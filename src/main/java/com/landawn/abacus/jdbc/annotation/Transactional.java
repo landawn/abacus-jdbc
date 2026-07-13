@@ -35,7 +35,7 @@ import com.landawn.abacus.jdbc.Propagation;
  * invocation chain. At invocation time the proxy:</p>
  * <ol>
  *   <li>Begins a {@link com.landawn.abacus.jdbc.Transaction Transaction} on the DAO's
- *       {@code DataSource}, honoring {@link #propagation()} and {@link #isolation()}.</li>
+ *       {@code DataSource}, honoring {@link #propagation()} and {@link #isolationLevel()}.</li>
  *   <li>Runs the method body.</li>
  *   <li>Commits on normal return, or rolls back if any exception or error propagates out of
  *       the method body before it returns normally.</li>
@@ -67,7 +67,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *
  *     // Money transfer needs the strictest isolation.
  *     @Transactional(propagation = Propagation.REQUIRED,
- *                    isolation = IsolationLevel.SERIALIZABLE)
+ *                    isolationLevel = IsolationLevel.SERIALIZABLE)
  *     default void transfer(long from, long to, BigDecimal amount) {
  *         decrement(from, amount);
  *         increment(to, amount);
@@ -134,15 +134,15 @@ public @interface Transactional {
      * <p>Choose isolation level based on your consistency requirements:</p>
      * <pre>{@code
      * // Financial transactions need high isolation
-     * @Transactional(isolation = IsolationLevel.SERIALIZABLE)
+     * @Transactional(isolationLevel = IsolationLevel.SERIALIZABLE)
      * void transferFunds(Account from, Account to, BigDecimal amount) { ... }
      *
      * // Reporting can tolerate some inconsistency
-     * @Transactional(isolation = IsolationLevel.READ_UNCOMMITTED)
+     * @Transactional(isolationLevel = IsolationLevel.READ_UNCOMMITTED)
      * List<Report> generateReports() { ... }
      *
      * // Most business operations use default
-     * @Transactional(isolation = IsolationLevel.DEFAULT)
+     * @Transactional(isolationLevel = IsolationLevel.DEFAULT)
      * void updateUserProfile(User user) { ... }
      * }</pre>
      *
@@ -152,5 +152,5 @@ public @interface Transactional {
      * @return the configured isolation level; defaults to {@link IsolationLevel#DEFAULT}
      * @see IsolationLevel
      */
-    IsolationLevel isolation() default IsolationLevel.DEFAULT;
+    IsolationLevel isolationLevel() default IsolationLevel.DEFAULT;
 }

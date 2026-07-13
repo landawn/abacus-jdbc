@@ -106,15 +106,15 @@ public final class DaoUtil {
     }
 
     /**
-     * Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-read-capable DAO
-     * (any {@link CrudReadOps} variant, including the no-update and read-only composites), otherwise {@code null}.
+     * Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-insert-capable DAO
+     * (any {@link CrudInsertOps} variant, including the no-update composite), otherwise {@code null}.
      *
      * @param dao the DAO instance to inspect.
      * @return the DAO's declared id extractor, or {@code null} if the DAO has none.
      */
     @SuppressWarnings("rawtypes")
     public static Jdbc.BiRowMapper getDeclaredIdExtractor(final DaoBase dao) {
-        return dao instanceof CrudReadOps ? ((CrudReadOps) dao).idExtractor() : null;
+        return dao instanceof CrudInsertOps ? ((CrudInsertOps) dao).idExtractor() : null;
     }
 
     /**
@@ -187,7 +187,7 @@ public final class DaoUtil {
     }
 
     /**
-     * Generates a new ID for entity insertion by delegating to {@link CrudReadOps#generateId()}.
+     * Generates a new ID for entity insertion by delegating to {@link CrudInsertOps#generateId()}.
      * <p>
      * The default {@code generateId()} implementation throws {@link UnsupportedOperationException};
      * a value is only produced when the DAO overrides it with a client-side ID generation strategy
@@ -195,15 +195,15 @@ public final class DaoUtil {
      * path is rarely used.
      * </p>
      *
-     * @param dao the DAO used to generate the identifier; must implement {@link CrudReadOps}.
+     * @param dao the DAO used to generate the identifier; must implement {@link CrudInsertOps}.
      * @return the generated identifier.
      * @throws SQLException if a database access error occurs while generating the identifier.
-     * @throws UnsupportedOperationException if {@code dao} does not override {@link CrudReadOps#generateId()}.
-     * @throws ClassCastException if {@code dao} does not implement {@link CrudReadOps}.
+     * @throws UnsupportedOperationException if {@code dao} does not override {@link CrudInsertOps#generateId()}.
+     * @throws ClassCastException if {@code dao} does not implement {@link CrudInsertOps}.
      */
     @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
     public static Object generateId(final DaoBase dao) throws SQLException {
-        return ((CrudReadOps) dao).generateId();
+        return ((CrudInsertOps) dao).generateId();
     }
 
     /**

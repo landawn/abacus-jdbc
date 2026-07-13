@@ -397,7 +397,7 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     // A custom @Query UPDATE method declared with a WRAPPER return type (Integer/Long/Boolean) must dispatch into
-    // the update path at OP.DEFAULT. Regression: DaoImpl#isUpdateReturnType used to be primitive-only, so
+    // the update path at QueryOperation.DEFAULT. Regression: DaoImpl#isUpdateReturnType used to be primitive-only, so
     // wrapper returns silently fell through to "Unsupported sql annotation", even though the error message and
     // the result converter both explicitly advertised wrapper support.
     public interface WrapperReturnDao extends CrudDao<UserAccount, Long, WrapperReturnDao> {
@@ -463,7 +463,7 @@ public class DaoImplIntegrationTest extends TestBase {
     public interface TxLeakDao extends CrudDao<UserAccount, Long, TxLeakDao> {
         @com.landawn.abacus.jdbc.annotation.Transactional
         @com.landawn.abacus.jdbc.annotation.SqlLogEnabled(value = true, maxSqlLogLength = 4242)
-        @com.landawn.abacus.jdbc.annotation.PerfLog(minExecutionTimeForSql = 7777L, minExecutionTimeForOperation = 8888L)
+        @com.landawn.abacus.jdbc.annotation.PerfLog(sqlLogThresholdMillis = 7777L, daoMethodLogThresholdMillis = 8888L)
         @Query("SELECT COUNT(*) FROM user_account")
         long countWithTx() throws SQLException;
     }
@@ -482,7 +482,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
         // Snapshot the thread-local SQL-log + perf-log state before the failed call.
         final boolean priorSqlLogEnabled = JdbcUtil.isSqlLogEnabled();
-        final long priorMinPerfLog = JdbcUtil.getMinExecutionTimeForSqlPerfLog();
+        final long priorMinPerfLog = JdbcUtil.sqlLogThresholdMillis();
 
         // Closing the Hikari pool makes beginTransaction's getConnection() throw, simulating a
         // mid-method DataSource failure that occurs after the @SqlLogEnabled/@PerfLog wrapper has
@@ -494,7 +494,7 @@ public class DaoImplIntegrationTest extends TestBase {
         // The fix: even though beginTransaction threw, the wrapper's finally block must have
         // restored both thread-locals.
         assertEquals(priorSqlLogEnabled, JdbcUtil.isSqlLogEnabled(), "SQL log thread-local must be restored after beginTransaction failure");
-        assertEquals(priorMinPerfLog, JdbcUtil.getMinExecutionTimeForSqlPerfLog(), "Perf log thread-local must be restored after beginTransaction failure");
+        assertEquals(priorMinPerfLog, JdbcUtil.sqlLogThresholdMillis(), "Perf log thread-local must be restored after beginTransaction failure");
     }
 
     // CrudDao queryFor* single-column-by-id family: each typed accessor drives a distinct generated
@@ -749,24 +749,24 @@ public class DaoImplIntegrationTest extends TestBase {
     // =====================================================================================
     public interface AnnotatedQueryDao extends CrudDao<UserAccount, Long, AnnotatedQueryDao> {
 
-        // DEFAULT op + Optional return type -> "find first" semantics.
+        // DEFAULT QueryOperation + Optional return type -> "find first" semantics.
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
         Optional<UserAccount> findOptByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
-        // DEFAULT op + List<Entity> with TWO named (@Bind) parameters (multi-bind named-SQL path).
+        // DEFAULT QueryOperation + List<Entity> with TWO named (@Bind) parameters (multi-bind named-SQL path).
         @Query("SELECT * FROM user_account WHERE age >= :minAge AND last_name = :ln ORDER BY id")
         List<UserAccount> findListByAgeAndLastName(@com.landawn.abacus.jdbc.annotation.Bind("minAge") int minAge,
                 @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
-        // DEFAULT op + single-column List<String>.
+        // DEFAULT QueryOperation + single-column List<String>.
         @Query("SELECT first_name FROM user_account WHERE last_name = :ln ORDER BY id")
         List<String> firstNamesByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
-        // DEFAULT op + com.landawn.abacus.util.Dataset return type.
+        // DEFAULT QueryOperation + com.landawn.abacus.util.Dataset return type.
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
         Dataset datasetByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
-        // DEFAULT op + Stream return type -> lazy streaming. A lazily-evaluated Stream return
+        // DEFAULT QueryOperation + Stream return type -> lazy streaming. A lazily-evaluated Stream return
         // must NOT declare a checked throws clause (DaoImpl rejects it at creation time).
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
         Stream<UserAccount> streamByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln);
@@ -853,42 +853,42 @@ public class DaoImplIntegrationTest extends TestBase {
     // =====================================================================================
     public interface OpQueryDao extends CrudDao<UserAccount, Long, OpQueryDao> {
 
-        @Query(value = "SELECT 1 FROM user_account WHERE last_name = :ln", op = OP.exists)
+        @Query(value = "SELECT 1 FROM user_account WHERE last_name = :ln", op = QueryOperation.exists)
         boolean existsByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
-        @Query(value = "SELECT COUNT(*) FROM user_account WHERE last_name = :ln", op = OP.queryForSingle)
+        @Query(value = "SELECT COUNT(*) FROM user_account WHERE last_name = :ln", op = QueryOperation.queryForSingle)
         long countByLastNameSingle(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
-        @Query(value = "SELECT first_name FROM user_account WHERE id = :id", op = OP.queryForSingle)
+        @Query(value = "SELECT first_name FROM user_account WHERE id = :id", op = QueryOperation.queryForSingle)
         String firstNameViaSingle(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
 
-        @Query(value = "SELECT * FROM user_account WHERE id = :id", op = OP.findOnlyOne)
+        @Query(value = "SELECT * FROM user_account WHERE id = :id", op = QueryOperation.findOnlyOne)
         UserAccount onlyOneById(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
 
-        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY age", op = OP.findFirst)
+        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY age", op = QueryOperation.findFirst)
         Optional<UserAccount> firstByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
-        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY id", op = OP.list)
+        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY id", op = QueryOperation.list)
         List<UserAccount> listByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
     }
 
     @Test
     public void testExplicitOp_Variants() throws SQLException {
         final OpQueryDao opDao = JdbcUtil.createDao(OpQueryDao.class, ds);
-        final Long id = dao.insert(newUser("Op1", "Op", 25));
-        dao.insert(newUser("Op2", "Op", 35));
+        final Long id = dao.insert(newUser("Op1", "QueryOperation", 25));
+        dao.insert(newUser("Op2", "QueryOperation", 35));
 
-        assertTrue(opDao.existsByLastName("Op"));
+        assertTrue(opDao.existsByLastName("QueryOperation"));
         assertFalse(opDao.existsByLastName("Nope"));
-        assertEquals(2L, opDao.countByLastNameSingle("Op"));
+        assertEquals(2L, opDao.countByLastNameSingle("QueryOperation"));
         assertEquals("Op1", opDao.firstNameViaSingle(id));
         assertEquals(25, opDao.onlyOneById(id).getAge());
 
-        final Optional<UserAccount> first = opDao.firstByLastName("Op");
+        final Optional<UserAccount> first = opDao.firstByLastName("QueryOperation");
         assertTrue(first.isPresent());
         assertEquals(25, first.get().getAge());
 
-        assertEquals(2, opDao.listByLastName("Op").size());
+        assertEquals(2, opDao.listByLastName("QueryOperation").size());
     }
 
     // =====================================================================================
@@ -969,11 +969,11 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     // =====================================================================================
-    // @PerfLog + @SqlLogEnabled: thresholds of 0 force both the SQL-perf and DAO-op-perf log
+    // @PerfLog + @SqlLogEnabled: thresholds of 0 force both the SQL-perf and DAO-query-operation-perf log
     // branches to run on a successful call (the happy-path counterpart to the existing
     // begin-transaction-failure restoration test).
     // =====================================================================================
-    @com.landawn.abacus.jdbc.annotation.PerfLog(minExecutionTimeForSql = 0, minExecutionTimeForOperation = 0)
+    @com.landawn.abacus.jdbc.annotation.PerfLog(sqlLogThresholdMillis = 0, daoMethodLogThresholdMillis = 0)
     @com.landawn.abacus.jdbc.annotation.SqlLogEnabled
     public interface PerfLogDao extends CrudDao<UserAccount, Long, PerfLogDao> {
         @Query("SELECT COUNT(*) FROM user_account")
@@ -1040,7 +1040,7 @@ public class DaoImplIntegrationTest extends TestBase {
     // @Cache + @CacheResult on a NoUpdate DAO: the second call with identical args is served
     // from cache, so data inserted after the first call is NOT reflected (proves cache hit).
     // =====================================================================================
-    @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelay = 60000)
+    @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelayMillis = 60000)
     public interface CachedUserDao extends NoUpdateCrudDao<UserAccount, Long, CachedUserDao> {
         @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true)
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")

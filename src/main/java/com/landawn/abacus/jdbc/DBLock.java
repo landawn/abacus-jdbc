@@ -75,7 +75,7 @@ import com.landawn.abacus.util.Strings;
  * unique per-acquisition {@code code}, so only the holder that supplies the matching {@code code}
  * can release a given lock.</p>
  *
- * <p>Instances are normally obtained through {@link JdbcUtil#getDBLock(DataSource, String)} rather
+ * <p>Instances are normally obtained through {@link JdbcUtil#createDBLock(DataSource, String)} rather
  * than constructed directly. The {@link #close()} method should be called when the lock is no
  * longer needed to stop the background refresh task and release any locks still held.</p>
  *
@@ -86,7 +86,7 @@ import com.landawn.abacus.util.Strings;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Initialize DBLock with a DataSource and a table name
- * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "app_distributed_locks");
+ * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "app_distributed_locks");
  *
  * String resourceId = "inventory_item_123";
  * long lockLiveTimeMillis = 60 * 1000;       // Lock for 1 minute
@@ -195,7 +195,7 @@ public final class DBLock {
      * per resource at any given time.</p>
      *
      * <p>This constructor is package-private; instances are normally obtained via
-     * {@code JdbcUtil.getDBLock(DataSource, String)}.</p>
+     * {@code JdbcUtil.createDBLock(DataSource, String)}.</p>
      *
      * @param ds the {@link DataSource} to use for database connections. Must not be {@code null}.
      * @param tableName the name of the database table to use for storing lock information.
@@ -324,7 +324,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "report_generation_task";
      *
      * String lockCode = dbLock.lock(resourceIdentifier);
@@ -367,7 +367,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "data_export_job";
      * long customTimeout = 15 * 1000;  // Wait up to 15 seconds
      *
@@ -412,7 +412,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "batch_processing_queue";
      * long lockDuration = 10 * 60 * 1000;  // Lock for 10 minutes
      * long waitTimeout = 30 * 1000;        // Wait up to 30 seconds to acquire
@@ -468,7 +468,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "inventory_update_process";
      * long lockDuration = 5 * 60 * 1000;    // Lock for 5 minutes
      * long acquisitionTimeout = 10 * 1000;  // Wait up to 10 seconds
@@ -632,7 +632,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "configuration_update";
      * String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000);   // Acquire lock for 30s, wait 5s
      *
@@ -709,7 +709,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
      * try {
      *     // Perform operations using the DBLock instance
      *     String lockCode = dbLock.lock("some_resource");

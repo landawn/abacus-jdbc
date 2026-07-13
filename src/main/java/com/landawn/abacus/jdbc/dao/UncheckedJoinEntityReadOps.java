@@ -70,7 +70,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
@@ -79,8 +79,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
-    default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntityClass, final Condition cond) throws UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(selectPropNames, cond);
+    default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond)
+            throws UncheckedSQLException {
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(sourceSelectPropNames, cond);
 
         if (result.isPresent()) {
             loadJoinEntities(result.get(), joinEntityClass);
@@ -92,7 +93,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     /**
      * Finds the first entity matching the condition and loads multiple join entity classes.
      * The matching join property of every requested type is populated in place on the returned entity.
-     * If {@code joinEntitiesToLoad} is {@code null} or empty, the entity is returned without any join entities loaded.
+     * If {@code joinEntityClasses} is {@code null} or empty, the entity is returned without any join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -104,21 +105,21 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param joinEntityClasses the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
      * @return an Optional containing the entity with the requested join entities loaded, or empty if not found
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Override
-    default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
+    default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(sourceSelectPropNames, cond);
 
-        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
-            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+        if (result.isPresent() && N.notEmpty(joinEntityClasses)) {
+            for (final Class<?> joinEntityClass : joinEntityClasses) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
         }
@@ -139,7 +140,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -148,9 +149,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default Optional<T> findFirst(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+    default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(sourceSelectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {
             loadAllJoinEntities(result.get());
@@ -173,7 +174,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
@@ -183,9 +184,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
-    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntityClass, final Condition cond)
+    default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond)
             throws DuplicateResultException, UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(sourceSelectPropNames, cond);
 
         if (result.isPresent()) {
             loadJoinEntities(result.get(), joinEntityClass);
@@ -197,7 +198,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     /**
      * Finds exactly one entity matching the condition and loads multiple join entity classes.
      * Throws an exception if multiple entities are found. The matching join property of every requested type is
-     * populated in place on the returned entity. If {@code joinEntitiesToLoad} is {@code null} or empty, the entity is
+     * populated in place on the returned entity. If {@code joinEntityClasses} is {@code null} or empty, the entity is
      * returned without any join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
@@ -209,9 +210,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param joinEntityClasses the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified condition
@@ -219,12 +220,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Override
-    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
+    default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws DuplicateResultException, UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(sourceSelectPropNames, cond);
 
-        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
-            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+        if (result.isPresent() && N.notEmpty(joinEntityClasses)) {
+            for (final Class<?> joinEntityClass : joinEntityClasses) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
         }
@@ -245,7 +246,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -255,9 +256,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+    default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws DuplicateResultException, UncheckedSQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(selectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(sourceSelectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {
             loadAllJoinEntities(result.get());
@@ -283,7 +284,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
@@ -293,8 +294,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      */
     @Beta
     @Override
-    default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntityClass, final Condition cond) throws UncheckedSQLException {
-        final List<T> result = DaoUtil.getReadOps(this).list(selectPropNames, cond);
+    default List<T> list(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond) throws UncheckedSQLException {
+        final List<T> result = DaoUtil.getReadOps(this).list(sourceSelectPropNames, cond);
 
         if (N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -312,7 +313,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * This is a beta API that efficiently loads multiple relationships in batches. Each returned entity has the
      * matching join property of every requested type populated in place. For result sets larger than
      * {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches. If
-     * {@code joinEntitiesToLoad} is {@code null} or empty, the entities are returned without any join entities loaded.
+     * {@code joinEntityClasses} is {@code null} or empty, the entities are returned without any join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -324,9 +325,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param joinEntityClasses the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
      * @param cond the condition to match
      * @return a list of entities, each with the requested join properties populated in place; empty if no entity matches
      * @throws UncheckedSQLException if a database access error occurs
@@ -334,18 +335,18 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      */
     @Beta
     @Override
-    default List<T> list(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
+    default List<T> list(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws UncheckedSQLException {
-        final List<T> result = DaoUtil.getReadOps(this).list(selectPropNames, cond);
+        final List<T> result = DaoUtil.getReadOps(this).list(sourceSelectPropNames, cond);
 
-        if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
+        if (N.notEmpty(result) && N.notEmpty(joinEntityClasses)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
-                for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                for (final Class<?> joinEntityClass : joinEntityClasses) {
                     loadJoinEntities(result, joinEntityClass);
                 }
             } else {
                 N.runByBatch(result, JdbcUtil.DEFAULT_BATCH_SIZE, batchEntities -> {
-                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    for (final Class<?> joinEntityClass : joinEntityClasses) {
                         loadJoinEntities(batchEntities, joinEntityClass);
                     }
                 });
@@ -371,7 +372,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -382,8 +383,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      */
     @Beta
     @Override
-    default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws UncheckedSQLException {
-        final List<T> result = DaoUtil.getReadOps(this).list(selectPropNames, cond);
+    default List<T> list(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
+            throws UncheckedSQLException {
+        final List<T> result = DaoUtil.getReadOps(this).list(sourceSelectPropNames, cond);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -436,21 +438,21 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity to load join entities for
      * @param joinEntityClass the class of the join entities to load
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws UncheckedSQLException {
+    default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames) throws UncheckedSQLException {
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+            loadJoinEntities(entity, joinEntityPropName, joinSelectPropNames);
         }
     }
 
@@ -493,14 +495,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+    default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
             throws UncheckedSQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -512,7 +514,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntities(entities, joinEntityPropName, selectPropNames);
+            loadJoinEntities(entities, joinEntityPropName, joinSelectPropNames);
         }
     }
 
@@ -572,7 +574,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropName the property name of the join entities to load. Must be a valid
      *                           property name that exists in the entity class and is annotated
      *                           with {@code @JoinedBy}
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected.
      *                       This parameter is useful for performance optimization when only
      *                       specific fields are needed
@@ -581,7 +583,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
-    void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
+    void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws UncheckedSQLException;
 
     /**
      * Loads join entities for a specific property name for multiple entities in batch.
@@ -620,7 +622,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * <ul>
      *   <li>For N parent entities, this method executes O(1) queries instead of O(N)</li>
      *   <li>Large collections may be automatically batched to prevent excessive memory usage</li>
-     *   <li>Selecting fewer properties via {@code selectPropNames} can significantly improve performance</li>
+     *   <li>Selecting fewer properties via {@code joinSelectPropNames} can significantly improve performance</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>
@@ -645,7 +647,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropName the property name of the join entities to load. Must be a valid
      *                           property name that exists in the entity class and is annotated
      *                           with {@code @JoinedBy}
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected.
      *                       Specifying only needed properties can significantly improve query
      *                       performance and reduce memory usage
@@ -654,7 +656,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
-    void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
+    void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
+            throws UncheckedSQLException;
 
     /**
      * Loads join entities for multiple property names of a single entity.
@@ -1037,14 +1040,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityClass the class of the join entities to load
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
             throws UncheckedSQLException {
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
@@ -1052,7 +1055,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfAbsent(entity, joinEntityPropName, selectPropNames);
+            loadJoinEntitiesIfAbsent(entity, joinEntityPropName, joinSelectPropNames);
         }
     }
 
@@ -1092,14 +1095,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to conditionally load join entities for
      * @param joinEntityClass the class of the join entities to load
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
             throws UncheckedSQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -1111,7 +1114,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
-            loadJoinEntitiesIfAbsent(entities, joinEntityPropName, selectPropNames);
+            loadJoinEntitiesIfAbsent(entities, joinEntityPropName, joinSelectPropNames);
         }
     }
 
@@ -1152,13 +1155,13 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
-    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
             throws UncheckedSQLException {
         final Class<?> cls = entity.getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
@@ -1168,7 +1171,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         }
 
         if (propInfo.getPropValue(entity) == null) {
-            loadJoinEntities(entity, joinEntityPropName, selectPropNames);
+            loadJoinEntities(entity, joinEntityPropName, joinSelectPropNames);
         }
     }
 
@@ -1210,14 +1213,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropName the property name of the join entities to load
-     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class,
      *                                  or if the first element of {@code entities} is {@code null}
      */
     @Override
-    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
+    default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
             throws UncheckedSQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -1236,7 +1239,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         final List<T> newEntities = N.filter(entities, entity -> propInfo.getPropValue(entity) == null);
 
         if (N.notEmpty(newEntities)) {
-            loadJoinEntities(newEntities, joinEntityPropName, selectPropNames);
+            loadJoinEntities(newEntities, joinEntityPropName, joinSelectPropNames);
         }
     }
 

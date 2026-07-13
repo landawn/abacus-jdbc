@@ -20,10 +20,13 @@ import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 
 /**
- * Insert capability of {@link CrudDao}: {@code insert}/{@code batchInsert} returning generated ids.
+ * Insert capability of {@link CrudDao}: generated-ID extraction and generation, plus
+ * {@code insert}/{@code batchInsert} returning generated ids.
  * Extends {@link InsertOps}.
  *
  * <p><b>{@code insert} vs {@code save}:</b> {@code insert}/{@code batchInsert} perform the same INSERT
@@ -40,6 +43,45 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertOps<T, TD> permits CrudDao, NoUpdateCrudDao, UncheckedCrudInsertOps {
+    /**
+     * Returns a {@link Jdbc.BiRowMapper} that extracts an ID from generated-key rows returned by an insert.
+     * Override this method when the framework's default ID extraction strategy is not suitable.
+     *
+     * <p>The default implementation returns {@code null}, which selects the default extractor.</p>
+     *
+     * <pre>{@code
+     * @Override
+     * public Jdbc.BiRowMapper<Long> idExtractor() {
+     *     return (rs, columnLabels) -> rs.getLong("id");
+     * }
+     * }</pre>
+     *
+     * @return an ID extractor, or {@code null} to use the default extraction strategy
+     */
+    @SuppressWarnings("SameReturnValue")
+    @NonDBOperation
+    default Jdbc.BiRowMapper<ID> idExtractor() {
+        return null;
+    }
+
+    /**
+     * Generates a new ID for entity insertion.
+     *
+     * <p>Override this method for client-side strategies such as UUIDs or sequences. The default
+     * implementation throws because ID generation is normally handled by the database.</p>
+     *
+     * @return the generated ID
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if client-side ID generation is not supported
+     * @deprecated ID generation should typically be handled by the database. Override this method
+     *             only when a client-side ID generation strategy is required.
+     */
+    @Deprecated
+    @NonDBOperation
+    default ID generateId() throws SQLException, UnsupportedOperationException {
+        throw new UnsupportedOperationException("ID generation is not supported by default");
+    }
+
     /**
      * Inserts the specified entity into the database and returns its ID.
      * All insertable properties of the entity will be included in the INSERT statement.

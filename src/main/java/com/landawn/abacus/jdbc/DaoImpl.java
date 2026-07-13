@@ -34,7 +34,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -54,6 +53,7 @@ import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
+import com.landawn.abacus.jdbc.annotation.CacheSerialization;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.FetchColumnByEntityClass;
 import com.landawn.abacus.jdbc.annotation.Handler;
@@ -158,7 +158,7 @@ import com.landawn.abacus.util.stream.Stream;
  * method's annotation metadata. Supported annotations include {@code @Query} (covering SELECT/INSERT/UPDATE/DELETE
  * and stored-procedure calls) together with helpers such as {@code @Bind}, {@code @BindList}, {@code @SqlScript},
  * {@code @SqlFragment}, {@code @SqlFragmentList}, and {@code @SqlSource}. The SQL operation type is determined from
- * the {@link OP} value supplied in the {@code @Query} annotation, from the SQL statement kind (e.g., {@code SELECT},
+ * the {@link QueryOperation} value supplied in the {@code @Query} annotation, from the SQL statement kind (e.g., {@code SELECT},
  * {@code INSERT}) detected by parsing the statement text (which also recognizes CTE and parenthesized forms), or from
  * built-in CRUD methods inherited from {@link Dao} and {@link CrudDao}.</p>
  *
@@ -224,8 +224,6 @@ final class DaoImpl {
         // utility class - prevent instantiation.
     }
 
-    private static final Set<String> SUPPORTED_SERIALIZER_FOR_CACHE = N.asSet("none", "kryo", "json");
-
     private static final String _1 = "1";
 
     private static final JsonParser jsonParser = ParserFactory.createJsonParser();
@@ -243,13 +241,13 @@ final class DaoImpl {
     static {
         sqlAnnoMap.put(Query.class, (final Annotation anno, final SqlMapper sqlMapper) -> {
             final Query tmp = (Query) anno;
-            int queryTimeout = tmp.queryTimeout();
+            int queryTimeout = tmp.queryTimeoutSeconds();
             int fetchSize = tmp.fetchSize();
             int batchSize = tmp.batchSize();
-            final boolean isBatch = tmp.isBatch();
-            final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
-            final boolean isSingleParameter = tmp.isSingleParameter();
-            final boolean isProcedure = tmp.isProcedure();
+            final boolean isBatch = tmp.batch();
+            final QueryOperation queryOperation = tmp.op() == null ? QueryOperation.DEFAULT : tmp.op();
+            final boolean isSingleParameter = tmp.collectionAsSingleParameter();
+            final boolean isProcedure = tmp.procedure();
 
             ParsedSql parsedSql = null;
             String sql = N.notEmpty(tmp.value()) ? Strings.trim(tmp.value()[0]) : null;
@@ -301,8 +299,8 @@ final class DaoImpl {
             final boolean isSelect = SqlParser.isSelectQuery(trimmedSql);
             final boolean isInsert = SqlParser.isInsertQuery(trimmedSql);
 
-            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.autoSetSysTimeParam(), isSelect,
-                    isInsert, isProcedure, tmp.fragmentsContainNamedParameters());
+            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, queryOperation, isSingleParameter,
+                    tmp.injectCurrentTimeParameters(), isSelect, isInsert, isProcedure, tmp.fragmentsContainNamedParameters());
         });
     }
 
@@ -425,17 +423,17 @@ final class DaoImpl {
 
     /**
      * Determines whether the specified method should be dispatched as a list-style (multi-row) query, based on its
-     * return type, its declared {@link OP}, the presence of {@code @MappedByKey}/{@code @MergedById} annotations,
-     * and (for {@link OP#DEFAULT}) the method's name prefix.
+     * return type, its declared {@link QueryOperation}, the presence of {@code @MappedByKey}/{@code @MergedById} annotations,
+     * and (for {@link QueryOperation#DEFAULT}) the method's name prefix.
      *
      * <p>The decision rules are:</p>
      * <ul>
-     *   <li>{@link OP#list} or {@link OP#listAll}: treated as a list query, but only if the return type is a proper
+     *   <li>{@link QueryOperation#list} or {@link QueryOperation#listAll}: treated as a list query, but only if the return type is a proper
      *       {@link Collection} subtype (not raw {@code Collection.class} itself); otherwise an
      *       {@link UnsupportedOperationException} is raised.</li>
      *   <li>Methods annotated with {@link MappedByKey @MappedByKey}: always treated as list queries.</li>
-     *   <li>Any explicit {@code op} other than {@link OP#DEFAULT}: not a list query.</li>
-     *   <li>{@link OP#DEFAULT}: only a return type that is a {@code Collection} subtype can be a list query; for any
+     *   <li>Any explicit {@code QueryOperation} other than {@link QueryOperation#DEFAULT}: not a list query.</li>
+     *   <li>{@link QueryOperation#DEFAULT}: only a return type that is a {@code Collection} subtype can be a list query; for any
      *       other return type the result is non-list. When the return type is a {@code Collection} subtype, the
      *       following rules are applied in order:
      *       <ol>
@@ -456,25 +454,25 @@ final class DaoImpl {
      *
      * @param method the DAO method to inspect
      * @param returnType the return type of the method
-     * @param op the operation type declared for the method ({@link OP#DEFAULT} when not explicitly specified)
+     * @param QueryOperation the operation type declared for the method ({@link QueryOperation#DEFAULT} when not explicitly specified)
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return {@code true} if the method should be dispatched as a list query, {@code false} otherwise
-     * @throws UnsupportedOperationException if {@code op} is {@link OP#list} or {@link OP#listAll} but the return
+     * @throws UnsupportedOperationException if {@code QueryOperation} is {@link QueryOperation#list} or {@link QueryOperation#listAll} but the return
      *         type is neither a proper {@link Collection} subtype nor one of the supported exemptions
      *         ({@code Map} via {@link MappedByKey}, {@code Tuple2} for procedures with out parameters)
      */
-    private static boolean isListQuery(final Method method, final Class<?> returnType, final OP op, final String fullClassMethodName) {
+    private static boolean isListQuery(final Method method, final Class<?> returnType, final QueryOperation queryOperation, final String fullClassMethodName) {
         final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final int paramLen = paramTypes.length;
 
-        // Checked before the list-OP Collection requirement: @MappedByKey methods return a Map built
-        // from the listed rows and explicitly support OP.list.
+        // Checked before the list-QueryOperation Collection requirement: @MappedByKey methods return a Map built
+        // from the listed rows and explicitly support QueryOperation.list.
         if (method.getAnnotation(MappedByKey.class) != null) {
             return true;
         }
 
-        if (op == OP.list || op == OP.listAll) {
+        if (queryOperation == QueryOperation.list || queryOperation == QueryOperation.listAll) {
             // Tuple2<..., OutParamResult> returns are legal for procedures with list OPs; they are handled
             // by the dedicated procedure dispatch, not the plain list dispatch.
             if (Tuple2.class.isAssignableFrom(returnType)) {
@@ -482,12 +480,12 @@ final class DaoImpl {
             }
 
             if (Collection.class.equals(returnType) || !(Collection.class.isAssignableFrom(returnType))) {
-                throw new UnsupportedOperationException(
-                        "The result type of list OP must be sub type of Collection, can't be: " + returnType + " in method: " + fullClassMethodName);
+                throw new UnsupportedOperationException("The result type of list QueryOperation must be sub type of Collection, can't be: " + returnType
+                        + " in method: " + fullClassMethodName);
             }
 
             return true;
-        } else if (op != OP.DEFAULT) {
+        } else if (queryOperation != QueryOperation.DEFAULT) {
             return false;
         }
 
@@ -536,7 +534,7 @@ final class DaoImpl {
         }
     }
 
-    private static boolean isExistsQuery(final Method method, final OP op, final String fullClassMethodName) {
+    private static boolean isExistsQuery(final Method method, final QueryOperation queryOperation, final String fullClassMethodName) {
         final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
@@ -544,14 +542,14 @@ final class DaoImpl {
 
         final boolean isBooleanReturnType = boolean.class.equals(returnType) || Boolean.class.equals(returnType);
 
-        if (op == OP.exists) {
+        if (queryOperation == QueryOperation.exists) {
             if (!isBooleanReturnType) {
                 throw new UnsupportedOperationException(
-                        "The result type of exists OP must be boolean or Boolean, can't be: " + returnType + " in method: " + fullClassMethodName);
+                        "The result type of exists QueryOperation must be boolean or Boolean, can't be: " + returnType + " in method: " + fullClassMethodName);
             }
 
             return true;
-        } else if (op != OP.DEFAULT) {
+        } else if (queryOperation != QueryOperation.DEFAULT) {
             return false;
         }
 
@@ -573,30 +571,30 @@ final class DaoImpl {
                 || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8))));
     }
 
-    private static boolean isFindFirst(final Method method, final OP op) {
-        if (op == OP.findFirst) {
+    private static boolean isFindFirst(final Method method, final QueryOperation queryOperation) {
+        if (queryOperation == QueryOperation.findFirst) {
             return true;
         }
 
-        return op == OP.DEFAULT && !(method.getName().startsWith("findOnlyOne") || method.getName().startsWith("queryForSingle")
+        return queryOperation == QueryOperation.DEFAULT && !(method.getName().startsWith("findOnlyOne") || method.getName().startsWith("queryForSingle")
                 || method.getName().startsWith("queryForUnique"));
     }
 
-    private static boolean isFindOnlyOne(final Method method, final OP op) {
-        if (op == OP.findOnlyOne) {
+    private static boolean isFindOnlyOne(final Method method, final QueryOperation queryOperation) {
+        if (queryOperation == QueryOperation.findOnlyOne) {
             return true;
         }
 
         // Both "OnlyOne" prefixes from singleQueryPrefix promise at-most-one-row semantics.
-        return op == OP.DEFAULT && (method.getName().startsWith("findOnlyOne") || method.getName().startsWith("selectOnlyOne"));
+        return queryOperation == QueryOperation.DEFAULT && (method.getName().startsWith("findOnlyOne") || method.getName().startsWith("selectOnlyOne"));
     }
 
-    private static boolean isQueryForUnique(final Method method, final OP op) {
-        if (op == OP.queryForUnique) {
+    private static boolean isQueryForUnique(final Method method, final QueryOperation queryOperation) {
+        if (queryOperation == QueryOperation.queryForUnique) {
             return true;
         }
 
-        return op == OP.DEFAULT && method.getName().startsWith("queryForUnique");
+        return queryOperation == QueryOperation.DEFAULT && method.getName().startsWith("queryForUnique");
     }
 
     private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.wrap((N.toSet(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
@@ -609,7 +607,7 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createSingleQueryFunction(final Class<?> returnType, final Method method,
-            final OP op) {
+            final QueryOperation queryOperation) {
         if (u.OptionalBoolean.class.isAssignableFrom(returnType)) {
             return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
         } else if (u.OptionalChar.class.isAssignableFrom(returnType)) {
@@ -632,7 +630,7 @@ final class DaoImpl {
 
             // Bare scalar returns must still honor the uniqueness contract of findOnlyOne/queryForUnique
             // (DuplicateResultException on more than one row) instead of silently reading the first row.
-            if (isQueryForUnique(method, op) || isFindOnlyOne(method, op)) {
+            if (isQueryForUnique(method, queryOperation) || isFindOnlyOne(method, queryOperation)) {
                 return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueValue(returnType).orElse(N.defaultValueOf(returnType));
             }
 
@@ -643,8 +641,8 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createQueryFunctionByMethod(final Class<?> entityClass,
             final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMap,
-            final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isProcedure,
-            final String fullClassMethodName) {
+            final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final QueryOperation queryOperation,
+            final boolean isProcedure, final String fullClassMethodName) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -653,51 +651,55 @@ final class DaoImpl {
 
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
-        final boolean isListQuery = isListQuery(method, returnType, op, fullClassMethodName);
-        final boolean isExists = isExistsQuery(method, op, fullClassMethodName);
+        final boolean isListQuery = isListQuery(method, returnType, queryOperation, fullClassMethodName);
+        final boolean isExists = isExistsQuery(method, queryOperation, fullClassMethodName);
 
-        if ((op == OP.stream && !Stream.class.isAssignableFrom(returnType))
-                || (op == OP.query && !(Dataset.class.isAssignableFrom(returnType) || Tuple2.class.isAssignableFrom(returnType) || (lastParamType != null
+        if ((queryOperation == QueryOperation.stream && !Stream.class.isAssignableFrom(returnType)) || (queryOperation == QueryOperation.query
+                && !(Dataset.class.isAssignableFrom(returnType) || Tuple2.class.isAssignableFrom(returnType) || (lastParamType != null
                         && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)))))) {
-            throw new UnsupportedOperationException(
-                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                    + " is not supported by the specified queryOperation: " + queryOperation);
         }
 
-        if ((op == OP.findFirst || op == OP.findOnlyOne) && Nullable.class.isAssignableFrom(returnType)) {
-            throw new UnsupportedOperationException(
-                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+        if ((queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne) && Nullable.class.isAssignableFrom(returnType)) {
+            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                    + " is not supported by the specified queryOperation: " + queryOperation);
         }
 
-        if ((op == OP.executeAndGetOutParameters && !returnType.isAssignableFrom(Jdbc.OutParamResult.class))
-                || (Stream.class.isAssignableFrom(returnType) && !(op == OP.stream || op == OP.streamAll || op == OP.DEFAULT))) {
-            throw new UnsupportedOperationException(
-                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+        if ((queryOperation == QueryOperation.executeAndGetOutParameters && !returnType.isAssignableFrom(Jdbc.OutParamResult.class)) || (Stream.class
+                .isAssignableFrom(returnType)
+                && !(queryOperation == QueryOperation.stream || queryOperation == QueryOperation.streamAll || queryOperation == QueryOperation.DEFAULT))) {
+            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                    + " is not supported by the specified queryOperation: " + queryOperation);
         }
 
-        if (Dataset.class.isAssignableFrom(returnType) && !(op == OP.query || op == OP.DEFAULT)) {
-            throw new UnsupportedOperationException(
-                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+        if (Dataset.class.isAssignableFrom(returnType) && !(queryOperation == QueryOperation.query || queryOperation == QueryOperation.DEFAULT)) {
+            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                    + " is not supported by the specified queryOperation: " + queryOperation);
         }
 
         if ((u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType))
-                && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
-            throw new UnsupportedOperationException(
-                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                && !(queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne
+                        || queryOperation == QueryOperation.queryForSingle || queryOperation == QueryOperation.queryForUnique
+                        || queryOperation == QueryOperation.DEFAULT)) {
+            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                    + " is not supported by the specified queryOperation: " + queryOperation);
         }
 
-        if (Nullable.class.isAssignableFrom(returnType) && !(op == OP.queryForSingle || op == OP.queryForUnique || op == OP.DEFAULT)) {
-            throw new UnsupportedOperationException(
-                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+        if (Nullable.class.isAssignableFrom(returnType) && !(queryOperation == QueryOperation.queryForSingle || queryOperation == QueryOperation.queryForUnique
+                || queryOperation == QueryOperation.DEFAULT)) {
+            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                    + " is not supported by the specified queryOperation: " + queryOperation);
         }
 
         if (isProcedure) {
-            if (op == OP.executeAndGetOutParameters) {
+            if (queryOperation == QueryOperation.executeAndGetOutParameters) {
                 return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).executeAndGetOutParameters();
-            } else if (op == OP.listAll) {
+            } else if (queryOperation == QueryOperation.listAll) {
                 if (Tuple2.class.isAssignableFrom(returnType)) {
                     if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
                     if (hasRowMapperOrExtractor) {
@@ -719,20 +721,20 @@ final class DaoImpl {
                             }
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
-                                    + " is not supported by the specified op: " + op);
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
                     } else {
                         if (firstReturnEleEleType == null) {
-                            throw new UnsupportedOperationException(
-                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
 
                         return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSetsAndGetOutParameters(firstReturnEleEleType);
                     }
                 } else {
                     if (!List.class.isAssignableFrom(returnType)) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
                     if (hasRowMapperOrExtractor) {
@@ -752,7 +754,7 @@ final class DaoImpl {
                             }
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
-                                    + " is not supported by the specified op: " + op);
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
                     } else {
                         // For a return type of List<List<User>>, each result set's rows are mapped to the innermost element type (User),
@@ -760,18 +762,18 @@ final class DaoImpl {
                         final Class<?> rowType = firstReturnEleEleType != null ? firstReturnEleEleType : firstReturnEleType;
 
                         if (rowType == null) {
-                            throw new UnsupportedOperationException(
-                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
 
                         return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSets(rowType);
                     }
                 }
-            } else if (op == OP.queryAll) {
+            } else if (queryOperation == QueryOperation.queryAll) {
                 if (Tuple2.class.isAssignableFrom(returnType)) {
                     if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
                     if (hasRowMapperOrExtractor) {
@@ -783,12 +785,12 @@ final class DaoImpl {
                                     .queryAllResultSetsAndGetOutParameters((Jdbc.BiResultExtractor) args[paramLen - 1]);
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
-                                    + " is not supported by the specified op: " + op);
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
                     } else {
                         if (firstReturnEleEleType == null || !Dataset.class.isAssignableFrom(firstReturnEleEleType)) {
-                            throw new UnsupportedOperationException(
-                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
 
                         return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultSetsAndGetOutParameters();
@@ -796,8 +798,8 @@ final class DaoImpl {
 
                 } else {
                     if (!List.class.isAssignableFrom(returnType)) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
                     if (hasRowMapperOrExtractor) {
@@ -807,21 +809,21 @@ final class DaoImpl {
                             return (preparedQuery, args) -> (R) preparedQuery.queryAllResultSets((Jdbc.BiResultExtractor) args[paramLen - 1]);
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
-                                    + " is not supported by the specified op: " + op);
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
                     } else {
                         if (firstReturnEleType == null || !Dataset.class.isAssignableFrom(firstReturnEleType)) {
-                            throw new UnsupportedOperationException(
-                                    "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                    + " is not supported by the specified queryOperation: " + queryOperation);
                         }
 
                         return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultSets();
                     }
                 }
-            } else if (op == OP.streamAll) {
+            } else if (queryOperation == QueryOperation.streamAll) {
                 if (!Stream.class.isAssignableFrom(returnType)) {
-                    throw new UnsupportedOperationException(
-                            "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                    throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                            + " is not supported by the specified queryOperation: " + queryOperation);
                 }
 
                 if (hasRowMapperOrExtractor) {
@@ -831,22 +833,23 @@ final class DaoImpl {
                         return (preparedQuery, args) -> (R) preparedQuery.streamAllResultSets((Jdbc.BiResultExtractor) args[paramLen - 1]);
                     } else {
                         throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
-                                + " is not supported by the specified op: " + op);
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
                 } else {
                     if (firstReturnEleType == null || !Dataset.class.isAssignableFrom(firstReturnEleType)) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
                     return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultSets();
                 }
             }
 
-            if (Tuple2.class.isAssignableFrom(returnType) && (op == OP.list || op == OP.query || op == OP.DEFAULT)) {
+            if (Tuple2.class.isAssignableFrom(returnType)
+                    && (queryOperation == QueryOperation.list || queryOperation == QueryOperation.query || queryOperation == QueryOperation.DEFAULT)) {
                 //    if (firstReturnEleType == null || !List.class.isAssignableFrom(firstReturnEleType)) {
                 //        throw new UnsupportedOperationException(
-                //                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                //                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified queryOperation: " + queryOperation);
                 //    }
 
                 if (hasRowMapperOrExtractor) {
@@ -871,12 +874,12 @@ final class DaoImpl {
                                 args) -> (R) ((CallableQuery) preparedQuery).queryAndGetOutParameters((Jdbc.BiResultExtractor) args[paramLen - 1]);
                     } else {
                         throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
-                                + " is not supported by the specified op: " + op);
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
                 } else {
                     if (firstReturnEleType == null) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
                     if (Dataset.class.isAssignableFrom(firstReturnEleType)) {
@@ -884,8 +887,8 @@ final class DaoImpl {
                     }
 
                     if (firstReturnEleEleType == null) {
-                        throw new UnsupportedOperationException(
-                                "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported by the specified op: " + op);
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
                     return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAndGetOutParameters(firstReturnEleEleType);
@@ -903,13 +906,18 @@ final class DaoImpl {
                                 + fullClassMethodName);
             }
 
-            if (!(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll || op == OP.stream
-                    || op == OP.streamAll || op == OP.DEFAULT)) {
-                throw new UnsupportedOperationException("RowMapper/ResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
+            if (!(queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne || queryOperation == QueryOperation.list
+                    || queryOperation == QueryOperation.listAll || queryOperation == QueryOperation.query || queryOperation == QueryOperation.queryAll
+                    || queryOperation == QueryOperation.stream || queryOperation == QueryOperation.streamAll || queryOperation == QueryOperation.DEFAULT)) {
+                throw new UnsupportedOperationException(
+                        "RowMapper/ResultExtractor is not supported by queryOperation: " + queryOperation + " in method: " + fullClassMethodName);
             }
 
-            if (hasRowFilter && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.listAll || op == OP.stream || op == OP.DEFAULT)) {
-                throw new UnsupportedOperationException("RowFilter is not supported by OP: " + op + " in method: " + fullClassMethodName);
+            if (hasRowFilter && !(queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne
+                    || queryOperation == QueryOperation.list || queryOperation == QueryOperation.listAll || queryOperation == QueryOperation.stream
+                    || queryOperation == QueryOperation.DEFAULT)) {
+                throw new UnsupportedOperationException(
+                        "RowFilter is not supported by queryOperation: " + queryOperation + " in method: " + fullClassMethodName);
             }
 
             if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
@@ -930,7 +938,7 @@ final class DaoImpl {
                         }
                     }
                 } else if (u.Optional.class.isAssignableFrom(returnType)) {
-                    if (isFindOnlyOne(method, op)) {
+                    if (isFindOnlyOne(method, queryOperation)) {
                         if (hasRowFilter) {
                             return (preparedQuery,
                                     args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]).onlyOne();
@@ -957,7 +965,7 @@ final class DaoImpl {
                                 "The return type of method: " + method.getName() + " can't be: " + returnType + " when RowMapper/BiRowMapper is specified");
                     }
 
-                    if (isFindOnlyOne(method, op)) {
+                    if (isFindOnlyOne(method, queryOperation)) {
                         if (hasRowFilter) {
                             return (preparedQuery, args) -> (R) ((Stream<Object>) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2],
                                     (Jdbc.RowMapper) args[paramLen - 1])).onlyOne().orElse(N.defaultValueOf(returnType));
@@ -995,7 +1003,7 @@ final class DaoImpl {
                         }
                     }
                 } else if (u.Optional.class.isAssignableFrom(returnType)) {
-                    if (isFindOnlyOne(method, op)) {
+                    if (isFindOnlyOne(method, queryOperation)) {
                         if (hasRowFilter) {
                             return (preparedQuery,
                                     args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1]).onlyOne();
@@ -1022,7 +1030,7 @@ final class DaoImpl {
                                 "The return type of method: " + method.getName() + " can't be: " + returnType + " when RowMapper/BiRowMapper is specified");
                     }
 
-                    if (isFindOnlyOne(method, op)) {
+                    if (isFindOnlyOne(method, queryOperation)) {
                         if (hasRowFilter) {
                             return (preparedQuery, args) -> (R) ((Stream<Object>) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2],
                                     (Jdbc.BiRowMapper) args[paramLen - 1])).onlyOne().orElse(N.defaultValueOf(returnType));
@@ -1041,9 +1049,9 @@ final class DaoImpl {
                     }
                 }
             } else {
-                if (!(op == OP.query || op == OP.DEFAULT)) {
+                if (!(queryOperation == QueryOperation.query || queryOperation == QueryOperation.DEFAULT)) {
                     throw new UnsupportedOperationException(
-                            "ResultExtractor/BiResultExtractor is not supported by OP: " + op + " in method: " + fullClassMethodName);
+                            "ResultExtractor/BiResultExtractor is not supported by queryOperation: " + queryOperation + " in method: " + fullClassMethodName);
                 }
 
                 if (method.getGenericParameterTypes()[paramLen - 1] instanceof ParameterizedType) {
@@ -1102,7 +1110,7 @@ final class DaoImpl {
                             return (R) c;
                         }
                     } else {
-                        if (isFindOnlyOne(method, op) && N.size(mergedEntities) > 1) {
+                        if (isFindOnlyOne(method, queryOperation) && N.size(mergedEntities) > 1) {
                             throw new DuplicateResultException("More than one record found by the query defined or generated in method: " + method.getName());
                         }
 
@@ -1147,27 +1155,27 @@ final class DaoImpl {
             checkReturnEleTypeResolved(firstReturnEleType, returnType, fullClassMethodName);
 
             if (Nullable.class.isAssignableFrom(returnType)) {
-                if (isQueryForUnique(method, op)) {
+                if (isQueryForUnique(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueValue(firstReturnEleType);
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleValue(firstReturnEleType);
                 }
             } else if (u.Optional.class.isAssignableFrom(returnType)) {
-                if (isFindFirst(method, op)) {
+                if (isFindFirst(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
-                } else if (isFindOnlyOne(method, op)) {
+                } else if (isFindOnlyOne(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
-                } else if (isQueryForUnique(method, op)) {
+                } else if (isQueryForUnique(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType);
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType);
                 }
             } else if (java.util.Optional.class.isAssignableFrom(returnType)) {
-                if (isFindFirst(method, op)) {
+                if (isFindFirst(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).toJdkOptional();
-                } else if (isFindOnlyOne(method, op)) {
+                } else if (isFindOnlyOne(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(BiRowMapper.to(firstReturnEleType, prefixFieldMap)).toJdkOptional();
-                } else if (isQueryForUnique(method, op)) {
+                } else if (isQueryForUnique(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueNonNull(firstReturnEleType).toJdkOptional();
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleNonNull(firstReturnEleType).toJdkOptional();
@@ -1177,13 +1185,13 @@ final class DaoImpl {
             }
         } else {
             if (isFindOrListTargetClass(returnType)) {
-                if (isFindOnlyOne(method, op)) {
+                if (isFindOnlyOne(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();
                 }
             } else {
-                return createSingleQueryFunction(returnType, method, op);
+                return createSingleQueryFunction(returnType, method, queryOperation);
             }
         }
     }
@@ -1556,9 +1564,9 @@ final class DaoImpl {
     private static AbstractQuery prepareQuery(final DaoBase proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final String fullClassMethodName,
             final Method method, final Class<?> returnType, final Object[] args, final int[] fragmentParamIndexes,
             final Tuple2<Annotation, String>[] fragmentAnnos, final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys,
-            final String[] returnColumnNames, final List<OutParameter> outParameterList,
+            final String[] generatedKeyColumnNames, final List<OutParameter> outParameterList,
             final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter) throws SQLException {
-        final OP op = queryInfo.op;
+        final QueryOperation queryOperation = queryInfo.queryOperation;
         String query = queryInfo.sql;
         ParsedSql parsedSql = queryInfo.parsedSql;
 
@@ -1579,9 +1587,9 @@ final class DaoImpl {
         try {
             preparedQuery = queryInfo.isProcedure ? JdbcUtil.prepareCallableQuery(proxy.dataSource(), query)
                     : (queryInfo.isNamedQuery
-                            ? (returnGeneratedKeys ? JdbcUtil.prepareNamedQuery(proxy.dataSource(), parsedSql, returnColumnNames)
+                            ? (returnGeneratedKeys ? JdbcUtil.prepareNamedQuery(proxy.dataSource(), parsedSql, generatedKeyColumnNames)
                                     : JdbcUtil.prepareNamedQuery(proxy.dataSource(), parsedSql))
-                            : (returnGeneratedKeys ? JdbcUtil.prepareQuery(proxy.dataSource(), query, returnColumnNames)
+                            : (returnGeneratedKeys ? JdbcUtil.prepareQuery(proxy.dataSource(), query, generatedKeyColumnNames)
                                     : JdbcUtil.prepareQuery(proxy.dataSource(), query)));
 
             if (queryInfo.isProcedure && N.notEmpty(outParameterList)) {
@@ -1605,17 +1613,18 @@ final class DaoImpl {
             } else if (queryInfo.isSelect) {
                 if (mergedByIdAnno != null) {
                     preparedQuery.configureStatement(JdbcUtil.stmtSetterForBigQueryResult); // @MergedById may fetch a large multi-row result set to merge
-                } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
+                } else if (queryOperation == QueryOperation.findOnlyOne || queryOperation == QueryOperation.queryForUnique) {
                     preparedQuery.setFetchSize(2);
-                } else if (op == OP.findFirst || op == OP.queryForSingle || op == OP.exists || isExistsQuery(method, op, fullClassMethodName)
+                } else if (queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.queryForSingle
+                        || queryOperation == QueryOperation.exists || isExistsQuery(method, queryOperation, fullClassMethodName)
                         || isSingleReturnType(returnType)) {
                     preparedQuery.setFetchSize(1);
-                } else if (op == OP.stream || op == OP.streamAll || Stream.class.isAssignableFrom(returnType)) {
+                } else if (queryOperation == QueryOperation.stream || queryOperation == QueryOperation.streamAll || Stream.class.isAssignableFrom(returnType)) {
                     preparedQuery.configureStatement(JdbcUtil.stmtSetterForStream);
-                } else if (op == OP.list || op == OP.listAll || op == OP.query || op == OP.queryAll
-                        || isListQuery(method, returnType, op, fullClassMethodName)) {
+                } else if (queryOperation == QueryOperation.list || queryOperation == QueryOperation.listAll || queryOperation == QueryOperation.query
+                        || queryOperation == QueryOperation.queryAll || isListQuery(method, returnType, queryOperation, fullClassMethodName)) {
                     preparedQuery.configureStatement(JdbcUtil.stmtSetterForBigQueryResult);
-                } else if (op == OP.DEFAULT && (Dataset.class.isAssignableFrom(returnType))) {
+                } else if (queryOperation == QueryOperation.DEFAULT && (Dataset.class.isAssignableFrom(returnType))) {
                     preparedQuery.configureStatement(JdbcUtil.stmtSetterForBigQueryResult);
                 }
             }
@@ -1724,8 +1733,8 @@ final class DaoImpl {
         Jdbc.BiRowMapper<Object> keyExtractor = idExtractorHolder.value();
 
         if (keyExtractor == null) {
-            // idExtractor() is declared on CrudReadOps, so this must cover every insert-capable CRUD
-            // variant (e.g. NoUpdateCrudDao), not just full CrudDao implementations.
+            // idExtractor() is declared on CrudInsertOps, so this covers every insert-capable CRUD
+            // variant (for example NoUpdateCrudDao), but not read-only CRUD DAOs.
             keyExtractor = N.defaultIfNull((Jdbc.BiRowMapper<Object>) DaoUtil.getDeclaredIdExtractor(dao), defaultIdExtractor);
 
             idExtractorHolder.setValue(keyExtractor);
@@ -1735,11 +1744,11 @@ final class DaoImpl {
     }
 
     private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final PerfLog perfLogAnno, final long startTimeNanos) {
-        if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
+        if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.daoMethodLogThresholdMillis() >= 0 && daoLogger.isInfoEnabled()) {
             final long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
 
-            if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
-                daoLogger.info(Strings.concat("[DAO-OP-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime), " ms"));
+            if (elapsedTime >= perfLogAnno.daoMethodLogThresholdMillis()) {
+                daoLogger.info(Strings.concat("[DAO-QUERY-OPERATION-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime), " ms"));
             }
         }
     }
@@ -1841,7 +1850,7 @@ final class DaoImpl {
      * @param inputDaoCache an optional {@link Jdbc.DaoCache} for caching query results of methods annotated with
      *        {@code @CacheResult} (and invalidated by {@code @RefreshCache}). When {@code null}, the cache is
      *        derived from the class-level {@code @Cache} annotation (using its {@code impl()}, {@code capacity()}
-     *        and {@code evictDelay()}) if present, otherwise a {@link Jdbc.DefaultDaoCache} with
+     *        and {@code evictDelayMillis()}) if present, otherwise a {@link Jdbc.DefaultDaoCache} with
      *        {@link JdbcUtil#DEFAULT_CACHE_CAPACITY default capacity} and
      *        {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY default evict delay} is used. Note: result caching is
      *        currently only supported for cacheable DAOs — {@code NoUpdateDao}/{@code ReadOnlyDao} and their
@@ -1855,7 +1864,7 @@ final class DaoImpl {
      *         nor {@link SqlPolicy#PARAMETERIZED_SQL}, if duplicate SQL keys are defined, or if the
      *         DAO interface has invalid annotation configurations or generic type arguments
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
-     *         incompatible return type for the declared {@link OP}, or a feature not yet enabled (e.g., cache on a
+     *         incompatible return type for the declared {@link QueryOperation}, or a feature not yet enabled (e.g., cache on a
      *         non-cacheable interface that supports update/delete operations, or a {@code RowMapper}/{@code ResultExtractor} parameter that is not the last method parameter)
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
@@ -2154,7 +2163,7 @@ final class DaoImpl {
 
         final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
 
-        final String[] returnColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
+        final String[] generatedKeyColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
                         : Stream.of(idPropNameList).map(propColumnNameMap::get).toArray(IntFunctions.ofStringArray()));
 
@@ -2257,10 +2266,10 @@ final class DaoImpl {
         }
 
         final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
-        final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
+        final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelayMillis();
 
         if (daoClassCacheAnno != null && (capacity < 0 || evictDelay < 0)) {
-            throw new UnsupportedOperationException("Invalid ('capacity', 'evictDelay'): (" + capacity + ", " + evictDelay
+            throw new UnsupportedOperationException("Invalid ('capacity', 'evictDelayMillis'): (" + capacity + ", " + evictDelay
                     + ") (both must be >= 0) in annotation 'Cache' on Dao interface: " + daoClassName);
         }
 
@@ -3983,7 +3992,7 @@ final class DaoImpl {
                                 namedInsertSql = namedInsertWithIdSQL;
                             }
 
-                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                     .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
@@ -4003,7 +4012,7 @@ final class DaoImpl {
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).build().query();
 
-                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                     .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
@@ -4021,7 +4030,7 @@ final class DaoImpl {
                                 idSetter.accept(DaoUtil.generateId(proxy), entity);
                             }
 
-                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                     .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
@@ -4055,7 +4064,7 @@ final class DaoImpl {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
@@ -4063,7 +4072,7 @@ final class DaoImpl {
                                 Throwable failure = null;
 
                                 try {
-                                    try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                                    try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                             .closeAfterExecution(false)) {
                                         ids = Seq.of(entities)
                                                 .split(batchSize)
@@ -4131,7 +4140,7 @@ final class DaoImpl {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
@@ -4139,7 +4148,7 @@ final class DaoImpl {
                                 Throwable failure = null;
 
                                 try {
-                                    try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                                    try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                             .closeAfterExecution(false)) {
                                         ids = Seq.of(entities)
                                                 .split(batchSize)
@@ -4205,7 +4214,7 @@ final class DaoImpl {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
@@ -4213,7 +4222,7 @@ final class DaoImpl {
                                 Throwable failure = null;
 
                                 try {
-                                    try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, returnColumnNames)
+                                    try (NamedQuery nameQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                                             .closeAfterExecution(false)) {
                                         ids = Seq.of(entities)
                                                 .split(batchSize)
@@ -4739,7 +4748,7 @@ final class DaoImpl {
                                     ClassUtil.getCanonicalClassName(entityClass));
 
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                    .getSelectSqlPlan(parameterizedDsl);
+                                    .selectSqlPlan(parameterizedDsl);
 
                             final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
@@ -4792,7 +4801,7 @@ final class DaoImpl {
                                 final Object first = N.firstOrNullIfEmpty(entities);
 
                                 final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                        .getSelectSqlPlan(parameterizedDsl);
+                                        .selectSqlPlan(parameterizedDsl);
 
                                 final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(first, tp._2);
 
@@ -4823,7 +4832,7 @@ final class DaoImpl {
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                        .getBatchSelectSqlPlan(parameterizedDsl);
+                                        .batchSelectSqlPlan(parameterizedDsl);
 
                                 Stream.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
@@ -4871,8 +4880,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
-                            final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                    .getDeleteSqlPlan(parameterizedDsl);
+                            final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.deleteSqlPlan(parameterizedDsl);
 
                             final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
 
@@ -4916,7 +4924,7 @@ final class DaoImpl {
                                 final Object first = N.firstOrNullIfEmpty(entities);
 
                                 final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                        .getDeleteSqlPlan(parameterizedDsl);
+                                        .deleteSqlPlan(parameterizedDsl);
 
                                 if (Strings.isEmpty(tp._2)) {
                                     return joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
@@ -4946,7 +4954,7 @@ final class DaoImpl {
 
                                 try {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                            .getBatchDeleteSqlPlan(parameterizedDsl);
+                                            .batchDeleteSqlPlan(parameterizedDsl);
 
                                     result = Seq.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).sumLong(bp -> {
                                         if (tp._2 == null) {
@@ -5006,9 +5014,9 @@ final class DaoImpl {
 
                     // Includes primitive AND wrapper update return types: the converter at the bottom of the isUpdate
                     // branch (LongFunction<?> updateResultConverter) already handles Boolean/Integer via ClassUtil.wrap,
-                    // and isLargeUpdate explicitly recognizes Long.class for OP.DEFAULT — keeping the predicate
+                    // and isLargeUpdate explicitly recognizes Long.class for QueryOperation.DEFAULT — keeping the predicate
                     // primitive-only meant those wrapper branches were unreachable and @Update methods declared with
-                    // Integer/Long/Boolean returns failed at the OP.DEFAULT dispatch with "Unsupported sql annotation".
+                    // Integer/Long/Boolean returns failed at the QueryOperation.DEFAULT dispatch with "Unsupported sql annotation".
                     final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class)
                             || returnType.equals(void.class) || returnType.equals(Integer.class) || returnType.equals(Long.class)
                             || returnType.equals(Boolean.class);
@@ -5018,14 +5026,15 @@ final class DaoImpl {
                     final ParsedSql parsedSql = queryInfo.parsedSql;
                     final boolean isBatch = queryInfo.isBatch;
                     final int tmpBatchSize = queryInfo.batchSize;
-                    final OP op = queryInfo.op;
+                    final QueryOperation queryOperation = queryInfo.queryOperation;
                     final boolean isSingleParameter = queryInfo.isSingleParameter;
                     final boolean isProcedure = queryInfo.isProcedure;
-                    final boolean isUpdate = !queryInfo.isSelect && !queryInfo.isInsert
-                            && (op == OP.update || op == OP.largeUpdate || (op == OP.DEFAULT && isUpdateReturnType));
+                    final boolean isUpdate = !queryInfo.isSelect && !queryInfo.isInsert && (queryOperation == QueryOperation.update
+                            || queryOperation == QueryOperation.largeUpdate || (queryOperation == QueryOperation.DEFAULT && isUpdateReturnType));
 
                     final boolean isQuery = queryInfo.isSelect
-                            || (isProcedure && !(op == OP.update || op == OP.largeUpdate) && (op != OP.DEFAULT || !isUpdateReturnType));
+                            || (isProcedure && !(queryOperation == QueryOperation.update || queryOperation == QueryOperation.largeUpdate)
+                                    && (queryOperation != QueryOperation.DEFAULT || !isUpdateReturnType));
 
                     final boolean returnGeneratedKeys = !isNoId && queryInfo.isInsert;
 
@@ -5123,16 +5132,19 @@ final class DaoImpl {
 
                     if (hasRowMapperOrResultExtractor
                             && (Jdbc.RowMapper.class.isAssignableFrom(lastParamType) || Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType))
-                            && !(op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.stream || op == OP.listAll || op == OP.DEFAULT)) {
-                        throw new UnsupportedOperationException(
-                                "Parameter 'RowMapper/BiRowMapper' is not supported by OP = " + op + " in method: " + fullClassMethodName);
+                            && !(queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne
+                                    || queryOperation == QueryOperation.list || queryOperation == QueryOperation.stream
+                                    || queryOperation == QueryOperation.listAll || queryOperation == QueryOperation.DEFAULT)) {
+                        throw new UnsupportedOperationException("Parameter 'RowMapper/BiRowMapper' is not supported by queryOperation = " + queryOperation
+                                + " in method: " + fullClassMethodName);
                     }
 
                     if (hasRowMapperOrResultExtractor
                             && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType))
-                            && !(op == OP.query || op == OP.queryAll || op == OP.streamAll || op == OP.DEFAULT)) {
-                        throw new UnsupportedOperationException(
-                                "Parameter 'ResultExtractor/BiResultExtractor' is not supported by OP = " + op + " in method: " + fullClassMethodName);
+                            && !(queryOperation == QueryOperation.query || queryOperation == QueryOperation.queryAll
+                                    || queryOperation == QueryOperation.streamAll || queryOperation == QueryOperation.DEFAULT)) {
+                        throw new UnsupportedOperationException("Parameter 'ResultExtractor/BiResultExtractor' is not supported by queryOperation = "
+                                + queryOperation + " in method: " + fullClassMethodName);
                     }
 
                     // TODO may enable it later.
@@ -5249,7 +5261,8 @@ final class DaoImpl {
 
                     if (isSingleParameter && stmtParamLen != 1) {
                         throw new UnsupportedOperationException(
-                                "Don't set 'isSingleParameter' to true if the count of statement/query parameter is not one in method: " + fullClassMethodName);
+                                "Don't set 'collectionAsSingleParameter' to true if the count of statement/query parameters is not one in method: "
+                                        + fullClassMethodName);
                     }
 
                     final List<OutParameter> outParameterList = Stream.of(method.getAnnotations())
@@ -5260,7 +5273,7 @@ final class DaoImpl {
                     if (N.notEmpty(outParameterList)) {
                         if (!isProcedure) {
                             throw new UnsupportedOperationException(
-                                    "@OutParameter annotations are only supported by @Query methods with isProcedure=true, not supported in method: "
+                                    "@OutParameter annotations are only supported by @Query methods with procedure=true, not supported in method: "
                                             + fullClassMethodName);
                         }
 
@@ -5279,10 +5292,11 @@ final class DaoImpl {
                         }
                     }
 
-                    if ((op == OP.listAll || op == OP.queryAll || op == OP.streamAll || op == OP.executeAndGetOutParameters) && !isProcedure) {
+                    if ((queryOperation == QueryOperation.listAll || queryOperation == QueryOperation.queryAll || queryOperation == QueryOperation.streamAll
+                            || queryOperation == QueryOperation.executeAndGetOutParameters) && !isProcedure) {
                         throw new UnsupportedOperationException(
-                                "Op.listAll/queryAll/streamAll/executeAndGetOutParameters are only supported by @Query methods with isProcedure=true but method: "
-                                        + fullClassMethodName + " does not have isProcedure=true");
+                                "QueryOperation.listAll/queryAll/streamAll/executeAndGetOutParameters are only supported by @Query methods with procedure=true but method: "
+                                        + fullClassMethodName + " does not have procedure=true");
                     }
 
                     if (isBatch && !((stmtParamLen == 1 && Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])) || (stmtParamLen == 2
@@ -5312,9 +5326,9 @@ final class DaoImpl {
                                     "No method found by mapped key: " + mappedByKey + " in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
                         }
 
-                        if (!(op == OP.DEFAULT || op == OP.list)) {
-                            throw new IllegalArgumentException("OP for method annotated by @MappedByKey can't be: " + op + " in method: " + fullClassMethodName
-                                    + ". It must be OP.DEFAULT or OP.list");
+                        if (!(queryOperation == QueryOperation.DEFAULT || queryOperation == QueryOperation.list)) {
+                            throw new IllegalArgumentException("QueryOperation for method annotated by @MappedByKey can't be: " + queryOperation
+                                    + " in method: " + fullClassMethodName + ". It must be QueryOperation.DEFAULT or QueryOperation.list");
                         }
 
                         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -5358,16 +5372,20 @@ final class DaoImpl {
                                 }
                             }
 
-                            if (!(op == OP.DEFAULT || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list)) {
-                                throw new IllegalArgumentException("OP for method annotated by @MergedById can't be: " + op + " in method: "
-                                        + fullClassMethodName + ". It must be OP.DEFAULT, OP.findFirst, OP.findOnlyOne or OP.list");
+                            if (!(queryOperation == QueryOperation.DEFAULT || queryOperation == QueryOperation.findFirst
+                                    || queryOperation == QueryOperation.findOnlyOne || queryOperation == QueryOperation.list)) {
+                                throw new IllegalArgumentException("QueryOperation for method annotated by @MergedById can't be: " + queryOperation
+                                        + " in method: " + fullClassMethodName
+                                        + ". It must be QueryOperation.DEFAULT, QueryOperation.findFirst, QueryOperation.findOnlyOne or QueryOperation.list");
                             }
 
                             final Class<?> firstReturnEleType = getFirstReturnEleType(method);
 
-                            if (!(((Collection.class.isAssignableFrom(returnType) && (op == OP.list || op == OP.DEFAULT))
+                            if (!(((Collection.class.isAssignableFrom(returnType)
+                                    && (queryOperation == QueryOperation.list || queryOperation == QueryOperation.DEFAULT))
                                     || ((u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType))
-                                            && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.DEFAULT)))
+                                            && (queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne
+                                                    || queryOperation == QueryOperation.DEFAULT)))
                                     && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
                                 throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
                                         + ") annotated by @MergedById must be: Optional/List/Collection<? super " + ClassUtil.getSimpleClassName(entityClass)
@@ -5382,9 +5400,12 @@ final class DaoImpl {
                             : MapSplitter.with(",", "=").trimResults().split(prefixFieldMappingAnno.value());
 
                     if (N.notEmpty(prefixFieldMap)) {
-                        if (!(op == OP.DEFAULT || op == OP.findFirst || op == OP.findOnlyOne || op == OP.list || op == OP.query || op == OP.stream)) {
-                            throw new IllegalArgumentException("OP for method annotated by @PrefixFieldMapping can't be: " + op + " in method: "
-                                    + fullClassMethodName + ". It must be OP.DEFAULT, OP.findFirst, OP.findOnlyOne, OP.list, OP.stream and OP.query");
+                        if (!(queryOperation == QueryOperation.DEFAULT || queryOperation == QueryOperation.findFirst
+                                || queryOperation == QueryOperation.findOnlyOne || queryOperation == QueryOperation.list
+                                || queryOperation == QueryOperation.query || queryOperation == QueryOperation.stream)) {
+                            throw new IllegalArgumentException("QueryOperation for method annotated by @PrefixFieldMapping can't be: " + queryOperation
+                                    + " in method: " + fullClassMethodName
+                                    + ". It must be QueryOperation.DEFAULT, QueryOperation.findFirst, QueryOperation.findOnlyOne, QueryOperation.list, QueryOperation.stream and QueryOperation.query");
                         }
 
                         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -5411,14 +5432,13 @@ final class DaoImpl {
 
                     if (isQuery) {
                         final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> queryFunc = createQueryFunctionByMethod(entityClass, method,
-                                mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op,
+                                mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, queryOperation,
                                 isProcedure, fullClassMethodName);
 
-                        call = (proxy,
-                                args) -> queryFunc.apply(
-                                        prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args, fragmentParamIndexes,
-                                                fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter),
-                                        args);
+                        call = (proxy, args) -> queryFunc.apply(
+                                prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args, fragmentParamIndexes,
+                                        fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList, parametersSetter),
+                                args);
                     } else if (queryInfo.isInsert) {
                         if (isNoId && !returnType.isAssignableFrom(void.class)) {
                             throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
@@ -5444,7 +5464,7 @@ final class DaoImpl {
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
                                 final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                        fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                        fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList,
                                         parametersSetter).insert(keyExtractor, isDefaultIdTester);
 
                                 if (isEntity && id.isPresent()) {
@@ -5483,12 +5503,12 @@ final class DaoImpl {
 
                                     if (isSingleParameter) {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
-                                                parametersSetter).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames,
+                                                outParameterList, parametersSetter).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
-                                                parametersSetter).addBatchParameters(batchParameters);
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames,
+                                                outParameterList, parametersSetter).addBatchParameters(batchParameters);
                                     }
 
                                     ids = preparedQuery.batchInsert(keyExtractor, isDefaultIdTester);
@@ -5498,8 +5518,8 @@ final class DaoImpl {
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
-                                                returnType, args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames,
-                                                outParameterList, parametersSetter).closeAfterExecution(false)) {
+                                                returnType, args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys,
+                                                generatedKeyColumnNames, outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 ids = Seq.of(batchParameters)
@@ -5566,14 +5586,14 @@ final class DaoImpl {
                                 : (Boolean.class.equals(ClassUtil.wrap(returnType)) ? updatedRecordCount -> updatedRecordCount > 0
                                         : (Integer.class.equals(ClassUtil.wrap(returnType)) ? Numbers::toIntExact : LongFunction.identity()));
 
-                        final boolean isLargeUpdate = op == OP.largeUpdate
-                                || (op == OP.DEFAULT && (returnType.equals(long.class) || returnType.equals(Long.class)));
+                        final boolean isLargeUpdate = queryOperation == QueryOperation.largeUpdate
+                                || (queryOperation == QueryOperation.DEFAULT && (returnType.equals(long.class) || returnType.equals(Long.class)));
 
                         if (!isBatch) {
                             call = (proxy, args) -> {
                                 final AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType,
-                                        args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
-                                        parametersSetter);
+                                        args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames,
+                                        outParameterList, parametersSetter);
 
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
 
@@ -5604,12 +5624,12 @@ final class DaoImpl {
 
                                     if (isSingleParameter) {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
-                                                parametersSetter).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames,
+                                                outParameterList, parametersSetter).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
-                                                parametersSetter).addBatchParameters(batchParameters);
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames,
+                                                outParameterList, parametersSetter).addBatchParameters(batchParameters);
                                     }
 
                                     if (isLargeUpdate) {
@@ -5623,8 +5643,8 @@ final class DaoImpl {
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
-                                                returnType, args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames,
-                                                outParameterList, parametersSetter).closeAfterExecution(false)) {
+                                                returnType, args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys,
+                                                generatedKeyColumnNames, outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
                                                 updatedRecordCount = Seq.of(batchParameters)
@@ -5655,8 +5675,8 @@ final class DaoImpl {
                             };
                         }
                     } else {
-                        throw new UnsupportedOperationException(
-                                "Unsupported combination of SQL kind, op (" + op + ") and return type (" + returnType + ") in method: " + fullClassMethodName);
+                        throw new UnsupportedOperationException("Unsupported combination of SQL kind, QueryOperation (" + queryOperation + ") and return type ("
+                                + returnType + ") in method: " + fullClassMethodName);
                     }
                 }
 
@@ -5731,7 +5751,7 @@ final class DaoImpl {
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5744,7 +5764,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                    JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                 }
 
                                 if (hasSqlLogAnno) {
@@ -5777,7 +5797,7 @@ final class DaoImpl {
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5787,7 +5807,7 @@ final class DaoImpl {
                             Throwable failure = null;
 
                             try {
-                                tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolationLevel());
                                 result = tmp.apply(proxy, args);
 
                                 tran.commit();
@@ -5802,7 +5822,7 @@ final class DaoImpl {
                                 } finally {
                                     if (hasPerfLogAnno) {
                                         logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
-                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                        JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
                                     if (hasSqlLogAnno) {
@@ -5820,7 +5840,7 @@ final class DaoImpl {
                                         + transactionalAnno.propagation() + ") must be called in a transaction.");
                             }
 
-                            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolationLevel());
                             Object result = null;
                             Throwable failure = null;
 
@@ -5856,7 +5876,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                    JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5866,7 +5886,7 @@ final class DaoImpl {
                                 Throwable failure = null;
 
                                 try {
-                                    tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                    tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolationLevel());
                                     result = tmp.apply(proxy, args);
 
                                     tran.commit();
@@ -5881,7 +5901,7 @@ final class DaoImpl {
                                     } finally {
                                         if (hasPerfLogAnno) {
                                             logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
-                                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                            JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                         }
 
                                         if (hasSqlLogAnno) {
@@ -5892,7 +5912,7 @@ final class DaoImpl {
 
                                 return result;
                             } else {
-                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolationLevel());
                                 Object result = null;
                                 Throwable failure = null;
 
@@ -5934,7 +5954,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                    JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5947,7 +5967,7 @@ final class DaoImpl {
                                     }
 
                                     if (hasPerfLogAnno) {
-                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                        JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
                                     if (hasSqlLogAnno) {
@@ -5981,8 +6001,8 @@ final class DaoImpl {
                                         ? daoClassRefreshCacheAnno
                                         : null);
 
-                final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.liveTime();
-                final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTime();
+                final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxLiveTimeMillis();
+                final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTimeMillis();
 
                 final boolean isQueryMethod = JdbcUtil.IS_QUERY_METHOD.test(method);
                 final boolean isUpdateMethod = JdbcUtil.IS_UPDATE_METHOD.test(method);
@@ -6004,21 +6024,17 @@ final class DaoImpl {
                                 "The return type of method: " + simpleClassMethodName + " is not cacheable: " + method.getReturnType());
                     }
 
-                    final String serializerAttr = cacheResultAnno == null ? (kryoParser != null ? "kryo" : "json") : cacheResultAnno.serializer();
-
-                    if (!(Strings.isEmpty(serializerAttr) || SUPPORTED_SERIALIZER_FOR_CACHE.contains(serializerAttr.toLowerCase(Locale.ROOT)))) {
-                        throw new UnsupportedOperationException(
-                                "Unsupported 'serializer' : " + serializerAttr + " in annotation 'CacheResult' on method: " + simpleClassMethodName);
-                    }
+                    final CacheSerialization serialization = cacheResultAnno == null ? (kryoParser != null ? CacheSerialization.KRYO : CacheSerialization.JSON)
+                            : cacheResultAnno.serialization();
 
                     if (cacheResultAnno != null) {
-                        if (cacheResultAnno.liveTime() < 0) {
-                            throw new UnsupportedOperationException("Invalid 'liveTime': " + cacheResultAnno.liveTime()
+                        if (cacheResultAnno.maxLiveTimeMillis() < 0) {
+                            throw new UnsupportedOperationException("Invalid 'maxLiveTimeMillis': " + cacheResultAnno.maxLiveTimeMillis()
                                     + " (must be >= 0) in annotation 'CacheResult' on method: " + simpleClassMethodName);
                         }
 
-                        if (cacheResultAnno.maxIdleTime() < 0) {
-                            throw new UnsupportedOperationException("Invalid 'maxIdleTime': " + cacheResultAnno.maxIdleTime()
+                        if (cacheResultAnno.maxIdleTimeMillis() < 0) {
+                            throw new UnsupportedOperationException("Invalid 'maxIdleTimeMillis': " + cacheResultAnno.maxIdleTimeMillis()
                                     + " (must be >= 0) in annotation 'CacheResult' on method: " + simpleClassMethodName);
                         }
 
@@ -6029,22 +6045,27 @@ final class DaoImpl {
                         }
                     }
 
-                    final Function<Object, Object> cloneFunc = Strings.isEmpty(serializerAttr) || "none".equalsIgnoreCase(serializerAttr) ? Fn.identity()
-                            : r -> {
-                                final Class<?> cls = r.getClass();
+                    final Predicate<Object> serializationNotRequired = r -> {
+                        final Class<?> cls = r.getClass();
+                        return !isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls);
+                    };
 
-                                if (!isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls)) {
-                                    return r;
-                                } else if ("kryo".equalsIgnoreCase(serializerAttr)) {
-                                    if (kryoParser == null) {
-                                        throw new UnsupportedOperationException(
-                                                "Kryo is not available for cache serialization. Please add Kryo to the classpath or use 'json' serializer instead.");
-                                    }
-                                    return kryoParser.deepCopy(r);
-                                } else {
-                                    return jsonParser.deserialize(jsonParser.serialize(r), r.getClass());
-                                }
-                            };
+                    final Function<Object, Object> cloneFunc = switch (serialization) {
+                        case NONE -> Fn.identity();
+                        case KRYO -> r -> {
+                            if (serializationNotRequired.test(r)) {
+                                return r;
+                            }
+
+                            if (kryoParser == null) {
+                                throw new UnsupportedOperationException(
+                                        "Kryo is not available for cache serialization. Please add Kryo to the classpath or use CacheSerialization.JSON instead.");
+                            }
+
+                            return kryoParser.deepCopy(r);
+                        };
+                        case JSON -> r -> serializationNotRequired.test(r) ? r : jsonParser.deserialize(jsonParser.serialize(r), r.getClass());
+                    };
 
                     final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = call;
 
@@ -6076,11 +6097,11 @@ final class DaoImpl {
                             } finally {
                                 if (Strings.isNotEmpty(cacheKey)) {
                                     if (isRefreshLocalThreadCacheRequired) {
-                                        localThreadCache.invalidate(cacheKey, result, proxy, args, methodSignature);
+                                        localThreadCache.update(cacheKey, result, proxy, args, methodSignature);
                                     }
 
                                     if (isAnnotatedRefreshResult) {
-                                        daoCacheToUseInMethod.invalidate(cacheKey, result, proxy, args, methodSignature);
+                                        daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
                                     }
                                 }
                             }
@@ -6413,7 +6434,7 @@ final class DaoImpl {
      * {@link Query @Query} annotation (or an equivalent SQL-script reference).
      *
      * <p>Each field corresponds either to an attribute of the source annotation (e.g., {@code queryTimeout},
-     * {@code fetchSize}, {@code op}) or to a property derived from the SQL text itself (e.g., {@code isSelect},
+     * {@code fetchSize}, {@code QueryOperation}) or to a property derived from the SQL text itself (e.g., {@code isSelect},
      * {@code isInsert}, {@code isNamedQuery}, the parsed {@link ParsedSql}). Instances are created once during DAO
      * proxy initialization and reused for every invocation of the associated DAO method.</p>
      */
@@ -6424,7 +6445,7 @@ final class DaoImpl {
         final int fetchSize;
         final boolean isBatch;
         final int batchSize;
-        final OP op;
+        final QueryOperation queryOperation;
         final boolean isSingleParameter;
         final boolean autoSetSysTimeParam;
         final boolean isSelect;
@@ -6442,10 +6463,10 @@ final class DaoImpl {
          * @param sql the raw SQL string (must not be blank); a single trailing semicolon is removed
          * @param parsedSql the pre-parsed SQL, or {@code null} to parse from {@code sql}
          * @param queryTimeout the query timeout in seconds; a negative value means not set (0 is passed through to JDBC as "no limit")
-         * @param fetchSize the JDBC fetch size hint; only applied when positive (otherwise SELECT queries get a default derived from the OP/return type)
+         * @param fetchSize the JDBC fetch size hint; only applied when positive (otherwise SELECT queries get a default derived from the QueryOperation/return type)
          * @param isBatch {@code true} if this query should be executed as a batch operation
          * @param batchSize the number of statements per batch execution
-         * @param op the {@link OP} operation type controlling execution behavior
+         * @param QueryOperation the {@link QueryOperation} operation type controlling execution behavior
          * @param isSingleParameter {@code true} if a single method parameter should be bound as-is rather than decomposed
          * @param autoSetSysTimeParam {@code true} to automatically set system time parameters (e.g., create/update timestamps)
          * @param isSelect {@code true} if this is a SELECT statement
@@ -6456,15 +6477,15 @@ final class DaoImpl {
          *         {@code true} but the SQL uses positional (?) parameters without named parameters
          */
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
-                final OP op, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect, final boolean isInsert,
-                final boolean isProcedure, final boolean fragmentsContainNamedParameters) {
+                final QueryOperation queryOperation, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect,
+                final boolean isInsert, final boolean isProcedure, final boolean fragmentsContainNamedParameters) {
             this.sql = N.checkArgNotBlank(sql != null && sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
             this.parsedSql = parsedSql == null ? ParsedSql.parse(this.sql) : parsedSql;
             this.queryTimeout = queryTimeout;
             this.fetchSize = fetchSize;
             this.isBatch = isBatch;
             this.batchSize = batchSize;
-            this.op = op;
+            this.queryOperation = queryOperation;
             this.isSingleParameter = isSingleParameter;
             this.autoSetSysTimeParam = autoSetSysTimeParam;
             this.isSelect = isSelect;

@@ -40,7 +40,7 @@ package com.landawn.abacus.jdbc;
  * }</pre>
  *
  * @see JdbcUtil#enableSqlLog()
- * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long)
+ * @see JdbcUtil#sqlLogThresholdMillis(long)
  */
 final class SqlLogConfig {
     // Note: instances are strictly thread-confined (held in ThreadLocals in JdbcUtil and only read/written

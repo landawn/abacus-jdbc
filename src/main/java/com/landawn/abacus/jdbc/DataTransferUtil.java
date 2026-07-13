@@ -27,6 +27,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -98,7 +99,7 @@ import com.landawn.abacus.util.stream.CharStream;
  *   </tr>
  *   <tr>
  *     <td>Utility</td>
- *     <td>{@code createParamSetter()}</td>
+     *     <td>{@code resultSetParameterSetter()}</td>
  *     <td>Factory method to create a parameter setter from a {@link Jdbc.ColumnGetter}</td>
  *   </tr>
  *   <tr>
@@ -125,6 +126,21 @@ import com.landawn.abacus.util.stream.CharStream;
  *   <li>{@link #copyTable(javax.sql.DataSource, String)} / {@link #copyTable(Connection, String)}
  *       &rarr; {@code CopyTable*} builders (terminal: {@code to(...)} returns {@code long})</li>
  * </ul>
+ *
+ * <p><b>Canonical API:</b> Prefer the fluent builders for every operation that needs optional configuration.
+ * They give each option a stable name, avoid overload-specific parameter ordering, and are the API surface that
+ * will receive new transfer options. The positional methods are retained for source compatibility and remain
+ * convenient for short operations that use defaults; option-heavy positional overloads are deprecated and no
+ * additional long positional overloads will be added.</p>
+ * <table border="1" style="border-collapse: collapse;">
+ *   <caption><b>Preferred entry points</b></caption>
+ *   <tr><th>Operation</th><th>Canonical form</th></tr>
+ *   <tr><td>Dataset import</td><td>{@code importFrom(dataset).filter(...).batchSize(...).to(...)}</td></tr>
+ *   <tr><td>Iterator/CSV import</td><td>{@code importFrom(iterator).parameterSetter(...).to(...)} / {@code importCsvFrom(...).parameterSetter(...).to(...)}</td></tr>
+ *   <tr><td>CSV export</td><td>{@code exportCsvFrom(...).columns(...).to(...)}</td></tr>
+ *   <tr><td>Query copy</td><td>{@code copyFrom(...).parameterSetter(...).to(...)}</td></tr>
+ *   <tr><td>Table copy</td><td>{@code copyTable(...).columns(...).to(...)}</td></tr>
+ * </table>
  *
  * <p><b>Resource ownership:</b> Methods that accept a {@link Connection}, {@link PreparedStatement} or
  * {@link ResultSet} never close the caller-supplied resource; they only close resources they create
@@ -156,19 +172,13 @@ import com.landawn.abacus.util.stream.CharStream;
  *     "SELECT * FROM users ORDER BY id",
  *     new File("export.csv"));
  *
- * // Copy data between databases
- * long copiedRows = DataTransferUtil.copy(sourceDataSource,
- *     "SELECT id, name, age FROM source_users WHERE active = true",
- *     targetDataSource,
- *     "INSERT INTO target_users (user_id, full_name, user_age) VALUES (?, ?, ?)");
- *
- * // Copy with custom fetch and batch sizes
- * copiedRows = DataTransferUtil.copy(sourceDataSource,
- *     "SELECT customer_id, first_name, last_name, email FROM legacy_customers",
- *     50000,  // fetch size
- *     targetDataSource,
- *     "INSERT INTO customers (id, name, email, status) VALUES (?, ?, ?, ?)",
- *     10000); // batch size
+ * // Configure nontrivial operations with the canonical fluent API
+ * long copiedRows = DataTransferUtil.copyFrom(sourceDataSource,
+ *         "SELECT id, name, age FROM source_users WHERE active = true")
+ *     .fetchSize(50000)
+ *     .batchSize(10000)
+ *     .to(targetDataSource,
+ *         "INSERT INTO target_users (user_id, full_name, user_age) VALUES (?, ?, ?)");
  * }</pre>
  *
  * @see Dataset
@@ -251,33 +261,33 @@ public final class DataTransferUtil {
 
     /**
      * Imports selected columns from a Dataset to a database table using the provided Connection and insert SQL statement.
-     * Only the specified columns will be imported, and their order in the SQL must match {@code selectColumnNames}.
+     * Only the specified columns will be imported, and their order in the SQL must match {@code columnNames}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("id", "name", "age", "email"), new Object[][] {{1, "John", 25, "john@email.com"}});
-     * List<String> selectColumnNames = Arrays.asList("name", "age");
+     * List<String> columnNames = Arrays.asList("name", "age");
      * String insertSql = "INSERT INTO users (name, age) VALUES (?, ?)";
-     * int rowsImported = DataTransferUtil.importData(dataset, selectColumnNames, connection, insertSql);
+     * int rowsImported = DataTransferUtil.importData(dataset, columnNames, connection, insertSql);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(columnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param selectColumnNames the collection of column names to be selected for import
+     * @param columnNames the collection of column names to be selected for import
      * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
+     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if any name in {@code selectColumnNames} is not a column of the dataset
+     * @throws IllegalArgumentException if any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
-    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql)
+    public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql)
             throws SQLException {
-        return importData(dataset, selectColumnNames, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+        return importData(dataset, columnNames, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
     }
 
     /**
@@ -294,24 +304,25 @@ public final class DataTransferUtil {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(columnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param selectColumnNames the collection of column names to be selected for import
+     * @param columnNames the collection of column names to be selected for import
      * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
+     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
-     *         or any name in {@code selectColumnNames} is not a column of the dataset
+     *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
-    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql,
+    @Deprecated
+    public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis) throws SQLException {
-        return importData(dataset, selectColumnNames, null, conn, insertSql, batchSize, batchIntervalInMillis);
+        return importData(dataset, columnNames, null, conn, insertSql, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -330,27 +341,28 @@ public final class DataTransferUtil {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(columnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param selectColumnNames the collection of column names to be selected for import
+     * @param columnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param conn the Connection to the database
-     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
+     * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
-     *         or any name in {@code selectColumnNames} is not a column of the dataset
+     *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
-    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Predicate<? super Object[]> filter,
-            final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException {
+    @Deprecated
+    public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter, final Connection conn,
+            final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException {
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(dataset, selectColumnNames, filter, stmt, batchSize, batchIntervalInMillis);
+            return importData(dataset, columnNames, filter, stmt, batchSize, batchIntervalInMillis);
         }
     }
 
@@ -424,6 +436,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
+    @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
             final Map<String, ? extends Type> columnTypeMap) throws SQLException {
         return importData(dataset, null, conn, insertSql, batchSize, batchIntervalInMillis, columnTypeMap);
@@ -467,6 +480,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
+    @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
@@ -493,13 +507,13 @@ public final class DataTransferUtil {
      * @param dataset the Dataset containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
-     * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+     * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+        return importData(dataset, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
     /**
@@ -523,14 +537,15 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+     * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, null, conn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+        return importData(dataset, null, conn, insertSql, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
     /**
@@ -558,16 +573,17 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+     * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
      * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
         }
     }
 
@@ -598,26 +614,26 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("id", "name", "age", "email"), new Object[][] {{1, "John", 25, "john@email.com"}});
-     * List<String> selectColumnNames = Arrays.asList("name", "age");
+     * List<String> columnNames = Arrays.asList("name", "age");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, selectColumnNames, stmt);
+     * int rowsImported = DataTransferUtil.importData(dataset, columnNames, stmt);
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(selectColumnNames);
+     * List<String> columnNameList = new ArrayList<>(columnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param selectColumnNames the collection of column names to be selected for import
+     * @param columnNames the collection of column names to be selected for import
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if any name in {@code selectColumnNames} is not a column of the dataset
+     * @throws IllegalArgumentException if any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
-    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt) throws SQLException {
-        return importData(dataset, selectColumnNames, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
+    public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt) throws SQLException {
+        return importData(dataset, columnNames, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
     }
 
     /**
@@ -635,23 +651,24 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(selectColumnNames);
+     * columnNameList.retainAll(columnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param selectColumnNames the collection of column names to be selected for import
+     * @param columnNames the collection of column names to be selected for import
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
-     *         or any name in {@code selectColumnNames} is not a column of the dataset
+     *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
-    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt, final int batchSize,
+    @Deprecated
+    public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis) throws SQLException {
-        return importData(dataset, selectColumnNames, null, stmt, batchSize, batchIntervalInMillis);
+        return importData(dataset, columnNames, null, stmt, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -672,28 +689,29 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(selectColumnNames);
+     * columnNameList.retainAll(columnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param selectColumnNames the collection of column names to be selected for import
+     * @param columnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null}, every row is imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
-     *         or any name in {@code selectColumnNames} is not a column of the dataset
+     *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
-    public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Predicate<? super Object[]> filter,
+    @Deprecated
+    public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
         final List<String> allColumnNames = dataset.columnNames();
-        final List<String> selectedColumnNameList = new ArrayList<>(selectColumnNames);
+        final List<String> selectedColumnNameList = new ArrayList<>(columnNames);
 
         // Validate that all selected column names exist in the dataset
         for (final String colName : selectedColumnNameList) {
@@ -708,13 +726,13 @@ public final class DataTransferUtil {
             selectedColumnIndices[i] = allColumnNames.indexOf(selectedColumnNameList.get(i));
         }
 
-        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (t, row) -> {
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> parameterSetter = (t, row) -> {
             for (int i = 0; i < selectedColumnIndices.length; i++) {
                 t.setObject(i + 1, row[selectedColumnIndices[i]]);
             }
         };
 
-        return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
     /**
@@ -770,6 +788,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
+    @Deprecated
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Map<String, ? extends Type> columnTypeMap) throws SQLException {
         return importData(dataset, null, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
@@ -812,6 +831,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings({ "rawtypes", "null" })
+    @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -832,7 +852,7 @@ public final class DataTransferUtil {
 
         final Type<Object> objType = N.typeOf(Object.class);
         final boolean hasColumnTypeMap = N.notEmpty(columnTypeMap);
-        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = new Throwables.BiConsumer<>() {
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> parameterSetter = new Throwables.BiConsumer<>() {
             private int columnCount = 0;
             private Type<Object>[] columnTypes = null;
 
@@ -863,7 +883,7 @@ public final class DataTransferUtil {
             }
         };
 
-        return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
     /**
@@ -884,13 +904,13 @@ public final class DataTransferUtil {
      *
      * @param dataset the Dataset containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
-     * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+     * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+        return importData(dataset, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
     /**
@@ -913,14 +933,15 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+     * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException {
-        return importData(dataset, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+        return importData(dataset, null, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
     /**
@@ -947,13 +968,14 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+     * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
      * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
             throws IllegalArgumentException, SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -979,7 +1001,7 @@ public final class DataTransferUtil {
                 continue;
             }
 
-            stmtSetter.accept(stmtForSetter, row);
+            parameterSetter.accept(stmtForSetter, row);
 
             // Call stmt.addBatch() directly rather than stmtForSetter.addBatch(), because the
             // latter (via AbstractQuery.addBatch) closes the underlying stmt on failure — which
@@ -1031,18 +1053,18 @@ public final class DataTransferUtil {
      * @param iter the Iterator containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
-     * @param stmtSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
+     * @param parameterSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
      * @return the total number of rows successfully inserted
      * @throws SQLException if a database access error occurs
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
      */
     public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(iter, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+            return importData(iter, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1085,17 +1107,18 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
+     * @param parameterSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
      * @return the total number of rows successfully inserted
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
      */
+    @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(iter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return importData(iter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
         }
     }
 
@@ -1159,21 +1182,22 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
+     * @param parameterSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
      * @return the total number of rows successfully inserted
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
      */
+    @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
-        return importData(iter, (Predicate<? super T>) null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
+        return importData(iter, (Predicate<? super T>) null, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
     /**
      * Internal core shared by the public {@code importData(Iterator, ...)} overloads and {@link RowImportBuilder}:
-     * iterates {@code iter}, applies the optional {@code filter}, binds each surviving element via {@code stmtSetter}
+     * iterates {@code iter}, applies the optional {@code filter}, binds each surviving element via {@code parameterSetter}
      * and batches the inserts.
      *
      * @param <T> the iterator element type
@@ -1182,12 +1206,12 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement (not closed here)
      * @param batchSize the batch size (must be {@code > 0})
      * @param batchIntervalInMillis the inter-batch pause (must be {@code >= 0})
-     * @param stmtSetter binds each surviving element to the statement parameters
+     * @param parameterSetter binds each surviving element to the statement parameters
      * @return the number of rows imported
      * @throws SQLException if a database access error occurs
      */
     private static <T> long importData(final Iterator<? extends T> iter, final Predicate<? super T> filter, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -1205,7 +1229,7 @@ public final class DataTransferUtil {
                 continue;
             }
 
-            stmtSetter.accept(stmtForSetter, next);
+            parameterSetter.accept(stmtForSetter, next);
             // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
             // stmt on failure (the doc guarantees this method does not close it).
             stmt.addBatch();
@@ -1255,17 +1279,17 @@ public final class DataTransferUtil {
      * @param file the CSV file containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
     public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importCsv(file, stmt, stmtSetter);
+            return importCsv(file, stmt, parameterSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1309,16 +1333,17 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
      * @return the total number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
+    @Deprecated
     public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importCsv(file, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return importCsv(file, stmt, batchSize, batchIntervalInMillis, parameterSetter);
         }
     }
 
@@ -1351,14 +1376,14 @@ public final class DataTransferUtil {
      *
      * @param file the CSV file containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
     public static long importCsv(final File file, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
-        return importCsv(file, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+        return importCsv(file, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
     /**
@@ -1398,15 +1423,16 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
+    @Deprecated
     public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
-        return importCsv(file, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+        return importCsv(file, null, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
     /**
@@ -1443,17 +1469,18 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
+    @Deprecated
     public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
             throws SQLException {
         try (Reader reader = IOUtil.newFileReader(file)) {
-            return importCsv(reader, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return importCsv(reader, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -1487,17 +1514,17 @@ public final class DataTransferUtil {
      * @param reader the Reader to read the CSV data from
      * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
     public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importCsv(reader, stmt, stmtSetter);
+            return importCsv(reader, stmt, parameterSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1531,14 +1558,14 @@ public final class DataTransferUtil {
      *
      * @param reader the Reader to read the CSV data from
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
     public static long importCsv(final Reader reader, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
-        return importCsv(reader, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+        return importCsv(reader, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
     /**
@@ -1573,15 +1600,16 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
+    @Deprecated
     public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException {
-        return importCsv(reader, null, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+        return importCsv(reader, null, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
     /**
@@ -1638,14 +1666,15 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
-     * @param stmtSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+     * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
      * @return the total number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
+    @Deprecated
     public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
             throws IllegalArgumentException, SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -1681,7 +1710,7 @@ public final class DataTransferUtil {
                     continue;
                 }
 
-                stmtSetter.accept(stmtForSetter, output);
+                parameterSetter.accept(stmtForSetter, output);
                 // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
                 // stmt on failure (the doc guarantees this method does not close it).
                 stmt.addBatch();
@@ -1809,22 +1838,22 @@ public final class DataTransferUtil {
      *
      * @param conn the Connection to the database (will not be closed by this method)
      * @param selectSql the SQL query to execute for retrieving data
-     * @param selectColumnNames collection of column names to include in export ({@code null} or empty for all columns)
+     * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> selectColumnNames, final File output)
-            throws SQLException {
+    @Deprecated
+    public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> columnNames, final File output) throws SQLException {
         final ParsedSql sql = ParsedSql.parse(selectSql);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 
             setFetchForLargeResult(conn, stmt);
 
-            return exportCsv(stmt, selectColumnNames, output);
+            return exportCsv(stmt, columnNames, output);
         }
     }
 
@@ -1883,20 +1912,21 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
-     * @param selectColumnNames collection of column names to include in export ({@code null} or empty for all columns)
+     * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException {
+    @Deprecated
+    public static long exportCsv(final PreparedStatement stmt, final Collection<String> columnNames, final File output) throws SQLException {
         ResultSet rs = null;
 
         try {
             rs = JdbcUtil.executeQuery(stmt);
 
-            return exportCsv(rs, selectColumnNames, output);
+            return exportCsv(rs, columnNames, output);
         } finally {
             JdbcUtil.closeQuietly(rs);
         }
@@ -1960,21 +1990,22 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
-     * @param selectColumnNames collection of column names to include in export ({@code null} or empty for all columns)
+     * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException {
+    @Deprecated
+    public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final File output) throws SQLException {
         try {
             if (!output.exists() && !output.createNewFile()) {
                 throw new IOException("Failed to create file: " + output);
             }
 
             try (Writer writer = IOUtil.newFileWriter(output)) {
-                return exportCsv(rs, selectColumnNames, writer);
+                return exportCsv(rs, columnNames, writer);
             }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
@@ -2128,37 +2159,37 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param rs the ResultSet containing the data to be exported (will not be closed by this method)
-     * @param selectColumnNames the collection of column names to be selected for export; if {@code null} or empty, all columns are exported
+     * @param columnNames the collection of column names to be selected for export; if {@code null} or empty, all columns are exported
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing
      */
-    public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output)
-            throws IllegalArgumentException, SQLException {
+    @Deprecated
+    public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final Writer output) throws IllegalArgumentException, SQLException {
 
         final Type<Object> strType = N.typeOf(String.class);
         final boolean isBufferedWriter = output instanceof BufferedCsvWriter;
         final BufferedCsvWriter bw = isBufferedWriter ? (BufferedCsvWriter) output : Objectory.createBufferedCsvWriter(output);
         long result = 0;
 
-        logger.debug("Exporting ResultSet to CSV(selectColumnNames={})", selectColumnNames == null ? null : selectColumnNames.size());
+        logger.debug("Exporting ResultSet to CSV(columnNames={})", columnNames == null ? null : columnNames.size());
 
         try {
             final boolean checkDateType = JdbcUtil.checkDateType(rs);
 
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
-            final String[] columnNames = new String[columnCount];
-            final Set<String> columnNameSet = N.isEmpty(selectColumnNames) ? null : N.newHashSet(selectColumnNames);
+            final String[] resultColumnNames = new String[columnCount];
+            final Set<String> columnNameSet = N.isEmpty(columnNames) ? null : N.newHashSet(columnNames);
             String label = null;
 
             for (int i = 0; i < columnCount; i++) {
                 label = JdbcUtil.getColumnLabel(rsmd, i + 1);
 
                 if (columnNameSet == null || columnNameSet.remove(label)) {
-                    columnNames[i] = label;
+                    resultColumnNames[i] = label;
                 }
             }
 
@@ -2166,11 +2197,11 @@ public final class DataTransferUtil {
                 throw new IllegalArgumentException(columnNameSet + " are not included in the query result");
             }
 
-            // Duplicate names in selectColumnNames match a single result column, so count the
-            // matched columns rather than trusting selectColumnNames.size().
+            // Duplicate names in columnNames match a single result column, so count the
+            // matched columns rather than trusting columnNames.size().
             int exportedColumnCount = 0;
 
-            for (final String columnName : columnNames) {
+            for (final String columnName : resultColumnNames) {
                 if (columnName != null) {
                     exportedColumnCount++;
                 }
@@ -2178,8 +2209,8 @@ public final class DataTransferUtil {
 
             final char separator = SK._COMMA;
 
-            for (int i = 0, j = 0, len = columnNames.length; i < len; i++) {
-                if (columnNames[i] == null) {
+            for (int i = 0, j = 0, len = resultColumnNames.length; i < len; i++) {
+                if (resultColumnNames[i] == null) {
                     continue;
                 }
 
@@ -2187,7 +2218,7 @@ public final class DataTransferUtil {
                     bw.write(separator);
                 }
 
-                CsvUtil.writeField(bw, strType, columnNames[i]);
+                CsvUtil.writeField(bw, strType, resultColumnNames[i]);
             }
 
             bw.write(IOUtil.LINE_SEPARATOR_UNIX);
@@ -2202,7 +2233,7 @@ public final class DataTransferUtil {
                 }
 
                 for (int i = 0, j = 0; i < columnCount; i++) {
-                    if (columnNames[i] == null) {
+                    if (resultColumnNames[i] == null) {
                         continue;
                     }
 
@@ -2332,6 +2363,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -2382,13 +2414,14 @@ public final class DataTransferUtil {
      * @param targetDataSource the data source to which to copy data
      * @param sourceTableName the name of the table in the source data source
      * @param targetTableName the name of the table in the target data source
-     * @param selectColumnNames the collection of column names to copy; {@code null} or empty copies all columns
+     * @param columnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs or any specified column doesn't exist
      */
+    @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
-            final String targetTableName, final Collection<String> selectColumnNames) throws SQLException {
-        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, selectColumnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
+            final String targetTableName, final Collection<String> columnNames) throws SQLException {
+        return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, columnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2411,14 +2444,15 @@ public final class DataTransferUtil {
      * @param targetDataSource the data source to which to copy data
      * @param sourceTableName the name of the table in the source data source
      * @param targetTableName the name of the table in the target data source
-     * @param selectColumnNames the collection of column names to copy; {@code null} or empty copies all columns
+     * @param columnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
-            final String targetTableName, final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
+            final String targetTableName, final Collection<String> columnNames, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         String selectSql = null;
@@ -2430,8 +2464,8 @@ public final class DataTransferUtil {
             sourceConn = JdbcUtil.getConnection(sourceDataSource);
             targetConn = JdbcUtil.getConnection(targetDataSource);
 
-            selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
-            insertSql = generateInsertSql(targetConn, targetTableName, selectColumnNames);
+            selectSql = generateSelectSql(sourceConn, sourceTableName, columnNames);
+            insertSql = generateInsertSql(targetConn, targetTableName, columnNames);
         } finally {
             // Release both connections even if one release throws (avoid leaking the second).
             try {
@@ -2500,6 +2534,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -2530,15 +2565,16 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to select data from the source data source
      * @param targetDataSource the data source to which to copy data
      * @param insertSql the SQL query to insert data into the target data source
-     * @param stmtSetter a bi-consumer to set parameters on the prepared statement from the result set;
+     * @param parameterSetter a bi-consumer to set parameters on the prepared statement from the result set;
      *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
-            final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
+            final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
         return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0,
-                stmtSetter);
+                parameterSetter);
     }
 
     /**
@@ -2578,15 +2614,16 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target data source
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
-     * @param stmtSetter a bi-consumer to set parameters on the prepared statement;
+     * @param parameterSetter a bi-consumer to set parameters on the prepared statement;
      *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
         Connection sourceConn = null;
         Connection targetConn = null;
 
@@ -2594,7 +2631,7 @@ public final class DataTransferUtil {
             sourceConn = JdbcUtil.getConnection(sourceDataSource);
             targetConn = JdbcUtil.getConnection(targetDataSource);
 
-            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
+            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis, parameterSetter);
         } finally {
             // Release both connections even if one release throws (avoid leaking the second).
             try {
@@ -2691,6 +2728,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -2747,13 +2785,14 @@ public final class DataTransferUtil {
      * @param targetConn the connection to the target database
      * @param sourceTableName the name of the source table to copy data from
      * @param targetTableName the name of the target table to copy data to
-     * @param selectColumnNames the collection of column names to be copied; {@code null} or empty copies all columns
+     * @param columnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs or any specified column doesn't exist
      */
+    @Deprecated
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
-            final Collection<String> selectColumnNames) throws SQLException {
-        return copy(sourceConn, targetConn, sourceTableName, targetTableName, selectColumnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
+            final Collection<String> columnNames) throws SQLException {
+        return copy(sourceConn, targetConn, sourceTableName, targetTableName, columnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2780,24 +2819,25 @@ public final class DataTransferUtil {
      * @param targetConn the connection to the target database
      * @param sourceTableName the name of the source table to copy data from
      * @param targetTableName the name of the target table to copy data to
-     * @param selectColumnNames the collection of column names to be copied; {@code null} or empty copies all columns
+     * @param columnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
-            final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
+            final Collection<String> columnNames, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final String selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
-        final String insertSql = generateInsertSql(targetConn, targetTableName, selectColumnNames);
+        final String selectSql = generateSelectSql(sourceConn, sourceTableName, columnNames);
+        final String insertSql = generateInsertSql(targetConn, targetTableName, columnNames);
 
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
     }
 
-    private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> selectColumnNames) {
-        if (N.isEmpty(selectColumnNames)) {
+    private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> columnNames) {
+        if (N.isEmpty(columnNames)) {
             return JdbcCodeGenerationUtil.generateSelectSql(conn, tableName);
         }
 
@@ -2806,8 +2846,8 @@ public final class DataTransferUtil {
 
         sb.append(SK.SELECT).append(SK._SPACE);
 
-        final Iterator<String> iter = selectColumnNames.iterator();
-        final int lastIdx = selectColumnNames.size() - 1;
+        final Iterator<String> iter = columnNames.iterator();
+        final int lastIdx = columnNames.size() - 1;
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
@@ -2823,8 +2863,8 @@ public final class DataTransferUtil {
         return sb.toString();
     }
 
-    private static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> selectColumnNames) {
-        if (N.isEmpty(selectColumnNames)) {
+    private static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> columnNames) {
+        if (N.isEmpty(columnNames)) {
             return JdbcCodeGenerationUtil.generateInsertSql(conn, tableName);
         }
 
@@ -2833,8 +2873,8 @@ public final class DataTransferUtil {
 
         sb.append(SK.INSERT).append(SK._SPACE).append(SK.INTO).append(SK._SPACE).append(checkTableName(tableName, dbProductInfo)).append(SK._PARENTHESIS_L);
 
-        final Iterator<String> iter = selectColumnNames.iterator();
-        final int lastIdx = selectColumnNames.size() - 1;
+        final Iterator<String> iter = columnNames.iterator();
+        final int lastIdx = columnNames.size() - 1;
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
@@ -2846,7 +2886,7 @@ public final class DataTransferUtil {
                 .append(SK._SPACE)
                 .append(SK.VALUES)
                 .append(SK._SPACE)
-                .append(Strings.repeat("?", selectColumnNames.size(), ", ", "(", ")"));
+                .append(Strings.repeat("?", columnNames.size(), ", ", "(", ")"));
 
         return sb.toString();
     }
@@ -2968,6 +3008,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
             final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -2999,14 +3040,15 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to select data from the source database
      * @param targetConn the connection to the target database
      * @param insertSql the SQL query to insert data into the target database
-     * @param stmtSetter the custom statement setter to set the parameters of the prepared statement;
+     * @param parameterSetter the custom statement setter to set the parameters of the prepared statement;
      *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
-        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
     /**
@@ -3050,15 +3092,16 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target database
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
-     * @param stmtSetter the custom statement setter to set the parameters of the prepared statement;
+     * @param parameterSetter the custom statement setter to set the parameters of the prepared statement;
      *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
 
@@ -3068,7 +3111,7 @@ public final class DataTransferUtil {
 
             insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
 
-            return copy(selectStmt, insertStmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return copy(selectStmt, insertStmt, batchSize, batchIntervalInMillis, parameterSetter);
         } finally {
             JdbcUtil.closeQuietly(selectStmt);
             JdbcUtil.closeQuietly(insertStmt);
@@ -3109,24 +3152,25 @@ public final class DataTransferUtil {
      * @param insertStmt the PreparedStatement used to insert data into the target
      * @param batchSize the number of rows to process in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
-     * @param stmtSetter a BiConsumer that sets the parameters for the {@link PreparedQuery} from the ResultSet;
+     * @param parameterSetter a BiConsumer that sets the parameters for the {@link PreparedQuery} from the ResultSet;
      *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
+    @Deprecated
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
-        final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetterForInsert = N.defaultIfNull(stmtSetter,
+        final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetterForInsert = N.defaultIfNull(parameterSetter,
                 supplierOfStmtSetterByRS.get());
         final PreparedQuery preparedQueryForInsert = new PreparedQuery(insertStmt);
 
         ResultSet rs = null;
 
-        logger.debug("Copying data(batchSize={}, batchIntervalInMillis={}, customStmtSetter={})", batchSize, batchIntervalInMillis, stmtSetter != null);
+        logger.debug("Copying data(batchSize={}, batchIntervalInMillis={}, customStmtSetter={})", batchSize, batchIntervalInMillis, parameterSetter != null);
 
         try {
             rs = JdbcUtil.executeQuery(selectStmt);
@@ -3195,7 +3239,7 @@ public final class DataTransferUtil {
      * the ResultSet column count on first invocation by calling {@link JdbcUtil#getColumnCount(ResultSet)}.
      * For each column index {@code 1..columnCount}, it calls
      * {@link PreparedQuery#setObject(int, Object)} with the value from
-     * {@code columnGetterForAll.get(resultSet, index)}.</p>
+     * {@code columnGetter.get(resultSet, index)}.</p>
      *
      * <p>Because the column count is cached, the setter must only be reused for ResultSet instances
      * with the same number of columns, and should not be shared across threads.</p>
@@ -3204,21 +3248,23 @@ public final class DataTransferUtil {
      * <pre>{@code
      * ColumnGetter<Object> getter = (rs, columnIndex) -> rs.getObject(columnIndex);
      * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter =
-     *     DataTransferUtil.createParamSetter(getter);
+     *     DataTransferUtil.resultSetParameterSetter(getter);
      *
      * // Use in copy operation
      * long copied = DataTransferUtil.copy(sourceConn, selectSql, targetConn, insertSql, setter);
      * }</pre>
      *
-     * @param columnGetterForAll the ColumnGetter to apply to each column index in every row
-     * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions;
-     *         a {@code NullPointerException} will be raised on first use if {@code columnGetterForAll} is {@code null}
+     * @param columnGetter the ColumnGetter to apply to each column index in every row
+     * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions
+     * @throws IllegalArgumentException if {@code columnGetter} is {@code null}
      * @see #copy(Connection, String, Connection, String, Throwables.BiConsumer)
      */
     @Beta
     @SequentialOnly
     @Stateful
-    public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> createParamSetter(final ColumnGetter<?> columnGetterForAll) {
+    public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> resultSetParameterSetter(final ColumnGetter<?> columnGetter) {
+        N.checkArgNotNull(columnGetter, "columnGetter");
+
         return new Throwables.BiConsumer<>() {
             private int columnCount = -1;
 
@@ -3229,7 +3275,7 @@ public final class DataTransferUtil {
                 }
 
                 for (int i = 1; i <= columnCount; i++) {
-                    stmt.setObject(i, columnGetterForAll.get(rs, i));
+                    stmt.setObject(i, columnGetter.get(rs, i));
                 }
             }
         };
@@ -3250,7 +3296,7 @@ public final class DataTransferUtil {
      *
      * // Equivalent to importData(dataset, cols, filter, conn, insertSql, 1000, 0) run on a connection from dataSource
      * int rowsImported = DataTransferUtil.importFrom(dataset)
-     *         .selectColumnNames(cols)
+     *         .columns(cols)
      *         .filter(row -> ((Integer) row[1]) >= 18)
      *         .batchSize(1000)
      *         .to(dataSource, "INSERT INTO users (name, age) VALUES (?, ?)");
@@ -3276,8 +3322,8 @@ public final class DataTransferUtil {
      * methods, then call one of the terminal {@code to(...)} methods to run the import. Each configuration
      * method returns {@code this}, so calls can be chained.</p>
      *
-     * <p>The three value-mapping strategies &mdash; {@link #selectColumnNames(Collection)},
-     * {@link #columnTypeMap(Map)} and {@link #stmtSetter(Throwables.BiConsumer)} &mdash; are mutually
+     * <p>The three value-mapping strategies &mdash; {@link #columns(Collection)},
+     * {@link #columnTypes(Map)} and {@link #parameterSetter(Throwables.BiConsumer)} &mdash; are mutually
      * exclusive; configuring more than one causes the terminal {@code to(...)} call to throw
      * {@link IllegalArgumentException}. When none of them is configured, all columns of the dataset are
      * imported in order. The {@link #filter(Predicate)} is independent and may be combined with
@@ -3287,13 +3333,13 @@ public final class DataTransferUtil {
      */
     public static final class DatasetImportBuilder {
         private final Dataset dataset;
-        private Collection<String> selectColumnNames;
+        private Collection<String> columnNames;
         private Predicate<? super Object[]> filter;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
         @SuppressWarnings("rawtypes")
         private Map<String, ? extends Type> columnTypeMap;
-        private Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter;
 
         DatasetImportBuilder(final Dataset dataset) {
             this.dataset = dataset;
@@ -3301,14 +3347,14 @@ public final class DataTransferUtil {
 
         /**
          * Restricts the import to the specified columns, in the given order. The order must match the
-         * parameter placeholders of the insert SQL. Mutually exclusive with {@link #columnTypeMap(Map)}
-         * and {@link #stmtSetter(Throwables.BiConsumer)}.
+         * parameter placeholders of the insert SQL. Mutually exclusive with {@link #columnTypes(Map)}
+         * and {@link #parameterSetter(Throwables.BiConsumer)}.
          *
-         * @param selectColumnNames the column names to import; {@code null} or empty imports all columns. The supplied collection is copied.
+         * @param columns the column names to import; {@code null} or empty imports all columns. The supplied collection is copied.
          * @return this builder
          */
-        public DatasetImportBuilder selectColumnNames(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
+        public DatasetImportBuilder columns(final Collection<String> columns) {
+            columnNames = N.isEmpty(columns) ? null : new ArrayList<>(columns);
 
             return this;
         }
@@ -3341,39 +3387,42 @@ public final class DataTransferUtil {
         /**
          * Sets the pause between consecutive batch executions.
          *
-         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @param delay the delay between completed batches; must not be {@code null} or negative
          * @return this builder
+         * @throws IllegalArgumentException if {@code delay} is {@code null} or negative
          */
-        public DatasetImportBuilder batchIntervalInMillis(final long batchIntervalInMillis) {
-            this.batchIntervalInMillis = batchIntervalInMillis;
+        public DatasetImportBuilder batchDelay(final Duration delay) {
+            N.checkArgNotNull(delay, "delay");
+            N.checkArgument(!delay.isNegative(), "delay must not be negative: %s", delay);
+            batchIntervalInMillis = delay.toMillis();
 
             return this;
         }
 
         /**
          * Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
-         * Mutually exclusive with {@link #selectColumnNames(Collection)} and {@link #stmtSetter(Throwables.BiConsumer)}.
+         * Mutually exclusive with {@link #columns(Collection)} and {@link #parameterSetter(Throwables.BiConsumer)}.
          *
-         * @param columnTypeMap a map of column name to {@link Type}; keys must be columns of the dataset. The supplied map is copied.
+         * @param columnTypes a map of column name to {@link Type}; keys must be columns of the dataset. The supplied map is copied.
          * @return this builder
          */
         @SuppressWarnings("rawtypes")
-        public DatasetImportBuilder columnTypeMap(final Map<String, ? extends Type> columnTypeMap) {
-            this.columnTypeMap = N.isEmpty(columnTypeMap) ? null : new LinkedHashMap<>(columnTypeMap);
+        public DatasetImportBuilder columnTypes(final Map<String, ? extends Type> columnTypes) {
+            columnTypeMap = N.isEmpty(columnTypes) ? null : new LinkedHashMap<>(columnTypes);
 
             return this;
         }
 
         /**
          * Supplies a custom setter that maps each row to the statement parameters, giving full control over
-         * how values are bound. Mutually exclusive with {@link #selectColumnNames(Collection)} and
-         * {@link #columnTypeMap(Map)}.
+         * how values are bound. Mutually exclusive with {@link #columns(Collection)} and
+         * {@link #columnTypes(Map)}.
          *
-         * @param stmtSetter a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
+         * @param parameterSetter a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
          * @return this builder
          */
-        public DatasetImportBuilder stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) {
-            this.stmtSetter = stmtSetter;
+        public DatasetImportBuilder parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) {
+            this.parameterSetter = parameterSetter;
 
             return this;
         }
@@ -3386,7 +3435,7 @@ public final class DataTransferUtil {
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of rows successfully imported
          * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
-         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         {@code batchSize <= 0}, or a configured column name
          *         is not a column of the dataset
          * @throws SQLException if a database access error occurs
          */
@@ -3407,7 +3456,7 @@ public final class DataTransferUtil {
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of rows successfully imported
          * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
-         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         {@code batchSize <= 0}, or a configured column name
          *         is not a column of the dataset
          * @throws SQLException if a database access error occurs
          */
@@ -3423,14 +3472,14 @@ public final class DataTransferUtil {
          * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
          * @return the number of rows successfully imported
          * @throws IllegalArgumentException if more than one value-mapping strategy is configured, or
-         *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or a configured column name
+         *         {@code batchSize <= 0}, or a configured column name
          *         is not a column of the dataset
          * @throws SQLException if a database access error occurs
          */
         public int to(final PreparedStatement stmt) throws SQLException {
             int configuredStrategies = 0;
 
-            if (N.notEmpty(selectColumnNames)) {
+            if (N.notEmpty(columnNames)) {
                 configuredStrategies++;
             }
 
@@ -3438,22 +3487,22 @@ public final class DataTransferUtil {
                 configuredStrategies++;
             }
 
-            if (stmtSetter != null) {
+            if (parameterSetter != null) {
                 configuredStrategies++;
             }
 
             if (configuredStrategies > 1) {
-                throw new IllegalArgumentException("Only one of 'selectColumnNames', 'columnTypeMap' or 'stmtSetter' can be configured for a single import");
+                throw new IllegalArgumentException("Only one of 'columns', 'columnTypes' or 'parameterSetter' can be configured for a single import");
             }
 
-            if (stmtSetter != null) {
-                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            if (parameterSetter != null) {
+                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
             } else if (N.notEmpty(columnTypeMap)) {
                 return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
             } else {
-                final Collection<String> columnNames = N.isEmpty(selectColumnNames) ? dataset.columnNames() : selectColumnNames;
+                final Collection<String> selectedColumnNames = N.isEmpty(columnNames) ? dataset.columnNames() : columnNames;
 
-                return importData(dataset, columnNames, filter, stmt, batchSize, batchIntervalInMillis);
+                return importData(dataset, selectedColumnNames, filter, stmt, batchSize, batchIntervalInMillis);
             }
         }
     }
@@ -3461,14 +3510,14 @@ public final class DataTransferUtil {
     /**
      * Creates a fluent builder for importing the elements of an {@link Iterator} into a database table, one row per element.
      *
-     * <p>Configure how an element becomes a database row with {@link RowImportBuilder#stmtSetter(Throwables.BiConsumer)},
+     * <p>Configure how an element becomes a database row with {@link RowImportBuilder#parameterSetter(Throwables.BiConsumer)},
      * optionally skipping elements with {@link RowImportBuilder#filter(Predicate)}. The iterator is not closed by this
      * builder.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long n = DataTransferUtil.importFrom(users.iterator())
-     *         .stmtSetter((q, u) -> { q.setLong(1, u.getId()); q.setString(2, u.getName()); })
+     *         .parameterSetter((q, u) -> { q.setLong(1, u.getId()); q.setString(2, u.getName()); })
      *         .to(dataSource, "INSERT INTO users (id, name) VALUES (?, ?)");
      * }</pre>
      *
@@ -3490,7 +3539,7 @@ public final class DataTransferUtil {
      *
      * <p>The first line is treated as a header and skipped; every subsequent line is tokenized (using the current
      * {@link CsvUtil} parser) and exposed to the builder as a {@code String[]} of column values. Bind each row with
-     * {@link RowImportBuilder#stmtSetter(Throwables.BiConsumer)}, optionally skipping rows with
+     * {@link RowImportBuilder#parameterSetter(Throwables.BiConsumer)}, optionally skipping rows with
      * {@link RowImportBuilder#filter(Predicate)}. The file is opened when a terminal
      * {@code to(...)} runs and closed before it returns.</p>
      *
@@ -3498,7 +3547,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * long n = DataTransferUtil.importCsvFrom(new File("users.csv"))
      *         .filter(row -> Integer.parseInt(row[1]) >= 18)
-     *         .stmtSetter((q, row) -> { q.setString(1, row[0]); q.setInt(2, Integer.parseInt(row[1])); })
+     *         .parameterSetter((q, row) -> { q.setString(1, row[0]); q.setInt(2, Integer.parseInt(row[1])); })
      *         .to(connection, "INSERT INTO users (name, age) VALUES (?, ?)");
      * }</pre>
      *
@@ -3540,7 +3589,7 @@ public final class DataTransferUtil {
      * (CSV; the header line is skipped; element type {@code String[]}). Chain the optional configuration methods, then
      * call a terminal {@code to(...)} method to run the import.</p>
      *
-     * <p>A value-binding strategy must be configured via {@link #stmtSetter(Throwables.BiConsumer)} (binds each element
+     * <p>A value-binding strategy must be configured via {@link #parameterSetter(Throwables.BiConsumer)} (binds each element
      * directly); the terminal {@code to(...)} throws {@link IllegalArgumentException} if it is not set.
      * {@link #filter(Predicate)} is independent and optional.</p>
      *
@@ -3555,7 +3604,7 @@ public final class DataTransferUtil {
         private Predicate<? super T> filter;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
-        private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter;
 
         RowImportBuilder(final Iterator<? extends T> iter, final Reader reader, final File file) {
             this.iter = iter;
@@ -3590,11 +3639,14 @@ public final class DataTransferUtil {
         /**
          * Sets the pause between consecutive batch executions.
          *
-         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @param delay the delay between completed batches; must not be {@code null} or negative
          * @return this builder
+         * @throws IllegalArgumentException if {@code delay} is {@code null} or negative
          */
-        public RowImportBuilder<T> batchIntervalInMillis(final long batchIntervalInMillis) {
-            this.batchIntervalInMillis = batchIntervalInMillis;
+        public RowImportBuilder<T> batchDelay(final Duration delay) {
+            N.checkArgNotNull(delay, "delay");
+            N.checkArgument(!delay.isNegative(), "delay must not be negative: %s", delay);
+            batchIntervalInMillis = delay.toMillis();
 
             return this;
         }
@@ -3602,11 +3654,11 @@ public final class DataTransferUtil {
         /**
          * Supplies a custom setter that binds each element to the insert statement parameters.
          *
-         * @param stmtSetter binds the parameters of the {@link PreparedQuery} for each element
+         * @param parameterSetter binds the parameters of the {@link PreparedQuery} for each element
          * @return this builder
          */
-        public RowImportBuilder<T> stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) {
-            this.stmtSetter = stmtSetter;
+        public RowImportBuilder<T> parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) {
+            this.parameterSetter = parameterSetter;
 
             return this;
         }
@@ -3618,8 +3670,7 @@ public final class DataTransferUtil {
          * @param targetDataSource the DataSource to obtain a database connection from
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of rows successfully imported
-         * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
-         *         or {@code batchIntervalInMillis < 0}
+         * @throws IllegalArgumentException if {@code parameterSetter} is not configured or {@code batchSize <= 0}
          * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
          *         configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
@@ -3641,8 +3692,7 @@ public final class DataTransferUtil {
          * @param conn the Connection to the database
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of rows successfully imported
-         * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
-         *         or {@code batchIntervalInMillis < 0}
+         * @throws IllegalArgumentException if {@code parameterSetter} is not configured or {@code batchSize <= 0}
          * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
          *         configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
@@ -3660,8 +3710,7 @@ public final class DataTransferUtil {
          *
          * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
          * @return the number of rows successfully imported
-         * @throws IllegalArgumentException if {@code stmtSetter} is not configured, or {@code batchSize <= 0},
-         *         or {@code batchIntervalInMillis < 0}
+         * @throws IllegalArgumentException if {@code parameterSetter} is not configured or {@code batchSize <= 0}
          * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
          *         configured; normally guaranteed by the factory methods
          * @throws SQLException if a database access error occurs
@@ -3710,11 +3759,11 @@ public final class DataTransferUtil {
         }
 
         private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> resolveSetter() {
-            if (stmtSetter == null) {
-                throw new IllegalArgumentException("'stmtSetter' must be configured before calling to(...)");
+            if (parameterSetter == null) {
+                throw new IllegalArgumentException("'parameterSetter' must be configured before calling to(...)");
             }
 
-            return stmtSetter;
+            return parameterSetter;
         }
     }
 
@@ -3724,13 +3773,13 @@ public final class DataTransferUtil {
      * before it returns.
      *
      * <p>It is an ergonomic alternative to the positional {@code exportCsv(DataSource, String, ...)} overloads and, via
-     * {@link CsvExportBuilder#selectColumnNames(Collection)}, supports column selection for BOTH
+     * {@link CsvExportBuilder#columns(Collection)}, supports column selection for BOTH
      * {@link CsvExportBuilder#to(File) File} and {@link CsvExportBuilder#to(Writer) Writer} targets.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long n = DataTransferUtil.exportCsvFrom(dataSource, "SELECT id, name, email FROM users")
-     *         .selectColumnNames(List.of("id", "name"))
+     *         .columns(List.of("id", "name"))
      *         .to(new File("users.csv"));
      * }</pre>
      *
@@ -3802,7 +3851,7 @@ public final class DataTransferUtil {
      * {@code exportCsvFrom(...)} factory methods ({@link DataTransferUtil#exportCsvFrom(javax.sql.DataSource, String)},
      * {@link DataTransferUtil#exportCsvFrom(Connection, String)}, {@link DataTransferUtil#exportCsvFrom(PreparedStatement)} or
      * {@link DataTransferUtil#exportCsvFrom(ResultSet)}), optionally restrict the columns with
-     * {@link #selectColumnNames(Collection)}, then write to a {@link File} or a {@link Writer} with a terminal
+     * {@link #columns(Collection)}, then write to a {@link File} or a {@link Writer} with a terminal
      * {@code to(...)} call.
      *
      * <p>The exported CSV always starts with a header row of column labels. A caller-supplied
@@ -3818,7 +3867,7 @@ public final class DataTransferUtil {
         private final PreparedStatement stmt;
         private final ResultSet rs;
         private final String selectSql;
-        private Collection<String> selectColumnNames;
+        private Collection<String> columnNames;
 
         CsvExportBuilder(final javax.sql.DataSource dataSource, final Connection conn, final PreparedStatement stmt, final ResultSet rs,
                 final String selectSql) {
@@ -3833,11 +3882,11 @@ public final class DataTransferUtil {
          * Restricts the export to the named columns (matched against the query's result-set column labels), in the
          * order they appear in the result. {@code null} or empty exports all columns.
          *
-         * @param selectColumnNames the column names to export; {@code null} for all columns. The supplied collection is copied.
+         * @param columns the column names to export; {@code null} for all columns. The supplied collection is copied.
          * @return this builder
          */
-        public CsvExportBuilder selectColumnNames(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
+        public CsvExportBuilder columns(final Collection<String> columns) {
+            columnNames = N.isEmpty(columns) ? null : new ArrayList<>(columns);
 
             return this;
         }
@@ -3856,7 +3905,7 @@ public final class DataTransferUtil {
         public long to(final File output) throws SQLException {
             N.checkArgNotNull(output, "output");
 
-            return export(r -> exportCsv(r, selectColumnNames, output));
+            return export(r -> exportCsv(r, columnNames, output));
         }
 
         /**
@@ -3873,7 +3922,7 @@ public final class DataTransferUtil {
         public long to(final Writer output) throws SQLException {
             N.checkArgNotNull(output, "output");
 
-            return export(r -> exportCsv(r, selectColumnNames, output));
+            return export(r -> exportCsv(r, columnNames, output));
         }
 
         private long export(final ResultSetExporter exporter) throws SQLException {
@@ -3950,7 +3999,7 @@ public final class DataTransferUtil {
      * into a target table, using explicit SELECT and INSERT SQL.
      *
      * <p>The returned {@link CopyFromDataSource} lets you configure {@code fetchSize}, {@code batchSize},
-     * {@code batchIntervalInMillis} and a custom {@code stmtSetter} through chained calls, then run the copy
+     * {@code batchIntervalInMillis} and a custom {@code parameterSetter} through chained calls, then run the copy
      * with {@link CopyFromDataSource#to(javax.sql.DataSource, String)}. It is an ergonomic alternative to the
      * positional {@code copy(DataSource, String, ..., DataSource, String, ...)} overloads.</p>
      *
@@ -3985,7 +4034,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * long copied = DataTransferUtil.copyFrom(sourceConn, "SELECT * FROM orders")
      *         .batchSize(1000)
-     *         .batchIntervalInMillis(100)
+     *         .batchDelay(Duration.ofMillis(100))
      *         .to(targetConn, "INSERT INTO orders_archive VALUES (?, ?, ?, ?)");
      * }</pre>
      *
@@ -4015,7 +4064,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * long copied = DataTransferUtil.copyFrom(selectStmt)
      *         .batchSize(1000)
-     *         .stmtSetter((pq, rs) -> { pq.setLong(1, rs.getLong(1)); pq.setString(2, rs.getString(2)); })
+     *         .parameterSetter((pq, rs) -> { pq.setLong(1, rs.getLong(1)); pq.setString(2, rs.getString(2)); })
      *         .to(insertStmt);
      * }</pre>
      *
@@ -4036,7 +4085,7 @@ public final class DataTransferUtil {
      * Creates a fluent builder for copying a whole table (or selected columns) from a source
      * {@link javax.sql.DataSource} to a target table, generating the SELECT and INSERT SQL from the table schema.
      *
-     * <p>The returned {@link CopyTableFromDataSource} lets you configure {@code selectColumnNames} and
+     * <p>The returned {@link CopyTableFromDataSource} lets you configure {@code columnNames} and
      * {@code batchSize}, then run the copy with {@link CopyTableFromDataSource#to(javax.sql.DataSource, String)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -4046,7 +4095,7 @@ public final class DataTransferUtil {
      *
      * // Copy selected columns with a custom batch size
      * long partial = DataTransferUtil.copyTable(sourceDataSource, "users")
-     *         .selectColumnNames(List.of("id", "name", "email"))
+     *         .columns(List.of("id", "name", "email"))
      *         .batchSize(10000)
      *         .to(targetDataSource, "users_lite");
      * }</pre>
@@ -4073,7 +4122,7 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long copied = DataTransferUtil.copyTable(sourceConn, "users")
-     *         .selectColumnNames(List.of("id", "name"))
+     *         .columns(List.of("id", "name"))
      *         .to(targetConn, "users_backup");
      * }</pre>
      *
@@ -4096,7 +4145,7 @@ public final class DataTransferUtil {
      * A fluent builder that copies the rows of a SELECT query from a source {@link javax.sql.DataSource} into a
      * target table. Obtain an instance via {@link DataTransferUtil#copyFrom(javax.sql.DataSource, String)}, chain
      * any of the optional configuration methods ({@link #fetchSize(int)}, {@link #batchSize(int)},
-     * {@link #batchIntervalInMillis(long)}, {@link #stmtSetter(Throwables.BiConsumer)}), then call the terminal
+     * {@link #batchDelay(Duration)}, {@link #parameterSetter(Throwables.BiConsumer)}), then call the terminal
      * {@link #to(javax.sql.DataSource, String)} to run the copy. Each configuration method returns {@code this}.
      *
      * <p>Connections are obtained from the source and target data sources and released back to them when the
@@ -4110,7 +4159,7 @@ public final class DataTransferUtil {
         private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
-        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
         CopyFromDataSource(final javax.sql.DataSource sourceDataSource, final String selectSql) {
             this.sourceDataSource = sourceDataSource;
@@ -4144,11 +4193,14 @@ public final class DataTransferUtil {
         /**
          * Sets the pause between consecutive batch executions.
          *
-         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @param delay the delay between completed batches; must not be {@code null} or negative
          * @return this builder
+         * @throws IllegalArgumentException if {@code delay} is {@code null} or negative
          */
-        public CopyFromDataSource batchIntervalInMillis(final long batchIntervalInMillis) {
-            this.batchIntervalInMillis = batchIntervalInMillis;
+        public CopyFromDataSource batchDelay(final Duration delay) {
+            N.checkArgNotNull(delay, "delay");
+            N.checkArgument(!delay.isNegative(), "delay must not be negative: %s", delay);
+            batchIntervalInMillis = delay.toMillis();
 
             return this;
         }
@@ -4157,11 +4209,11 @@ public final class DataTransferUtil {
          * Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters. When
          * {@code null} (the default), all columns are copied by index.
          *
-         * @param stmtSetter the parameter setter
+         * @param parameterSetter the parameter setter
          * @return this builder
          */
-        public CopyFromDataSource stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) {
-            this.stmtSetter = stmtSetter;
+        public CopyFromDataSource parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) {
+            this.parameterSetter = parameterSetter;
 
             return this;
         }
@@ -4172,19 +4224,19 @@ public final class DataTransferUtil {
          * @param targetDataSource the data source to write to
          * @param insertSql the SQL insert statement with placeholders matching the selected columns
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+         * @throws IllegalArgumentException if {@code batchSize <= 0}
          * @throws SQLException if a database access error occurs
          */
         public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
-            return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
+            return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, batchIntervalInMillis, parameterSetter);
         }
     }
 
     /**
      * A fluent builder that copies the rows of a SELECT query between two {@link Connection}s. Obtain an instance
      * via {@link DataTransferUtil#copyFrom(Connection, String)}, chain any of the optional configuration methods
-     * ({@link #fetchSize(int)}, {@link #batchSize(int)}, {@link #batchIntervalInMillis(long)},
-     * {@link #stmtSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(Connection, String)} to run
+     * ({@link #fetchSize(int)}, {@link #batchSize(int)}, {@link #batchDelay(Duration)},
+     * {@link #parameterSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(Connection, String)} to run
      * the copy. Each configuration method returns {@code this}.
      *
      * <p>Neither the source nor the target connection is closed by the copy; the caller retains ownership.</p>
@@ -4197,7 +4249,7 @@ public final class DataTransferUtil {
         private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
-        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
         CopyFromConnection(final Connection sourceConn, final String selectSql) {
             this.sourceConn = sourceConn;
@@ -4231,11 +4283,14 @@ public final class DataTransferUtil {
         /**
          * Sets the pause between consecutive batch executions.
          *
-         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @param delay the delay between completed batches; must not be {@code null} or negative
          * @return this builder
+         * @throws IllegalArgumentException if {@code delay} is {@code null} or negative
          */
-        public CopyFromConnection batchIntervalInMillis(final long batchIntervalInMillis) {
-            this.batchIntervalInMillis = batchIntervalInMillis;
+        public CopyFromConnection batchDelay(final Duration delay) {
+            N.checkArgNotNull(delay, "delay");
+            N.checkArgument(!delay.isNegative(), "delay must not be negative: %s", delay);
+            batchIntervalInMillis = delay.toMillis();
 
             return this;
         }
@@ -4244,11 +4299,11 @@ public final class DataTransferUtil {
          * Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters. When
          * {@code null} (the default), all columns are copied by index.
          *
-         * @param stmtSetter the parameter setter
+         * @param parameterSetter the parameter setter
          * @return this builder
          */
-        public CopyFromConnection stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) {
-            this.stmtSetter = stmtSetter;
+        public CopyFromConnection parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) {
+            this.parameterSetter = parameterSetter;
 
             return this;
         }
@@ -4259,19 +4314,19 @@ public final class DataTransferUtil {
          * @param targetConn the connection to write to
          * @param insertSql the SQL insert statement with placeholders matching the selected columns
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+         * @throws IllegalArgumentException if {@code batchSize <= 0}
          * @throws SQLException if a database access error occurs
          */
         public long to(final Connection targetConn, final String insertSql) throws SQLException {
-            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
+            return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis, parameterSetter);
         }
     }
 
     /**
      * A fluent builder that copies the rows produced by a source {@link PreparedStatement} into a target
      * {@link PreparedStatement}. Obtain an instance via {@link DataTransferUtil#copyFrom(PreparedStatement)}, chain
-     * any of the optional configuration methods ({@link #batchSize(int)}, {@link #batchIntervalInMillis(long)},
-     * {@link #stmtSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(PreparedStatement)} to run the
+     * any of the optional configuration methods ({@link #batchSize(int)}, {@link #batchDelay(Duration)},
+     * {@link #parameterSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(PreparedStatement)} to run the
      * copy. Each configuration method returns {@code this}.
      *
      * <p>The fetch size is whatever the caller already configured on the source statement, so this builder does
@@ -4283,7 +4338,7 @@ public final class DataTransferUtil {
         private final PreparedStatement selectStmt;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
-        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter;
+        private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
         CopyFromStatement(final PreparedStatement selectStmt) {
             this.selectStmt = selectStmt;
@@ -4304,11 +4359,14 @@ public final class DataTransferUtil {
         /**
          * Sets the pause between consecutive batch executions.
          *
-         * @param batchIntervalInMillis the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+         * @param delay the delay between completed batches; must not be {@code null} or negative
          * @return this builder
+         * @throws IllegalArgumentException if {@code delay} is {@code null} or negative
          */
-        public CopyFromStatement batchIntervalInMillis(final long batchIntervalInMillis) {
-            this.batchIntervalInMillis = batchIntervalInMillis;
+        public CopyFromStatement batchDelay(final Duration delay) {
+            N.checkArgNotNull(delay, "delay");
+            N.checkArgument(!delay.isNegative(), "delay must not be negative: %s", delay);
+            batchIntervalInMillis = delay.toMillis();
 
             return this;
         }
@@ -4317,11 +4375,11 @@ public final class DataTransferUtil {
          * Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters. When
          * {@code null} (the default), all columns are copied by index.
          *
-         * @param stmtSetter the parameter setter
+         * @param parameterSetter the parameter setter
          * @return this builder
          */
-        public CopyFromStatement stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) {
-            this.stmtSetter = stmtSetter;
+        public CopyFromStatement parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) {
+            this.parameterSetter = parameterSetter;
 
             return this;
         }
@@ -4331,18 +4389,18 @@ public final class DataTransferUtil {
          *
          * @param insertStmt the statement to insert into (not closed by this method)
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+         * @throws IllegalArgumentException if {@code batchSize <= 0}
          * @throws SQLException if a database access error occurs
          */
         public long to(final PreparedStatement insertStmt) throws SQLException {
-            return copy(selectStmt, insertStmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return copy(selectStmt, insertStmt, batchSize, batchIntervalInMillis, parameterSetter);
         }
     }
 
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link javax.sql.DataSource}s,
      * generating the SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link DataTransferUtil#copyTable(javax.sql.DataSource, String)}, optionally chain {@link #selectColumnNames(Collection)}
+     * {@link DataTransferUtil#copyTable(javax.sql.DataSource, String)}, optionally chain {@link #columns(Collection)}
      * and {@link #batchSize(int)}, then call the terminal {@link #to(javax.sql.DataSource, String)} to run the copy.
      * Each configuration method returns {@code this}.
      *
@@ -4354,7 +4412,7 @@ public final class DataTransferUtil {
     public static final class CopyTableFromDataSource {
         private final javax.sql.DataSource sourceDataSource;
         private final String sourceTableName;
-        private Collection<String> selectColumnNames;
+        private Collection<String> columnNames;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
 
         CopyTableFromDataSource(final javax.sql.DataSource sourceDataSource, final String sourceTableName) {
@@ -4365,11 +4423,11 @@ public final class DataTransferUtil {
         /**
          * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
          *
-         * @param selectColumnNames the column names to copy. The supplied collection is copied.
+         * @param columns the column names to copy. The supplied collection is copied.
          * @return this builder
          */
-        public CopyTableFromDataSource selectColumnNames(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
+        public CopyTableFromDataSource columns(final Collection<String> columns) {
+            columnNames = N.isEmpty(columns) ? null : new ArrayList<>(columns);
 
             return this;
         }
@@ -4396,15 +4454,15 @@ public final class DataTransferUtil {
          * @throws SQLException if a database access error occurs
          */
         public long to(final javax.sql.DataSource targetDataSource, final String targetTableName) throws SQLException {
-            return N.isEmpty(selectColumnNames) ? copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, batchSize)
-                    : copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, selectColumnNames, batchSize);
+            return N.isEmpty(columnNames) ? copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, batchSize)
+                    : copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, columnNames, batchSize);
         }
     }
 
     /**
      * A fluent builder that copies a table (or selected columns) between two {@link Connection}s, generating the
      * SELECT and INSERT SQL from the table schema. Obtain an instance via
-     * {@link DataTransferUtil#copyTable(Connection, String)}, optionally chain {@link #selectColumnNames(Collection)}
+     * {@link DataTransferUtil#copyTable(Connection, String)}, optionally chain {@link #columns(Collection)}
      * and {@link #batchSize(int)}, then call the terminal {@link #to(Connection, String)} to run the copy. Each
      * configuration method returns {@code this}.
      *
@@ -4415,7 +4473,7 @@ public final class DataTransferUtil {
     public static final class CopyTableFromConnection {
         private final Connection sourceConn;
         private final String sourceTableName;
-        private Collection<String> selectColumnNames;
+        private Collection<String> columnNames;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
 
         CopyTableFromConnection(final Connection sourceConn, final String sourceTableName) {
@@ -4426,11 +4484,11 @@ public final class DataTransferUtil {
         /**
          * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
          *
-         * @param selectColumnNames the column names to copy. The supplied collection is copied.
+         * @param columns the column names to copy. The supplied collection is copied.
          * @return this builder
          */
-        public CopyTableFromConnection selectColumnNames(final Collection<String> selectColumnNames) {
-            this.selectColumnNames = N.isEmpty(selectColumnNames) ? null : new ArrayList<>(selectColumnNames);
+        public CopyTableFromConnection columns(final Collection<String> columns) {
+            columnNames = N.isEmpty(columns) ? null : new ArrayList<>(columns);
 
             return this;
         }
@@ -4457,8 +4515,8 @@ public final class DataTransferUtil {
          * @throws SQLException if a database access error occurs
          */
         public long to(final Connection targetConn, final String targetTableName) throws SQLException {
-            return N.isEmpty(selectColumnNames) ? copy(sourceConn, targetConn, sourceTableName, targetTableName, batchSize)
-                    : copy(sourceConn, targetConn, sourceTableName, targetTableName, selectColumnNames, batchSize);
+            return N.isEmpty(columnNames) ? copy(sourceConn, targetConn, sourceTableName, targetTableName, batchSize)
+                    : copy(sourceConn, targetConn, sourceTableName, targetTableName, columnNames, batchSize);
         }
     }
 }

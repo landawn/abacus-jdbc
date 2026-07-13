@@ -51,30 +51,30 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p><strong>Init-time validation:</strong> applying {@code @CacheResult} to a method whose return
  * type is not cacheable ({@code void}, {@code Iterator}, {@code Stream}, {@code Seq}) causes DAO
- * initialization to fail with {@code UnsupportedOperationException}. In addition, {@link #liveTime()}
- * and {@link #maxIdleTime()} must be {@code >= 0}, and {@code 0 <= minSize() <= maxSize()} must hold.</p>
+ * initialization to fail with {@code UnsupportedOperationException}. In addition, {@link #maxLiveTimeMillis()}
+ * and {@link #maxIdleTimeMillis()} must be {@code >= 0}, and {@code 0 <= minSize() <= maxSize()} must hold.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
  *     // Cache individual user lookups for 30 minutes
- *     @CacheResult(enabled = true, liveTime = 1800000, maxIdleTime = 600000)
+ *     @CacheResult(enabled = true, maxLiveTimeMillis = 1800000, maxIdleTimeMillis = 600000)
  *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(@Bind("id") Long id) throws SQLException;
  *
  *     // Cache list results with size restrictions
- *     @CacheResult(enabled = true, liveTime = 300000, minSize = 1, maxSize = 100)
+ *     @CacheResult(enabled = true, maxLiveTimeMillis = 300000, minSize = 1, maxSize = 100)
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status) throws SQLException;
  *
  *     // Use Kryo serialization for complex objects
- *     @CacheResult(enabled = true, liveTime = 3600000, serializer = "kryo")
+ *     @CacheResult(enabled = true, maxLiveTimeMillis = 3600000, serialization = CacheSerialization.KRYO)
  *     @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
  *     UserProfile getProfile(@Bind("userId") Long userId) throws SQLException;
  * }
  *
  * // Apply caching to all matching methods at type level
- * @CacheResult(enabled = true, liveTime = 600000, filter = {"find.*", "get.*"})
+ * @CacheResult(enabled = true, maxLiveTimeMillis = 600000, filter = {"find.*", "get.*"})
  * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
  *     // All find* and get* methods will be cached
  * }
@@ -82,17 +82,17 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p>Cache invalidation strategies:</p>
  * <ul>
- *   <li>Time-based: Entries expire after {@code liveTime} milliseconds</li>
- *   <li>Idle-based: Entries expire if not accessed for {@code maxIdleTime} milliseconds</li>
+ *   <li>Time-based: Entries expire after {@code maxLiveTimeMillis} milliseconds</li>
+ *   <li>Idle-based: Entries expire if not accessed for {@code maxIdleTimeMillis} milliseconds</li>
  *   <li>Size-based: Only cache results within size bounds (for collections)</li>
  *   <li>Manual: Use {@link RefreshCache} annotation on update methods</li>
  * </ul>
  *
- * <p>Note: while a thread-local DAO cache opened by {@code JdbcUtil.openDaoCacheOnCurrentThread()}
+ * <p>Note: while a thread-local DAO cache scope opened by {@code JdbcUtil.openDaoCacheScope()}
  * is active, it takes precedence on that thread for query-named methods (names starting with
  * {@code query}/{@code list}/{@code get}/{@code find}/{@code exists}/{@code count}/...) — for those
  * methods this annotation's DAO-level cache is neither read from nor written to until the
- * thread-local cache is closed.</p>
+ * scope is closed.</p>
  *
  * @see Cache
  * @see RefreshCache
@@ -139,7 +139,7 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Cache for 15 minutes
-     * @CacheResult(enabled = true, liveTime = 900000)
+     * @CacheResult(enabled = true, maxLiveTimeMillis = 900000)
      * @Query("SELECT * FROM configurations WHERE key = :key")
      * Config getConfig(@Bind("key") String key) throws SQLException;
      * }</pre>
@@ -147,14 +147,14 @@ public @interface CacheResult {
      * @return the maximum cache entry lifetime in milliseconds; defaults to
      *         {@link JdbcUtil#DEFAULT_CACHE_LIVE_TIME} (30 minutes)
      */
-    long liveTime() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME;
+    long maxLiveTimeMillis() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME;
 
     /**
      * Specifies the maximum idle time (in milliseconds) for a cached entry.
      * If an entry is not accessed within this time, it expires and is removed.
      * This is useful for frequently accessed data that should expire if unused.
      *
-     * <p>The entry expires when either {@code liveTime} or {@code maxIdleTime}
+     * <p>The entry expires when either {@code maxLiveTimeMillis} or {@code maxIdleTimeMillis}
      * is exceeded, whichever comes first.</p>
      *
      * <p>The default is {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes).</p>
@@ -162,7 +162,7 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Expire if not accessed for 10 minutes
-     * @CacheResult(enabled = true, liveTime = 3600000, maxIdleTime = 600000)
+     * @CacheResult(enabled = true, maxLiveTimeMillis = 3600000, maxIdleTimeMillis = 600000)
      * @Query("SELECT * FROM user_sessions WHERE token = :token")
      * UserSession getSession(@Bind("token") String token) throws SQLException;
      * }</pre>
@@ -170,7 +170,7 @@ public @interface CacheResult {
      * @return the maximum idle time in milliseconds; defaults to
      *         {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes)
      */
-    long maxIdleTime() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME;
+    long maxIdleTimeMillis() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME;
 
     /**
      * Specifies the minimum size requirement for caching results.
@@ -220,9 +220,9 @@ public @interface CacheResult {
      *
      * <p>Available options:</p>
      * <ul>
-     *   <li>{@code "none"} (default) - No serialization, stores direct references</li>
-     *   <li>{@code "kryo"} - Uses Kryo for fast binary serialization</li>
-     *   <li>{@code "json"} - Uses JSON for human-readable serialization</li>
+     *   <li>{@link CacheSerialization#NONE} (default) - No serialization, stores direct references</li>
+     *   <li>{@link CacheSerialization#KRYO} - Uses Kryo for fast binary serialization</li>
+     *   <li>{@link CacheSerialization#JSON} - Uses JSON for human-readable serialization</li>
      * </ul>
      *
      * <p>Serialization provides isolation between cached objects and application code,
@@ -231,20 +231,20 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Use Kryo for deep copying complex objects
-     * @CacheResult(enabled = true, serializer = "kryo")
+     * @CacheResult(enabled = true, serialization = CacheSerialization.KRYO)
      * @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
      * UserProfile getComplexProfile(@Bind("userId") Long userId) throws SQLException;
      *
      * // Use JSON for debugging/logging friendly format
-     * @CacheResult(enabled = true, serializer = "json")
+     * @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
      * @Query("SELECT * FROM audit_logs WHERE id = :id")
      * AuditLog getAuditLog(@Bind("id") Long id) throws SQLException;
      * }</pre>
      *
-     * @return the serialization strategy name
+     * @return the serialization strategy
      * @see <a href="https://github.com/EsotericSoftware/kryo">Kryo Serialization</a>
      */
-    String serializer() default "none";
+    CacheSerialization serialization() default CacheSerialization.NONE;
 
     /**
      * Specifies filter patterns for methods when the annotation is applied at the class level.
@@ -263,7 +263,7 @@ public @interface CacheResult {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @CacheResult(enabled = true,
-     *              liveTime = 600000,
+     *              maxLiveTimeMillis = 600000,
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})
      * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
      *     // Matched by the filter - results are cached:

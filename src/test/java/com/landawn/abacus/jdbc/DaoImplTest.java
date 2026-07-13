@@ -104,17 +104,17 @@ public class DaoImplTest extends TestBase {
     }
 
     interface ProcedureDao {
-        @Query(value = "call test_proc(?, ?)", isProcedure = true)
+        @Query(value = "call test_proc(?, ?)", procedure = true)
         void callProc(@Bind("p1") String first, String second);
     }
 
     interface EmptyBindProcedureDao {
-        @Query(value = "call test_proc(?, ?)", isProcedure = true)
+        @Query(value = "call test_proc(?, ?)", procedure = true)
         void callProc(@Bind("p1") String first, @Bind String second);
     }
 
     interface BatchBindListDao extends Dao<TestEntity, BatchBindListDao> {
-        @Query(value = "UPDATE test SET status = 1 WHERE id IN ({ids})", isBatch = true)
+        @Query(value = "UPDATE test SET status = 1 WHERE id IN ({ids})", batch = true)
         int updateBatch(@com.landawn.abacus.jdbc.annotation.BindList("ids") Collection<Long> ids) throws SQLException;
     }
 
@@ -125,13 +125,13 @@ public class DaoImplTest extends TestBase {
     }
 
     interface AmbiguousOutParameterDao extends Dao<TestEntity, AmbiguousOutParameterDao> {
-        @Query(value = "{call test_proc(?)}", isProcedure = true, op = OP.executeAndGetOutParameters)
+        @Query(value = "{call test_proc(?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
         @OutParameter(name = "out", position = 1, sqlType = Types.INTEGER)
         Jdbc.OutParamResult call();
     }
 
     interface ZeroPositionOutParameterDao extends Dao<TestEntity, ZeroPositionOutParameterDao> {
-        @Query(value = "{call test_proc(?)}", isProcedure = true, op = OP.executeAndGetOutParameters)
+        @Query(value = "{call test_proc(?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
         @OutParameter(position = 0, sqlType = Types.INTEGER)
         Jdbc.OutParamResult call() throws SQLException;
     }
@@ -141,12 +141,12 @@ public class DaoImplTest extends TestBase {
         List<String> list(Jdbc.RowMapper<TestEntity> mapper);
     }
 
-    // Regression: a stored-procedure DAO method declared as Stream<Dataset> with op=OP.streamAll
+    // Regression: a stored-procedure DAO method declared as Stream<Dataset> with op = QueryOperation.streamAll
     // used to fail at proxy creation time because the Stream-return guard rejected anything other
-    // than OP.stream / OP.DEFAULT — even though the OP.streamAll dispatch branch (procedure path)
+    // than QueryOperation.stream / QueryOperation.DEFAULT — even though the QueryOperation.streamAll dispatch branch (procedure path)
     // was explicitly written to handle it.
     interface StreamAllProcedureDao extends Dao<TestEntity, StreamAllProcedureDao> {
-        @Query(value = "call test_proc()", isProcedure = true, op = OP.streamAll)
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.streamAll)
         com.landawn.abacus.util.stream.Stream<Dataset> streamAll();
     }
 
@@ -308,14 +308,15 @@ public class DaoImplTest extends TestBase {
     void testMergedByIdReturnsAbacusOptional() throws Exception {
         Method daoMethod = MergedDao.class.getMethod("findMerged");
         Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
-                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
         factory.setAccessible(true);
 
         Dataset dataset = new RowDataset(ImmutableList.of("id", "name"), ImmutableList.of(ImmutableList.of(1L), ImmutableList.of("name")));
 
         @SuppressWarnings("unchecked")
         Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> func = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
-                .invoke(null, TestEntity.class, daoMethod, null, List.of("id"), null, true, false, false, OP.DEFAULT, false, "MergedDao.findMerged");
+                .invoke(null, TestEntity.class, daoMethod, null, List.of("id"), null, true, false, false, QueryOperation.DEFAULT, false,
+                        "MergedDao.findMerged");
 
         Object result = func.apply(new StubQuery(dataset), new Object[0]);
 
@@ -331,14 +332,15 @@ public class DaoImplTest extends TestBase {
     public void testMergedByIdReturnsEmptyOptionalForEmptyDataset() throws Exception {
         Method daoMethod = MergedDao.class.getMethod("findMerged");
         Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
-                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
         factory.setAccessible(true);
 
         Dataset dataset = new RowDataset(List.of("id", "name"), List.of(List.of(), List.of()));
 
         @SuppressWarnings("unchecked")
         Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> func = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
-                .invoke(null, TestEntity.class, daoMethod, null, List.of("id"), null, true, false, false, OP.DEFAULT, false, "MergedDao.findMergedEmpty");
+                .invoke(null, TestEntity.class, daoMethod, null, List.of("id"), null, true, false, false, QueryOperation.DEFAULT, false,
+                        "MergedDao.findMergedEmpty");
 
         Object result = func.apply(new StubQuery(dataset), new Object[0]);
 
@@ -349,7 +351,8 @@ public class DaoImplTest extends TestBase {
     @Test
     void testProcedureBindRequiresAllParamsBound() throws Exception {
         Method daoMethod = ProcedureDao.class.getMethod("callProc", String.class, String.class);
-        DaoImpl.QueryInfo queryInfo = new DaoImpl.QueryInfo("call test_proc(?, ?)", null, 0, 0, false, 0, OP.DEFAULT, false, false, false, false, true, false);
+        DaoImpl.QueryInfo queryInfo = new DaoImpl.QueryInfo("call test_proc(?, ?)", null, 0, 0, false, 0, QueryOperation.DEFAULT, false, false, false, false,
+                true, false);
 
         Method factory = DaoImpl.class.getDeclaredMethod("createParametersSetter", DaoImpl.QueryInfo.class, String.class, Method.class, Class[].class,
                 int.class, int.class, int[].class, boolean[].class, int.class);
@@ -373,7 +376,8 @@ public class DaoImplTest extends TestBase {
     @Tag("2025")
     void testProcedureBindRejectsEmptyBindNameAmongNamedOnes() throws Exception {
         Method daoMethod = EmptyBindProcedureDao.class.getMethod("callProc", String.class, String.class);
-        DaoImpl.QueryInfo queryInfo = new DaoImpl.QueryInfo("call test_proc(?, ?)", null, 0, 0, false, 0, OP.DEFAULT, false, false, false, false, true, false);
+        DaoImpl.QueryInfo queryInfo = new DaoImpl.QueryInfo("call test_proc(?, ?)", null, 0, 0, false, 0, QueryOperation.DEFAULT, false, false, false, false,
+                true, false);
 
         Method factory = DaoImpl.class.getDeclaredMethod("createParametersSetter", DaoImpl.QueryInfo.class, String.class, Method.class, Class[].class,
                 int.class, int.class, int[].class, boolean[].class, int.class);
@@ -414,12 +418,12 @@ public class DaoImplTest extends TestBase {
     void testResultExtractorPrimitiveReturnTypeCompatibility() throws Exception {
         Method daoMethod = PrimitiveExtractorDao.class.getMethod("count", Jdbc.ResultExtractor.class);
         Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
-                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
         factory.setAccessible(true);
 
         @SuppressWarnings("unchecked")
         Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> func = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
-                .invoke(null, TestEntity.class, daoMethod, null, null, null, true, true, false, OP.DEFAULT, false, "PrimitiveExtractorDao.count");
+                .invoke(null, TestEntity.class, daoMethod, null, null, null, true, true, false, QueryOperation.DEFAULT, false, "PrimitiveExtractorDao.count");
 
         assertNotNull(func);
 
@@ -459,10 +463,10 @@ public class DaoImplTest extends TestBase {
                 () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
     }
 
-    // Regression: @Query(isProcedure=true, op=OP.streamAll) Stream<Dataset> proc()
-    // previously threw "is not supported the specified op: streamAll" at proxy creation
+    // Regression: @Query(procedure=true, op = QueryOperation.streamAll) Stream<Dataset> proc()
+    // previously threw "is not supported the specified QueryOperation: streamAll" at proxy creation
     // because the Stream-return guard in createQueryFunctionByMethod only allowed
-    // OP.stream and OP.DEFAULT — the dedicated OP.streamAll handler was unreachable.
+    // QueryOperation.stream and QueryOperation.DEFAULT — the dedicated QueryOperation.streamAll handler was unreachable.
     @Test
     void testCreateDaoAcceptsStreamAllForProcedure() throws Exception {
         StreamAllProcedureDao dao = assertDoesNotThrow(
@@ -474,11 +478,11 @@ public class DaoImplTest extends TestBase {
     @Test
     public void testIsListQuery_ListOpRejectsNonCollection() throws Exception {
         Method method = QueryClassifierDao.class.getMethod("getEntities");
-        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         classifier.setAccessible(true);
 
         InvocationTargetException ex = assertThrows(InvocationTargetException.class,
-                () -> classifier.invoke(null, method, TestEntity.class, OP.list, "QueryClassifierDao.getEntities"));
+                () -> classifier.invoke(null, method, TestEntity.class, QueryOperation.list, "QueryClassifierDao.getEntities"));
 
         assertTrue(ex.getCause() instanceof UnsupportedOperationException);
     }
@@ -486,10 +490,10 @@ public class DaoImplTest extends TestBase {
     @Test
     public void testIsListQuery_DefaultSinglePrefixCollection() throws Exception {
         Method method = QueryClassifierDao.class.getMethod("getEntities");
-        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         classifier.setAccessible(true);
 
-        Object result = classifier.invoke(null, method, List.class, OP.DEFAULT, "QueryClassifierDao.getEntities");
+        Object result = classifier.invoke(null, method, List.class, QueryOperation.DEFAULT, "QueryClassifierDao.getEntities");
 
         assertEquals(false, result);
     }
@@ -497,10 +501,10 @@ public class DaoImplTest extends TestBase {
     @Test
     public void testIsListQuery_ResultExtractorParameter() throws Exception {
         Method method = QueryClassifierDao.class.getMethod("selectWithExtractor", Jdbc.ResultExtractor.class);
-        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         classifier.setAccessible(true);
 
-        Object result = classifier.invoke(null, method, List.class, OP.DEFAULT, "QueryClassifierDao.selectWithExtractor");
+        Object result = classifier.invoke(null, method, List.class, QueryOperation.DEFAULT, "QueryClassifierDao.selectWithExtractor");
 
         assertEquals(false, result);
     }
@@ -508,11 +512,11 @@ public class DaoImplTest extends TestBase {
     @Test
     public void testIsExistsQuery_ExplicitOpRejectsNonBoolean() throws Exception {
         Method method = QueryClassifierDao.class.getMethod("existsAsString");
-        Method classifier = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, QueryOperation.class, String.class);
         classifier.setAccessible(true);
 
         InvocationTargetException ex = assertThrows(InvocationTargetException.class,
-                () -> classifier.invoke(null, method, OP.exists, "QueryClassifierDao.existsAsString"));
+                () -> classifier.invoke(null, method, QueryOperation.exists, "QueryClassifierDao.existsAsString"));
 
         assertTrue(ex.getCause() instanceof UnsupportedOperationException);
     }
@@ -520,10 +524,10 @@ public class DaoImplTest extends TestBase {
     @Test
     public void testIsExistsQuery_MapperParameter() throws Exception {
         Method method = QueryClassifierDao.class.getMethod("existsWithMapper", Jdbc.RowMapper.class);
-        Method classifier = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, QueryOperation.class, String.class);
         classifier.setAccessible(true);
 
-        Object result = classifier.invoke(null, method, OP.DEFAULT, "QueryClassifierDao.existsWithMapper");
+        Object result = classifier.invoke(null, method, QueryOperation.DEFAULT, "QueryClassifierDao.existsWithMapper");
 
         assertEquals(false, result);
     }
@@ -533,10 +537,10 @@ public class DaoImplTest extends TestBase {
     public void testExistsOperationDoesNotNegateMethodMerelyStartingWithNot() throws Exception {
         final Method method = QueryClassifierDao.class.getMethod("notifyExists");
         final Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
-                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
         factory.setAccessible(true);
         final Throwables.BiFunction<AbstractQuery, Object[], Boolean, SQLException> function = (Throwables.BiFunction<AbstractQuery, Object[], Boolean, SQLException>) factory
-                .invoke(null, TestEntity.class, method, null, null, null, false, false, false, OP.exists, false, "QueryClassifierDao.notifyExists");
+                .invoke(null, TestEntity.class, method, null, null, null, false, false, false, QueryOperation.exists, false, "QueryClassifierDao.notifyExists");
         final AbstractQuery query = mock(AbstractQuery.class);
         org.mockito.Mockito.when(query.exists()).thenReturn(true);
 
@@ -548,7 +552,7 @@ public class DaoImplTest extends TestBase {
     // QueryInfo: sql ends with ";" - trims it (L6536 branch)
     @Test
     void testQueryInfo_SqlWithTrailingSemicolon() {
-        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1;", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, false);
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1;", null, 0, 0, false, 0, QueryOperation.DEFAULT, false, false, true, false, false, false);
         assertEquals("SELECT 1", qi.sql);
     }
 
@@ -556,23 +560,23 @@ public class DaoImplTest extends TestBase {
     @Test
     void testQueryInfo_WithPreParsedSql() {
         com.landawn.abacus.query.ParsedSql parsed = com.landawn.abacus.query.ParsedSql.parse("SELECT 1");
-        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1", parsed, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, false);
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1", parsed, 0, 0, false, 0, QueryOperation.DEFAULT, false, false, true, false, false, false);
         assertEquals(parsed, qi.parsedSql);
     }
 
     // QueryInfo: fragmentsContainNamedParameters=true with named SQL -> isNamedQuery=true
     @Test
     void testQueryInfo_FragmentContainsNamedParameters_NamedSql() {
-        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = :id", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false,
-                true);
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = :id", null, 0, 0, false, 0, QueryOperation.DEFAULT, false, false, true, false,
+                false, true);
         assertTrue(qi.isNamedQuery);
     }
 
     // QueryInfo: fragmentsContainNamedParameters=true with positional SQL -> throws
     @Test
     void testQueryInfo_FragmentContainsNamedParameters_PositionalSql_Throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = ?", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, true));
+        assertThrows(IllegalArgumentException.class, () -> new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = ?", null, 0, 0, false, 0, QueryOperation.DEFAULT,
+                false, false, true, false, false, true));
     }
 
     /**
@@ -582,11 +586,11 @@ public class DaoImplTest extends TestBase {
     @Test
     void testIsListQuery_TypeVariableArgument_DoesNotThrow() throws Exception {
         Method method = GenericListDao.class.getMethod("listAll");
-        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         classifier.setAccessible(true);
 
         // Should not throw ClassCastException — returns false because paramClassInReturnType is null
-        assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, OP.DEFAULT, "GenericListDao.listAll"));
+        assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, QueryOperation.DEFAULT, "GenericListDao.listAll"));
     }
 
     /**
@@ -597,11 +601,11 @@ public class DaoImplTest extends TestBase {
     void testCreateQueryFunctionByMethod_ResultExtractorWithTypeVariable_DoesNotThrow() throws Exception {
         Method method = GenericExtractorDao.class.getMethod("listWithExtractor", Jdbc.ResultExtractor.class);
         Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
-                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
         factory.setAccessible(true);
 
         // Should not throw ClassCastException when ResultExtractor<T> (TypeVariable) is the last param.
-        assertDoesNotThrow(() -> factory.invoke(null, TestEntity.class, method, null, null, null, true, false, true, OP.DEFAULT, false,
+        assertDoesNotThrow(() -> factory.invoke(null, TestEntity.class, method, null, null, null, true, false, true, QueryOperation.DEFAULT, false,
                 "GenericExtractorDao.listWithExtractor"));
     }
 
@@ -612,11 +616,11 @@ public class DaoImplTest extends TestBase {
     @Test
     void testIsListQuery_WildcardTypeArgument_DoesNotThrow() throws Exception {
         Method method = GenericListDao.class.getMethod("listWildcard");
-        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         classifier.setAccessible(true);
 
         // Should not throw ClassCastException — returns false because paramClassInReturnType is null
-        assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, OP.DEFAULT, "GenericListDao.listWildcard"));
+        assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, QueryOperation.DEFAULT, "GenericListDao.listWildcard"));
     }
 
     @CacheResult(enabled = true)
@@ -670,7 +674,7 @@ public class DaoImplTest extends TestBase {
             }
 
             @Override
-            public void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+            public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
                     Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             }
         };
@@ -713,7 +717,7 @@ public class DaoImplTest extends TestBase {
             }
 
             @Override
-            public void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+            public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
                     Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
                 updateCount.incrementAndGet();
             }
@@ -724,124 +728,124 @@ public class DaoImplTest extends TestBase {
         assertEquals(0, updateCount.get(), "@RefreshCache(enabled=false) method must not invalidate the cache");
     }
 
-    // isFindFirst: OP.findFirst returns true regardless of method name (line 521)
+    // isFindFirst: QueryOperation.findFirst returns true regardless of method name (line 521)
     @Test
     public void testIsFindFirst_OpFindFirst() throws Exception {
         Method method = FindFirstOpDao.class.getMethod("anyName");
-        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, OP.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, QueryOperation.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, OP.findFirst));
+        assertTrue((boolean) m.invoke(null, method, QueryOperation.findFirst));
     }
 
-    // isFindFirst: OP.DEFAULT with method starting "findFirst" returns true (line 524)
+    // isFindFirst: QueryOperation.DEFAULT with method starting "findFirst" returns true (line 524)
     @Test
     public void testIsFindFirst_DefaultWithFindFirstPrefix() throws Exception {
         Method method = FindFirstPrefixDao.class.getMethod("findFirstByStatus", String.class);
-        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, OP.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, QueryOperation.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, OP.DEFAULT));
+        assertTrue((boolean) m.invoke(null, method, QueryOperation.DEFAULT));
     }
 
-    // isFindFirst: OP.DEFAULT with "findOnlyOne" prefix returns false (line 524)
+    // isFindFirst: QueryOperation.DEFAULT with "findOnlyOne" prefix returns false (line 524)
     @Test
     public void testIsFindFirst_DefaultFindOnlyOneReturnsFalse() throws Exception {
         Method method = FindOnlyOneMethodDao.class.getMethod("findOnlyOneById", long.class);
-        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, OP.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, QueryOperation.class);
         m.setAccessible(true);
 
-        assertFalse((boolean) m.invoke(null, method, OP.DEFAULT));
+        assertFalse((boolean) m.invoke(null, method, QueryOperation.DEFAULT));
     }
 
-    // isFindOnlyOne: OP.findOnlyOne returns true (line 530)
+    // isFindOnlyOne: QueryOperation.findOnlyOne returns true (line 530)
     @Test
     public void testIsFindOnlyOne_OpFindOnlyOne() throws Exception {
         Method method = FindFirstOpDao.class.getMethod("anyName");
-        Method m = DaoImpl.class.getDeclaredMethod("isFindOnlyOne", Method.class, OP.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindOnlyOne", Method.class, QueryOperation.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, OP.findOnlyOne));
+        assertTrue((boolean) m.invoke(null, method, QueryOperation.findOnlyOne));
     }
 
-    // isFindOnlyOne: OP.DEFAULT with method starting "findOnlyOne" returns true (line 533)
+    // isFindOnlyOne: QueryOperation.DEFAULT with method starting "findOnlyOne" returns true (line 533)
     @Test
     public void testIsFindOnlyOne_DefaultWithFindOnlyOnePrefix() throws Exception {
         Method method = FindOnlyOneMethodDao.class.getMethod("findOnlyOneById", long.class);
-        Method m = DaoImpl.class.getDeclaredMethod("isFindOnlyOne", Method.class, OP.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindOnlyOne", Method.class, QueryOperation.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, OP.DEFAULT));
+        assertTrue((boolean) m.invoke(null, method, QueryOperation.DEFAULT));
     }
 
-    // isQueryForUnique: OP.queryForUnique returns true (line 538)
+    // isQueryForUnique: QueryOperation.queryForUnique returns true (line 538)
     @Test
     public void testIsQueryForUnique_OpQueryForUnique() throws Exception {
         Method method = AnyOpDaoForUnique.class.getMethod("anyName");
-        Method m = DaoImpl.class.getDeclaredMethod("isQueryForUnique", Method.class, OP.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isQueryForUnique", Method.class, QueryOperation.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, OP.queryForUnique));
+        assertTrue((boolean) m.invoke(null, method, QueryOperation.queryForUnique));
     }
 
-    // isQueryForUnique: OP.DEFAULT with method starting "queryForUnique" returns true (line 541)
+    // isQueryForUnique: QueryOperation.DEFAULT with method starting "queryForUnique" returns true (line 541)
     @Test
     public void testIsQueryForUnique_DefaultWithQueryForUniquePrefix() throws Exception {
         Method method = QueryForUniqueMethodDao.class.getMethod("queryForUniqueByName", String.class);
-        Method m = DaoImpl.class.getDeclaredMethod("isQueryForUnique", Method.class, OP.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isQueryForUnique", Method.class, QueryOperation.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, OP.DEFAULT));
+        assertTrue((boolean) m.invoke(null, method, QueryOperation.DEFAULT));
     }
 
-    // isListQuery: OP.listAll with valid Collection subtype returns true (line 437)
+    // isListQuery: QueryOperation.listAll with valid Collection subtype returns true (line 437)
     @Test
     public void testIsListQuery_ListAllOpWithValidCollection() throws Exception {
         Method method = ListAllOpDao.class.getMethod("getEntities");
-        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, java.util.Set.class, OP.listAll, "ListAllOpDao.getEntities"));
+        assertTrue((boolean) m.invoke(null, method, java.util.Set.class, QueryOperation.listAll, "ListAllOpDao.getEntities"));
     }
 
     // isListQuery: @MappedByKey annotation returns true (line 439)
     @Test
     public void testIsListQuery_MappedByKeyAnnotation() throws Exception {
         Method method = MappedByKeyDao.class.getMethod("findMapped");
-        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, java.util.Map.class, OP.DEFAULT, "MappedByKeyDao.findMapped"));
+        assertTrue((boolean) m.invoke(null, method, java.util.Map.class, QueryOperation.DEFAULT, "MappedByKeyDao.findMapped"));
     }
 
-    // isListQuery: non-DEFAULT non-list op returns false (line 441)
+    // isListQuery: non-DEFAULT non-list QueryOperation returns false (line 441)
     @Test
     public void testIsListQuery_UpdateOpReturnsFalse() throws Exception {
         Method method = UpdateOpDao.class.getMethod("updateCount");
-        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         m.setAccessible(true);
 
-        assertFalse((boolean) m.invoke(null, method, int.class, OP.update, "UpdateOpDao.updateCount"));
+        assertFalse((boolean) m.invoke(null, method, int.class, QueryOperation.update, "UpdateOpDao.updateCount"));
     }
 
-    // isExistsQuery: OP.exists with boolean return returns true (line 500)
+    // isExistsQuery: QueryOperation.exists with boolean return returns true (line 500)
     @Test
     public void testIsExistsQuery_OpExistsReturnsTrue() throws Exception {
         Method method = ExistsOpDao.class.getMethod("checkExists");
-        Method m = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, QueryOperation.class, String.class);
         m.setAccessible(true);
 
-        assertTrue((boolean) m.invoke(null, method, OP.exists, "ExistsOpDao.checkExists"));
+        assertTrue((boolean) m.invoke(null, method, QueryOperation.exists, "ExistsOpDao.checkExists"));
     }
 
-    // isExistsQuery: non-DEFAULT non-exists op returns false (line 502)
+    // isExistsQuery: non-DEFAULT non-exists QueryOperation returns false (line 502)
     @Test
     public void testIsExistsQuery_ListOpReturnsFalse() throws Exception {
         Method method = ExistsOpDao.class.getMethod("checkExists");
-        Method m = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, QueryOperation.class, String.class);
         m.setAccessible(true);
 
-        assertFalse((boolean) m.invoke(null, method, OP.list, "ExistsOpDao.checkExists"));
+        assertFalse((boolean) m.invoke(null, method, QueryOperation.list, "ExistsOpDao.checkExists"));
     }
 
     // isSingleReturnType: checks Optional, Nullable, primitive types
@@ -937,13 +941,13 @@ public class DaoImplTest extends TestBase {
     // QueryInfo: sql without trailing semicolon is not modified (line 6649)
     @Test
     public void testQueryInfo_SqlWithoutTrailingSemicolon() {
-        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1", null, 10, 20, true, 50, OP.update, true, true, false, false, false, false);
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1", null, 10, 20, true, 50, QueryOperation.update, true, true, false, false, false, false);
         assertEquals("SELECT 1", qi.sql);
         assertEquals(10, qi.queryTimeout);
         assertEquals(20, qi.fetchSize);
         assertTrue(qi.isBatch);
         assertEquals(50, qi.batchSize);
-        assertEquals(OP.update, qi.op);
+        assertEquals(QueryOperation.update, qi.queryOperation);
         assertTrue(qi.isSingleParameter);
         assertTrue(qi.autoSetSysTimeParam);
         assertFalse(qi.isSelect);
@@ -1034,10 +1038,10 @@ public class DaoImplTest extends TestBase {
     @Test
     public void testIsListQuery_IncompatibleRowMapperTypeIsNotListQuery() throws Exception {
         Method daoMethod = IncompatibleRowMapperListDao.class.getMethod("list", Jdbc.RowMapper.class);
-        Method isListQuery = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        Method isListQuery = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, QueryOperation.class, String.class);
         isListQuery.setAccessible(true);
 
-        assertFalse((Boolean) isListQuery.invoke(null, daoMethod, List.class, OP.DEFAULT, "IncompatibleRowMapperListDao.list"));
+        assertFalse((Boolean) isListQuery.invoke(null, daoMethod, List.class, QueryOperation.DEFAULT, "IncompatibleRowMapperListDao.list"));
     }
 
     private static DataSource mockDataSourceForDaoCreation() throws SQLException {

@@ -48,7 +48,7 @@ public class TransactionalTest extends TestBase {
 
     @Test
     public void testDefaultValueIsolation() throws Exception {
-        Method m = Transactional.class.getDeclaredMethod("isolation");
+        Method m = Transactional.class.getDeclaredMethod("isolationLevel");
         Object defaultValue = m.getDefaultValue();
         assertEquals(IsolationLevel.DEFAULT, defaultValue);
     }

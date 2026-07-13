@@ -30,8 +30,8 @@ import java.lang.annotation.Target;
  * proxy strips the {@code prefix.} and then assigns the value to the corresponding nested
  * property on the target object.</p>
  *
- * <p>The method's {@code OP} must be one of {@code OP.DEFAULT}, {@code OP.findFirst},
- * {@code OP.findOnlyOne}, {@code OP.list}, {@code OP.query}, or {@code OP.stream}, and the return
+ * <p>The method's {@code QueryOperation} must be one of {@code QueryOperation.DEFAULT}, {@code QueryOperation.findFirst},
+ * {@code QueryOperation.findOnlyOne}, {@code QueryOperation.list}, {@code QueryOperation.query}, or {@code QueryOperation.stream}, and the return
  * type must be {@code Optional}/{@code List}/{@code Collection<? super Entity>}, {@code Dataset},
  * or the entity type itself; violating either constraint fails DAO initialization with
  * {@code IllegalArgumentException}. A {@code Dataset}-returning method additionally requires

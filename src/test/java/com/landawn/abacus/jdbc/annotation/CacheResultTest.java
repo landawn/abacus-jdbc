@@ -43,13 +43,13 @@ public class CacheResultTest extends TestBase {
     }
 
     @Test
-    public void testDefaultLiveTime() throws Exception {
-        assertEquals((long) JdbcUtil.DEFAULT_CACHE_LIVE_TIME, CacheResult.class.getMethod("liveTime").getDefaultValue());
+    public void testDefaultTimeToLiveMillis() throws Exception {
+        assertEquals((long) JdbcUtil.DEFAULT_CACHE_LIVE_TIME, CacheResult.class.getMethod("maxLiveTimeMillis").getDefaultValue());
     }
 
     @Test
-    public void testDefaultMaxIdleTime() throws Exception {
-        assertEquals((long) JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME, CacheResult.class.getMethod("maxIdleTime").getDefaultValue());
+    public void testDefaultMaxIdleTimeMillis() throws Exception {
+        assertEquals((long) JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME, CacheResult.class.getMethod("maxIdleTimeMillis").getDefaultValue());
     }
 
     @Test
@@ -63,8 +63,10 @@ public class CacheResultTest extends TestBase {
     }
 
     @Test
-    public void testDefaultSerializer() throws Exception {
-        assertEquals("none", CacheResult.class.getMethod("serializer").getDefaultValue());
+    public void testDefaultSerialization() throws Exception {
+        assertEquals(CacheSerialization.NONE, CacheResult.class.getMethod("serialization").getDefaultValue());
+        assertEquals(CacheSerialization.class, CacheResult.class.getMethod("serialization").getReturnType());
+        assertArrayEquals(new CacheSerialization[] { CacheSerialization.NONE, CacheSerialization.KRYO, CacheSerialization.JSON }, CacheSerialization.values());
     }
 
     @Test

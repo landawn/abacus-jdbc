@@ -34,13 +34,13 @@ import java.sql.Types;
  * {@link ElementType#METHOD METHOD} target) and is {@link Repeatable repeatable}: declaring several
  * {@code @OutParameter}s on the same method collects them into an {@link OutParameters}. Exactly one
  * of {@link #name()} or {@link #position()} must be supplied on each instance, while {@link #sqlType()}
- * is always mandatory. The accompanying {@link Query @Query} should declare {@code isProcedure = true}
- * and an {@code op} that retrieves the OUT values (for example {@code OP.executeAndGetOutParameters}).</p>
+ * is always mandatory. The accompanying {@link Query @Query} should declare {@code procedure = true}
+ * and a {@code QueryOperation} that retrieves the OUT values (for example {@code QueryOperation.executeAndGetOutParameters}).</p>
  *
  * <p><b>Usage Example:</b></p>
  * <pre>{@code
  * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
- *        isProcedure = true, op = OP.executeAndGetOutParameters)
+ *        procedure = true, op = QueryOperation.executeAndGetOutParameters)
  * @OutParameter(name = "discount",   sqlType = Types.DECIMAL)
  * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
  * Jdbc.OutParamResult calculateDiscount(
@@ -73,7 +73,7 @@ public @interface OutParameter {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
-     *        isProcedure = true, op = OP.executeAndGetOutParameters)
+     *        procedure = true, op = QueryOperation.executeAndGetOutParameters)
      * @OutParameter(name = "discount", sqlType = Types.DECIMAL)
      * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
      * Jdbc.OutParamResult calculateDiscount(
@@ -105,7 +105,7 @@ public @interface OutParameter {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call sp_analyze_customer(?, ?, ?, ?)}",
-     *        isProcedure = true, op = OP.executeAndGetOutParameters)
+     *        procedure = true, op = QueryOperation.executeAndGetOutParameters)
      * @OutParameter(position = 2, sqlType = Types.VARCHAR)  // status
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)  // credit_score
      * @OutParameter(position = 4, sqlType = Types.DATE)     // last_purchase

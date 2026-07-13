@@ -18,7 +18,7 @@ import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 
-@PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
+@PerfLog(sqlLogThresholdMillis = 101, daoMethodLogThresholdMillis = 100)
 @Handler(impl = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", externalCallsOnly = true)

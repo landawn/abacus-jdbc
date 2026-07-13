@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,6 +27,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -221,7 +223,7 @@ public class DataTransferUtilTest extends TestBase {
     @Test
     public void testDatasetImportBuilderSnapshotsSelectedColumns() throws SQLException {
         final List<String> selectedColumns = new ArrayList<>(List.of("col1"));
-        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).selectColumnNames(selectedColumns);
+        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).columns(selectedColumns);
 
         selectedColumns.add("missing");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
@@ -236,7 +238,7 @@ public class DataTransferUtilTest extends TestBase {
     public void testDatasetImportBuilderSnapshotsColumnTypeMap() throws SQLException {
         final Map<String, Type> columnTypes = new HashMap<>();
         columnTypes.put("col1", N.typeOf(String.class));
-        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).columnTypeMap(columnTypes);
+        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset).columnTypes(columnTypes);
 
         columnTypes.put("missing", N.typeOf(String.class));
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
@@ -910,10 +912,10 @@ public class DataTransferUtilTest extends TestBase {
         verify(targetPreparedStatement, times(2)).executeBatch(); // 3 rows with batch size 2
     }
 
-    // Test for createParamSetter
+    // Test for resultSetParameterSetter
 
     @Test
-    public void testCreateParamSetter() throws SQLException {
+    public void testResultSetParameterSetter() throws SQLException {
         // Setup
         Jdbc.ColumnGetter<String> columnGetter = (rs, columnIndex) -> rs.getString(columnIndex).toUpperCase();
 
@@ -923,7 +925,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
 
         // Execute
-        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.createParamSetter(columnGetter);
+        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.resultSetParameterSetter(columnGetter);
         assertNotNull(setter);
         setter.accept(preparedQuery, mockResultSet);
 
@@ -933,16 +935,34 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
-    public void testCreateParamSetter_ZeroColumns() throws SQLException {
+    public void testResultSetParameterSetter_ZeroColumns() throws SQLException {
         Jdbc.ColumnGetter<String> columnGetter = (rs, columnIndex) -> rs.getString(columnIndex);
         PreparedQuery preparedQuery = mock(PreparedQuery.class);
         when(mockResultSetMetaData.getColumnCount()).thenReturn(0);
 
-        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.createParamSetter(columnGetter);
+        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.resultSetParameterSetter(columnGetter);
         assertNotNull(setter);
         setter.accept(preparedQuery, mockResultSet);
 
         verifyNoInteractions(preparedQuery);
+    }
+
+    @Test
+    public void testResultSetParameterSetterRejectsNullColumnGetterImmediately() {
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.resultSetParameterSetter(null));
+    }
+
+    @Test
+    public void testFluentBuildersAreCanonicalApi() throws NoSuchMethodException {
+        assertFalse(DataTransferUtil.class.getMethod("importFrom", Dataset.class).isAnnotationPresent(Deprecated.class));
+        assertFalse(DataTransferUtil.DatasetImportBuilder.class.getMethod("columns", Collection.class).isAnnotationPresent(Deprecated.class));
+        assertFalse(DataTransferUtil.DatasetImportBuilder.class.getMethod("batchDelay", Duration.class).isAnnotationPresent(Deprecated.class));
+        assertFalse(
+                DataTransferUtil.DatasetImportBuilder.class.getMethod("parameterSetter", Throwables.BiConsumer.class).isAnnotationPresent(Deprecated.class));
+
+        assertTrue(DataTransferUtil.class.getMethod("importData", Dataset.class, Collection.class, Connection.class, String.class, int.class, long.class)
+                .isAnnotationPresent(Deprecated.class));
+        assertFalse(DataTransferUtil.class.getMethod("importData", Dataset.class, DataSource.class, String.class).isAnnotationPresent(Deprecated.class));
     }
 
     // Edge case tests
@@ -1515,15 +1535,18 @@ public class DataTransferUtilTest extends TestBase {
         final PreparedStatement targetStmt = mock(PreparedStatement.class);
 
         assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchSize(0).stmtSetter((pq, rs) -> pq.setObject(1, rs.getObject(1))).to(targetStmt));
+                () -> DataTransferUtil.copyFrom(mockPreparedStatement)
+                        .batchSize(0)
+                        .parameterSetter((pq, rs) -> pq.setObject(1, rs.getObject(1)))
+                        .to(targetStmt));
     }
 
-    // CopyFromStatement.batchIntervalInMillis(-1) routes a negative interval into copy(...)'s argument validation
+    // CopyFromStatement.batchDelay rejects a negative duration immediately.
     // (DataTransferUtil L3075).
     @Test
     public void testCopyFromStatement_NegativeBatchInterval_Throws() {
         final PreparedStatement targetStmt = mock(PreparedStatement.class);
 
-        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchIntervalInMillis(-1).to(targetStmt));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchDelay(Duration.ofMillis(-1)).to(targetStmt));
     }
 }

@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.OP;
+import com.landawn.abacus.jdbc.QueryOperation;
 
 public class QueryTest extends TestBase {
 
@@ -60,26 +60,26 @@ public class QueryTest extends TestBase {
     public void testDefaultValueOp() throws Exception {
         Method m = Query.class.getDeclaredMethod("op");
         Object defaultValue = m.getDefaultValue();
-        assertEquals(OP.DEFAULT, defaultValue);
+        assertEquals(QueryOperation.DEFAULT, defaultValue);
     }
 
     @Test
-    public void testDefaultValueIsProcedure() throws Exception {
-        Method m = Query.class.getDeclaredMethod("isProcedure");
+    public void testDefaultValueProcedure() throws Exception {
+        Method m = Query.class.getDeclaredMethod("procedure");
         Object defaultValue = m.getDefaultValue();
         assertEquals(false, defaultValue);
     }
 
     @Test
-    public void testDefaultValueIsBatch() throws Exception {
-        Method m = Query.class.getDeclaredMethod("isBatch");
+    public void testDefaultValueBatch() throws Exception {
+        Method m = Query.class.getDeclaredMethod("batch");
         Object defaultValue = m.getDefaultValue();
         assertEquals(false, defaultValue);
     }
 
     @Test
-    public void testDefaultValueIsSingleParameter() throws Exception {
-        Method m = Query.class.getDeclaredMethod("isSingleParameter");
+    public void testDefaultValueCollectionAsSingleParameter() throws Exception {
+        Method m = Query.class.getDeclaredMethod("collectionAsSingleParameter");
         Object defaultValue = m.getDefaultValue();
         assertEquals(false, defaultValue);
     }
@@ -92,15 +92,15 @@ public class QueryTest extends TestBase {
     }
 
     @Test
-    public void testDefaultValueAutoSetSysTimeParam() throws Exception {
-        Method m = Query.class.getDeclaredMethod("autoSetSysTimeParam");
+    public void testDefaultValueInjectCurrentTimeParameters() throws Exception {
+        Method m = Query.class.getDeclaredMethod("injectCurrentTimeParameters");
         Object defaultValue = m.getDefaultValue();
         assertEquals(false, defaultValue);
     }
 
     @Test
-    public void testDefaultValueQueryTimeout() throws Exception {
-        Method m = Query.class.getDeclaredMethod("queryTimeout");
+    public void testDefaultValueQueryTimeoutSeconds() throws Exception {
+        Method m = Query.class.getDeclaredMethod("queryTimeoutSeconds");
         Object defaultValue = m.getDefaultValue();
         assertEquals(-1, defaultValue);
     }

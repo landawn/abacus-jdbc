@@ -38,8 +38,8 @@ public class CacheTest extends TestBase {
     }
 
     @Test
-    public void testDefaultEvictDelay() throws Exception {
-        assertEquals((long) JdbcUtil.DEFAULT_CACHE_EVICT_DELAY, Cache.class.getMethod("evictDelay").getDefaultValue());
+    public void testDefaultEvictionSweepIntervalMillis() throws Exception {
+        assertEquals((long) JdbcUtil.DEFAULT_CACHE_EVICT_DELAY, Cache.class.getMethod("evictDelayMillis").getDefaultValue());
     }
 
     @Test

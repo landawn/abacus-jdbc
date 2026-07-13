@@ -3533,7 +3533,7 @@ public final class Jdbc {
             };
         }
 
-        // Note: a toMap(Predicate<Object> valueFilter) overload was intentionally not provided here because
+        // Note: a toMap(Predicate<Object> entryFilter) overload was intentionally not provided here because
         // its signature is ambiguous with toMap(...) for the type Jdbc.BiRowMapper. Use toMap(BiPredicate, ...) below.
 
         /**
@@ -3550,15 +3550,15 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param valueFilter a bi-predicate that receives the column name as the first argument and the column value
+         * @param entryFilter a bi-predicate that receives the column name as the first argument and the column value
          *                    as the second argument; only entries for which this predicate returns {@code true} are included
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a {@code BiRowMapper} that produces a filtered {@code Map}
-         * @throws IllegalArgumentException if {@code valueFilter} or {@code mapSupplier} is {@code null}
+         * @throws IllegalArgumentException if {@code entryFilter} or {@code mapSupplier} is {@code null}
          */
-        static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter,
+        static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> entryFilter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
-            N.checkArgNotNull(valueFilter, cs.valueFilter);
+            N.checkArgNotNull(entryFilter, cs.entryFilter);
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
             return (rs, columnLabels) -> {
@@ -3572,7 +3572,7 @@ public final class Jdbc {
                     columnName = columnLabels.get(i - 1);
                     value = JdbcUtil.getColumnValue(rs, i);
 
-                    if (valueFilter.test(columnName, value)) {
+                    if (entryFilter.test(columnName, value)) {
                         result.put(columnName, value);
                     }
                 }
@@ -3603,18 +3603,18 @@ public final class Jdbc {
          * }</pre>
          *
          * @param rowExtractor the custom extractor to get values from the {@code ResultSet} row
-         * @param valueFilter a bi-predicate that receives the column name as the first argument and the column value
+         * @param entryFilter a bi-predicate that receives the column name as the first argument and the column value
          *                    as the second argument; only entries for which this predicate returns {@code true} are included
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a new stateful {@code BiRowMapper}.
-         * @throws IllegalArgumentException if {@code rowExtractor}, {@code valueFilter}, or {@code mapSupplier} is {@code null}
+         * @throws IllegalArgumentException if {@code rowExtractor}, {@code entryFilter}, or {@code mapSupplier} is {@code null}
          */
         @SequentialOnly
         @Stateful
-        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> valueFilter,
+        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> entryFilter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
             N.checkArgNotNull(rowExtractor, cs.rowExtractor);
-            N.checkArgNotNull(valueFilter, cs.valueFilter);
+            N.checkArgNotNull(entryFilter, cs.entryFilter);
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
             return new BiRowMapper<>() {
@@ -3637,7 +3637,7 @@ public final class Jdbc {
                     for (int i = 0; i < columnCount; i++) {
                         columnName = columnLabels.get(i);
 
-                        if (valueFilter.test(columnName, outputValuesForRowExtractor[i])) {
+                        if (entryFilter.test(columnName, outputValuesForRowExtractor[i])) {
                             result.put(columnName, outputValuesForRowExtractor[i]);
                         }
                     }
@@ -7162,7 +7162,7 @@ public final class Jdbc {
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * Invalidates the cache after a data modification operation (e.g., insert, update, delete). This method
+         * Updates the cache after a data modification operation (e.g., insert, update, delete). This method
          * is responsible for invalidating or clearing cache entries that may be affected by the operation.
          *
          * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. Typical implementations
@@ -7174,7 +7174,7 @@ public final class Jdbc {
          * DaoCache cache = DaoCache.create(1000, 3000);
          * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
          * // After updating the "users" table, invalidate the cached entries for that table.
-         * cache.invalidate("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
+         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
          * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null
          * }</pre>
          *
@@ -7184,8 +7184,7 @@ public final class Jdbc {
          * @param args the arguments of the modification method.
          * @param methodSignature a tuple containing method metadata.
          */
-        void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
-                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
+        void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
     }
 
@@ -7304,7 +7303,7 @@ public final class Jdbc {
         }
 
         /**
-         * Implements cache invalidation. If the table name can be determined from the cache key,
+         * Updates the cache after a data modification. If the table name can be determined from the cache key,
          * it removes all cache entries whose key references that table (matched case-insensitively).
          * Otherwise, it clears the entire cache.
          * No action is taken for built-in update operations that report zero affected rows (an
@@ -7316,7 +7315,7 @@ public final class Jdbc {
          * // Cache key format: fullMethodName#tableName#jsonArrayOfParameters
          * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
          * // An update against the "users" table invalidates all entries for that table.
-         * cache.invalidate("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
+         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
          * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted)
          * }</pre>
          *
@@ -7328,7 +7327,7 @@ public final class Jdbc {
          */
         @Override
         @SuppressWarnings("unused")
-        public void invalidate(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 
@@ -7427,7 +7426,7 @@ public final class Jdbc {
         }
 
         /**
-         * Implements cache invalidation. If the table name can be determined from the cache key,
+         * Updates the cache after a data modification. If the table name can be determined from the cache key,
          * it removes all cache entries whose key references that table (matched case-insensitively).
          * Otherwise, it clears the entire cache.
          * No action is taken for built-in update operations that report zero affected rows (an
@@ -7435,7 +7434,7 @@ public final class Jdbc {
          */
         @Override
         @SuppressWarnings("unused")
-        public void invalidate(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 

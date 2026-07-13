@@ -54,7 +54,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * @Cache(capacity = 1000, evictDelay = 60000) // Run eviction sweep every 60 seconds
+ * @Cache(capacity = 1000, evictDelayMillis = 60000) // Run eviction sweep every 60 seconds
  * public interface CountryDao extends NoUpdateCrudDao<Country, String, CountryDao> {
  *     // Results will be cached when annotated with @CacheResult
  *     @CacheResult(enabled = true)
@@ -63,7 +63,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * }
  *
  * // Using custom cache implementation
- * @Cache(capacity = 500, evictDelay = 30000, impl = MyCustomDaoCache.class)
+ * @Cache(capacity = 500, evictDelayMillis = 30000, impl = MyCustomDaoCache.class)
  * public interface ConfigDao extends ReadOnlyDao<Config, ConfigDao> {
  *     // Query results cached with custom implementation
  * }
@@ -83,8 +83,8 @@ public @interface Cache {
      * When the cache is at capacity, the underlying pool's eviction policy determines
      * which entries are removed to make room for new ones (the default
      * {@link Jdbc.DefaultDaoCache} relies on the {@code KeyedObjectPool}'s default policy
-     * combined with TTL/idle-time-based eviction; see {@link CacheResult#liveTime()} and
-     * {@link CacheResult#maxIdleTime()}).
+     * combined with TTL/idle-time-based eviction; see {@link CacheResult#maxLiveTimeMillis()} and
+     * {@link CacheResult#maxIdleTimeMillis()}).
      *
      * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_CAPACITY} (1000 entries), which is
      * typically suitable for most use cases. For DAOs handling large amounts
@@ -105,8 +105,8 @@ public @interface Cache {
     /**
      * Specifies the interval (in milliseconds) at which the background eviction scheduler
      * runs to remove expired entries from the cache. This is <em>not</em> the per-entry
-     * time-to-live; entry expiration is controlled by {@link CacheResult#liveTime()} and
-     * {@link CacheResult#maxIdleTime()} when the {@link CacheResult} annotation is used on
+     * time-to-live; entry expiration is controlled by {@link CacheResult#maxLiveTimeMillis()} and
+     * {@link CacheResult#maxIdleTimeMillis()} when the {@link CacheResult} annotation is used on
      * individual methods.
      *
      * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY} (3 seconds).
@@ -123,7 +123,7 @@ public @interface Cache {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Cache(evictDelay = 60000) // Sweep expired entries every 60 seconds
+     * @Cache(evictDelayMillis = 60000) // Sweep expired entries every 60 seconds
      * public interface CurrencyDao extends ReadOnlyDao<Currency, CurrencyDao> {
      *     // Methods here
      * }
@@ -131,7 +131,7 @@ public @interface Cache {
      *
      * @return the interval in milliseconds between eviction sweeps
      */
-    long evictDelay() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY;
+    long evictDelayMillis() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY;
 
     /**
      * Specifies the implementation class for the DAO cache.
@@ -172,10 +172,10 @@ public @interface Cache {
      *     }
      *
      *     @Override
-     *     public void invalidate(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+     *     public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
      *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Invalidation hook: called after write operations (see @RefreshCache).
-     *         delegate.invalidate(defaultCacheKey, result, daoProxy, args, methodSignature);
+     *         delegate.update(defaultCacheKey, result, daoProxy, args, methodSignature);
      *     }
      * }
      *

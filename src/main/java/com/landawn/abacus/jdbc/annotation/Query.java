@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.OP;
+import com.landawn.abacus.jdbc.QueryOperation;
 import com.landawn.abacus.util.RegExUtil;
 
 /**
@@ -34,11 +34,11 @@ import com.landawn.abacus.util.RegExUtil;
  * be supplied: declaring both, or neither, causes DAO initialization to fail with an
  * {@code IllegalArgumentException}.</p>
  *
- * <p>Beyond the SQL itself, the annotation lets a method choose an {@link OP execution mode}
- * ({@link #op()}), flag a stored-procedure call ({@link #isProcedure()}), enable batching
- * ({@link #isBatch()} / {@link #batchSize()}), and supply runtime hints such as {@link #fetchSize()}
- * and {@link #queryTimeout()}. The method's return type still participates in the final execution
- * strategy: for example, with {@link OP#DEFAULT} a {@code Stream} return type triggers lazy streaming
+ * <p>Beyond the SQL itself, the annotation lets a method choose an {@link QueryOperation execution mode}
+ * ({@link #op()}), flag a stored-procedure call ({@link #procedure()}), enable batching
+ * ({@link #batch()} / {@link #batchSize()}), and supply runtime hints such as {@link #fetchSize()}
+ * and {@link #queryTimeoutSeconds()}. The method's return type still participates in the final execution
+ * strategy: for example, with {@link QueryOperation#DEFAULT} a {@code Stream} return type triggers lazy streaming
  * while an {@code Optional} return type triggers "find first" semantics.</p>
  *
  * <p>Method parameters are bound to named parameters in the SQL through {@link Bind} (and
@@ -65,7 +65,7 @@ import com.landawn.abacus.util.RegExUtil;
  *     Optional<User> findByEmail(@Bind("email") String email) throws SQLException;
  *
  *     // Scalar aggregate via an explicit execution mode
- *     @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = OP.queryForSingle)
+ *     @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = QueryOperation.queryForSingle)
  *     long countActiveUsers() throws SQLException;
  *
  *     // Streaming a large result set with a fetch-size hint
@@ -76,7 +76,7 @@ import com.landawn.abacus.util.RegExUtil;
  *     // Batch insert with a custom batch size: the single Collection parameter supplies the batch
  *     // rows; a batch INSERT may return void or List<ID> (the generated keys)
  *     @Query(value = "INSERT INTO users (name, email) VALUES (:name, :email)",
- *            isBatch = true, batchSize = 500)
+ *            batch = true, batchSize = 500)
  *     List<Long> batchInsert(List<User> users) throws SQLException;
  *
  *     // SQL stored in an external mapper, referenced by id
@@ -94,7 +94,7 @@ import com.landawn.abacus.util.RegExUtil;
  * @see SqlFragmentList
  * @see SqlSource
  * @see Handler
- * @see OP
+ * @see QueryOperation
  * @see OutParameter
  * @see OutParameters
  */
@@ -247,34 +247,34 @@ public @interface Query {
      *
      * <p>Common operation types:</p>
      * <ul>
-     *   <li>{@link OP#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases)</li>
-     *   <li>{@link OP#list} - Returns all results as a List</li>
-     *   <li>{@link OP#stream} - (Deprecated) Returns results as a Stream; prefer {@link OP#DEFAULT} with a {@code Stream} return type</li>
-     *   <li>{@link OP#findFirst} - Returns the first result wrapped in Optional</li>
-     *   <li>{@link OP#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
-     *   <li>{@link OP#exists} - Returns boolean indicating if any results exist</li>
-     *   <li>{@link OP#queryForSingle} - Returns a single scalar value</li>
-     *   <li>{@link OP#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
-     *   <li>{@link OP#update} - Executes UPDATE/INSERT/DELETE and returns row count</li>
-     *   <li>{@link OP#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
+     *   <li>{@link QueryOperation#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases)</li>
+     *   <li>{@link QueryOperation#list} - Returns all results as a List</li>
+     *   <li>{@link QueryOperation#stream} - (Deprecated) Returns results as a Stream; prefer {@link QueryOperation#DEFAULT} with a {@code Stream} return type</li>
+     *   <li>{@link QueryOperation#findFirst} - Returns the first result wrapped in Optional</li>
+     *   <li>{@link QueryOperation#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
+     *   <li>{@link QueryOperation#exists} - Returns boolean indicating if any results exist</li>
+     *   <li>{@link QueryOperation#queryForSingle} - Returns a single scalar value</li>
+     *   <li>{@link QueryOperation#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
+     *   <li>{@link QueryOperation#update} - Executes UPDATE/INSERT/DELETE and returns row count</li>
+     *   <li>{@link QueryOperation#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Existence check
-     * @Query(value = "SELECT 1 FROM users WHERE email = :email", op = OP.exists)
+     * @Query(value = "SELECT 1 FROM users WHERE email = :email", op = QueryOperation.exists)
      * boolean emailExists(@Bind("email") String email);
      *
      * // Single scalar value
-     * @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = OP.queryForSingle)
+     * @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = QueryOperation.queryForSingle)
      * long countActiveUsers();
      *
      * // First result from ordered query
-     * @Query(value = "SELECT * FROM users ORDER BY created_date DESC", op = OP.findFirst)
+     * @Query(value = "SELECT * FROM users ORDER BY created_date DESC", op = QueryOperation.findFirst)
      * Optional<User> findLatestUser();
      *
      * // At most one match (throws DuplicateResultException if more than one matches; null if none)
-     * @Query(value = "SELECT * FROM users WHERE id = :id", op = OP.findOnlyOne)
+     * @Query(value = "SELECT * FROM users WHERE id = :id", op = QueryOperation.findOnlyOne)
      * User getUserById(@Bind("id") Long id);
      *
      * // Stream for large result sets (a Stream return type makes the framework stream automatically)
@@ -282,25 +282,25 @@ public @interface Query {
      * Stream<Record> streamAllRecords();
      *
      * // Explicit update operation
-     * @Query(value = "DELETE FROM audit_logs WHERE created_date < :cutoff", op = OP.update)
+     * @Query(value = "DELETE FROM audit_logs WHERE created_date < :cutoff", op = QueryOperation.update)
      * int purgeOldLogs(@Bind("cutoff") Date cutoff);
      * }</pre>
      *
      * <p>When to specify explicitly:</p>
      * <ul>
-     *   <li>For existence checks: use {@code OP.exists} for performance</li>
-     *   <li>For scalar aggregates: use {@code OP.queryForSingle}</li>
-     *   <li>When you need strict validation: use {@code OP.findOnlyOne}</li>
+     *   <li>For existence checks: use {@code QueryOperation.exists} for performance</li>
+     *   <li>For scalar aggregates: use {@code QueryOperation.queryForSingle}</li>
+     *   <li>When you need strict validation: use {@code QueryOperation.findOnlyOne}</li>
      *   <li>For large result sets: return a {@code Stream} with an appropriate fetch size (the framework streams automatically)</li>
      * </ul>
      *
-     * <p>Note: In most cases, {@link OP#DEFAULT} is sufficient as the framework intelligently
+     * <p>Note: In most cases, {@link QueryOperation#DEFAULT} is sufficient as the framework intelligently
      * determines the appropriate operation based on the SQL statement type and method return type.</p>
      *
-     * @return the operation type, defaults to {@link OP#DEFAULT}
-     * @see OP
+     * @return the operation type, defaults to {@link QueryOperation#DEFAULT}
+     * @see QueryOperation
      */
-    OP op() default OP.DEFAULT;
+    QueryOperation op() default QueryOperation.DEFAULT;
 
     /**
      * Indicates whether the SQL statement is a stored procedure call.
@@ -311,8 +311,8 @@ public @interface Query {
      * <pre>{@code
      * // Stored procedure call with an output parameter (positional binding to match the '?' placeholders).
      * // Registered OUT parameters are surfaced through Jdbc.OutParamResult with
-     * // op = OP.executeAndGetOutParameters (they are not returned as the method result directly).
-     * @Query(value = "{call calculate_bonus(?, ?, ?)}", isProcedure = true, op = OP.executeAndGetOutParameters)
+     * // op = QueryOperation.executeAndGetOutParameters (they are not returned as the method result directly).
+     * @Query(value = "{call calculate_bonus(?, ?, ?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)  // bonus (OUT)
      * Jdbc.OutParamResult calculateBonus(long employeeId, int performanceScore) throws SQLException;
      *
@@ -330,7 +330,7 @@ public @interface Query {
      * @see OutParameter
      * @see OutParameters
      */
-    boolean isProcedure() default false;
+    boolean procedure() default false;
 
     /**
      * Indicates whether this query should be executed as a batch operation.
@@ -359,7 +359,7 @@ public @interface Query {
      * // Batch insert with entity list: the single Collection parameter supplies one entity per batch row
      * @Query(value = "INSERT INTO users (name, email, status) " +
      *               "VALUES (:name, :email, :status)",
-     *        isBatch = true)
+     *        batch = true)
      * List<Long> batchInsertUsers(List<User> users) throws SQLException;
      * // Returns the generated keys (or declare void if they are not needed)
      * }</pre>
@@ -368,14 +368,14 @@ public @interface Query {
      * <pre>{@code
      * // Batch update with entity list
      * @Query(value = "UPDATE users SET status = :status WHERE id = :id",
-     *        isBatch = true)
+     *        batch = true)
      * int batchUpdateStatus(List<User> users) throws SQLException;
      * // Returns the total affected-row count summed across all batch rows
      *
      * // Batch delete: for positional SQL each element of the Collection is one row's value
      * // (or an Object[]/List of values for multi-parameter SQL)
      * @Query(value = "DELETE FROM temp_records WHERE id = ?",
-     *        isBatch = true)
+     *        batch = true)
      * int batchDelete(List<Long> ids) throws SQLException;
      * }</pre>
      *
@@ -384,7 +384,7 @@ public @interface Query {
      * // Large batch with custom batch size
      * @Query(value = "INSERT INTO event_log (timestamp, event_type, data) " +
      *               "VALUES (:timestamp, :eventType, :data)",
-     *        isBatch = true, batchSize = 1000)
+     *        batch = true, batchSize = 1000)
      * void batchLogEvents(List<EventLog> events) throws SQLException;
      * // Processes 1000 records per database round trip
      *
@@ -392,7 +392,7 @@ public @interface Query {
      * // overrides batchSize() at call time (0 falls back to the default batch size)
      * @Query(value = "INSERT INTO historical_data (date, metric, value) " +
      *               "VALUES (:date, :metric, :value)",
-     *        isBatch = true, queryTimeout = 300)
+     *        batch = true, queryTimeoutSeconds = 300)
      * void importHistoricalData(List<HistoricalData> rows, int batchSize) throws SQLException;
      * }</pre>
      *
@@ -433,7 +433,7 @@ public @interface Query {
      * <ul>
      *   <li>Use batch operations for bulk data loading and imports</li>
      *   <li>Set appropriate {@link #batchSize()} based on your data and environment</li>
-     *   <li>Use {@link #queryTimeout()} for long-running batch operations</li>
+     *   <li>Use {@link #queryTimeoutSeconds()} for long-running batch operations</li>
      *   <li>Monitor memory usage with large batches</li>
      *   <li>Consider using transactions to ensure all-or-nothing semantics</li>
      *   <li>Validate collection parameters have matching sizes</li>
@@ -442,19 +442,20 @@ public @interface Query {
      * @return {@code true} for batch operations; {@code false} (default) for single operations
      * @see #batchSize()
      */
-    boolean isBatch() default false;
+    boolean batch() default false;
 
     /**
-     * Indicates whether a single method parameter that is a collection or array should be treated
-     * as a single value rather than being expanded for batch operations or IN clauses.
+     * Controls whether a collection or array argument is bound as one JDBC value rather than being
+     * expanded for batch operations or {@code IN} clauses. This element does not describe the number
+     * of parameters declared by the DAO method.
      *
-     * <p>Default behavior ({@code isSingleParameter = false}):</p>
+     * <p>Default behavior ({@code collectionAsSingleParameter = false}):</p>
      * <ul>
      *   <li>Collections/arrays in IN clauses are expanded: {@code WHERE id IN (:ids)} with {@code List<Long> ids}</li>
      *   <li>For batch operations, collections represent multiple rows to process</li>
      * </ul>
      *
-     * <p>When {@code isSingleParameter = true}:</p>
+     * <p>When {@code collectionAsSingleParameter = true}:</p>
      * <ul>
      *   <li>The collection/array is passed as a single value to the database</li>
      *   <li>Useful for database-native array types (e.g., PostgreSQL arrays)</li>
@@ -466,22 +467,22 @@ public @interface Query {
      * <pre>{@code
      * // PostgreSQL array containment operator
      * @Query(value = "SELECT * FROM products WHERE tags @> :tags",
-     *        isSingleParameter = true)
+     *        collectionAsSingleParameter = true)
      * List<Product> findByTags(@Bind("tags") String[] tags);
      *
      * // PostgreSQL array equality
      * @Query(value = "SELECT * FROM events WHERE participants = :participants",
-     *        isSingleParameter = true)
+     *        collectionAsSingleParameter = true)
      * List<Event> findByExactParticipants(@Bind("participants") Long[] participants);
      *
-     * // JSON array column (isSingleParameter requires exactly one statement parameter)
+     * // JSON array column (collectionAsSingleParameter requires exactly one statement parameter)
      * @Query(value = "UPDATE configs SET options = :options::jsonb WHERE name = 'default'",
-     *        isSingleParameter = true)
+     *        collectionAsSingleParameter = true)
      * int updateDefaultConfigOptions(@Bind("options") String[] options);
      *
      * // Array intersection
      * @Query(value = "SELECT * FROM items WHERE categories && :categories",
-     *        isSingleParameter = true)
+     *        collectionAsSingleParameter = true)
      * List<Item> findByCategoryOverlap(@Bind("categories") String[] categories);
      * }</pre>
      *
@@ -492,16 +493,16 @@ public @interface Query {
      * List<User> findByIds(@BindList("ids") List<Long> ids);
      * // Becomes: SELECT * FROM users WHERE id IN (?, ?, ?, ...)
      *
-     * // With isSingleParameter: collection passed as single array value
+     * // With collectionAsSingleParameter: collection passed as single array value
      * @Query(value = "SELECT * FROM users WHERE id = ANY(:ids)",
-     *        isSingleParameter = true)
+     *        collectionAsSingleParameter = true)
      * List<User> findByIdsArray(@Bind("ids") Long[] ids);
      * // PostgreSQL: id = ANY($1) where $1 is an array parameter
      * }</pre>
      *
      * <p>Important notes:</p>
      * <ul>
-     *   <li>Only applicable when the method has a single collection/array parameter or when specifically needed for one parameter</li>
+     *   <li>The collection/array must map to the single SQL statement parameter; the DAO method may still declare auxiliary parameters</li>
      *   <li>Database must support the native array or collection type being used</li>
      *   <li>Not commonly needed for standard SQL; primarily for database-specific features</li>
      * </ul>
@@ -509,7 +510,7 @@ public @interface Query {
      * @return {@code true} if collection/array parameters should be treated as single values;
      *         {@code false} (default) for standard expansion behavior
      */
-    boolean isSingleParameter() default false;
+    boolean collectionAsSingleParameter() default false;
 
     /**
      * Indicates whether the SQL statement contains template variables defined by the {@link SqlFragment} or {@link SqlFragmentList} annotations
@@ -558,19 +559,19 @@ public @interface Query {
      * // Finding currently active records
      * @Query(value = "SELECT * FROM promotions " +
      *               "WHERE start_date <= :sysTime AND end_date >= :sysDate",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * List<Promotion> findActivePromotions();
      * // :sysTime and :sysDate are automatically set to current timestamp and date
      *
      * // Audit logging
      * @Query(value = "INSERT INTO audit_log (action, user_id, timestamp) " +
      *               "VALUES (:action, :userId, :sysTime)",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * int logAction(@Bind("action") String action, @Bind("userId") Long userId);
      *
      * // Updating with timestamp
      * @Query(value = "UPDATE users SET last_login = :sysTime WHERE id = :id",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * int updateLastLogin(@Bind("id") Long id);
      * }</pre>
      *
@@ -581,7 +582,7 @@ public @interface Query {
      *               "WHERE e.start_time <= :sysTime " +
      *               "  AND e.end_time >= :sysTime " +
      *               "  AND e.category = :category",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * List<Event> findCurrentEvents(@Bind("category") String category);
      *
      * // Combining with other parameters
@@ -589,21 +590,21 @@ public @interface Query {
      *               "WHERE user_id = :userId " +
      *               "  AND start_date <= :sysTime " +
      *               "  AND (end_date IS NULL OR end_date >= :sysTime)",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * List<Subscription> findActiveSubscriptions(@Bind("userId") Long userId);
      *
      * // Data archival based on current time
      * @Query(value = "INSERT INTO archive_logs " +
      *               "SELECT *, :sysTime as archived_at FROM logs " +
      *               "WHERE created_date < :cutoffDate",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * int archiveOldLogs(@Bind("cutoffDate") Date cutoffDate);
      *
      * // Scheduled task execution tracking
      * @Query(value = "UPDATE scheduled_tasks " +
      *               "SET last_run = :sysTime, next_run = :sysTime + INTERVAL :intervalMinutes MINUTE " +
      *               "WHERE task_id = :taskId",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * int updateTaskExecution(@Bind("taskId") String taskId,
      *                        @Bind("intervalMinutes") int interval);
      * }</pre>
@@ -613,14 +614,14 @@ public @interface Query {
      * // Using :sysTime multiple times in the same query
      * @Query(value = "INSERT INTO user_sessions (user_id, created_at, last_activity) " +
      *               "VALUES (:userId, :sysTime, :sysTime)",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * int createSession(@Bind("userId") Long userId);
      *
      * // Combining automatic and manual timestamps
      * @Query(value = "SELECT * FROM bookings " +
      *               "WHERE booking_date >= :startDate " +
      *               "  AND booking_date <= :sysDate",
-     *        autoSetSysTimeParam = true)
+     *        injectCurrentTimeParameters = true)
      * List<Booking> findBookingsSince(@Bind("startDate") Date startDate);
      * }</pre>
      *
@@ -646,7 +647,7 @@ public @interface Query {
      *         {@code false} (default) for no automatic injection
      */
     @Beta
-    boolean autoSetSysTimeParam() default false;
+    boolean injectCurrentTimeParameters() default false;
 
     /**
      * Specifies the query timeout in seconds.
@@ -673,20 +674,20 @@ public @interface Query {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Quick lookup that should complete fast
-     * @Query(value = "SELECT * FROM users WHERE id = :id", queryTimeout = 2)
+     * @Query(value = "SELECT * FROM users WHERE id = :id", queryTimeoutSeconds = 2)
      * User getUserById(@Bind("id") Long id);
      *
      * // Complex reporting query
-     * @Query(value = "SELECT ... complex join and aggregation ...", queryTimeout = 60)
+     * @Query(value = "SELECT ... complex join and aggregation ...", queryTimeoutSeconds = 60)
      * Report generateMonthlyReport(@Bind("month") int month);
      *
      * // Batch operation with generous timeout
      * @Query(value = "INSERT INTO archive SELECT * FROM data WHERE year = :year",
-     *        queryTimeout = 300)
+     *        queryTimeoutSeconds = 300)
      * int archiveYearData(@Bind("year") int year);
      *
      * // External API call timeout
-     * @Query(value = "SELECT get_external_data(:param)", queryTimeout = 10)
+     * @Query(value = "SELECT get_external_data(:param)", queryTimeoutSeconds = 10)
      * String callExternalService(@Bind("param") String param);
      * }</pre>
      *
@@ -704,7 +705,7 @@ public @interface Query {
      *
      * @return the timeout in seconds, or {@code -1} to use the default configured timeout
      */
-    int queryTimeout() default -1;
+    int queryTimeoutSeconds() default -1;
 
     /**
      * Specifies the JDBC fetch size for the query.
@@ -821,7 +822,7 @@ public @interface Query {
 
     /**
      * Specifies the number of items to process in each database round trip for batch operations.
-     * Only applicable when {@link #isBatch()} is {@code true}.
+     * Only applicable when {@link #batch()} is {@code true}.
      *
      * <p>The batch size determines how many SQL statements are grouped together and sent to the database
      * in a single batch execution. This is a critical performance tuning parameter that balances:</p>
@@ -847,19 +848,19 @@ public @interface Query {
      * <pre>{@code
      * // Using default batch size
      * @Query(value = "INSERT INTO users (name, email) VALUES (:name, :email)",
-     *        isBatch = true)
+     *        batch = true)
      * void insertUsers(List<User> users) throws SQLException;
      * // Uses JdbcUtil.DEFAULT_BATCH_SIZE
      *
      * // Small batch size for memory-constrained environment
      * @Query(value = "INSERT INTO large_documents (title, content) VALUES (:title, :content)",
-     *        isBatch = true, batchSize = 50)
+     *        batch = true, batchSize = 50)
      * void insertDocuments(List<Document> documents) throws SQLException;
      * // Processes 50 documents per round trip
      *
      * // Large batch size for bulk import
      * @Query(value = "INSERT INTO event_log (timestamp, type, data) VALUES (:timestamp, :type, :data)",
-     *        isBatch = true, batchSize = 5000)
+     *        batch = true, batchSize = 5000)
      * void importEvents(List<Event> events) throws SQLException;
      * // Processes 5000 events per round trip
      * }</pre>
@@ -868,17 +869,17 @@ public @interface Query {
      * <pre>{@code
      * // Optimize for network latency (high latency, use larger batches)
      * @Query(value = "INSERT INTO metrics (name, value, timestamp) VALUES (:name, :value, :timestamp)",
-     *        isBatch = true, batchSize = 2000)
+     *        batch = true, batchSize = 2000)
      * void insertMetrics(List<Metric> metrics) throws SQLException;
      *
      * // Optimize for low memory (small row size but many rows)
      * @Query(value = "INSERT INTO simple_logs (timestamp, message) VALUES (:timestamp, :message)",
-     *        isBatch = true, batchSize = 10000)
+     *        batch = true, batchSize = 10000)
      * void insertLogs(List<LogEntry> logs) throws SQLException;
      *
      * // Optimize for large rows (documents, blobs)
      * @Query(value = "INSERT INTO files (filename, content) VALUES (:filename, :content)",
-     *        isBatch = true, batchSize = 10)
+     *        batch = true, batchSize = 10)
      * void insertFiles(List<FileData> files) throws SQLException;
      * }</pre>
      *
@@ -886,13 +887,13 @@ public @interface Query {
      * <pre>{@code
      * // Batch with timeout for very large operations
      * @Query(value = "INSERT INTO archive_data SELECT * FROM staging WHERE batch_id = :batchId",
-     *        isBatch = true, batchSize = 1000, queryTimeout = 600)
+     *        batch = true, batchSize = 1000, queryTimeoutSeconds = 600)
      * void archiveData(List<String> batchIds) throws SQLException;
      *
      * // Balance batch size with transaction scope: the entity list supplies both named parameters
      * @Transactional
      * @Query(value = "UPDATE inventory SET quantity = quantity - :amount WHERE product_id = :productId",
-     *        isBatch = true, batchSize = 500)
+     *        batch = true, batchSize = 500)
      * int decrementInventory(List<InventoryAdjustment> adjustments) throws SQLException;
      * }</pre>
      *
@@ -959,7 +960,7 @@ public @interface Query {
      * </ul>
      *
      * @return the number of items to process per batch, defaults to {@link JdbcUtil#DEFAULT_BATCH_SIZE}
-     * @see #isBatch()
+     * @see #batch()
      * @see JdbcUtil#DEFAULT_BATCH_SIZE
      */
     int batchSize() default JdbcUtil.DEFAULT_BATCH_SIZE;

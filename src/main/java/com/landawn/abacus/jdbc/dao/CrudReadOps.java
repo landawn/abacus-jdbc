@@ -28,7 +28,6 @@ import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.cs;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.query.QueryUtil;
@@ -50,7 +49,7 @@ import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Read capability of {@link CrudDao}: id-based reads ({@code get}/{@code gett}/{@code batchGet}),
- * {@code exists}/{@code count} by id, {@code queryForXxx(propName, id)}, {@code refresh}, and {@code generateId()}.
+ * {@code exists}/{@code count} by id, {@code queryForXxx(propName, id)}, and {@code refresh}.
  * Extends {@link ReadOps}.
  *
  * @param <T> entity type
@@ -60,57 +59,6 @@ import com.landawn.abacus.util.stream.Stream;
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T, TD> permits CrudDao, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
-    /**
-     * Returns a {@link Jdbc.BiRowMapper} that extracts the ID from a database row.
-     * This mapper is used internally to extract ID values from query results (for example,
-     * after an insert returns generated keys).
-     *
-     * <p>Override this method to provide a custom ID extractor if the default behavior doesn't suit your needs.
-     * The default implementation returns {@code null}, which signals that the framework should use its
-     * default ID extraction strategy.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * @Override
-     * public Jdbc.BiRowMapper<Long> idExtractor() {
-     *     return (rs, columnLabels) -> rs.getLong("id");
-     * }
-     * }</pre>
-     *
-     * @return a {@link Jdbc.BiRowMapper} that extracts the ID from a row, or {@code null} to use default extraction
-     */
-    @SuppressWarnings("SameReturnValue")
-    @NonDBOperation
-    default Jdbc.BiRowMapper<ID> idExtractor() {
-        return null;
-    }
-
-    /**
-     * Generates a new ID for entity insertion.
-     *
-     * <p>This method should be overridden by implementations that support ID generation.
-     * Common use cases include generating UUIDs, using sequences, or other ID generation strategies.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * @Override
-     * public Long generateId() throws SQLException {
-     *     return System.currentTimeMillis();   // Simple timestamp-based ID
-     * }
-     * }</pre>
-     *
-     * @return the generated ID
-     * @throws SQLException if a database access error occurs
-     * @throws UnsupportedOperationException if the operation is not supported (default behavior)
-     * @deprecated This operation is deprecated as ID generation should typically be handled by the database
-     *             (e.g., via auto-increment columns or sequences). Override this method only if a client-side
-     *             ID generation strategy is required.
-     */
-    @Deprecated
-    @NonDBOperation
-    default ID generateId() throws SQLException, UnsupportedOperationException {
-        throw new UnsupportedOperationException("ID generation is not supported by default");
-    }
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.

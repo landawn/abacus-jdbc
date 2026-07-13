@@ -17,7 +17,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.OP;
+import com.landawn.abacus.jdbc.QueryOperation;
 import com.landawn.abacus.jdbc.Propagation;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.Handler;
@@ -33,7 +33,7 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
 
-@PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
+@PerfLog(sqlLogThresholdMillis = 101, daoMethodLogThresholdMillis = 100)
 public interface UncheckedUserDao extends UncheckedCrudDao<User, Long, UncheckedUserDao>, UncheckedJoinEntityHelper<User, UncheckedUserDao> {
 
     @Query("INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
@@ -50,22 +50,22 @@ public interface UncheckedUserDao extends UncheckedCrudDao<User, Long, Unchecked
     @Query("SELECT id, first_name, last_name, email FROM user1")
     Stream<User> allUsers();
 
-    @Query(value = "INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)", isBatch = true)
+    @Query(value = "INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)", batch = true)
     List<Long> batchInsertWithId(List<User> users);
 
-    @Query(value = "INSERT INTO user1 (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", isBatch = true, batchSize = 123)
+    @Query(value = "INSERT INTO user1 (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", batch = true, batchSize = 123)
     List<Long> batchInsertWithoutId(List<User> users);
 
-    @Query(value = "UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id", isBatch = true)
+    @Query(value = "UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id", batch = true)
     int batchUpdate(List<User> users);
 
-    @Query(value = "DELETE FROM user1 where id = :id", isBatch = true)
+    @Query(value = "DELETE FROM user1 where id = :id", batch = true)
     int batchDelete(List<User> users);
 
-    @Query(value = "DELETE FROM user1 where id = :id", isBatch = true, batchSize = 10000)
+    @Query(value = "DELETE FROM user1 where id = :id", batch = true, batchSize = 10000)
     int batchDeleteByIds(List<Long> userIds);
 
-    @Query(value = "DELETE FROM user1 where id = ?", isBatch = true, batchSize = 10000)
+    @Query(value = "DELETE FROM user1 where id = ?", batch = true, batchSize = 10000)
     int batchDeleteByIds_1(List<Long> userIds);
 
     default int[] batchDeleteByIds_2(final List<Long> userIds) throws SQLException {
@@ -118,7 +118,7 @@ public interface UncheckedUserDao extends UncheckedCrudDao<User, Long, Unchecked
     @Query("DELETE FROM {tableName} where id = :id")
     int deleteByIdWithSqlFragment(@SqlFragment("tableName") String tableName, @Bind("id") long id);
 
-    @Query(value = "DELETE FROM {tableName} where id = :id", isBatch = true, batchSize = 10000)
+    @Query(value = "DELETE FROM {tableName} where id = :id", batch = true, batchSize = 10000)
     int deleteByIdsWithSqlFragment(@SqlFragment("tableName") String tableName, List<Long> userIds);
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
@@ -141,7 +141,7 @@ public interface UncheckedUserDao extends UncheckedCrudDao<User, Long, Unchecked
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     boolean exists(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id);
 
-    @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
+    @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = QueryOperation.exists)
     boolean isThere(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
 }

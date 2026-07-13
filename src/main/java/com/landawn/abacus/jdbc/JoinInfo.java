@@ -757,7 +757,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     plan = joinInfo.getSelectSqlPlan(PSC);
+     *     plan = joinInfo.selectSqlPlan(PSC);
      *
      * // Build SQL with specific columns
      * String sql = plan._1.apply(Arrays.asList("id", "name", "description"));
@@ -774,7 +774,7 @@ public final class JoinInfo {
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(final Dsl dsl) {
+    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> selectSqlPlan(final Dsl dsl) {
         final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(dsl);
 
         if (tp == null) {
@@ -793,7 +793,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchPlan = joinInfo.getBatchSelectSqlPlan(PSC);
+     *     batchPlan = joinInfo.batchSelectSqlPlan(PSC);
      *
      * // Build SQL for batch of entities
      * List<Employee> employees = getEmployees();
@@ -811,7 +811,7 @@ public final class JoinInfo {
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR
+    public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchSelectSqlPlan( //NOSONAR
             final Dsl dsl) {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSqlBuilderAndParamSetterPool
                 .get(dsl);
@@ -832,7 +832,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     deletePlan = joinInfo.getDeleteSqlPlan(PSC);
+     *     deletePlan = joinInfo.deleteSqlPlan(PSC);
      *
      * String deleteSql = deletePlan._1;             // Main delete SQL
      * String middleTableDeleteSql = deletePlan._2;  // Always null in current implementation
@@ -850,7 +850,7 @@ public final class JoinInfo {
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Dsl dsl) {
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSqlPlan(final Dsl dsl) {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(dsl);
 
         if (tp == null) {
@@ -869,7 +869,7 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchDeletePlan = joinInfo.getBatchDeleteSqlPlan(PSC);
+     *     batchDeletePlan = joinInfo.batchDeleteSqlPlan(PSC);
      *
      * List<Employee> employees = getEmployeesToDelete();
      * String deleteSql = batchDeletePlan._1.apply(employees.size());   // Main delete SQL
@@ -888,7 +888,7 @@ public final class JoinInfo {
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR
+    public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchDeleteSqlPlan( //NOSONAR
             final Dsl dsl) {
         final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSqlBuilderAndParamSetterPool
                 .get(dsl);
@@ -1145,7 +1145,7 @@ public final class JoinInfo {
      * // Use the join info to load related entities for a single employee
      * Employee employee = employeeDao.findById(123);
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     builder = joinInfo.getSelectSqlPlan(PSC);
+     *     builder = joinInfo.selectSqlPlan(PSC);
      * String sql = builder._1.apply(null);   // Use default columns
      * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
      *                                   .setParameters(employee, builder._2)

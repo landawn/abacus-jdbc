@@ -35,7 +35,7 @@ package com.landawn.abacus.jdbc;
  * @see AbstractQuery
  * @see com.landawn.abacus.jdbc.annotation.Query
  */
-public enum OP {
+public enum QueryOperation {
     /**
      * Checks whether any records exist that match the query criteria.
      * Returns a {@code boolean} indicating the existence of matching records.
@@ -46,7 +46,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT 1 FROM users WHERE email = ?", op = OP.exists)
+     * @Query(value = "SELECT 1 FROM users WHERE email = ?", op = QueryOperation.exists)
      * boolean emailExists(String email);
      * }</pre>
      *
@@ -68,7 +68,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT * FROM users WHERE id = ?", op = OP.findOnlyOne)
+     * @Query(value = "SELECT * FROM users WHERE id = ?", op = QueryOperation.findOnlyOne)
      * Optional<User> getUserById(long id);
      * }</pre>
      *
@@ -89,7 +89,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT * FROM users WHERE age >= ? ORDER BY age", op = OP.findFirst)
+     * @Query(value = "SELECT * FROM users WHERE age >= ? ORDER BY age", op = QueryOperation.findFirst)
      * Optional<User> findYoungestAdult(int minAge);
      * }</pre>
      *
@@ -109,7 +109,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT * FROM users WHERE active = true", op = OP.list)
+     * @Query(value = "SELECT * FROM users WHERE active = true", op = QueryOperation.list)
      * List<User> getActiveUsers();
      * }</pre>
      *
@@ -123,11 +123,11 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT * FROM users WHERE age > ?", op = OP.query)
+     * @Query(value = "SELECT * FROM users WHERE age > ?", op = QueryOperation.query)
      * Dataset queryUsersByAge(int age);
      * }</pre>
      *
-     * @deprecated Generally it is unnecessary to specify {@code "op = OP.query"} in {@code @Query}; rely on
+     * @deprecated Generally it is unnecessary to specify {@code "op = QueryOperation.query"} in {@code @Query}; rely on
      *             {@link #DEFAULT} so the framework can infer the correct operation from the method's return type.
      */
     @Deprecated
@@ -142,11 +142,11 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT * FROM users", op = OP.stream)
+     * @Query(value = "SELECT * FROM users", op = QueryOperation.stream)
      * Stream<User> streamAllUsers();
      * }</pre>
      *
-     * @deprecated Generally it is unnecessary to specify {@code "op = OP.stream"} in {@code @Query}; rely on
+     * @deprecated Generally it is unnecessary to specify {@code "op = QueryOperation.stream"} in {@code @Query}; rely on
      *             {@link #DEFAULT} -- the framework will use streaming automatically when the method's return
      *             type is a {@code Stream}.
      */
@@ -166,10 +166,10 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT MAX(salary) FROM employees", op = OP.queryForSingle)
+     * @Query(value = "SELECT MAX(salary) FROM employees", op = QueryOperation.queryForSingle)
      * Double getMaxSalary();
      *
-     * @Query(value = "SELECT name FROM users WHERE id = ?", op = OP.queryForSingle)
+     * @Query(value = "SELECT name FROM users WHERE id = ?", op = QueryOperation.queryForSingle)
      * String getUserName(long id);
      * }</pre>
      *
@@ -191,7 +191,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "SELECT email FROM users WHERE username = ?", op = OP.queryForUnique)
+     * @Query(value = "SELECT email FROM users WHERE username = ?", op = QueryOperation.queryForUnique)
      * String findEmailByUsername(String username);
      * }</pre>
      *
@@ -209,7 +209,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "{call getUserBatches(?)}", op = OP.listAll, isProcedure = true)
+     * @Query(value = "{call getUserBatches(?)}", op = QueryOperation.listAll, procedure = true)
      * List<List<User>> getUserBatches(long departmentId);
      * }</pre>
      *
@@ -229,7 +229,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "{call getComplexReport(?, ?)}", op = OP.queryAll, isProcedure = true)
+     * @Query(value = "{call getComplexReport(?, ?)}", op = QueryOperation.queryAll, procedure = true)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre>
      *
@@ -249,7 +249,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
+     * @Query(value = "{call streamLargeDatasets()}", op = QueryOperation.streamAll, procedure = true)
      * Stream<Dataset> streamLargeDatasets();
      * }</pre>
      *
@@ -266,7 +266,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters, isProcedure = true)
+     * @Query(value = "{call calculateStats(?, ?, ?)}", op = QueryOperation.executeAndGetOutParameters, procedure = true)
      * @OutParameter(position = 2, sqlType = Types.INTEGER)
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)
      * Jdbc.OutParamResult calculateStats(int input);
@@ -289,10 +289,10 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
+     * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = QueryOperation.update)
      * int deactivateInactiveUsers(Date threshold);
      *
-     * @Query(value = "DELETE FROM users WHERE id = ?", op = OP.update)
+     * @Query(value = "DELETE FROM users WHERE id = ?", op = QueryOperation.update)
      * int deleteUser(long id);
      * }</pre>
      *
@@ -310,7 +310,7 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "DELETE FROM audit_logs WHERE created_date < ?", op = OP.largeUpdate)
+     * @Query(value = "DELETE FROM audit_logs WHERE created_date < ?", op = QueryOperation.largeUpdate)
      * long purgeOldAuditLogs(Date cutoffDate);
      * }</pre>
      *
@@ -332,11 +332,11 @@ public enum OP {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT
-     * List<User> getAllUsers();      // Framework infers OP.list
+     * @Query("SELECT * FROM users")  // QueryOperation defaults to QueryOperation.DEFAULT
+     * List<User> getAllUsers();      // Framework infers QueryOperation.list
      *
-     * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT
-     * int deleteUser(long id);                  // Framework infers OP.update
+     * @Query("DELETE FROM users WHERE id = ?")  // QueryOperation defaults to QueryOperation.DEFAULT
+     * int deleteUser(long id);                  // Framework infers QueryOperation.update
      * }</pre>
      *
      */

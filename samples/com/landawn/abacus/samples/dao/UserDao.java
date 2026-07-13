@@ -25,7 +25,7 @@ import java.util.Set;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.jdbc.OP;
+import com.landawn.abacus.jdbc.QueryOperation;
 import com.landawn.abacus.jdbc.Propagation;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
@@ -53,7 +53,7 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
 
-@PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
+@PerfLog(sqlLogThresholdMillis = 101, daoMethodLogThresholdMillis = 100)
 @Handler(impl = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", externalCallsOnly = true)
@@ -68,7 +68,7 @@ public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<
         return System.currentTimeMillis();
     }
 
-    @Query(value = "INSERT INTO `user1` (id, first_name, last_name, email, create_time) VALUES (:id, :firstName, :lastName, :email, :sysTime)", autoSetSysTimeParam = true)
+    @Query(value = "INSERT INTO `user1` (id, first_name, last_name, email, create_time) VALUES (:id, :firstName, :lastName, :email, :sysTime)", injectCurrentTimeParameters = true)
     void insertWithId(User user) throws SQLException;
 
     @Query("UPDATE `user1` SET first_name = :firstName, last_name = :lastName WHERE id = :id")
@@ -82,19 +82,19 @@ public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<
     @Query("SELECT id, first_name, last_name, email FROM user1")
     Stream<User> allUsers();
 
-    @Query(value = "INSERT INTO user1 (id, first_name, last_name, prop1, email) VALUES (:id, :firstName, :lastName, :nickName, :email)", isBatch = true)
+    @Query(value = "INSERT INTO user1 (id, first_name, last_name, prop1, email) VALUES (:id, :firstName, :lastName, :nickName, :email)", batch = true)
     List<Long> batchInsertWithId(List<User> users) throws UncheckedSQLException;
 
-    @Query(value = "INSERT INTO user1 (first_name, last_name, email, create_time) VALUES (:firstName, :lastName, :email, :sysTime)", isBatch = true, batchSize = 123, autoSetSysTimeParam = true)
+    @Query(value = "INSERT INTO user1 (first_name, last_name, email, create_time) VALUES (:firstName, :lastName, :email, :sysTime)", batch = true, batchSize = 123, injectCurrentTimeParameters = true)
     List<Long> batchInsertWithoutId(List<User> users) throws SQLException;
 
-    @Query(value = "UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id", isBatch = true)
+    @Query(value = "UPDATE user1 SET first_name = :firstName, last_name = :lastName WHERE id = :id", batch = true)
     int batchUpdate(List<User> users) throws SQLException;
 
-    @Query(value = "DELETE FROM user1 where id = :id", isBatch = true)
+    @Query(value = "DELETE FROM user1 where id = :id", batch = true)
     int batchDelete(List<User> users) throws SQLException;
 
-    @Query(value = "DELETE FROM user1 where id = :id", isBatch = true, batchSize = 10000)
+    @Query(value = "DELETE FROM user1 where id = :id", batch = true, batchSize = 10000)
     int batchDeleteByIds(List<Long> userIds) throws SQLException;
 
     @Query(value = "DELETE FROM user1 where id in ({ids})")
@@ -150,7 +150,7 @@ public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<
     @Query("DELETE FROM {tableName} where id = :id")
     int deleteByIdWithSqlFragment(@SqlFragment("tableName") String tableName, @Bind("id") long id) throws SQLException;
 
-    @Query(value = "DELETE FROM {tableName} where id = :id", isBatch = true, batchSize = 10000)
+    @Query(value = "DELETE FROM {tableName} where id = :id", batch = true, batchSize = 10000)
     int deleteByIdsWithSqlFragment(@SqlFragment("tableName") String tableName, List<Long> userIds) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
@@ -173,7 +173,7 @@ public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     boolean exists(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
-    @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
+    @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = QueryOperation.exists)
     boolean isThere(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
     @Query(id = "sql_listToSet")

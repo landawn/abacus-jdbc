@@ -126,7 +126,7 @@ public final class JdbcCodeGenerationUtil {
      * Default name of the inner interface that holds field(property) name constants inside a generated entity class.
      * This is the only one of {@link #S}/{@link #SF}/{@code X} actually emitted by the generator: it produces a
      * {@code public interface x} that declares a {@code String} constant for each field, providing compile-time-safe
-     * field-name references. It is generated only when {@link EntityCodeConfig#generateFieldNameTable} is enabled.
+     * field-name references. It is generated only when {@link EntityCodeConfig#generatePropNameTable} is enabled.
      */
     public static final String X = "x";
 
@@ -246,7 +246,7 @@ public final class JdbcCodeGenerationUtil {
      * EntityCodeConfig config = EntityCodeConfig.builder()
      *     .className("User")
      *     .packageName("com.example.entity")
-     *     .useBoxedType(true)
+     *     .useBoxedTypes(true)
      *     .build();
      * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "user_table", config);
      * }</pre>
@@ -433,10 +433,11 @@ public final class JdbcCodeGenerationUtil {
 
         final QuadFunction<String, String, String, String, String> fieldTypeConverter = configToUse.getFieldTypeConverter();
 
-        final Map<String, Tuple3<String, String, Class<?>>> customizedFieldMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFields()),
-                tp -> tp._1.toLowerCase(Locale.ROOT));
+        final Map<String, EntityCodeConfig.FieldMapping> customFieldMappingMap = N.toMap(N.nullToEmpty(configToUse.getCustomFieldMappings()),
+                mapping -> mapping.columnName().toLowerCase(Locale.ROOT));
 
-        final Map<String, Tuple2<String, String>> customizedFieldDbTypeMap = N.toMap(N.nullToEmpty(configToUse.getCustomizedFieldDbTypes()), tp -> tp._1);
+        final Map<String, Tuple2<String, String>> fieldTypeAnnotationArgumentMap = N.toMap(N.nullToEmpty(configToUse.getFieldTypeAnnotationArguments()),
+                tp -> tp._1);
 
         final Set<String> readOnlyFields = configToUse.getReadOnlyFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getReadOnlyFields());
 
@@ -475,8 +476,8 @@ public final class JdbcCodeGenerationUtil {
         }
 
         // (type, fieldName, skipInCopy): static/final fields can't be re-assigned by the generated copy().
-        final List<Tuple3<String, String, Boolean>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
-                : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
+        final List<Tuple3<String, String, Boolean>> additionalFields = Strings.isEmpty(configToUse.getAdditionalClassBodySource()) ? new ArrayList<>()
+                : Stream.split(configToUse.getAdditionalClassBodySource(), "\n")
                         // Strip trailing line comments so a declaration written as "private Set<X> s; // note"
                         // still parses (and gets its import + copy() assignment). stripLineComment ignores any
                         // "//" inside a string/char literal, so initializers like "https://..." are preserved.
@@ -545,11 +546,12 @@ public final class JdbcCodeGenerationUtil {
                 // name otherwise, which is what query-result mapping keys on (see JdbcUtil.getColumnLabels).
                 final String columnName = Strings.isEmpty(rsmd.getColumnLabel(i)) ? rsmd.getColumnName(i) : rsmd.getColumnLabel(i);
 
-                final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(Locale.ROOT),
-                        customizedFieldMap.get(Strings.toCamelCase(columnName).toLowerCase(Locale.ROOT)));
+                final EntityCodeConfig.FieldMapping customFieldMapping = customFieldMappingMap.getOrDefault(columnName.toLowerCase(Locale.ROOT),
+                        customFieldMappingMap.get(Strings.toCamelCase(columnName).toLowerCase(Locale.ROOT)));
 
-                final String fieldName = customizedField == null || Strings.isEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
-                        : customizedField._2;
+                final String fieldName = customFieldMapping == null || Strings.isEmpty(customFieldMapping.fieldName())
+                        ? fieldNameConverter.apply(entityName, columnName)
+                        : customFieldMapping.fieldName();
 
                 if (N.notEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
                     continue;
@@ -559,17 +561,17 @@ public final class JdbcCodeGenerationUtil {
 
                 if (previousColumnName != null) {
                     throw new IllegalArgumentException("Columns '" + previousColumnName + "' and '" + columnName + "' both map to generated field '" + fieldName
-                            + "'. Configure distinct names with fieldNameConverter or customizedFields");
+                            + "'. Configure distinct names with fieldNameConverter or customFieldMappings");
                 }
 
-                final String columnClassName = customizedField == null || customizedField._3 == null
+                final String columnClassName = customFieldMapping == null || customFieldMapping.fieldType() == null
                         ? mapColumnClassName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
                                 : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
-                        : mapColumnClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
+                        : mapColumnClassName(ClassUtil.getCanonicalClassName(customFieldMapping.fieldType()), true, configToUse);
 
                 if (!Strings.isValidJavaIdentifier(fieldName)) {
                     logger.warn(
-                            "Generated field name '{}' for column '{}' is not a valid Java identifier (e.g., a Java keyword, starts with a digit, or contains unsupported characters) — the generated entity class will not compile. Override via EntityCodeConfig.fieldNameConverter or customizedFields.",
+                            "Generated field name '{}' for column '{}' is not a valid Java identifier (e.g., a Java keyword, starts with a digit, or contains unsupported characters) — the generated entity class will not compile. Override via EntityCodeConfig.fieldNameConverter or customFieldMappings.",
                             fieldName, columnName);
                 }
 
@@ -702,7 +704,7 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import lombok.Builder;\n", "").replace("@Builder\n", "");
             }
 
-            if (!configToUse.isChainAccessor()) {
+            if (!configToUse.isGenerateChainAccessors()) {
                 headPart = headPart.replace("import lombok.experimental.Accessors;\n", "").replace("@Accessors(chain = true)\n", "");
             }
 
@@ -776,7 +778,7 @@ public final class JdbcCodeGenerationUtil {
 
                 sb.append("    @Column(name = \"").append(EscapeUtil.escapeJava(columnName)).append("\")").append(LINE_SEPARATOR);
 
-                final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
+                final Tuple2<String, String> dbType = fieldTypeAnnotationArgumentMap.getOrDefault(fieldName, fieldTypeAnnotationArgumentMap.get(columnName));
 
                 if (dbType != null) {
                     sb.append("    @Type(").append(dbType._2).append(")").append(LINE_SEPARATOR);
@@ -789,8 +791,8 @@ public final class JdbcCodeGenerationUtil {
             // intentionally ignored (no validation/throw). This keeps generation lenient when the config lists
             // fields that don't exist in the target table.
 
-            if (Strings.isNotEmpty(configToUse.getAdditionalFieldsOrLines())) {
-                sb.append(LINE_SEPARATOR).append(configToUse.getAdditionalFieldsOrLines());
+            if (Strings.isNotEmpty(configToUse.getAdditionalClassBodySource())) {
+                sb.append(LINE_SEPARATOR).append(configToUse.getAdditionalClassBodySource());
             }
 
             if (configToUse.isGenerateCopyMethod()) {
@@ -824,7 +826,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append("        return copy;").append(LINE_SEPARATOR).append("    }").append(LINE_SEPARATOR);
             }
 
-            if (configToUse.isGenerateFieldNameTable()) {
+            if (configToUse.isGeneratePropNameTable()) {
                 sb.append(LINE_SEPARATOR)
                         .append("    /*")
                         .append(LINE_SEPARATOR)
@@ -909,7 +911,7 @@ public final class JdbcCodeGenerationUtil {
                 IOUtil.createFileIfNotExists(file);
 
                 // Explicit UTF-8 instead of IOUtil's platform default (Cp1252 on Windows). Non-ASCII
-                // characters in table/column names, dateFormat config, or additionalFieldsOrLines
+                // characters in table/column names, dateFormat config, or additionalClassBodySource
                 // otherwise become mojibake when the on-disk source is compiled with javac's standard
                 // -encoding UTF-8.
                 IOUtil.write(result, Charsets.UTF_8, file);
@@ -982,7 +984,7 @@ public final class JdbcCodeGenerationUtil {
             className = "double";
         }
 
-        if (configToUse.isUseBoxedType() && eccClassNameMap.containsValue(className)) {
+        if (configToUse.isUseBoxedTypes() && eccClassNameMap.containsValue(className)) {
             className = eccClassNameMap.getByValue(className);
         }
 
@@ -2320,14 +2322,14 @@ public final class JdbcCodeGenerationUtil {
      *        .fieldNameConverter((entityOrTableName, columnName) -> Strings.toCamelCase(columnName))
      *        .fieldTypeConverter((entityOrTableName, fieldName, columnName, columnClassName) -> columnClassName
      *                .replace("java.lang.", ""))
-     *        .useBoxedType(false)
+     *        .useBoxedTypes(false)
      *        .readOnlyFields(N.asSet("id"))
      *        .nonUpdatableFields(N.asSet("create_time"))
      *        .idAnnotationClass(jakarta.persistence.Id.class)
      *        .columnAnnotationClass(jakarta.persistence.Column.class)
      *        .tableAnnotationClass(jakarta.persistence.Table.class)
-     *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
-     *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "name = \"List<String>\"")))
+     *        .customFieldMappings(N.asList(new EntityCodeConfig.FieldMapping("columnName", "fieldName", java.util.Date.class)))
+     *        .fieldTypeAnnotationArguments(N.asList(Tuple.of("fieldName", "name = \"List<String>\"")))
      *        .generateBuilder(true)
      *        .generateCopyMethod(true)
      *        .build();
@@ -2342,6 +2344,17 @@ public final class JdbcCodeGenerationUtil {
     @Accessors(chain = true)
     @SuppressWarnings("missing-explicit-ctor")
     public static final class EntityCodeConfig {
+        /**
+         * Maps a database column to an optional generated field name and Java field type.
+         * A {@code null} field name or type leaves that part to the configured/default converter.
+         *
+         * @param columnName database column name used to select this mapping
+         * @param fieldName generated Java field name, or {@code null} to use the field-name converter
+         * @param fieldType generated Java field type, or {@code null} to use the field-type converter
+         */
+        public record FieldMapping(String columnName, String fieldName, Class<?> fieldType) {
+        }
+
         /**
          * The source directory where the generated entity class file will be saved.
          * If specified, the generated class will be written to this directory following the package structure.
@@ -2377,14 +2390,13 @@ public final class JdbcCodeGenerationUtil {
         private QuadFunction<String, String, String, String, String> fieldTypeConverter;
 
         /**
-         * List of customized field mappings.
-         * Each tuple contains: (column name, field name, field class).
+         * List of custom field mappings.
          * Allows overriding default field names and types for specific columns.
          */
-        private List<Tuple3<String, String, Class<?>>> customizedFields;
+        private List<FieldMapping> customFieldMappings;
 
         /**
-         * List of customized database type annotations.
+         * List of field-type annotation arguments.
          * Each tuple contains: (field name, {@code @Type} annotation argument expression).
          * The second element is emitted verbatim as the argument to {@code @Type(...)}, so it must be
          * a valid annotation argument — {@code @Type} declares {@code String value()}, so use the quoted
@@ -2393,13 +2405,13 @@ public final class JdbcCodeGenerationUtil {
          * Used to generate {@code @Type} annotations for fields whose database types
          * require explicit type mapping.
          */
-        private List<Tuple2<String, String>> customizedFieldDbTypes;
+        private List<Tuple2<String, String>> fieldTypeAnnotationArguments;
 
         /**
          * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.).
          * Default is {@code false} (uses primitives where possible).
          */
-        private boolean useBoxedType;
+        private boolean useBoxedTypes;
 
         /**
          * Whether to map {@link BigInteger} columns to {@code long} type.
@@ -2435,8 +2447,51 @@ public final class JdbcCodeGenerationUtil {
         /**
          * A single field name to be annotated with {@code @Id}.
          * This is a convenience alternative to {@link #idFields} when there is only one primary key column.
+         *
+         * @deprecated use {@link #idFields}; for a single ID use a singleton collection
          */
+        @Deprecated
         private String idField;
+
+        /**
+         * Returns the deprecated singular ID-field configuration.
+         *
+         * @return the singular ID field, or {@code null}
+         * @deprecated use {@code getIdFields()}
+         */
+        @Deprecated
+        public String getIdField() {
+            return idField;
+        }
+
+        /**
+         * Sets the deprecated singular ID-field configuration.
+         *
+         * @param idField the singular ID field
+         * @return this configuration
+         * @deprecated use {@code setIdFields(Collection)}
+         */
+        @Deprecated
+        public EntityCodeConfig setIdField(final String idField) {
+            this.idField = idField;
+            return this;
+        }
+
+        /** Customizes Lombok's generated builder API. */
+        public static class EntityCodeConfigBuilder {
+            /**
+             * Sets the deprecated singular ID-field configuration.
+             *
+             * @param idField the singular ID field
+             * @return this builder
+             * @deprecated use {@code idFields(Collection)}
+             */
+            @Deprecated
+            public EntityCodeConfigBuilder idField(final String idField) {
+                this.idField = idField;
+                return this;
+            }
+        }
 
         /**
          * Collection of field names to exclude from the generated entity class.
@@ -2445,11 +2500,11 @@ public final class JdbcCodeGenerationUtil {
         private Collection<String> excludedFields;
 
         /**
-         * Additional fields or lines of code to append to the generated entity class body.
+         * Additional source code to append to the generated entity class body.
          * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}).
          * Lines starting with {@code //} are treated as comments and stripped during field parsing.
          */
-        private String additionalFieldsOrLines;
+        private String additionalClassBodySource;
 
         /**
          * List of fully qualified class names to add as import statements in the generated entity class.
@@ -2483,7 +2538,7 @@ public final class JdbcCodeGenerationUtil {
          * When {@code true}, setter methods return {@code this} for method chaining.
          * Default is {@code false}.
          */
-        private boolean chainAccessor;
+        private boolean generateChainAccessors;
 
         /**
          * Whether to generate Lombok {@code @Builder} annotation on the entity class.
@@ -2499,12 +2554,12 @@ public final class JdbcCodeGenerationUtil {
         private boolean generateCopyMethod;
 
         /**
-         * Whether to generate an inner interface containing field name constants.
+         * Whether to generate an inner interface containing property-name constants.
          * The interface is named {@code x} (see {@link JdbcCodeGenerationUtil#X}) and contains
          * {@code String} constants for each field name, providing compile-time-safe field-name references.
          * Default is {@code false}.
          */
-        private boolean generateFieldNameTable;
+        private boolean generatePropNameTable;
 
         //    /**
         //     * Reserved configuration flag intended to extend the field-name table class name with additional context.

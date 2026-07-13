@@ -138,14 +138,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * This is useful when you need to retrieve specific auto-generated column values.
      *
      * @param sql the SQL query string
-     * @param returnColumnIndexes array of column indexes to return as generated keys
+     * @param generatedKeyColumnIndexes array of column indexes to return as generated keys
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql, final int[] returnColumnIndexes) throws SQLException {
-        return JdbcUtil.prepareQuery(dataSource(), sql, returnColumnIndexes);
+    default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, generatedKeyColumnIndexes);
     }
 
     /**
@@ -161,14 +161,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * }</pre>
      *
      * @param sql the SQL query string
-     * @param returnColumnNames array of column names to return as generated keys
+     * @param generatedKeyColumnNames array of column names to return as generated keys
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql, final String[] returnColumnNames) throws SQLException {
-        return JdbcUtil.prepareQuery(dataSource(), sql, returnColumnNames);
+    default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, generatedKeyColumnNames);
     }
 
     /**
@@ -207,14 +207,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * Useful for INSERT statements with named parameters that need to retrieve auto-generated values.
      *
      * @param namedSql the named SQL query string
-     * @param returnColumnIndexes array of column indexes to return
+     * @param generatedKeyColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql, final int[] returnColumnIndexes) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnIndexes);
+    default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnIndexes);
     }
 
     /**
@@ -222,14 +222,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * Provides the most readable way to retrieve auto-generated values with named queries.
      *
      * @param namedSql the named SQL query string
-     * @param returnColumnNames array of column names to return
+     * @param generatedKeyColumnNames array of column names to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql, final String[] returnColumnNames) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnNames);
+    default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnNames);
     }
 
     /**
@@ -250,28 +250,28 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.
      *
      * @param namedSql the pre-parsed named query
-     * @param returnColumnIndexes array of column indexes to return
+     * @param generatedKeyColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] returnColumnIndexes) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnIndexes);
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnIndexes);
     }
 
     /**
      * Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.
      *
      * @param namedSql the pre-parsed named query
-     * @param returnColumnNames array of column names to return
+     * @param generatedKeyColumnNames array of column names to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] returnColumnNames) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnNames);
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnNames);
     }
 
     /**
@@ -355,18 +355,18 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * }</pre>
      *
      * @param entity the entity to insert or update
-     * @param uniquePropNamesForQuery property names that uniquely identify the record
+     * @param matchPropNames property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches
      * @see #upsert(Object, Condition)
      */
-    default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws SQLException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
-        N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
+        N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
-        final Condition cond = Filters.allEqual(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.allEqual(entity, matchPropNames);
 
         return upsert(entity, cond);
     }

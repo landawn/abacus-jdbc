@@ -37,8 +37,8 @@ import java.util.Map;
  *
  * <p>Per its {@code @Target}, this annotation is placed on a DAO query method whose declared return
  * type is a {@code Map} (or a {@code Map} subtype); see {@link #mapClass()} to control the concrete
- * implementation. The method's {@code OP} must be {@code OP.DEFAULT} or {@code OP.list}; any other
- * {@code OP} fails DAO initialization with {@code IllegalArgumentException}.</p>
+ * implementation. The method's {@code QueryOperation} must be {@code QueryOperation.DEFAULT} or {@code QueryOperation.list}; any other
+ * {@code QueryOperation} fails DAO initialization with {@code IllegalArgumentException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

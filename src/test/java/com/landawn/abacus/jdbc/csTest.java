@@ -272,12 +272,12 @@ public class csTest extends TestBase {
 
     @Test
     public void testReturnColumnIndexesConstant() {
-        assertEquals("returnColumnIndexes", cs.returnColumnIndexes);
+        assertEquals("generatedKeyColumnIndexes", cs.generatedKeyColumnIndexes);
     }
 
     @Test
     public void testReturnColumnNamesConstant() {
-        assertEquals("returnColumnNames", cs.returnColumnNames);
+        assertEquals("generatedKeyColumnNames", cs.generatedKeyColumnNames);
     }
 
     @Test
@@ -377,7 +377,7 @@ public class csTest extends TestBase {
 
     @Test
     public void testUniquePropNamesForQueryConstant() {
-        assertEquals("uniquePropNamesForQuery", cs.uniquePropNamesForQuery);
+        assertEquals("matchPropNames", cs.matchPropNames);
     }
 
     @Test

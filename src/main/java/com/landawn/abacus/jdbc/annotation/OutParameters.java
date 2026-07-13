@@ -32,14 +32,14 @@ import java.lang.annotation.Target;
  * <p>The DAO proxy registers each contained {@code @OutParameter} on the underlying
  * {@link java.sql.CallableStatement} in declaration order; the registered values are then
  * exposed to the caller only through a {@code Jdbc.OutParamResult} return value (with
- * {@code op = OP.executeAndGetOutParameters}) or a {@code Tuple2<T, Jdbc.OutParamResult>}
+ * {@code op = QueryOperation.executeAndGetOutParameters}) or a {@code Tuple2<T, Jdbc.OutParamResult>}
  * return value.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Implicit form — preferred. The compiler wraps the two @OutParameter annotations in an @OutParameters container.
  * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
- *        isProcedure = true, op = OP.executeAndGetOutParameters)
+ *        procedure = true, op = QueryOperation.executeAndGetOutParameters)
  * @OutParameter(name = "discount",   sqlType = Types.DECIMAL)
  * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
  * Jdbc.OutParamResult calculateDiscount(
@@ -48,7 +48,7 @@ import java.lang.annotation.Target;
  *
  * // Explicit form — equivalent to the above.
  * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
- *        isProcedure = true, op = OP.executeAndGetOutParameters)
+ *        procedure = true, op = QueryOperation.executeAndGetOutParameters)
  * @OutParameters({
  *     @OutParameter(name = "discount",   sqlType = Types.DECIMAL),
  *     @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)

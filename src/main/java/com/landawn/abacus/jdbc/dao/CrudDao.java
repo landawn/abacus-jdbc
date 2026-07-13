@@ -229,13 +229,13 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param uniquePropNamesForQuery the property names that uniquely identify each entity (must not be empty)
+     * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws SQLException {
-        return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws SQLException {
+        return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -257,27 +257,25 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param uniquePropNamesForQuery the property names that uniquely identify each entity (must not be empty)
+     * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null}/empty,
+     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
-     *                                  or if any name in {@code uniquePropNamesForQuery} is not a property of the entity class
+     *                                  or if any name in {@code matchPropNames} is not a property of the entity class
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      * @throws SQLException if a database access error occurs
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize)
-            throws SQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
-        N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
+        N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
         if (N.isEmpty(entities)) {
             return new ArrayList<>();
         }
 
-        final List<String> uniquePropNameList = uniquePropNamesForQuery instanceof List ? (List<String>) uniquePropNamesForQuery
-                : new ArrayList<>(uniquePropNamesForQuery);
+        final List<String> uniquePropNameList = matchPropNames instanceof List ? (List<String>) matchPropNames : new ArrayList<>(matchPropNames);
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
@@ -335,7 +333,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             }
 
             if (N.notEmpty(entitiesToUpdate)) {
-                final Set<String> ignoredPropNames = N.newHashSet(uniquePropNamesForQuery);
+                final Set<String> ignoredPropNames = N.newHashSet(matchPropNames);
 
                 final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 

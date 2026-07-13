@@ -125,18 +125,18 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entity the entity to insert or update
-     * @param uniquePropNamesForQuery the property names that uniquely identify the record
+     * @param matchPropNames the property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches
      */
     @Override
-    default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException {
         N.checkArgNotNull(entity, cs.entity);
-        N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
+        N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
-        final Condition cond = Filters.allEqual(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.allEqual(entity, matchPropNames);
 
         return upsert(entity, cond);
     }
@@ -247,14 +247,14 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param uniquePropNamesForQuery the property names that uniquely identify each record
+     * @param matchPropNames the property names that uniquely identify each record
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException {
-        return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws UncheckedSQLException {
+        return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -281,19 +281,19 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param uniquePropNamesForQuery the property names that uniquely identify each record
+     * @param matchPropNames the property names that uniquely identify each record
      * @param batchSize the size of each batch
      * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, if {@code uniquePropNamesForQuery} is {@code null} or empty,
-     *                                  or if any name in {@code uniquePropNamesForQuery} is not a property of the entity class
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, if {@code matchPropNames} is {@code null} or empty,
+     *                                  or if any name in {@code matchPropNames} is not a property of the entity class
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize)
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize)
             throws UncheckedSQLException {
         try {
-            return CrudDao.super.batchUpsert(entities, uniquePropNamesForQuery, batchSize);
+            return CrudDao.super.batchUpsert(entities, matchPropNames, batchSize);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }

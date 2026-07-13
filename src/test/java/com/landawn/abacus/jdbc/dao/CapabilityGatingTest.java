@@ -190,4 +190,17 @@ public class CapabilityGatingTest extends TestBase {
         assertTrue(CrudReadOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
         assertFalse(CrudInsertOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
     }
+
+    @Test
+    public void testGeneratedIdHooksBelongToInsertCapability() throws NoSuchMethodException {
+        assertNotNull(CrudInsertOps.class.getDeclaredMethod("idExtractor"));
+        assertNotNull(CrudInsertOps.class.getDeclaredMethod("generateId"));
+        assertThrows(NoSuchMethodException.class, () -> CrudReadOps.class.getDeclaredMethod("idExtractor"));
+        assertThrows(NoSuchMethodException.class, () -> CrudReadOps.class.getDeclaredMethod("generateId"));
+        assertThrows(NoSuchMethodException.class, () -> ReadOnlyCrudDao.class.getMethod("idExtractor"));
+        assertThrows(NoSuchMethodException.class, () -> ReadOnlyCrudDao.class.getMethod("generateId"));
+
+        assertNotNull(UncheckedCrudInsertOps.class.getDeclaredMethod("generateId"));
+        assertThrows(NoSuchMethodException.class, () -> UncheckedCrudReadOps.class.getDeclaredMethod("generateId"));
+    }
 }

@@ -21,6 +21,7 @@ import java.util.List;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 
 /**
  * Unchecked-exception insert capability of {@link UncheckedCrudDao}.
@@ -35,6 +36,22 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 @Beta
 sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudInsertOps<T, ID, TD>, UncheckedInsertOps<T, TD>
         permits UncheckedCrudDao, UncheckedNoUpdateCrudDao {
+    /**
+     * Generates a new ID for entity insertion using an unchecked database-access contract.
+     *
+     * @return the generated ID
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UnsupportedOperationException if client-side ID generation is not supported
+     * @deprecated ID generation should typically be handled by the database. Override this method
+     *             only when a client-side ID generation strategy is required.
+     */
+    @Deprecated
+    @NonDBOperation
+    @Override
+    default ID generateId() throws UncheckedSQLException, UnsupportedOperationException {
+        throw new UnsupportedOperationException("ID generation is not supported by default");
+    }
+
     /**
      * Inserts the specified entity into the database and returns its ID.
      * All insertable properties of the entity will be included in the INSERT statement.

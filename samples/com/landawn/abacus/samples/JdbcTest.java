@@ -96,7 +96,7 @@ public class JdbcTest {
     static {
         try {
             //    JdbcUtil.enableSqlLog();
-            //    JdbcUtil.setMinExecutionTimeForSqlPerfLog(10);
+            //    JdbcUtil.sqlLogThresholdMillis(10);
 
             final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
             final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
@@ -199,7 +199,7 @@ public class JdbcTest {
 
     @Test
     public void test_iterateAllResultSets() throws SQLException {
-        // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
+        // JdbcUtil.sqlLogThresholdMillis(1);
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
@@ -240,7 +240,7 @@ public class JdbcTest {
 
     @Test
     public void test_perf_log() throws SQLException {
-        // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
+        // JdbcUtil.sqlLogThresholdMillis(1);
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())

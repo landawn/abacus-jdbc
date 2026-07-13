@@ -1292,12 +1292,12 @@ public class JdbcUtilTest extends TestBase {
     //    }
 
     @Test
-    public void testGetDBLock() {
-        DBLock lock = JdbcUtil.getDBLock(mockDataSource, "lock_table");
+    public void testCreateDBLock() {
+        DBLock lock = JdbcUtil.createDBLock(mockDataSource, "lock_table");
         assertNotNull(lock);
         assertTrue(lock instanceof DBLock, "should return a DBLock instance");
         // A second call with a different table name should produce a distinct instance
-        DBLock otherLock = JdbcUtil.getDBLock(mockDataSource, "other_lock_table");
+        DBLock otherLock = JdbcUtil.createDBLock(mockDataSource, "other_lock_table");
         assertNotNull(otherLock);
         assertFalse(lock == otherLock, "different table names should yield different DBLock instances");
     }
@@ -1763,16 +1763,16 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testSetMinExecutionTimeForSqlPerfLog() {
-        JdbcUtil.setMinExecutionTimeForSqlPerfLog(500);
-        assertEquals(500, JdbcUtil.getMinExecutionTimeForSqlPerfLog());
+        JdbcUtil.sqlLogThresholdMillis(500);
+        assertEquals(500, JdbcUtil.sqlLogThresholdMillis());
 
-        JdbcUtil.setMinExecutionTimeForSqlPerfLog(1000, 2048);
-        assertEquals(1000, JdbcUtil.getMinExecutionTimeForSqlPerfLog());
+        JdbcUtil.sqlLogThresholdMillis(1000, 2048);
+        assertEquals(1000, JdbcUtil.sqlLogThresholdMillis());
     }
 
     @Test
     public void testGetMinExecutionTimeForSqlPerfLog() {
-        long defaultTime = JdbcUtil.getMinExecutionTimeForSqlPerfLog();
+        long defaultTime = JdbcUtil.sqlLogThresholdMillis();
         assertTrue(defaultTime >= 0);
     }
 
@@ -2189,6 +2189,68 @@ public class JdbcUtilTest extends TestBase {
         JdbcUtil.openDaoCacheOnCurrentThread();
         JdbcUtil.closeDaoCacheOnCurrentThread();
         assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testOpenDaoCacheScope() {
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+
+        final Jdbc.DaoCache scopedCache;
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
+            scopedCache = scope.cache();
+            assertNotNull(scopedCache);
+            assertSame(scopedCache, JdbcUtil.localThreadCache_TL.get());
+        }
+
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testOpenDaoCacheScopeWithCache() {
+        final Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(cache)) {
+            assertSame(cache, scope.cache());
+            assertSame(cache, JdbcUtil.localThreadCache_TL.get());
+        }
+
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testOpenDaoCacheScopeRestoresOuterCache() {
+        final Jdbc.DaoCache outerCache = Jdbc.DaoCache.createByMap();
+        final Jdbc.DaoCache innerCache = Jdbc.DaoCache.createByMap();
+
+        try (JdbcUtil.DaoCacheScope outerScope = JdbcUtil.openDaoCacheScope(outerCache)) {
+            assertSame(outerCache, JdbcUtil.localThreadCache_TL.get());
+
+            try (JdbcUtil.DaoCacheScope innerScope = JdbcUtil.openDaoCacheScope(innerCache)) {
+                assertSame(innerCache, JdbcUtil.localThreadCache_TL.get());
+            }
+
+            assertSame(outerCache, JdbcUtil.localThreadCache_TL.get());
+        }
+
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testDaoCacheScopeCloseIsIdempotent() {
+        final Jdbc.DaoCache previousCache = JdbcUtil.openDaoCacheOnCurrentThread();
+        final JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope();
+
+        scope.close();
+        assertSame(previousCache, JdbcUtil.localThreadCache_TL.get());
+
+        scope.close();
+        assertSame(previousCache, JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testOpenDaoCacheScopeRejectsNullCache() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.openDaoCacheScope(null));
     }
 
     private void assertDataSourceCreation(final String expectedClassName, final Supplier<DataSource> supplier) {
@@ -2844,10 +2906,10 @@ public class JdbcUtilTest extends TestBase {
         assertDoesNotThrow(() -> JdbcUtil.enableSqlLog(-1));
     }
 
-    // setMinExecutionTimeForSqlPerfLog with custom maxLogLength
+    // sqlLogThresholdMillis with custom maxLogLength
     @Test
     public void testSetMinExecutionTimeForSqlPerfLog_WithMaxLength() {
-        assertDoesNotThrow(() -> JdbcUtil.setMinExecutionTimeForSqlPerfLog(100, 512));
+        assertDoesNotThrow(() -> JdbcUtil.sqlLogThresholdMillis(100, 512));
     }
 
     // callWithSqlLogDisabled when log already disabled

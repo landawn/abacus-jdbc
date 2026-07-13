@@ -2918,29 +2918,29 @@ public final class JdbcUtil {
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
      * @param sql The SQL statement to prepare.
-     * @param returnColumnIndexes An array of column indexes that should be made available for retrieval.
+     * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      * @see Connection#prepareStatement(String, int[])
      */
-    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] returnColumnIndexes)
+    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
-        N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
+        N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareQuery(tran.connection(), sql, returnColumnIndexes);
+            return prepareQuery(tran.connection(), sql, generatedKeyColumnIndexes);
         } else {
             PreparedQuery result = null;
             Connection conn = null;
 
             try {
                 conn = JdbcUtil.getConnection(ds);
-                result = prepareQuery(conn, sql, returnColumnIndexes).onClose(createCloseHandler(conn, ds));
+                result = prepareQuery(conn, sql, generatedKeyColumnIndexes).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
                     JdbcUtil.releaseConnection(conn, ds);
@@ -2977,29 +2977,29 @@ public final class JdbcUtil {
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
      * @param sql The SQL statement to prepare.
-     * @param returnColumnNames An array of column names that should be made available for retrieval.
+     * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      * @see Connection#prepareStatement(String, String[])
      */
-    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] returnColumnNames)
+    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
-        N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
+        N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
 
         final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareQuery(tran.connection(), sql, returnColumnNames);
+            return prepareQuery(tran.connection(), sql, generatedKeyColumnNames);
         } else {
             PreparedQuery result = null;
             Connection conn = null;
 
             try {
                 conn = JdbcUtil.getConnection(ds);
-                result = prepareQuery(conn, sql, returnColumnNames).onClose(createCloseHandler(conn, ds));
+                result = prepareQuery(conn, sql, generatedKeyColumnNames).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
                     JdbcUtil.releaseConnection(conn, ds);
@@ -3150,18 +3150,18 @@ public final class JdbcUtil {
      *
      * @param conn The database {@link Connection} to use. It will not be closed by this method.
      * @param sql The SQL statement to prepare.
-     * @param returnColumnIndexes An array of 1-based column indexes of generated keys to return.
+     * @param generatedKeyColumnIndexes An array of 1-based column indexes of generated keys to return.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any argument is {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      */
-    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] returnColumnIndexes)
+    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
-        N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
+        N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
 
-        return new PreparedQuery(prepareStatement(conn, sql, returnColumnIndexes));
+        return new PreparedQuery(prepareStatement(conn, sql, generatedKeyColumnIndexes));
     }
 
     /**
@@ -3186,18 +3186,18 @@ public final class JdbcUtil {
      *
      * @param conn The database {@link Connection} to use. It will not be closed by this method.
      * @param sql The SQL statement to prepare.
-     * @param returnColumnNames An array of column names of generated keys to return.
+     * @param generatedKeyColumnNames An array of column names of generated keys to return.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any argument is {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      */
-    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] returnColumnNames)
+    public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
-        N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
+        N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
 
-        return new PreparedQuery(prepareStatement(conn, sql, returnColumnNames));
+        return new PreparedQuery(prepareStatement(conn, sql, generatedKeyColumnNames));
     }
 
     /**
@@ -3450,30 +3450,30 @@ public final class JdbcUtil {
      *
      * @param ds The DataSource to use for the query
      * @param namedSql The named SQL string to prepare
-     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @param generatedKeyColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnIndexes is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
+     * @throws IllegalArgumentException if the DataSource, named SQL string, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
      * @throws SQLException if a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] returnColumnIndexes)
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
+        N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
 
         final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, returnColumnIndexes);
+            return prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnIndexes);
         } else {
             NamedQuery result = null;
             Connection conn = null;
 
             try {
                 conn = JdbcUtil.getConnection(ds);
-                result = prepareNamedQuery(conn, namedSql, returnColumnIndexes).onClose(createCloseHandler(conn, ds));
+                result = prepareNamedQuery(conn, namedSql, generatedKeyColumnIndexes).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
                     JdbcUtil.releaseConnection(conn, ds);
@@ -3510,30 +3510,30 @@ public final class JdbcUtil {
      *
      * @param ds The DataSource to use for the query
      * @param namedSql The named SQL string to prepare
-     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @param generatedKeyColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnNames is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
+     * @throws IllegalArgumentException if the DataSource, named SQL string, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
      * @throws SQLException if a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] returnColumnNames)
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
+        N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
 
         final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, returnColumnNames);
+            return prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnNames);
         } else {
             NamedQuery result = null;
             Connection conn = null;
 
             try {
                 conn = JdbcUtil.getConnection(ds);
-                result = prepareNamedQuery(conn, namedSql, returnColumnNames).onClose(createCloseHandler(conn, ds));
+                result = prepareNamedQuery(conn, namedSql, generatedKeyColumnNames).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
                     JdbcUtil.releaseConnection(conn, ds);
@@ -3694,20 +3694,20 @@ public final class JdbcUtil {
      *
      * @param conn The Connection to use for the query
      * @param namedSql The named SQL string to prepare
-     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @param generatedKeyColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or returnColumnIndexes is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
+     * @throws IllegalArgumentException if the Connection, named SQL string, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] returnColumnIndexes)
+    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
+        N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
 
         final ParsedSql parsedSql = parseNamedSql(namedSql);
 
-        return new NamedQuery(prepareStatement(conn, parsedSql, returnColumnIndexes), parsedSql);
+        return new NamedQuery(prepareStatement(conn, parsedSql, generatedKeyColumnIndexes), parsedSql);
     }
 
     /**
@@ -3734,20 +3734,20 @@ public final class JdbcUtil {
      *
      * @param conn The Connection to use for the query
      * @param namedSql The named SQL string to prepare
-     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @param generatedKeyColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or returnColumnNames is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
+     * @throws IllegalArgumentException if the Connection, named SQL string, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] returnColumnNames)
+    public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
+        N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
 
         final ParsedSql parsedSql = parseNamedSql(namedSql);
 
-        return new NamedQuery(prepareStatement(conn, parsedSql, returnColumnNames), parsedSql);
+        return new NamedQuery(prepareStatement(conn, parsedSql, generatedKeyColumnNames), parsedSql);
     }
 
     /**
@@ -3919,37 +3919,37 @@ public final class JdbcUtil {
      *     .setString("msg", "System startup")
      *     .insert();   // returns the generated key
      *
-     * // An empty returnColumnIndexes array throws IllegalArgumentException.
+     * // An empty generatedKeyColumnIndexes array throws IllegalArgumentException.
      * JdbcUtil.prepareNamedQuery(dataSource, psql, new int[0]);   // throws IllegalArgumentException
      * }</pre>
      *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
-     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @param generatedKeyColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
+     * @throws IllegalArgumentException if the DataSource, named SQL, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] returnColumnIndexes)
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
+        N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
         validateNamedSql(namedSql);
 
         final SqlTransaction tran = getTransaction(ds, namedSql.parameterizedSql(), CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, returnColumnIndexes);
+            return prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnIndexes);
         } else {
             NamedQuery result = null;
             Connection conn = null;
 
             try {
                 conn = JdbcUtil.getConnection(ds);
-                result = prepareNamedQuery(conn, namedSql, returnColumnIndexes).onClose(createCloseHandler(conn, ds));
+                result = prepareNamedQuery(conn, namedSql, generatedKeyColumnIndexes).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
                     JdbcUtil.releaseConnection(conn, ds);
@@ -3979,37 +3979,37 @@ public final class JdbcUtil {
      *     .setString("msg", "Welcome to the system")
      *     .insert();   // returns the generated key
      *
-     * // An empty returnColumnNames array throws IllegalArgumentException.
+     * // An empty generatedKeyColumnNames array throws IllegalArgumentException.
      * JdbcUtil.prepareNamedQuery(dataSource, psql, new String[0]);   // throws IllegalArgumentException
      * }</pre>
      *
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
-     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @param generatedKeyColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
+     * @throws IllegalArgumentException if the DataSource, named SQL, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames)
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
+        N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
         validateNamedSql(namedSql);
 
         final SqlTransaction tran = getTransaction(ds, namedSql.parameterizedSql(), CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, returnColumnNames);
+            return prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnNames);
         } else {
             NamedQuery result = null;
             Connection conn = null;
 
             try {
                 conn = JdbcUtil.getConnection(ds);
-                result = prepareNamedQuery(conn, namedSql, returnColumnNames).onClose(createCloseHandler(conn, ds));
+                result = prepareNamedQuery(conn, namedSql, generatedKeyColumnNames).onClose(createCloseHandler(conn, ds));
             } finally {
                 if (result == null) {
                     JdbcUtil.releaseConnection(conn, ds);
@@ -4167,19 +4167,19 @@ public final class JdbcUtil {
      *
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
-     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @param generatedKeyColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
+     * @throws IllegalArgumentException if the Connection, named SQL, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] returnColumnIndexes)
+    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotNull(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnIndexes, cs.returnColumnIndexes);
+        N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
         validateNamedSql(namedSql);
 
-        return new NamedQuery(prepareStatement(conn, namedSql, returnColumnIndexes), namedSql);
+        return new NamedQuery(prepareStatement(conn, namedSql, generatedKeyColumnIndexes), namedSql);
     }
 
     /**
@@ -4203,19 +4203,19 @@ public final class JdbcUtil {
      *
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
-     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @param generatedKeyColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
+     * @throws IllegalArgumentException if the Connection, named SQL, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL is invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
-    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames)
+    public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotNull(namedSql, cs.namedSql);
-        N.checkArgNotEmpty(returnColumnNames, cs.returnColumnNames);
+        N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
         validateNamedSql(namedSql);
 
-        return new NamedQuery(prepareStatement(conn, namedSql, returnColumnNames), namedSql);
+        return new NamedQuery(prepareStatement(conn, namedSql, generatedKeyColumnNames), namedSql);
     }
 
     /**
@@ -4606,16 +4606,16 @@ public final class JdbcUtil {
         return conn.prepareStatement(sql, autoGeneratedKeys ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
     }
 
-    static PreparedStatement prepareStatement(final Connection conn, final String sql, final int[] returnColumnIndexes) throws SQLException {
+    static PreparedStatement prepareStatement(final Connection conn, final String sql, final int[] generatedKeyColumnIndexes) throws SQLException {
         JdbcUtil.logSql(sql);
 
-        return conn.prepareStatement(sql, returnColumnIndexes);
+        return conn.prepareStatement(sql, generatedKeyColumnIndexes);
     }
 
-    static PreparedStatement prepareStatement(final Connection conn, final String sql, final String[] returnColumnNames) throws SQLException {
+    static PreparedStatement prepareStatement(final Connection conn, final String sql, final String[] generatedKeyColumnNames) throws SQLException {
         JdbcUtil.logSql(sql);
 
-        return conn.prepareStatement(sql, returnColumnNames);
+        return conn.prepareStatement(sql, generatedKeyColumnNames);
     }
 
     static PreparedStatement prepareStatement(final Connection conn, final String sql, final int resultSetType, final int resultSetConcurrency)
@@ -4651,16 +4651,16 @@ public final class JdbcUtil {
         return conn.prepareStatement(parsedSql.parameterizedSql(), autoGeneratedKeys ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
     }
 
-    static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final int[] returnColumnIndexes) throws SQLException {
+    static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final int[] generatedKeyColumnIndexes) throws SQLException {
         JdbcUtil.logSql(parsedSql.originalSql());
 
-        return conn.prepareStatement(parsedSql.parameterizedSql(), returnColumnIndexes);
+        return conn.prepareStatement(parsedSql.parameterizedSql(), generatedKeyColumnIndexes);
     }
 
-    static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final String[] returnColumnNames) throws SQLException {
+    static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final String[] generatedKeyColumnNames) throws SQLException {
         JdbcUtil.logSql(parsedSql.originalSql());
 
-        return conn.prepareStatement(parsedSql.parameterizedSql(), returnColumnNames);
+        return conn.prepareStatement(parsedSql.parameterizedSql(), generatedKeyColumnNames);
     }
 
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final int resultSetType, final int resultSetConcurrency)
@@ -8609,7 +8609,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "distributed_locks");
+     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "distributed_locks");
      * try {
      *     String lockCode = dbLock.lock("job_processor");
      *     if (lockCode != null) {
@@ -8629,7 +8629,7 @@ public final class JdbcUtil {
      * @return a new {@link DBLock} instance bound to {@code ds} and {@code tableName}
      * @see DBLock
      */
-    public static DBLock getDBLock(final javax.sql.DataSource ds, final String tableName) {
+    public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName) {
         return new DBLock(ds, tableName);
     }
 
@@ -10012,16 +10012,16 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Log SQL statements that take 500ms or longer
-     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(500);
+     * JdbcUtil.sqlLogThresholdMillis(500);
      *
      * // Disable performance logging
-     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
+     * JdbcUtil.sqlLogThresholdMillis(-1);
      * }</pre>
      *
      * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use a negative value to disable)
      */
-    public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog) {
-        setMinExecutionTimeForSqlPerfLog(minExecutionTimeForSqlPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
+    public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog) {
+        sqlLogThresholdMillis(minExecutionTimeForSqlPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
@@ -10031,16 +10031,16 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Log SQL statements that take more than 1 second, with longer log length
-     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(1000, 2048);
+     * JdbcUtil.sqlLogThresholdMillis(1000, 2048);
      *
      * // Disable performance logging
-     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
+     * JdbcUtil.sqlLogThresholdMillis(-1);
      * }</pre>
      *
      * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use a negative value to disable)
      * @param maxSqlLogLength the maximum length of SQL statements in performance logs
      */
-    public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
+    public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
         final SqlLogConfig config = minExecutionTimeForSqlPerfLog_TL.get();
         // synchronized (minExecutionTimeForSqlPerfLog_TL) {
         if (logger.isDebugEnabled() && config.minExecutionTimeForSqlPerfLog != minExecutionTimeForSqlPerfLog) {
@@ -10061,13 +10061,13 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * long threshold = JdbcUtil.getMinExecutionTimeForSqlPerfLog();
+     * long threshold = JdbcUtil.sqlLogThresholdMillis();
      * System.out.println("Performance logging threshold: " + threshold + "ms");
      * }</pre>
      *
      * @return the minimum execution time in milliseconds (default is 1000ms)
      */
-    public static long getMinExecutionTimeForSqlPerfLog() {
+    public static long sqlLogThresholdMillis() {
         return minExecutionTimeForSqlPerfLog_TL.get().minExecutionTimeForSqlPerfLog;
     }
 
@@ -11412,131 +11412,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables DAO query result caching for the current thread.
-     * Creates a new thread-local cache that will be used by all DAOs in the current thread.
-     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
-     * try {
-     *     // DAO operations here will use the cache
-     *     userDao.findById(1L);   // First call hits database
-     *     userDao.findById(1L);   // Second call uses cache
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();
-     * }
-     * }</pre>
-     *
-     * @return the created DaoCache for the current thread
-     * @see Jdbc.DaoCache#createByMap()
-     * @see #closeDaoCacheOnCurrentThread()
-     */
-    public static Jdbc.DaoCache openDaoCacheOnCurrentThread() {
-        final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
-
-        return openDaoCacheOnCurrentThread(localThreadCache);
-    }
-
-    /**
-     * Enables the specified DAO cache for the current thread.
-     * The provided cache will be used by all DAOs in the current thread.
-     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Use a custom cache implementation
-     * Map<String, Object> cacheMap = new ConcurrentHashMap<>();
-     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
-     *
-     * JdbcUtil.openDaoCacheOnCurrentThread(cache);
-     * try {
-     *     // DAO operations use the custom cache
-     *     productDao.findPopular();
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();
-     * }
-     * }</pre>
-     *
-     * @param localThreadCache the cache to use for the current thread, must not be {@code null}
-     * @return the specified localThreadCache
-     * @throws IllegalArgumentException if {@code localThreadCache} is {@code null}
-     * @see Jdbc.DaoCache#createByMap()
-     * @see Jdbc.DaoCache#createByMap(Map)
-     * @see #closeDaoCacheOnCurrentThread()
-     */
-    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException {
-        N.checkArgNotNull(localThreadCache, cs.localThreadCache);
-
-        localThreadCache_TL.set(localThreadCache);
-
-        return localThreadCache;
-    }
-
-    /**
-     * Closes and removes the DAO cache for the current thread.
-     * This method should always be called in a finally block after starting a thread-local cache
-     * to prevent memory leaks.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * JdbcUtil.openDaoCacheOnCurrentThread();
-     * try {
-     *     // Use cached DAO operations
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();   // Always clean up
-     * }
-     * }</pre>
-     *
-     * @see #openDaoCacheOnCurrentThread()
-     * @see #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
-     */
-    public static void closeDaoCacheOnCurrentThread() {
-        localThreadCache_TL.remove();
-    }
-
-    @SuppressWarnings("unused")
-    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
-        String paramKey = null;
-
-        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
-
-        if (kryoParser != null) {
-            try {
-                paramKey = kryoParser.serialize(cacheKeyArgs);
-            } catch (final Exception e) {
-                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
-            }
-        } else {
-            final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
-                if (it == null) {
-                    return null;
-                }
-
-                final Type<?> type = N.typeOf(it.getClass());
-
-                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
-                    return it;
-                } else {
-                    return it.toString();
-                }
-            }).toList();
-
-            try {
-                paramKey = N.toJson(newArgs);
-            } catch (final Exception e) {
-                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
-            }
-        }
-
-        if (paramKey == null) {
-            return null;
-        }
-
-        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
-    }
-
-    /**
      * Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.
      * This method generates a runtime proxy that implements all methods in the DAO interface, automatically
      * handling CRUD operations, query execution, and transaction management based on method signatures and annotations.
@@ -11891,6 +11766,228 @@ public final class JdbcUtil {
          * the shared async executor is used.
          */
         private Executor executor;
+    }
+
+    /**
+     * Opens a DAO-cache scope for the current thread using a new map-backed cache.
+     * Closing the returned scope restores the cache that was active before the scope was opened,
+     * making this method safe to nest.
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
+     *     // DAO operations here share scope.cache().
+     * }
+     * }</pre>
+     *
+     * @return a scope containing the newly created cache
+     * @see #openDaoCacheScope(Jdbc.DaoCache)
+     * @see Jdbc.DaoCache#createByMap()
+     */
+    public static DaoCacheScope openDaoCacheScope() {
+        return openDaoCacheScope(Jdbc.DaoCache.createByMap());
+    }
+
+    /**
+     * Opens a DAO-cache scope for the current thread using the specified cache.
+     * Closing the returned scope restores the cache that was active before the scope was opened,
+     * or removes the thread-local value if there was no previous cache. The scope controls only
+     * the thread-local binding; it does not otherwise manage the lifetime of the supplied cache.
+     *
+     * @param localThreadCache the cache to use in the scope, must not be {@code null}
+     * @return a scope containing {@code localThreadCache}
+     * @throws IllegalArgumentException if {@code localThreadCache} is {@code null}
+     * @see #openDaoCacheScope()
+     */
+    public static DaoCacheScope openDaoCacheScope(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException {
+        N.checkArgNotNull(localThreadCache, cs.localThreadCache);
+
+        final Jdbc.DaoCache previousCache = localThreadCache_TL.get();
+        localThreadCache_TL.set(localThreadCache);
+
+        return new DaoCacheScope(localThreadCache, previousCache);
+    }
+
+    /**
+     * A current-thread DAO-cache binding that restores the previous binding when closed.
+     * Instances are created by {@link JdbcUtil#openDaoCacheScope()} or
+     * {@link JdbcUtil#openDaoCacheScope(Jdbc.DaoCache)} and must be closed on the thread that opened them.
+     */
+    public static final class DaoCacheScope implements AutoCloseable {
+        private final Jdbc.DaoCache cache;
+        private final Jdbc.DaoCache previousCache;
+        private final Thread ownerThread;
+        private boolean closed;
+
+        private DaoCacheScope(final Jdbc.DaoCache cache, final Jdbc.DaoCache previousCache) {
+            this.cache = cache;
+            this.previousCache = previousCache;
+            ownerThread = Thread.currentThread();
+        }
+
+        /**
+         * Returns the cache bound to the current thread by this scope.
+         *
+         * @return the scope's cache
+         */
+        public Jdbc.DaoCache cache() {
+            return cache;
+        }
+
+        /**
+         * Restores the DAO-cache binding that preceded this scope. Repeated calls have no effect.
+         *
+         * @throws IllegalStateException if called from a thread other than the one that opened the scope
+         */
+        @Override
+        public void close() {
+            if (Thread.currentThread() != ownerThread) {
+                throw new IllegalStateException("DaoCacheScope must be closed on the thread that opened it");
+            }
+
+            if (closed) {
+                return;
+            }
+
+            closed = true;
+
+            if (previousCache == null) {
+                localThreadCache_TL.remove();
+            } else {
+                localThreadCache_TL.set(previousCache);
+            }
+        }
+    }
+
+    /**
+     * Enables DAO query result caching for the current thread.
+     * Creates a new thread-local cache that will be used by all DAOs in the current thread.
+     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
+     * Prefer {@link #openDaoCacheScope()} when the cache may be nested or try-with-resources can be used.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
+     * try {
+     *     // DAO operations here will use the cache
+     *     userDao.findById(1L);   // First call hits database
+     *     userDao.findById(1L);   // Second call uses cache
+     * } finally {
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();
+     * }
+     * }</pre>
+     *
+     * @return the created DaoCache for the current thread
+     * @see Jdbc.DaoCache#createByMap()
+     * @see #openDaoCacheScope()
+     * @see #closeDaoCacheOnCurrentThread()
+     */
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread() {
+        final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
+
+        return openDaoCacheOnCurrentThread(localThreadCache);
+    }
+
+    /**
+     * Enables the specified DAO cache for the current thread.
+     * The provided cache will be used by all DAOs in the current thread.
+     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
+     * Prefer {@link #openDaoCacheScope(Jdbc.DaoCache)} when the cache may be nested or try-with-resources can be used.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Use a custom cache implementation
+     * Map<String, Object> cacheMap = new ConcurrentHashMap<>();
+     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
+     *
+     * JdbcUtil.openDaoCacheOnCurrentThread(cache);
+     * try {
+     *     // DAO operations use the custom cache
+     *     productDao.findPopular();
+     * } finally {
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();
+     * }
+     * }</pre>
+     *
+     * @param localThreadCache the cache to use for the current thread, must not be {@code null}
+     * @return the specified localThreadCache
+     * @throws IllegalArgumentException if {@code localThreadCache} is {@code null}
+     * @see Jdbc.DaoCache#createByMap()
+     * @see Jdbc.DaoCache#createByMap(Map)
+     * @see #openDaoCacheScope(Jdbc.DaoCache)
+     * @see #closeDaoCacheOnCurrentThread()
+     */
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException {
+        N.checkArgNotNull(localThreadCache, cs.localThreadCache);
+
+        localThreadCache_TL.set(localThreadCache);
+
+        return localThreadCache;
+    }
+
+    /**
+     * Removes the DAO-cache binding for the current thread.
+     * This method does not close the cache object or restore a binding replaced by
+     * {@link #openDaoCacheOnCurrentThread()}; use {@link #openDaoCacheScope()} for nest-safe lifecycle management.
+     * This method should always be called in a finally block after starting a thread-local cache
+     * to prevent memory leaks.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JdbcUtil.openDaoCacheOnCurrentThread();
+     * try {
+     *     // Use cached DAO operations
+     * } finally {
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();   // Always clean up
+     * }
+     * }</pre>
+     *
+     * @see #openDaoCacheOnCurrentThread()
+     * @see #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
+     */
+    public static void closeDaoCacheOnCurrentThread() {
+        localThreadCache_TL.remove();
+    }
+
+    @SuppressWarnings("unused")
+    static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
+        String paramKey = null;
+
+        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
+
+        if (kryoParser != null) {
+            try {
+                paramKey = kryoParser.serialize(cacheKeyArgs);
+            } catch (final Exception e) {
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
+            }
+        } else {
+            final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
+                if (it == null) {
+                    return null;
+                }
+
+                final Type<?> type = N.typeOf(it.getClass());
+
+                if (type.isSerializable() || type.isCollection() || type.isMap() || type.isArray() || type.isBean() || type.isEntityId()) {
+                    return it;
+                } else {
+                    return it.toString();
+                }
+            }).toList();
+
+            try {
+                paramKey = N.toJson(newArgs);
+            } catch (final Exception e) {
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
+            }
+        }
+
+        if (paramKey == null) {
+            return null;
+        }
+
+        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
     }
 
     // ==============================================Jdbc Context=======================================================>>

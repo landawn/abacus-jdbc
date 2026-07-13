@@ -25,7 +25,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -50,26 +49,6 @@ import com.landawn.abacus.util.u.OptionalShort;
 @Beta
 sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudReadOps<T, ID, TD>, UncheckedReadOps<T, TD>
         permits UncheckedCrudDao, UncheckedNoUpdateCrudDao, UncheckedReadOnlyCrudDao {
-    /**
-     * Generates a new ID for entity insertion.
-     *
-     * <p>This method should be overridden by implementations that support ID generation.
-     * Common use cases include generating UUIDs, using sequences, or other ID generation strategies.</p>
-     *
-     * @return the generated ID
-     * @throws UncheckedSQLException if a database access error occurs
-     * @throws UnsupportedOperationException if the operation is not supported (default behavior)
-     * @deprecated ID generation should typically be handled by the database (e.g., via auto-increment
-     *             columns or sequences). Override this method only if a client-side ID generation
-     *             strategy is required.
-     */
-    @Deprecated
-    @NonDBOperation
-    @Override
-    default ID generateId() throws UncheckedSQLException, UnsupportedOperationException {
-        throw new UnsupportedOperationException("ID generation is not supported by default");
-    }
-
     /**
      * Returns an {@code OptionalBoolean} describing the value of a single property for the entity with the specified ID.
      * Returns an empty {@code OptionalBoolean} only when no record matches the given id. If a matching record's value is SQL {@code null},

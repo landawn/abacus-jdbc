@@ -163,7 +163,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of join entities to load
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
@@ -172,16 +172,16 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntityClass)
+    default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, joinEntityClass));
+        return Optional.ofNullable(gett(id, sourceSelectPropNames, joinEntityClass));
     }
 
     /**
      * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities.
      * This method provides fine-grained control over what data is loaded from the database.
      * The loaded related entities are populated in place on the returned entity instance; if
-     * {@code joinEntitiesToLoad} is {@code null} or empty, no join entities are loaded.
+     * {@code joinEntityClasses} is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -193,18 +193,18 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntityClasses the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
-    default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+    default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
+        return Optional.ofNullable(gett(id, sourceSelectPropNames, joinEntityClasses));
     }
 
     /**
@@ -222,7 +222,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -231,9 +231,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+    default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
+        return Optional.ofNullable(gett(id, sourceSelectPropNames, includeAllJoinEntities));
     }
 
     /**
@@ -316,7 +316,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of join entities to load
      * @return the entity with selected properties and join entities loaded, or {@code null} if not found
@@ -325,8 +325,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
+    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, sourceSelectPropNames);
 
         if (result != null) {
             loadJoinEntities(result, joinEntityClass);
@@ -338,7 +338,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     /**
      * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, Collection)}. The loaded related
-     * entities are populated in place on the returned entity; if {@code joinEntitiesToLoad} is {@code null} or
+     * entities are populated in place on the returned entity; if {@code joinEntityClasses} is {@code null} or
      * empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
@@ -353,21 +353,21 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @param joinEntityClasses the collection of join entity classes to load
      * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
-    default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, sourceSelectPropNames);
 
-        if (result != null && N.notEmpty(joinEntitiesToLoad)) {
-            for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+        if (result != null && N.notEmpty(joinEntityClasses)) {
+            for (final Class<?> joinEntityClass : joinEntityClasses) {
                 loadJoinEntities(result, joinEntityClass);
             }
         }
@@ -393,7 +393,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -402,8 +402,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, selectPropNames);
+    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
+            throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, sourceSelectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -478,7 +479,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClass the class of join entities to load for each entity
      * @return a list of entities with selected properties and join entities loaded
@@ -487,15 +488,15 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntityClass)
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
             throws DuplicateResultException, SQLException {
-        return batchGet(ids, selectPropNames, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return batchGet(ids, sourceSelectPropNames, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
      * Uses the default batch size for processing. The loaded related entities are populated in place on each
-     * returned entity; if {@code joinEntitiesToLoad} is {@code null} or empty, no join entities are loaded.
+     * returned entity; if {@code joinEntityClasses} is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -506,18 +507,18 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load for each entity
+     * @param joinEntityClasses the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, SQLException {
-        return batchGet(ids, selectPropNames, joinEntitiesToLoad, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return batchGet(ids, sourceSelectPropNames, joinEntityClasses, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -535,7 +536,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -544,9 +545,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, SQLException {
-        return batchGet(ids, selectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return batchGet(ids, sourceSelectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -564,7 +565,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClass the class of join entities to load for each entity
      * @param batchSize the number of entities to process in each batch. The operation will split
@@ -575,11 +576,11 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property of the specified type is found in the entity class
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntityClass, final int batchSize)
-            throws DuplicateResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass,
+            final int batchSize) throws DuplicateResultException, SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, selectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, sourceSelectPropNames, batchSize);
 
         if (N.notEmpty(result)) {
             if (result.size() <= batchSize) {
@@ -595,7 +596,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
      * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
-     * The loaded related entities are populated in place on each returned entity; if {@code joinEntitiesToLoad}
+     * The loaded related entities are populated in place on each returned entity; if {@code joinEntityClasses}
      * is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
@@ -608,9 +609,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
-     * @param joinEntitiesToLoad the collection of join entity classes to load for each entity
+     * @param joinEntityClasses the collection of join entity classes to load for each entity
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and specified join entities loaded
@@ -619,20 +620,20 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property is found for one of the specified types in the entity class
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses,
             final int batchSize) throws DuplicateResultException, SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, selectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, sourceSelectPropNames, batchSize);
 
-        if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
+        if (N.notEmpty(result) && N.notEmpty(joinEntityClasses)) {
             if (result.size() <= batchSize) {
-                for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                for (final Class<?> joinEntityClass : joinEntityClasses) {
                     loadJoinEntities(result, joinEntityClass);
                 }
             } else {
                 N.runByBatch(result, batchSize, batchEntities -> {
-                    for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
+                    for (final Class<?> joinEntityClass : joinEntityClasses) {
                         loadJoinEntities(batchEntities, joinEntityClass);
                     }
                 });
@@ -658,7 +659,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -670,11 +671,11 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities,
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities,
             final int batchSize) throws DuplicateResultException, SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, selectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, sourceSelectPropNames, batchSize);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() <= batchSize) {

@@ -69,19 +69,19 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * }</pre>
      *
      * @param entity the entity to insert or update
-     * @param uniquePropNamesForQuery the list of property names that uniquely identify the record
+     * @param matchPropNames the list of property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches
      * @see #upsert(Object, Condition)
      */
     @Override
-    default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException {
         N.checkArgNotNull(entity, cs.entity);
-        N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
+        N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
-        final Condition cond = Filters.allEqual(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.allEqual(entity, matchPropNames);
 
         return upsert(entity, cond);
     }

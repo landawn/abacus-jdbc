@@ -269,11 +269,11 @@ public final class cs { // NOSONAR
     /**
      * Parameter name for arrays of column indexes to be returned from insert operations.
      */
-    public static final String returnColumnIndexes = "returnColumnIndexes";
+    public static final String generatedKeyColumnIndexes = "generatedKeyColumnIndexes";
     /**
      * Parameter name for arrays of column names to be returned from insert operations.
      */
-    public static final String returnColumnNames = "returnColumnNames";
+    public static final String generatedKeyColumnNames = "generatedKeyColumnNames";
     /**
      * Parameter name for consumer functions that process individual rows from result sets.
      */
@@ -361,7 +361,7 @@ public final class cs { // NOSONAR
     /**
      * Parameter name for collections of unique property names used in query construction.
      */
-    public static final String uniquePropNamesForQuery = "uniquePropNamesForQuery";
+    public static final String matchPropNames = "matchPropNames";
     /**
      * Parameter name for URL strings, typically database connection URLs.
      */
@@ -433,7 +433,7 @@ public final class cs { // NOSONAR
     /**
      * Parameter name for predicates that filter values before they are placed into a map.
      */
-    public static final String valueFilter = "valueFilter";
+    public static final String entryFilter = "entryFilter";
     /**
      * Parameter name for suppliers that create map instances for collecting results.
      */

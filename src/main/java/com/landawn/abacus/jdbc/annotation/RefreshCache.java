@@ -52,7 +52,7 @@ import com.landawn.abacus.annotation.Beta;
  * @RefreshCache                                   // type-level: defaults cover insert/save/...
  * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
  *
- *     @CacheResult(enabled = true, liveTime = 600_000)
+ *     @CacheResult(enabled = true, maxLiveTimeMillis = 600_000)
  *     @Query("SELECT * FROM product WHERE id = :id")
  *     Product findById(@Bind("id") Long id) throws SQLException;
  *

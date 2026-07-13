@@ -19,11 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig;
+import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig.FieldMapping;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
@@ -68,7 +70,7 @@ class CodeGenerationUtilTest {
         EntityCodeConfig ecc = EntityCodeConfig.builder()
                 .packageName("codes.entity")
                 .srcDir("./samples")
-                .idField("id")
+                .idFields(List.of("id"))
                 .readOnlyFields(N.asSet("createTime"))
                 .nonUpdatableFields(N.asSet("id"))
                 .generateBuilder(true)
@@ -81,16 +83,16 @@ class CodeGenerationUtilTest {
                 .className("User")
                 .packageName("codes.entity")
                 .srcDir("./samples")
-                .useBoxedType(true)
+                .useBoxedTypes(true)
                 .readOnlyFields(N.asSet("id"))
-                .idField("id")
+                .idFields(List.of("id"))
                 .nonUpdatableFields(N.asSet("create_time"))
                 .idAnnotationClass(javax.persistence.Id.class)
                 .columnAnnotationClass(jakarta.persistence.Column.class)
                 .tableAnnotationClass(com.landawn.abacus.annotation.Table.class)
-                .customizedFields(N.asList(Tuple.of("create_time", "create_time", java.util.Date.class)))
-                .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "name = \"List<String>\"")))
-                .chainAccessor(true)
+                .customFieldMappings(N.asList(new FieldMapping("create_time", "create_time", java.util.Date.class)))
+                .fieldTypeAnnotationArguments(N.asList(Tuple.of("create_time", "name = \"List<String>\"")))
+                .generateChainAccessors(true)
                 .generateBuilder(true)
                 .generateCopyMethod(true)
                 .jsonXmlConfig(EntityCodeConfig.JsonXmlConfig.builder()
@@ -114,11 +116,11 @@ class CodeGenerationUtilTest {
                 """;
 
         ecc.setClassName("UserQueryAllResult");
-        ecc.setAdditionalFieldsOrLines(additionalLines);
+        ecc.setAdditionalClassBodySource(additionalLines);
         ecc.setIdAnnotationClass(javax.persistence.Id.class);
         ecc.setColumnAnnotationClass(jakarta.persistence.Column.class);
         ecc.setTableAnnotationClass(com.landawn.abacus.annotation.Table.class);
-        ecc.setGenerateFieldNameTable(true);
+        ecc.setGeneratePropNameTable(true);
         // ecc.setClassNamesToImport(N.asList("codes.entity.User", "jakarta.persistence.Column"));
         str = JdbcCodeGenerationUtil.generateEntityClassByQuery(dataSource, "UserQueryAllResult", "select * from user1", ecc);
         System.out.println(str);

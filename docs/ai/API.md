@@ -4054,7 +4054,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Contract:**
   - <p> If the lock is successfully acquired, a unique lock code is returned, which must be used to release the lock later.
   - If the lock cannot be acquired within the timeout, {@code null} is returned.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "report_generation_task"; String lockCode = dbLock.lock(resourceIdentifier); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform the critical operation that requires exclusive access // ...
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "report_generation_task"; String lockCode = dbLock.lock(resourceIdentifier); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform the critical operation that requires exclusive access // ...
   - } finally { // Ensure the lock is released, even if an error occurs dbLock.unlock(resourceIdentifier, lockCode); System.out.println("Lock released for: " + resourceIdentifier); } } else { System.out.println("Failed to acquire lock for: " + resourceIdentifier + " within default timeout."); } } </pre>
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource to lock. Must not be {@code null} or empty.
@@ -4064,7 +4064,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Summary:** Attempts to acquire a distributed lock on the specified target resource with a custom timeout.
 - **Contract:**
   - If successful, a unique lock code is returned; otherwise, {@code null} is returned.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "data_export_job"; long customTimeout = 15 * 1000; // Wait up to 15 seconds String lockCode = dbLock.lock(resourceIdentifier, customTimeout); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Execute the data export logic // ...
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "data_export_job"; long customTimeout = 15 * 1000; // Wait up to 15 seconds String lockCode = dbLock.lock(resourceIdentifier, customTimeout); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Execute the data export logic // ...
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource to lock. Must not be {@code null} or empty.
   - `timeout` (`long`) — the maximum time in milliseconds to wait for the lock. Must be non-negative.
@@ -4074,7 +4074,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Summary:** Attempts to acquire a distributed lock on the specified target resource with custom lock duration (live time) and acquisition timeout.
 - **Contract:**
   - <p> The acquired lock will automatically expire after {@code liveTime} milliseconds if not refreshed.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "batch_processing_queue"; long lockDuration = 10 * 60 * 1000; // Lock for 10 minutes long waitTimeout = 30 * 1000; // Wait up to 30 seconds to acquire String lockCode = dbLock.lock(resourceIdentifier, lockDuration, waitTimeout); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Execute the batch processing logic // ...
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "batch_processing_queue"; long lockDuration = 10 * 60 * 1000; // Lock for 10 minutes long waitTimeout = 30 * 1000; // Wait up to 30 seconds to acquire String lockCode = dbLock.lock(resourceIdentifier, lockDuration, waitTimeout); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Execute the batch processing logic // ...
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource to lock. Must not be {@code null} or empty.
   - `liveTime` (`long`) — the duration in milliseconds for which the lock is valid. Must be positive.
@@ -4087,7 +4087,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
   - If the initial attempt fails (meaning another process holds the lock), it will repeatedly retry after {@code retryInterval} milliseconds until the total {@code timeout} is reached.
   - If the calling thread is interrupted while sleeping between attempts, the loop stops immediately, the thread's interrupt status is restored, and {@code null} is returned.
   - When the timeout elapses without success, {@code null} is returned and the last failure (if any) is logged.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "inventory_update_process"; long lockDuration = 5 * 60 * 1000; // Lock for 5 minutes long acquisitionTimeout = 10 * 1000; // Wait up to 10 seconds long retryInterval = 500; // Retry every 500 milliseconds String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform the inventory update // ...
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "inventory_update_process"; long lockDuration = 5 * 60 * 1000; // Lock for 5 minutes long acquisitionTimeout = 10 * 1000; // Wait up to 10 seconds long retryInterval = 500; // Retry every 500 milliseconds String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform the inventory update // ...
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource to lock. Must not be {@code null} or empty.
   - `liveTime` (`long`) — the duration in milliseconds for which the lock is valid. Must be positive.
@@ -4103,7 +4103,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
   - The lock is released only if the provided {@code code} matches the unique code associated with the currently held lock for that target.
   - <p> If the lock is successfully released, the corresponding entry is removed from the database table.
   - If the lock does not exist, or if the provided code does not match the stored code, the operation will fail (return {@code false} ).
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "configuration_update"; String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000); // Acquire lock for 30s, wait 5s if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform configuration update // ...
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "configuration_update"; String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000); // Acquire lock for 30s, wait 5s if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform configuration update // ...
   - } finally { boolean released = dbLock.unlock(resourceIdentifier, lockCode); if (released) { System.out.println("Lock successfully released for: " + resourceIdentifier); } else { System.err.println("Failed to release lock for: " + resourceIdentifier + ".
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource whose lock is to be released. Must not be {@code null} or empty.
@@ -4113,7 +4113,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Signature:** `public synchronized void close()`
 - **Summary:** Closes this {@code DBLock} instance, releasing all associated resources.
 - **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); try { // Perform operations using the DBLock instance String lockCode = dbLock.lock("some_resource"); if (lockCode != null) { try { // ...
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); try { // Perform operations using the DBLock instance String lockCode = dbLock.lock("some_resource"); if (lockCode != null) { try { // ...
 - **Parameters:**
   - (none)
 
@@ -9091,13 +9091,13 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `conn` (`Connection`) — the database connection to use for dropping the table
   - `tableName` (`String`) — the name of the table to drop (optionally qualified); must not be blank
 - **Returns:** {@code true} if the table was dropped by this call; {@code false} if the table did not exist (either at the time of the existence check or by the time the {@code DROP} executed)
-##### getDBLock(...) -> DBLock
-- **Signature:** `public static DBLock getDBLock(final javax.sql.DataSource ds, final String tableName)`
+##### createDBLock(...) -> DBLock
+- **Signature:** `public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName)`
 - **Summary:** Creates a new {@link DBLock} backed by the specified database table for implementing cross-process / cross-JVM advisory locks.
 - **Contract:**
   - <p> The lock table must already exist (this method does not create it).
   - A successful {@code lock(target)} call returns a unique lock code that the caller must pass back to {@code unlock(target, code)} to release the lock.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "distributed_locks"); String lockCode = dbLock.lock("job_processor"); if (lockCode != null) { try { // Perform exclusive operation } finally { dbLock.unlock("job_processor", lockCode); } } } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "distributed_locks"); String lockCode = dbLock.lock("job_processor"); if (lockCode != null) { try { // Perform exclusive operation } finally { dbLock.unlock("job_processor", lockCode); } } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} to use for acquiring connections
   - `tableName` (`String`) — the name of the existing table that stores lock records
@@ -9408,18 +9408,18 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - <p> <b> Usage Examples: </b> </p> <pre> {@code JdbcUtil.setSqlLogHandler((sql, startTime, endTime) -> { long duration = endTime - startTime; if (duration > 1000) { // Log slow queries logger.warn("Slow query ({}ms): {}", duration, sql); } // Send metrics to monitoring system metricsCollector.recordSqlExecution(sql, duration); }); } </pre>
 - **Parameters:**
   - `sqlLogHandler` (`TriConsumer<String, Long, Long>`) — the handler that receives: SQL statement, start time (ms), end time (ms)
-##### setMinExecutionTimeForSqlPerfLog(...) -> void
-- **Signature:** `public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog)`
+##### sqlLogThresholdMillis(...) -> void
+- **Signature:** `public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog)`
 - **Summary:** Sets the minimum execution time threshold for SQL performance logging in the current thread.
 - **Parameters:**
   - `minExecutionTimeForSqlPerfLog` (`long`) — the minimum execution time in milliseconds (use a negative value to disable)
-- **Signature:** `public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength)`
+- **Signature:** `public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength)`
 - **Summary:** Sets the minimum execution time threshold for SQL performance logging in the current thread with a specified maximum SQL log length.
 - **Parameters:**
   - `minExecutionTimeForSqlPerfLog` (`long`) — the minimum execution time in milliseconds (use a negative value to disable)
   - `maxSqlLogLength` (`int`) — the maximum length of SQL statements in performance logs
-##### getMinExecutionTimeForSqlPerfLog(...) -> long
-- **Signature:** `public static long getMinExecutionTimeForSqlPerfLog()`
+##### sqlLogThresholdMillis(...) -> long
+- **Signature:** `public static long sqlLogThresholdMillis()`
 - **Summary:** Gets the current minimum execution time threshold for SQL performance logging in the current thread.
 - **Parameters:**
   - (none)
