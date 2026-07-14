@@ -62,6 +62,7 @@ import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
+import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.Jdbc.OutParam;
 import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
@@ -11930,6 +11931,12 @@ public final class JdbcUtil {
             }
 
             closed = true;
+
+            final DaoCache localDaoCache = localThreadCache_TL.get();
+
+            if (localDaoCache != null) {
+                localDaoCache.clear();
+            }
 
             if (previousCache == null) {
                 localThreadCache_TL.remove();

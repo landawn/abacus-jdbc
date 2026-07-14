@@ -7209,6 +7209,8 @@ public final class Jdbc {
          */
         void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
+        void clear();
+
     }
 
     /**
@@ -7368,6 +7370,11 @@ public final class Jdbc {
                 pool.keySet().stream().filter(k -> cacheKeyMatchesTable(k, updatedTableName)).toList().forEach(pool::remove);
             }
         }
+
+        @Override
+        public void clear() {
+            pool.clear();
+        }
     }
 
     /**
@@ -7474,6 +7481,11 @@ public final class Jdbc {
             } else {
                 cache.entrySet().removeIf(e -> cacheKeyMatchesTable(e.getKey(), updatedTableName));
             }
+        }
+
+        @Override
+        public void clear() {
+            cache.clear();
         }
 
     }
