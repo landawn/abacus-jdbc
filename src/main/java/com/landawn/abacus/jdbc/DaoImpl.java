@@ -2109,13 +2109,12 @@ final class DaoImpl {
         final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 
         final Function<Condition, SqlBuilder.SP> selectFromSqlBuilderFunc = cond -> cond instanceof final Criteria criteria
-                && Strings.isNotEmpty(criteria.selectModifier())
-                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.selectModifier()).from(tableName).append(cond).build()
+                && Strings.isNotEmpty(criteria.selectModifier()) ? parameterizedDsl.select(entityClass).from(tableName).append(cond).build()
                         : parameterizedDsl.select(entityClass).from(tableName).append(cond).build();
 
         final BiFunction<String, Condition, SqlBuilder.SP> singleQuerySqlBuilderFunc = (selectPropName,
                 cond) -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
-                        ? parameterizedDsl.select(selectPropName).selectModifier(criteria.selectModifier()).from(tableName, entityClass).append(cond).build()
+                        ? parameterizedDsl.select(selectPropName).from(tableName, entityClass).append(cond).build()
                         : parameterizedDsl.select(selectPropName).from(tableName, entityClass).append(cond).build();
 
         final BiFunction<String, Condition, SqlBuilder.SP> singleQueryByIdSqlBuilderFunc = (selectPropName,
@@ -2123,18 +2122,18 @@ final class DaoImpl {
 
         final BiFunction<Collection<String>, Condition, SqlBuilder> selectSqlBuilderFunc = (selectPropNames, cond) -> N.isEmpty(selectPropNames)
                 ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
-                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.selectModifier()).from(tableName).append(cond)
+                        ? parameterizedDsl.select(entityClass).from(tableName).append(cond)
                         : parameterizedDsl.select(entityClass).from(tableName).append(cond))
                 : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
-                        ? parameterizedDsl.select(selectPropNames).selectModifier(criteria.selectModifier()).from(tableName, entityClass).append(cond)
+                        ? parameterizedDsl.select(selectPropNames).from(tableName, entityClass).append(cond)
                         : parameterizedDsl.select(selectPropNames).from(tableName, entityClass).append(cond);
 
         final BiFunction<Collection<String>, Condition, SqlBuilder> namedSelectSqlBuilderFunc = (selectPropNames, cond) -> N.isEmpty(selectPropNames)
                 ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
-                        ? namedDsl.select(entityClass).selectModifier(criteria.selectModifier()).from(tableName).append(cond)
+                        ? namedDsl.select(entityClass).from(tableName).append(cond)
                         : namedDsl.select(entityClass).from(tableName).append(cond))
                 : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
-                        ? namedDsl.select(selectPropNames).selectModifier(criteria.selectModifier()).from(tableName, entityClass).append(cond)
+                        ? namedDsl.select(selectPropNames).from(tableName, entityClass).append(cond)
                         : namedDsl.select(selectPropNames).from(tableName, entityClass).append(cond);
 
         final Function<Collection<String>, SqlBuilder> namedInsertSqlBuilderFunc = propNamesToInsert -> N.isEmpty(propNamesToInsert)
