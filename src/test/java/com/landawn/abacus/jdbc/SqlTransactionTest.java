@@ -80,6 +80,26 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testTransactionNoneIsRejectedBeforeConnectionMutation() throws SQLException {
+        assertThrows(IllegalArgumentException.class,
+                () -> new SqlTransaction(dataSource, connection, IsolationLevel.NONE, SqlTransaction.CreatedBy.JDBC_UTIL, false));
+
+        verify(connection, never()).setAutoCommit(false);
+        verify(connection, never()).setTransactionIsolation(Connection.TRANSACTION_NONE);
+    }
+
+    @Test
+    public void testNestedTransactionNoneIsRejectedWithoutChangingScope() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        assertThrows(IllegalArgumentException.class, () -> transaction.incrementAndGetRef(IsolationLevel.NONE, false));
+
+        assertEquals(IsolationLevel.READ_COMMITTED, transaction.isolationLevel());
+        transaction.rollbackIfNotCommitted();
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+    }
+
+    @Test
     public void testStatus() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
@@ -246,6 +266,20 @@ public class SqlTransactionTest extends TestBase {
         final String result = transaction.callOutsideTransaction(() -> "test result");
 
         assertEquals("test result", result);
+    }
+
+    @Test
+    public void testRunOutsideTransactionRestoresRollbackOnlyTransaction() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false);
+        transaction.rollbackIfNotCommitted();
+        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+
+        transaction.runOutsideTransaction(() -> assertEquals(null, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL)));
+
+        assertSame(transaction, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+        transaction.rollbackIfNotCommitted();
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
     }
 
     @Test
@@ -541,16 +575,34 @@ public class SqlTransactionTest extends TestBase {
         verify(connection, times(1)).commit(); // only one actual DB commit
     }
 
-    // commit() fails, then rollback also fails → rollback exception swallowed, original rethrown (L335-337)
+    // commit() fails, then rollback also fails: the commit failure remains primary and the rollback failure is suppressed.
     @Test
-    public void testCommit_WhenRollbackAlsoFails_RollbackExceptionSwallowed() throws SQLException {
+    public void testCommit_WhenRollbackAlsoFails_RollbackExceptionSuppressed() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         doThrow(new SQLException("Commit failed")).when(connection).commit();
         doThrow(new SQLException("Rollback also failed")).when(connection).rollback();
 
-        assertThrows(UncheckedSQLException.class, transaction::commit);
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, transaction::commit);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+        assertEquals("Rollback also failed", thrown.getSuppressed()[0].getCause().getMessage());
         assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
         verify(connection).rollback();
+    }
+
+    @Test
+    public void testCommit_WhenRollbackThrowsError_CommitFailureRemainsPrimary() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new SQLException("Commit failed")).when(connection).commit();
+        doThrow(new AssertionError("Rollback error")).when(connection).rollback();
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, transaction::commit);
+
+        assertEquals("Commit failed", thrown.getCause().getMessage());
+        assertEquals(1, thrown.getSuppressed().length);
+        assertTrue(thrown.getSuppressed()[0] instanceof AssertionError);
+        assertEquals("Rollback error", thrown.getSuppressed()[0].getMessage());
+        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
     }
 
     // rollback() after commit logs warning and returns (L391-393)
@@ -943,6 +995,51 @@ public class SqlTransactionTest extends TestBase {
         // Primary cause must be the rollback SQLException, not the post-action exception.
         assertNotNull(ex.getCause());
         assertEquals("rollback-boom", ex.getCause().getMessage());
+        assertEquals(1, ex.getSuppressed().length);
+        assertEquals("post-rollback-action-boom", ex.getSuppressed()[0].getMessage());
+    }
+
+    @Test
+    public void testRollback_ErrorAfterRollbackDoesNotMaskPrimaryRollbackFailure() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new SQLException("rollback-boom")).when(connection).rollback();
+
+        final UncheckedSQLException ex = assertThrows(UncheckedSQLException.class, () -> tran.rollback(() -> {
+            throw new AssertionError("post-rollback-error");
+        }));
+
+        assertEquals("rollback-boom", ex.getCause().getMessage());
+        assertEquals(1, ex.getSuppressed().length);
+        assertTrue(ex.getSuppressed()[0] instanceof AssertionError);
+        assertEquals("post-rollback-error", ex.getSuppressed()[0].getMessage());
+    }
+
+    @Test
+    public void testRollback_ActionFailureDoesNotMaskUncheckedRollbackFailure() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new AssertionError("rollback-error")).when(connection).rollback();
+
+        final AssertionError ex = assertThrows(AssertionError.class, () -> tran.rollback(() -> {
+            throw new IllegalStateException("post-rollback-action");
+        }));
+
+        assertEquals("rollback-error", ex.getMessage());
+        assertEquals(1, ex.getSuppressed().length);
+        assertEquals("post-rollback-action", ex.getSuppressed()[0].getMessage());
+    }
+
+    @Test
+    public void testRollback_CleanupFailureDoesNotMaskRollbackSqlFailure() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new SQLException("rollback-boom")).when(connection).rollback();
+        doThrow(new AssertionError("cleanup-error")).when(connection).setAutoCommit(true);
+
+        final UncheckedSQLException ex = assertThrows(UncheckedSQLException.class, tran::rollback);
+
+        assertEquals("rollback-boom", ex.getCause().getMessage());
+        assertEquals(1, ex.getSuppressed().length);
+        assertEquals("cleanup-error", ex.getSuppressed()[0].getMessage());
+        verify(connection).close();
     }
 
     @Test

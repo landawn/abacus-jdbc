@@ -19,6 +19,9 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -28,6 +31,17 @@ import com.landawn.abacus.TestBase;
 public class csTest extends TestBase {
 
     // Test all constant fields exist and have expected values
+
+    @Test
+    public void testAllConstantsMatchTheirFieldNames() throws IllegalAccessException {
+        for (final Field field : cs.class.getDeclaredFields()) {
+            final int modifiers = field.getModifiers();
+
+            if (field.getType() == String.class && Modifier.isPublic(modifiers) && Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers)) {
+                assertEquals(field.getName(), field.get(null), field.getName());
+            }
+        }
+    }
 
     @Test
     public void testResultSetConstant() {

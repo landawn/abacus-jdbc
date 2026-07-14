@@ -69,16 +69,18 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * and handling OUT parameters. This class extends {@link AbstractQuery} and provides comprehensive support
  * for calling database stored procedures with both IN and OUT parameters.
  *
- * <p>The backing {@code CallableStatement} is closed by default after any execution methods
+ * <p>The backing {@code CallableStatement} is closed by default after materializing execution methods
  * (which will trigger the backing {@code CallableStatement} to be executed, for example,
  * query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/..),
- * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</p>
+ * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</p>
+ * Lazy streams retain the statement until the stream is closed, and asynchronous operations retain
+ * it until the task completes.
  *
- * <p>Generally, don't cache or reuse the instance of this class, unless the {@code 'closeAfterExecution'}
+ * <p>Generally, don't cache or reuse the instance of this class, unless the {@code closeAfterExecution}
  * flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</p>
  *
- * <p>The {@code ResultSet} returned by query will always be closed after execution,
- * even if {@code 'closeAfterExecution'} flag is set to {@code false}.</p>
+ * <p>Result sets consumed by materializing query methods are always closed after extraction,
+ * even if the {@code closeAfterExecution} flag is set to {@code false}.</p>
  *
  * <p>Remember: parameter/column index in {@code CallableStatement/ResultSet} starts from 1, not 0.</p>
  *
@@ -1619,7 +1621,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Note:</b> every entry of the map is forwarded to the driver. Unlike
      * {@link NamedQuery#setParameters(Map)} (which silently ignores keys that are not declared in the SQL),
-     * a key here that is not a parameter of the stored procedure results in a driver {@link SQLException}.</p>
+     * a key here that is not a parameter of the stored procedure results in a driver {@link SQLException}.
+     * If any binding fails, this query is closed because its parameters may have been only partially set.</p>
      *
      * @param parameters a map containing parameter names as keys and their corresponding values
      * @return this CallableQuery instance for method chaining
@@ -1633,7 +1636,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             for (final Map.Entry<String, ?> entry : parameters.entrySet()) {
                 setObject(entry.getKey(), entry.getValue());
             }
-        } catch (final Exception e) {
+        } catch (final SQLException | RuntimeException | Error e) {
             close();
             throw e;
         }
@@ -1648,7 +1651,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>The method uses the bean information of the entity class to extract property values.
      * Each parameter name in the list should correspond to a property name in the entity object.
-     * The appropriate database type is automatically determined based on the property type.</p>
+     * The appropriate database type is automatically determined based on the property type. If any
+     * binding fails, this query is closed because its parameters may have been only partially set.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1661,6 +1665,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * query.setParameters(employee, paramNames)
      *      .execute();
      * }</pre>
+     *
+     * <p>If any binding fails, this query is closed because its parameters may have been only partially set.</p>
      *
      * @param entity the entity object containing the parameter values. Must not be {@code null}.
      * @param parameterNamesToSet a list of parameter names corresponding to properties in the entity.
@@ -1692,7 +1698,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
                 propInfo.dbType.set(cstmt, parameterName, propInfo.getPropValue(entity));
             }
-        } catch (final Exception e) {
+        } catch (final SQLException | RuntimeException | Error e) {
             close();
             throw e;
         }
@@ -2271,14 +2277,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             outParams = new ArrayList<>();
         }
 
-        final boolean byIndex = outParameter.getParameterIndex() > 0;
+        final boolean byIndex = outParameter.parameterIndex() > 0;
         Jdbc.OutParam existingOutParam = null;
 
         for (int i = 0, size = outParams.size(); i < size; i++) {
             existingOutParam = outParams.get(i);
 
-            if (byIndex ? existingOutParam.getParameterIndex() == outParameter.getParameterIndex()
-                    : N.equals(existingOutParam.getParameterName(), outParameter.getParameterName())) {
+            if (byIndex ? existingOutParam.parameterIndex() == outParameter.parameterIndex()
+                    : N.equals(existingOutParam.parameterName(), outParameter.parameterName())) {
                 outParams.set(i, outParameter);
                 return;
             }
@@ -2293,8 +2299,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>Stored procedures may return any mix of result sets and update counts; this method walks the
      * results in order (via {@link CallableStatement#getMoreResults()} and {@link CallableStatement#getUpdateCount()})
-     * and returns the first {@code ResultSet} encountered. It returns an empty {@code ResultSet} if no result set
-     * is ever produced.
+     * and returns the first {@code ResultSet} encountered. It returns an empty, read-only {@code ResultSet} if no result set
+     * is ever produced. That fallback reports zero columns and no rows; as with a driver result set whose cursor is not on
+     * a row, column getters and row-update operations throw {@link SQLException}.
      *
      * <p>If {@link #setFetchDirection(FetchDirection)} was not previously called on this query, the fetch direction
      * is set to {@link ResultSet#FETCH_FORWARD} before execution.
@@ -2307,7 +2314,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     protected ResultSet executeQuery() throws SQLException {
         final ResultSet rs = executeQueryOrNull();
 
-        return rs == null ? emptyResultSet() : rs;
+        return rs == null ? emptyResultSet(cstmt) : rs;
     }
 
     private ResultSet executeQueryOrNull() throws SQLException {
@@ -2328,19 +2335,26 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         while (ret || updateCount != -1) {
             if (ret) {
-                // Wrapped for parity with PreparedQuery/NamedQuery reads (JdbcUtil.executeQuery): user
-                // mappers see normalized values (Oracle TIMESTAMP -> java.sql.Timestamp, materialized LOBs).
-                return ResultSetProxy.wrap(cstmt.getResultSet());
-            } else {
-                ret = cstmt.getMoreResults();
-                updateCount = cstmt.getUpdateCount();
+                final ResultSet currentRs = cstmt.getResultSet();
+
+                if (currentRs != null) {
+                    // Wrapped for parity with PreparedQuery/NamedQuery reads (JdbcUtil.executeQuery): user
+                    // mappers see normalized values (Oracle TIMESTAMP -> java.sql.Timestamp, materialized LOBs).
+                    return ResultSetProxy.wrap(currentRs);
+                }
+                // Some drivers have been observed to claim a ResultSet while returning null from
+                // getResultSet(). Treat the claim as stale and keep advancing rather than losing a
+                // valid later ResultSet.
             }
+
+            ret = cstmt.getMoreResults();
+            updateCount = cstmt.getUpdateCount();
         }
 
         return null;
     }
 
-    private static ResultSet emptyResultSet() {
+    private static ResultSet emptyResultSet(final CallableStatement producingStatement) {
         final ResultSetMetaData metadata = (ResultSetMetaData) Proxy.newProxyInstance(CallableQuery.class.getClassLoader(),
                 new Class<?>[] { ResultSetMetaData.class }, (proxy, method, args) -> {
                     final String methodName = method.getName();
@@ -2359,24 +2373,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                         return ((Class<?>) args[0]).isInstance(proxy);
                     }
 
-                    return defaultResultSetReturnValue(proxy, args, methodName, method.getReturnType(), "Empty ResultSet metadata has no columns");
+                    return unsupportedEmptyResultSetOperation(proxy, args, methodName, "Empty ResultSet metadata has no columns");
                 });
         final boolean[] closed = { false };
 
         return (ResultSet) Proxy.newProxyInstance(CallableQuery.class.getClassLoader(), new Class<?>[] { ResultSet.class }, (proxy, method, args) -> {
             final String methodName = method.getName();
 
-            if (methodName.equals("next")) {
-                return false;
-            } else if (methodName.equals("close")) {
+            if (methodName.equals("close")) {
                 closed[0] = true;
                 return null;
             } else if (methodName.equals("isClosed")) {
                 return closed[0];
-            } else if (methodName.equals("getMetaData")) {
-                return metadata;
-            } else if (methodName.equals("wasNull")) {
-                return false;
             } else if (methodName.equals("unwrap")) {
                 final Class<?> cls = (Class<?>) args[0];
 
@@ -2387,45 +2395,58 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 throw new SQLException("Not a wrapper for " + cls);
             } else if (methodName.equals("isWrapperFor")) {
                 return ((Class<?>) args[0]).isInstance(proxy);
+            } else if (methodName.equals("toString") || methodName.equals("hashCode") || methodName.equals("equals")) {
+                return unsupportedEmptyResultSetOperation(proxy, args, methodName, "The stored procedure did not return a ResultSet");
             }
 
-            return defaultResultSetReturnValue(proxy, args, methodName, method.getReturnType(), "The stored procedure did not return a ResultSet");
+            if (closed[0]) {
+                throw new SQLException("ResultSet is closed");
+            }
+
+            switch (methodName) {
+                case "next":
+                    return false;
+                case "getMetaData":
+                    return metadata;
+                case "getStatement":
+                    return producingStatement;
+                case "getWarnings":
+                    return null;
+                case "clearWarnings":
+                    return null;
+                case "getType":
+                    return ResultSet.TYPE_FORWARD_ONLY;
+                case "getConcurrency":
+                    return ResultSet.CONCUR_READ_ONLY;
+                case "getHoldability":
+                    return ResultSet.CLOSE_CURSORS_AT_COMMIT;
+                case "getFetchDirection":
+                    return ResultSet.FETCH_FORWARD;
+                case "getFetchSize":
+                case "getRow":
+                    return 0;
+                case "isBeforeFirst":
+                case "isAfterLast":
+                case "isFirst":
+                case "isLast":
+                case "rowUpdated":
+                case "rowInserted":
+                case "rowDeleted":
+                    return false;
+                default:
+                    return unsupportedEmptyResultSetOperation(proxy, args, methodName, "The stored procedure did not return a ResultSet");
+            }
         });
     }
 
-    private static Object defaultResultSetReturnValue(final Object proxy, final Object[] args, final String methodName, final Class<?> returnType,
-            final String message) throws SQLException {
+    private static Object unsupportedEmptyResultSetOperation(final Object proxy, final Object[] args, final String methodName, final String message)
+            throws SQLException {
         if (methodName.equals("toString")) {
             return message;
         } else if (methodName.equals("hashCode")) {
             return System.identityHashCode(proxy);
         } else if (methodName.equals("equals")) {
             return args != null && args.length > 0 && proxy == args[0];
-        } else if (Void.TYPE.equals(returnType)) {
-            return null;
-        } else if (Boolean.TYPE.equals(returnType)) {
-            return false;
-        } else if (Byte.TYPE.equals(returnType)) {
-            return (byte) 0;
-        } else if (Short.TYPE.equals(returnType)) {
-            return (short) 0;
-        } else if (Integer.TYPE.equals(returnType)) {
-            // 0 is not a legal value for these JDBC characteristics; return the standard defaults.
-            return switch (methodName) {
-                case "getType" -> ResultSet.TYPE_FORWARD_ONLY;
-                case "getConcurrency" -> ResultSet.CONCUR_READ_ONLY;
-                case "getHoldability" -> ResultSet.CLOSE_CURSORS_AT_COMMIT;
-                case "getFetchDirection" -> ResultSet.FETCH_FORWARD;
-                default -> 0;
-            };
-        } else if (Long.TYPE.equals(returnType)) {
-            return 0L;
-        } else if (Float.TYPE.equals(returnType)) {
-            return 0F;
-        } else if (Double.TYPE.equals(returnType)) {
-            return 0D;
-        } else if (Character.TYPE.equals(returnType)) {
-            return (char) 0;
         }
 
         throw new SQLException(message);
@@ -2698,8 +2719,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         for (final Jdbc.OutParam outParam : outParams) {
             copy.add(outParam == null ? null
-                    : new Jdbc.OutParam(outParam.getParameterIndex(), outParam.getParameterName(), outParam.getSqlType(), outParam.getTypeName(),
-                            outParam.getScale()));
+                    : new Jdbc.OutParam(outParam.parameterIndex(), outParam.parameterName(), outParam.sqlType(), outParam.typeName(), outParam.scale()));
         }
 
         return copy;

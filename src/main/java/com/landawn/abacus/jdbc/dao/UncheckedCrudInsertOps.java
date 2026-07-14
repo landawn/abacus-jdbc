@@ -35,7 +35,7 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
 sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudInsertOps<T, ID, TD>, UncheckedInsertOps<T, TD>
-        permits UncheckedCrudDao, UncheckedNoUpdateCrudDao {
+        permits UncheckedCrudDao, UncheckedNonUpdateCrudDao {
     /**
      * Generates a new ID for entity insertion using an unchecked database-access contract.
      *

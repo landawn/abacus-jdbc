@@ -42,7 +42,7 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
  * @see InsertOps
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertOps<T, TD> permits CrudDao, NoUpdateCrudDao, UncheckedCrudInsertOps {
+sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertOps<T, TD> permits CrudDao, NonUpdateCrudDao, UncheckedCrudInsertOps {
     /**
      * Returns a {@link Jdbc.BiRowMapper} that extracts an ID from generated-key rows returned by an insert.
      * Override this method when the framework's default ID extraction strategy is not suitable.

@@ -19,7 +19,7 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * CRUD DAO that disables update and delete operations while permitting read and insert operations.
- * This interface extends {@link NoUpdateDao}, {@link CrudReadOps} and {@link CrudInsertOps}, effectively
+ * This interface extends {@link NonUpdateDao}, {@link CrudReadOps} and {@link CrudInsertOps}, effectively
  * creating a DAO that can only read existing records and insert new ones, but cannot modify or remove existing records.
  *
  * <p>This pattern is particularly useful for:</p>
@@ -52,7 +52,7 @@ import com.landawn.abacus.annotation.Beta;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a DAO for immutable transaction records
- * public interface TransactionDao extends NoUpdateCrudDao<Transaction, String, TransactionDao> {
+ * public interface TransactionDao extends NonUpdateCrudDao<Transaction, String, TransactionDao> {
  *     // Custom read methods can be added
  * }
  *
@@ -103,13 +103,13 @@ import com.landawn.abacus.annotation.Beta;
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
- * @see NoUpdateDao
+ * @see NonUpdateDao
  * @see CrudReadOps
  * @see CrudInsertOps
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface NoUpdateCrudDao<T, ID, TD extends NoUpdateCrudDao<T, ID, TD>>
-        extends NoUpdateDao<T, TD>, CrudReadOps<T, ID, TD>, CrudInsertOps<T, ID, TD> {
+public non-sealed interface NonUpdateCrudDao<T, ID, TD extends NonUpdateCrudDao<T, ID, TD>>
+        extends NonUpdateDao<T, TD>, CrudReadOps<T, ID, TD>, CrudInsertOps<T, ID, TD> {
 
 }

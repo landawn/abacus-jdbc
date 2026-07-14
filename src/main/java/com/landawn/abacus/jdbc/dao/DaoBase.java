@@ -43,6 +43,10 @@ import com.landawn.abacus.util.Throwables;
  * <p>Contains no actual database read or write operation; those live in {@link ReadOps}, {@link InsertOps},
  * {@link UpdateOps} and {@link DeleteOps}, which all extend this interface.</p>
  *
+ * <p>Asynchronous DAO actions are exposed through {@link #callAsync(Throwables.Function)} and
+ * {@link #runAsync(Throwables.Consumer)}. Their returned futures should be observed so execution
+ * failures are not silently discarded.</p>
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
  * @see ReadOps
@@ -115,7 +119,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     /**
      * Creates a PreparedQuery for the specified SQL query string.
      * The query can be any valid SQL statement (SELECT, INSERT, UPDATE, DELETE, etc.),
-     * unless this DAO is read-only (SELECT only) or no-update (SELECT/INSERT only).
+     * unless this DAO is read-only (SELECT only) or non-update (SELECT/INSERT only).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -127,7 +131,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @return a PreparedQuery instance for the specified query
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
-     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
+     *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -189,7 +193,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
-     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
+     *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
@@ -250,7 +254,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
-     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
+     *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -266,7 +270,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
-     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
+     *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -313,7 +317,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
-     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
+     *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -328,7 +332,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
-     *                                       or on a no-update DAO with SQL other than SELECT/INSERT
+     *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      */
     @Beta
     @NonDBOperation
@@ -376,7 +380,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<List<User>> future = dao.asyncCall(d ->
+     * ContinuableFuture<List<User>> future = dao.callAsync(d ->
      *     d.list(Filters.eq("status", "ACTIVE"))
      * );
      *
@@ -393,8 +397,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @SuppressWarnings("deprecation")
     @Beta
     @NonDBOperation
-    default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction) {
-        return asyncCall(sqlAction, executor());
+    default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction) {
+        return callAsync(sqlAction, executor());
     }
 
     /**
@@ -406,7 +410,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
      *
-     * ContinuableFuture<Boolean> future = dao.asyncCall(
+     * ContinuableFuture<Boolean> future = dao.callAsync(
      *     d -> d.exists(Filters.eq("status", "PENDING")),
      *     customExecutor
      * );
@@ -420,7 +424,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor) {
+    default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor) {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -430,13 +434,13 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     }
 
     /**
-     * Executes an asynchronous database operation without return value using default executor.
-     * Useful for fire-and-forget operations like logging or cleanup.
+     * Executes an asynchronous database operation without a result value using the default executor.
+     * The returned future should still be observed so database failures are not silently discarded.
      * Note: Transactions started in the current thread are NOT propagated to the async operation.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * dao.asyncRun(d -> {
+     * dao.runAsync(d -> {
      *     List<User> stale = d.list(Filters.lt("lastAccess", sixMonthsAgo));
      *     System.out.println("stale accounts: " + stale.size());
      * });
@@ -449,8 +453,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @SuppressWarnings("deprecation")
     @Beta
     @NonDBOperation
-    default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction) {
-        return asyncRun(sqlAction, executor());
+    default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction) {
+        return runAsync(sqlAction, executor());
     }
 
     /**
@@ -462,7 +466,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
      *
-     * dao.asyncRun(
+     * dao.runAsync(
      *     d -> {
      *         long highValue = d.list(Filters.gt("amount", 1000)).size();
      *         System.out.println("high-value rows: " + highValue);
@@ -480,7 +484,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor) {
+    default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor) {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
         N.checkArgNotNull(executor, cs.executor);
 

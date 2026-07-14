@@ -35,7 +35,7 @@ import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.dao.CrudDao;
-import com.landawn.abacus.jdbc.dao.NoUpdateCrudDao;
+import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
@@ -463,7 +463,7 @@ public class DaoImplIntegrationTest extends TestBase {
     public interface TxLeakDao extends CrudDao<UserAccount, Long, TxLeakDao> {
         @com.landawn.abacus.jdbc.annotation.Transactional
         @com.landawn.abacus.jdbc.annotation.SqlLogEnabled(value = true, maxSqlLogLength = 4242)
-        @com.landawn.abacus.jdbc.annotation.PerfLog(sqlLogThresholdMillis = 7777L, daoMethodLogThresholdMillis = 8888L)
+        @com.landawn.abacus.jdbc.annotation.PerfLog(sqlPerfLogThresholdMillis = 7777L, daoMethodPerfLogThresholdMillis = 8888L)
         @Query("SELECT COUNT(*) FROM user_account")
         long countWithTx() throws SQLException;
     }
@@ -482,7 +482,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
         // Snapshot the thread-local SQL-log + perf-log state before the failed call.
         final boolean priorSqlLogEnabled = JdbcUtil.isSqlLogEnabled();
-        final long priorMinPerfLog = JdbcUtil.sqlLogThresholdMillis();
+        final long priorMinPerfLog = JdbcUtil.getSqlPerfLogThresholdMillis();
 
         // Closing the Hikari pool makes beginTransaction's getConnection() throw, simulating a
         // mid-method DataSource failure that occurs after the @SqlLogEnabled/@PerfLog wrapper has
@@ -494,7 +494,7 @@ public class DaoImplIntegrationTest extends TestBase {
         // The fix: even though beginTransaction threw, the wrapper's finally block must have
         // restored both thread-locals.
         assertEquals(priorSqlLogEnabled, JdbcUtil.isSqlLogEnabled(), "SQL log thread-local must be restored after beginTransaction failure");
-        assertEquals(priorMinPerfLog, JdbcUtil.sqlLogThresholdMillis(), "Perf log thread-local must be restored after beginTransaction failure");
+        assertEquals(priorMinPerfLog, JdbcUtil.getSqlPerfLogThresholdMillis(), "Perf log thread-local must be restored after beginTransaction failure");
     }
 
     // CrudDao queryFor* single-column-by-id family: each typed accessor drives a distinct generated
@@ -973,7 +973,7 @@ public class DaoImplIntegrationTest extends TestBase {
     // branches to run on a successful call (the happy-path counterpart to the existing
     // begin-transaction-failure restoration test).
     // =====================================================================================
-    @com.landawn.abacus.jdbc.annotation.PerfLog(sqlLogThresholdMillis = 0, daoMethodLogThresholdMillis = 0)
+    @com.landawn.abacus.jdbc.annotation.PerfLog(sqlPerfLogThresholdMillis = 0, daoMethodPerfLogThresholdMillis = 0)
     @com.landawn.abacus.jdbc.annotation.SqlLogEnabled
     public interface PerfLogDao extends CrudDao<UserAccount, Long, PerfLogDao> {
         @Query("SELECT COUNT(*) FROM user_account")
@@ -1037,11 +1037,11 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     // =====================================================================================
-    // @Cache + @CacheResult on a NoUpdate DAO: the second call with identical args is served
+    // @Cache + @CacheResult on a NonUpdate DAO: the second call with identical args is served
     // from cache, so data inserted after the first call is NOT reflected (proves cache hit).
     // =====================================================================================
     @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelayMillis = 60000)
-    public interface CachedUserDao extends NoUpdateCrudDao<UserAccount, Long, CachedUserDao> {
+    public interface CachedUserDao extends NonUpdateCrudDao<UserAccount, Long, CachedUserDao> {
         @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true)
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
         List<UserAccount> findCachedByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;

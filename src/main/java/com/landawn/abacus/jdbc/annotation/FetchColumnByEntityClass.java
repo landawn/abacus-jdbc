@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -25,8 +26,9 @@ import java.lang.annotation.Target;
  * This annotation may only be applied to methods whose return type is {@code Dataset}.
  *
  * <p>When enabled (default), only columns that correspond to properties in the entity class
- * will be fetched from the result set. This provides better performance and cleaner results
- * by avoiding unnecessary data retrieval.</p>
+ * will be retained in the returned {@code Dataset}. This keeps the result shape aligned with the
+ * entity and avoids materializing unrelated columns; it does not rewrite the SQL projection or
+ * prevent the database/driver from returning those columns.</p>
  *
  * <p>When disabled, all columns from the query result will be fetched, regardless of whether
  * they have corresponding properties in the entity class.</p>
@@ -59,7 +61,7 @@ import java.lang.annotation.Target;
  * <ul>
  *   <li>Working with complex joins that return extra columns</li>
  *   <li>You need to fetch calculated columns or aggregations not in the entity</li>
- *   <li>Optimizing performance by fetching only required columns</li>
+ *   <li>Keeping the returned {@code Dataset} limited to entity-mapped columns</li>
  * </ul>
  *
  * <p>Note: This annotation may only be applied to methods whose return type is {@code Dataset}.
@@ -68,6 +70,7 @@ import java.lang.annotation.Target;
  *
  * @see DaoConfig#fetchColumnByEntityClassForDatasetQuery()
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
 public @interface FetchColumnByEntityClass {
@@ -78,7 +81,7 @@ public @interface FetchColumnByEntityClass {
      * <p>When {@code true} (default):</p>
      * <ul>
      *   <li>Only columns with matching properties in the entity class are fetched</li>
-     *   <li>Provides better performance by reducing data transfer</li>
+     *   <li>Avoids materializing unrelated columns in the returned {@code Dataset}</li>
      *   <li>Results in cleaner Dataset with only relevant columns</li>
      * </ul>
      *

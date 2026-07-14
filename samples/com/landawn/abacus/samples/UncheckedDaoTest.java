@@ -175,7 +175,7 @@ public class UncheckedDaoTest {
                 if (idx % 2 == 0) {
                     System.out.println("###: enable log for Thread: " + Thread.currentThread());
                     JdbcUtil.enableSqlLog();
-                    JdbcUtil.sqlLogThresholdMillis(0);
+                    JdbcUtil.setSqlPerfLogThresholdMillis(0);
                 } else {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
                 }
@@ -190,7 +190,7 @@ public class UncheckedDaoTest {
                 if (idx % 2 == 0) {
                     System.out.println("###: disable log for Thread: " + Thread.currentThread());
                     JdbcUtil.disableSqlLog();
-                    JdbcUtil.sqlLogThresholdMillis(-1);
+                    JdbcUtil.setSqlPerfLogThresholdMillis(-1);
                 }
             }
         });

@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import javax.sql.DataSource;
 
@@ -2061,5 +2062,28 @@ public class JoinEntityHelperTest extends TestBase {
 
         Mockito.verify(dao, Mockito.never())
                 .loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testCustomExecutorOverloads_RejectNullBeforeShortCircuiting() {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Collection<TestEntity> entities = List.of();
+        Collection<String> propNames = List.of();
+        Executor executor = null;
+
+        assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntities(entity, propNames, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntities(entities, propNames, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.loadAllJoinEntities(entity, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.loadAllJoinEntities(entities, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, propNames, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, propNames, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.loadAllJoinEntitiesIfAbsent(entity, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.loadAllJoinEntitiesIfAbsent(entities, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.deleteJoinEntities(entity, propNames, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.deleteJoinEntities(entities, propNames, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.deleteAllJoinEntities(entity, executor));
+        assertThrows(IllegalArgumentException.class, () -> dao.deleteAllJoinEntities(entities, executor));
     }
 }

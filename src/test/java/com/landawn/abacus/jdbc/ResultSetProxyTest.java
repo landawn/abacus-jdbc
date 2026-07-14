@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -60,6 +61,10 @@ import com.landawn.abacus.TestBase;
 @Tag("2025")
 public class ResultSetProxyTest extends TestBase {
 
+    private interface VendorResultSet extends ResultSet {
+        // Test-only vendor extension.
+    }
+
     private ResultSet delegate;
     private ResultSetProxy proxy;
 
@@ -75,13 +80,12 @@ public class ResultSetProxyTest extends TestBase {
     }
 
     @Test
-    public void testWrap_ReturnsProxy() throws SQLException {
+    public void testWrap_UnwrapsImplementedInterfaceToProxy() throws SQLException {
         ResultSet delegate = Mockito.mock(ResultSet.class);
-        when(delegate.unwrap(ResultSet.class)).thenReturn(delegate);
 
         ResultSetProxy proxy = ResultSetProxy.wrap(delegate);
 
-        assertSame(delegate, proxy.unwrap(ResultSet.class));
+        assertSame(proxy, proxy.unwrap(ResultSet.class));
     }
 
     @Test
@@ -99,9 +103,8 @@ public class ResultSetProxyTest extends TestBase {
     }
 
     @Test
-    public void testCloseAndWrapperChecksDelegate() throws SQLException {
+    public void testCloseAndWrapperChecksProxyFirst() throws SQLException {
         ResultSet delegate = Mockito.mock(ResultSet.class);
-        when(delegate.isWrapperFor(ResultSet.class)).thenReturn(true);
 
         ResultSetProxy proxy = ResultSetProxy.wrap(delegate);
 
@@ -109,7 +112,21 @@ public class ResultSetProxyTest extends TestBase {
         proxy.close();
 
         verify(delegate).close();
-        verify(delegate).isWrapperFor(ResultSet.class);
+    }
+
+    @Test
+    public void testWrapperChecksDelegateForVendorInterface() throws SQLException {
+        final ResultSet delegate = Mockito.mock(ResultSet.class);
+        final VendorResultSet vendorResultSet = Mockito.mock(VendorResultSet.class);
+        when(delegate.isWrapperFor(VendorResultSet.class)).thenReturn(true);
+        when(delegate.unwrap(VendorResultSet.class)).thenReturn(vendorResultSet);
+
+        final ResultSetProxy proxy = ResultSetProxy.wrap(delegate);
+
+        assertTrue(proxy.isWrapperFor(VendorResultSet.class));
+        assertSame(vendorResultSet, proxy.unwrap(VendorResultSet.class));
+        verify(delegate).isWrapperFor(VendorResultSet.class);
+        verify(delegate).unwrap(VendorResultSet.class);
     }
 
     // Tests for delegation methods by column name (uncovered)
@@ -1493,6 +1510,17 @@ public class ResultSetProxyTest extends TestBase {
         when(delegate.getObject(2)).thenReturn(utilDate);
         Object result = proxy.getObject("col2");
         assertEquals(utilDate, result);
+    }
+
+    @Test
+    public void testGetObjectByLabel_NonDateValueDoesNotRequireMetadata() throws SQLException {
+        final Object value = new Object();
+        when(delegate.findColumn("opaque")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn(value);
+        when(delegate.getMetaData()).thenThrow(new SQLException("metadata unavailable"));
+
+        assertSame(value, proxy.getObject("opaque"));
+        verify(delegate, never()).getMetaData();
     }
 
     // getObject(int) - columnIndex <= 0 branch (L459-L460)

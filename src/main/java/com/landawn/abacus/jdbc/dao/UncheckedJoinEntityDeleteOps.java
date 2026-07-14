@@ -25,6 +25,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
@@ -359,7 +360,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total count of deleted records, or 0 if {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
      *             prefer the sequential {@link #deleteJoinEntities(Object, Collection)} for transactional deletion
      */
@@ -367,6 +369,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(joinEntityPropNames)) {
             return 0;
         }
@@ -531,7 +535,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total count of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
      *             prefer the sequential {@link #deleteJoinEntities(Collection, Collection)} for transactional deletion
      */
@@ -540,6 +545,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
             throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return 0;
         }
@@ -620,6 +627,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total count of deleted records
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
      *             prefer the sequential {@link #deleteAllJoinEntities(Object)} for transactional deletion
      */
@@ -627,6 +635,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
@@ -703,6 +713,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total count of deleted records, or 0 if {@code entities} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
      *             prefer the sequential {@link #deleteAllJoinEntities(Collection)} for transactional deletion
      */
@@ -710,6 +721,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities)) {
             return 0;
         }

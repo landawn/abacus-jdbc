@@ -32,6 +32,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +78,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.DaoBase;
 import com.landawn.abacus.jdbc.dao.DaoUtil;
-import com.landawn.abacus.jdbc.dao.NoUpdateDao;
+import com.landawn.abacus.jdbc.dao.NonUpdateDao;
 import com.landawn.abacus.jdbc.dao.ReadOnlyDao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
@@ -101,8 +102,8 @@ import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
-import com.landawn.abacus.query.condition.Expression;
 import com.landawn.abacus.query.condition.Limit;
+import com.landawn.abacus.query.condition.SqlExpression;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
@@ -275,7 +276,7 @@ final class DaoImpl {
                 parsedSql = sqlMapper.get(id);
                 sql = parsedSql.parameterizedSql();
 
-                final Map<String, String> attrs = sqlMapper.getAttributes(id);
+                final Map<String, String> attrs = sqlMapper.attributes(id);
 
                 if (N.notEmpty(attrs)) {
                     if (attrs.containsKey(SqlMapper.TIMEOUT)) {
@@ -1281,7 +1282,11 @@ final class DaoImpl {
                             + fullClassMethodName);
         }
 
-        if (stmtParamLen == 0 || queryInfo.isBatch) { //NOSONAR
+        if (stmtParamLen == 0) {
+            if (queryInfo.isNamedQuery) {
+                validateNamedParameterBindings(queryInfo, java.util.Collections.emptyList(), fullClassMethodName);
+            }
+        } else if (queryInfo.isBatch) { //NOSONAR
             // ignore
         } else if (stmtParamLen == 1) {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
@@ -1317,6 +1322,7 @@ final class DaoImpl {
                         .orElseNull();
 
                 if (Strings.isNotEmpty(paramName)) {
+                    validateNamedParameterBindings(queryInfo, N.asList(paramName), fullClassMethodName);
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
                 } else if (queryInfo.isSingleParameter) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
@@ -1433,13 +1439,7 @@ final class DaoImpl {
                         .map(Bind::value)
                         .toArray(IntFunctions.ofStringArray());
 
-                final List<String> diffParamNames = N.difference(queryInfo.parsedSql.namedParameters(), N.toList(paramNames));
-
-                if (N.notEmpty(diffParamNames)
-                        && !N.allMatch(diffParamNames, it -> Strings.equalsAny(it, JdbcUtil.PN_NOW, JdbcUtil.PN_SYS_TIME, JdbcUtil.PN_SYS_DATE))) {
-                    throw new UnsupportedOperationException("In method: " + fullClassMethodName
-                            + ", The named parameters in sql are different from the names bound by method parameters: " + diffParamNames);
-                }
+                validateNamedParameterBindings(queryInfo, N.asList(paramNames), fullClassMethodName);
 
                 parametersSetter = (preparedQuery, args) -> {
                     final NamedQuery namedQuery = ((NamedQuery) preparedQuery);
@@ -1496,67 +1496,92 @@ final class DaoImpl {
         }
 
         if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
-            if (queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_NOW)) {
-                if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> setSysTimestampParam(preparedQuery, JdbcUtil.PN_NOW);
-                } else {
-                    final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
+            final boolean hasNow = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_NOW);
+            final boolean hasSysTime = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_TIME);
+            final boolean hasSysDate = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_DATE);
 
-                    parametersSetter = (preparedQuery, args) -> {
-                        tmp.accept(preparedQuery, args);
-                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_NOW);
-                    };
-                }
+            if (hasNow || hasSysTime || hasSysDate) {
+                final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter == null ? Jdbc.BiParametersSetter.DO_NOTHING : parametersSetter;
 
-            }
+                parametersSetter = (preparedQuery, args) -> {
+                    tmp.accept(preparedQuery, args);
 
-            if (queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_TIME)) {
-                if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> setSysTimestampParam(preparedQuery, JdbcUtil.PN_SYS_TIME);
-                } else {
-                    final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
+                    // Capture one clock reading for the entire execution. Besides honoring the documented
+                    // alias semantics (:now and :sysTime are the same instant), deriving :sysDate from that
+                    // same value prevents a midnight boundary from producing internally inconsistent values.
+                    final java.sql.Timestamp currentTimestamp = Dates.currentTimestamp();
 
-                    parametersSetter = (preparedQuery, args) -> {
-                        tmp.accept(preparedQuery, args);
-                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_SYS_TIME);
-                    };
-                }
-
-            }
-
-            if (queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_DATE)) {
-                if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> setSysDateParam(preparedQuery, JdbcUtil.PN_SYS_DATE);
-                } else {
-                    final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
-
-                    parametersSetter = (preparedQuery, args) -> {
-                        tmp.accept(preparedQuery, args);
-                        setSysDateParam(preparedQuery, JdbcUtil.PN_SYS_DATE);
-                    };
-                }
-
+                    if (hasNow) {
+                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_NOW, currentTimestamp);
+                    }
+                    if (hasSysTime) {
+                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_SYS_TIME, currentTimestamp);
+                    }
+                    if (hasSysDate) {
+                        setSysDateParam(preparedQuery, JdbcUtil.PN_SYS_DATE, new java.sql.Date(currentTimestamp.getTime()));
+                    }
+                };
             }
         }
 
         return parametersSetter == null ? Jdbc.BiParametersSetter.DO_NOTHING : parametersSetter;
     }
 
-    // A procedure whose SQL uses named parameters is prepared as a CallableQuery, not a NamedQuery;
-    // both declare named setters but share no common interface for them.
-    private static void setSysTimestampParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName) throws SQLException {
-        if (preparedQuery instanceof CallableQuery) {
-            ((CallableQuery) preparedQuery).setTimestamp(parameterName, Dates.currentTimestamp());
-        } else {
-            ((NamedQuery) preparedQuery).setTimestamp(parameterName, Dates.currentTimestamp());
+    private static void validateNamedParameterBindings(final QueryInfo queryInfo, final Collection<String> boundParamNames, final String fullClassMethodName) {
+        final Set<String> boundParamNameSet = new HashSet<>();
+        final List<String> duplicateParamNames = new ArrayList<>();
+
+        for (final String paramName : boundParamNames) {
+            if (Strings.isEmpty(paramName)) {
+                throw new UnsupportedOperationException(
+                        "In method: " + fullClassMethodName + ", every @Bind on a named-query parameter must specify a non-empty name");
+            }
+
+            if (!boundParamNameSet.add(paramName) && !duplicateParamNames.contains(paramName)) {
+                duplicateParamNames.add(paramName);
+            }
+        }
+
+        if (N.notEmpty(duplicateParamNames)) {
+            throw new UnsupportedOperationException(
+                    "In method: " + fullClassMethodName + ", multiple method parameters are bound to the same named parameter: " + duplicateParamNames);
+        }
+
+        final Set<String> sqlParamNameSet = new HashSet<>(queryInfo.parsedSql.namedParameters());
+        final Set<String> requiredSqlParamNameSet = new HashSet<>(sqlParamNameSet);
+
+        if (queryInfo.autoSetSysTimeParam) {
+            requiredSqlParamNameSet.remove(JdbcUtil.PN_NOW);
+            requiredSqlParamNameSet.remove(JdbcUtil.PN_SYS_TIME);
+            requiredSqlParamNameSet.remove(JdbcUtil.PN_SYS_DATE);
+        }
+
+        final List<String> missingParamNames = N.difference(requiredSqlParamNameSet, boundParamNameSet);
+        final List<String> extraParamNames = N.difference(boundParamNameSet, sqlParamNameSet);
+
+        if (N.notEmpty(missingParamNames) || N.notEmpty(extraParamNames)) {
+            throw new UnsupportedOperationException("In method: " + fullClassMethodName
+                    + ", named SQL parameters and @Bind names do not match. Missing bindings: " + missingParamNames + "; extra bindings: " + extraParamNames);
         }
     }
 
-    private static void setSysDateParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName) throws SQLException {
+    // A procedure whose SQL uses named parameters is prepared as a CallableQuery, not a NamedQuery;
+    // both declare named setters but share no common interface for them.
+    private static void setSysTimestampParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName,
+            final java.sql.Timestamp value) throws SQLException {
         if (preparedQuery instanceof CallableQuery) {
-            ((CallableQuery) preparedQuery).setDate(parameterName, Dates.currentDate());
+            ((CallableQuery) preparedQuery).setTimestamp(parameterName, value);
         } else {
-            ((NamedQuery) preparedQuery).setDate(parameterName, Dates.currentDate());
+            ((NamedQuery) preparedQuery).setTimestamp(parameterName, value);
+        }
+    }
+
+    private static void setSysDateParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName, final java.sql.Date value)
+            throws SQLException {
+        if (preparedQuery instanceof CallableQuery) {
+            ((CallableQuery) preparedQuery).setDate(parameterName, value);
+        } else {
+            ((NamedQuery) preparedQuery).setDate(parameterName, value);
         }
     }
 
@@ -1641,14 +1666,18 @@ final class DaoImpl {
 
                     if (hasNow || hasSysTime || hasSysDate) {
                         preparedQuery.configAddBatchAction((q, s) -> {
+                            // Each batch row is one execution unit: all injected aliases for that row
+                            // must come from the same clock reading, while successive rows may advance.
+                            final java.sql.Timestamp currentTimestamp = Dates.currentTimestamp();
+
                             if (hasNow) {
-                                setSysTimestampParam((AbstractQuery) q, JdbcUtil.PN_NOW);
+                                setSysTimestampParam((AbstractQuery) q, JdbcUtil.PN_NOW, currentTimestamp);
                             }
                             if (hasSysTime) {
-                                setSysTimestampParam((AbstractQuery) q, JdbcUtil.PN_SYS_TIME);
+                                setSysTimestampParam((AbstractQuery) q, JdbcUtil.PN_SYS_TIME, currentTimestamp);
                             }
                             if (hasSysDate) {
-                                setSysDateParam((AbstractQuery) q, JdbcUtil.PN_SYS_DATE);
+                                setSysDateParam((AbstractQuery) q, JdbcUtil.PN_SYS_DATE, new java.sql.Date(currentTimestamp.getTime()));
                             }
                             ((PreparedStatement) s).addBatch();
                         });
@@ -1679,7 +1708,7 @@ final class DaoImpl {
         } else if (cond instanceof final Limit limit) {
             return limit;
         } else if (cond instanceof final Criteria criteria) {
-            final Limit limit = criteria.getLimit();
+            final Limit limit = criteria.limit();
 
             if (limit != null) {
                 return cond;
@@ -1687,10 +1716,10 @@ final class DaoImpl {
 
             return criteria.toBuilder().limit(count).build();
         } else {
-            if (cond instanceof final Expression expr //
-                    && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ", " FETCH FIRST ")) {
+            if (cond instanceof final SqlExpression expr //
+                    && Strings.containsAnyIgnoreCase(expr.literal(), " LIMIT ", " OFFSET ", " FETCH NEXT ", " FETCH FIRST ")) {
                 try {
-                    return Filters.limit(expr.getLiteral());
+                    return Filters.limit(expr.literal());
                 } catch (Exception e) {
                     // The literal carries a limit clause but isn't a parseable standalone Limit
                     // (e.g. "id > 0 FETCH FIRST 10 ROWS ONLY"); return it as-is rather than appending
@@ -1734,7 +1763,7 @@ final class DaoImpl {
 
         if (keyExtractor == null) {
             // idExtractor() is declared on CrudInsertOps, so this covers every insert-capable CRUD
-            // variant (for example NoUpdateCrudDao), but not read-only CRUD DAOs.
+            // variant (for example NonUpdateCrudDao), but not read-only CRUD DAOs.
             keyExtractor = N.defaultIfNull((Jdbc.BiRowMapper<Object>) DaoUtil.getDeclaredIdExtractor(dao), defaultIdExtractor);
 
             idExtractorHolder.setValue(keyExtractor);
@@ -1744,10 +1773,10 @@ final class DaoImpl {
     }
 
     private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final PerfLog perfLogAnno, final long startTimeNanos) {
-        if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.daoMethodLogThresholdMillis() >= 0 && daoLogger.isInfoEnabled()) {
+        if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.daoMethodPerfLogThresholdMillis() >= 0 && daoLogger.isInfoEnabled()) {
             final long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
 
-            if (elapsedTime >= perfLogAnno.daoMethodLogThresholdMillis()) {
+            if (elapsedTime >= perfLogAnno.daoMethodPerfLogThresholdMillis()) {
                 daoLogger.info(Strings.concat("[DAO-QUERY-OPERATION-PERF]-[", simpleClassMethodName, "]: ", String.valueOf(elapsedTime), " ms"));
             }
         }
@@ -1764,7 +1793,7 @@ final class DaoImpl {
     private static <T extends Condition> T checkCondForPaginate(final T cond) {
         N.checkArgNotNull(cond, "Condition for \"paginate\" cannot be null");
 
-        if ((cond instanceof Criteria && ((Criteria) cond).getOrderBy() != null) || Strings.containsIgnoreCase(cond.toString(), " ORDER BY ")) {
+        if ((cond instanceof Criteria && ((Criteria) cond).orderBy() != null) || Strings.containsIgnoreCase(cond.toString(), " ORDER BY ")) {
             // okay, has order by
         } else {
             throw new IllegalArgumentException("Condition for \"paginate\" must have \"orderBy\"");
@@ -1853,7 +1882,7 @@ final class DaoImpl {
      *        and {@code evictDelayMillis()}) if present, otherwise a {@link Jdbc.DefaultDaoCache} with
      *        {@link JdbcUtil#DEFAULT_CACHE_CAPACITY default capacity} and
      *        {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY default evict delay} is used. Note: result caching is
-     *        currently only supported for cacheable DAOs — {@code NoUpdateDao}/{@code ReadOnlyDao} and their
+     *        currently only supported for cacheable DAOs — {@code NonUpdateDao}/{@code ReadOnlyDao} and their
      *        {@code Unchecked} variants — supplying a non-{@code null} {@code inputDaoCache} (or declaring
      *        {@code @Cache}) on a DAO that supports update/delete operations will fail with
      *        {@link UnsupportedOperationException}
@@ -1917,9 +1946,9 @@ final class DaoImpl {
         final AsyncExecutor asyncExecutor = executor == null ? JdbcUtil.asyncExecutor : new AsyncExecutor(executor);
         final boolean isUncheckedDao = DaoUtil.isUncheckedReadOps(daoInterface);
         final boolean isCrudDao = DaoUtil.isCrudReadOps(daoInterface);
-        // Restriction level for centralizing the prepareQuery/prepareNamedQuery SQL-kind gate (formerly per-method overrides in ReadOnlyDao/NoUpdateDao).
+        // Restriction level for centralizing the prepareQuery/prepareNamedQuery SQL-kind gate (formerly per-method overrides in ReadOnlyDao/NonUpdateDao).
         final boolean isReadOnlyDao = ReadOnlyDao.class.isAssignableFrom(daoInterface);
-        final boolean isNoUpdateDao = !isReadOnlyDao && NoUpdateDao.class.isAssignableFrom(daoInterface);
+        final boolean isNonUpdateDao = !isReadOnlyDao && NonUpdateDao.class.isAssignableFrom(daoInterface);
 
         final List<Class<?>> allInterfaces = Stream.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
@@ -1931,7 +1960,7 @@ final class DaoImpl {
                 .map(SqlSource::value)
                 .map(String::trim)
                 .filter(Strings::isNotEmpty)
-                .map(SqlMapper::load)
+                .map(SqlMapper::loadFrom)
                 .forEach(it -> {
                     for (final String key : it.ids()) {
                         if (newSqlMapper.get(key) != null) {
@@ -2036,7 +2065,7 @@ final class DaoImpl {
             }
 
             if (isCrudDao) {
-                final List<String> idFieldNames = QueryUtil.getIdPropNames((Class) typeArguments[0]);
+                final List<String> idFieldNames = QueryUtil.idPropNames((Class) typeArguments[0]);
                 final Class<?> declaredIdClass = (Class) typeArguments[1];
 
                 if (idFieldNames.size() == 0) {
@@ -2080,32 +2109,32 @@ final class DaoImpl {
         final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 
         final Function<Condition, SqlBuilder.SP> selectFromSqlBuilderFunc = cond -> cond instanceof final Criteria criteria
-                && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond).build()
+                && Strings.isNotEmpty(criteria.selectModifier())
+                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.selectModifier()).from(tableName).append(cond).build()
                         : parameterizedDsl.select(entityClass).from(tableName).append(cond).build();
 
         final BiFunction<String, Condition, SqlBuilder.SP> singleQuerySqlBuilderFunc = (selectPropName,
-                cond) -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? parameterizedDsl.select(selectPropName).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond).build()
+                cond) -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
+                        ? parameterizedDsl.select(selectPropName).selectModifier(criteria.selectModifier()).from(tableName, entityClass).append(cond).build()
                         : parameterizedDsl.select(selectPropName).from(tableName, entityClass).append(cond).build();
 
         final BiFunction<String, Condition, SqlBuilder.SP> singleQueryByIdSqlBuilderFunc = (selectPropName,
                 cond) -> namedDsl.select(selectPropName).from(tableName, entityClass).append(cond).build();
 
         final BiFunction<Collection<String>, Condition, SqlBuilder> selectSqlBuilderFunc = (selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
+                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
+                        ? parameterizedDsl.select(entityClass).selectModifier(criteria.selectModifier()).from(tableName).append(cond)
                         : parameterizedDsl.select(entityClass).from(tableName).append(cond))
-                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? parameterizedDsl.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
+                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
+                        ? parameterizedDsl.select(selectPropNames).selectModifier(criteria.selectModifier()).from(tableName, entityClass).append(cond)
                         : parameterizedDsl.select(selectPropNames).from(tableName, entityClass).append(cond);
 
         final BiFunction<Collection<String>, Condition, SqlBuilder> namedSelectSqlBuilderFunc = (selectPropNames, cond) -> N.isEmpty(selectPropNames)
-                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? namedDsl.select(entityClass).selectModifier(criteria.getSelectModifier()).from(tableName).append(cond)
+                ? (cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
+                        ? namedDsl.select(entityClass).selectModifier(criteria.selectModifier()).from(tableName).append(cond)
                         : namedDsl.select(entityClass).from(tableName).append(cond))
-                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.getSelectModifier())
-                        ? namedDsl.select(selectPropNames).selectModifier(criteria.getSelectModifier()).from(tableName, entityClass).append(cond)
+                : cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.selectModifier())
+                        ? namedDsl.select(selectPropNames).selectModifier(criteria.selectModifier()).from(tableName, entityClass).append(cond)
                         : namedDsl.select(selectPropNames).from(tableName, entityClass).append(cond);
 
         final Function<Collection<String>, SqlBuilder> namedInsertSqlBuilderFunc = propNamesToInsert -> N.isEmpty(propNamesToInsert)
@@ -2118,7 +2147,7 @@ final class DaoImpl {
 
         final BiFunction<String, Class<?>, SqlBuilder> namedUpdateFunc = namedDsl::update;
 
-        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdPropNames(entityClass);
+        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.idPropNames(entityClass);
         final boolean isNoId = entityClass == null || N.isEmpty(idPropNameList);
         final Set<String> idPropNameSet = N.newHashSet(idPropNameList);
         final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
@@ -2141,8 +2170,8 @@ final class DaoImpl {
         String sql_deleteById = null;
 
         final boolean noOtherInsertPropNameExceptIdPropNames = entityClass != null
-                && (idPropNameSet.containsAll(Beans.getPropNameList(entityClass)) || N.isEmpty(QueryUtil.getInsertPropNames(entityClass, idPropNameSet)));
-        final Collection<String> propNamesToUpdateById = entityClass == null ? N.emptyList() : QueryUtil.getUpdatePropNames(entityClass, idPropNameSet);
+                && (idPropNameSet.containsAll(Beans.getPropNameList(entityClass)) || N.isEmpty(QueryUtil.insertPropNames(entityClass, idPropNameSet)));
+        final Collection<String> propNamesToUpdateById = entityClass == null ? N.emptyList() : QueryUtil.updatePropNames(entityClass, idPropNameSet);
         final boolean noPropNameToUpdateById = N.isEmpty(propNamesToUpdateById);
 
         sql_getById = isNoId ? null : namedDsl.select(entityClass).from(tableName).where(idCond).build().query();
@@ -2161,7 +2190,7 @@ final class DaoImpl {
         final ParsedSql namedUpdateByIdSQL = Strings.isEmpty(sql_updateById) ? null : ParsedSql.parse(sql_updateById);
         final ParsedSql namedDeleteByIdSQL = Strings.isEmpty(sql_deleteById) ? null : ParsedSql.parse(sql_deleteById);
 
-        final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
+        final ImmutableMap<String, String> propColumnNameMap = QueryUtil.propToColumnNameMap(entityClass, namingPolicy);
 
         final String[] generatedKeyColumnNames = isNoId ? N.EMPTY_STRING_ARRAY
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
@@ -2261,7 +2290,7 @@ final class DaoImpl {
         if (!DaoUtil.isCacheable(daoInterface)
                 && (daoClassCacheResultAnno != null || daoClassRefreshCacheAnno != null || inputDaoCache != null || daoClassCacheAnno != null)) {
             throw new UnsupportedOperationException(
-                    "Cache is only supported for Cacheable DAOs (NoUpdate/ReadOnly and their Unchecked variants), not supported for Dao interface: "
+                    "Cache is only supported for Cacheable DAOs (NonUpdate/ReadOnly and their Unchecked variants), not supported for Dao interface: "
                             + daoClassName);
         }
 
@@ -2373,12 +2402,12 @@ final class DaoImpl {
 
             Throwables.BiFunction<DaoBase, Object[], ?, Throwable> call = null;
 
-            // Centralized SQL-kind gate for read-only / no-update DAOs: the prepareQuery/prepareNamedQuery (and
+            // Centralized SQL-kind gate for read-only / non-update DAOs: the prepareQuery/prepareNamedQuery (and
             // *ForLargeResult) overloads whose first argument is a raw SQL String or ParsedSql must be restricted to
-            // SELECT (read-only) or SELECT/INSERT (no-update). This replaces the per-method overrides that used to live
-            // in ReadOnlyDao/NoUpdateDao. The Condition/Collection-based prepare builders always produce SELECTs and are
-            // intentionally excluded. 1 = read-only gate, 2 = no-update gate, 0 = no gate.
-            final int prepareSqlGate = (isReadOnlyDao || isNoUpdateDao) && paramLen >= 1
+            // SELECT (read-only) or SELECT/INSERT (non-update). This replaces the per-method overrides that used to live
+            // in ReadOnlyDao/NonUpdateDao. The Condition/Collection-based prepare builders always produce SELECTs and are
+            // intentionally excluded. 1 = read-only gate, 2 = non-update gate, 0 = no gate.
+            final int prepareSqlGate = (isReadOnlyDao || isNonUpdateDao) && paramLen >= 1
                     && (methodName.equals("prepareQuery") || methodName.equals("prepareNamedQuery") || methodName.equals("prepareQueryForLargeResult")
                             || methodName.equals("prepareNamedQueryForLargeResult"))
                     && (paramTypes[0].equals(String.class) || paramTypes[0].equals(ParsedSql.class)) ? (isReadOnlyDao ? 1 : 2) : 0;
@@ -2405,7 +2434,7 @@ final class DaoImpl {
                                 throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO");
                             }
                         } else if (!SqlParser.isNoUpdateQuery(sqlToCheck)) {
-                            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a no-update DAO");
+                            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a non-update DAO");
                         }
                     }
 
@@ -5041,13 +5070,13 @@ final class DaoImpl {
                     final boolean isNamedQuery = queryInfo.isNamedQuery;
 
                     // Custom annotated methods execute through JdbcUtil.prepareQuery/prepareNamedQuery directly,
-                    // bypassing the proxy's prepareSqlGate, so enforce the read-only/no-update SQL-kind
+                    // bypassing the proxy's prepareSqlGate, so enforce the read-only/non-update SQL-kind
                     // restriction here at DAO-creation time with the same SqlParser checks the gate uses.
                     if (isReadOnlyDao && !SqlParser.isReadOnlyQuery(query)) {
                         throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO. Method: " + fullClassMethodName);
-                    } else if (isNoUpdateDao && !SqlParser.isNoUpdateQuery(query)) {
+                    } else if (isNonUpdateDao && !SqlParser.isNoUpdateQuery(query)) {
                         throw new UnsupportedOperationException(
-                                "Only SELECT and INSERT queries are supported in a no-update DAO. Method: " + fullClassMethodName);
+                                "Only SELECT and INSERT queries are supported in a non-update DAO. Method: " + fullClassMethodName);
                     }
 
                     if (parsedSql.parameterCount() == 0 && !isNamedQuery) {
@@ -5218,6 +5247,20 @@ final class DaoImpl {
                             .mapToObj(i -> resolveFragmentAnnoAndPlaceholder(method, i, fullClassMethodName))
                             .toArray(Tuple2[]::new);
 
+                    final Set<String> fragmentPlaceholderSet = new HashSet<>();
+                    final List<String> duplicateFragmentPlaceholders = new ArrayList<>();
+
+                    for (final Tuple2<Annotation, String> fragmentAnno : fragmentAnnos) {
+                        if (!fragmentPlaceholderSet.add(fragmentAnno._2) && !duplicateFragmentPlaceholders.contains(fragmentAnno._2)) {
+                            duplicateFragmentPlaceholders.add(fragmentAnno._2);
+                        }
+                    }
+
+                    if (N.notEmpty(duplicateFragmentPlaceholders)) {
+                        throw new IllegalArgumentException("Multiple method parameters target the same SQL fragment placeholder in method: "
+                                + fullClassMethodName + ": " + duplicateFragmentPlaceholders);
+                    }
+
                     final BiFunction<Annotation, Object, String>[] fragmentMappers = IntStream.of(fragmentParamIndexes)
                             .mapToObj(i -> Stream.of(method.getParameterAnnotations()[i]).map(Annotation::annotationType).map(it -> {
                                 if (SqlFragment.class.isAssignableFrom(it)) {
@@ -5290,6 +5333,21 @@ final class DaoImpl {
                             throw new UnsupportedOperationException(
                                     "Only one of the attribute: (name, position) of @OutParameter can be set in method: " + fullClassMethodName);
                         }
+
+                        final Set<String> outParameterNameSet = new HashSet<>();
+                        final Set<Integer> outParameterPositionSet = new HashSet<>();
+
+                        for (final OutParameter outParameter : outParameterList) {
+                            if (Strings.isNotEmpty(outParameter.name()) && !outParameterNameSet.add(outParameter.name())) {
+                                throw new UnsupportedOperationException(
+                                        "Duplicate @OutParameter name '" + outParameter.name() + "' in method: " + fullClassMethodName);
+                            }
+
+                            if (outParameter.position() > 0 && !outParameterPositionSet.add(outParameter.position())) {
+                                throw new UnsupportedOperationException(
+                                        "Duplicate @OutParameter position " + outParameter.position() + " in method: " + fullClassMethodName);
+                            }
+                        }
                     }
 
                     if ((queryOperation == QueryOperation.listAll || queryOperation == QueryOperation.queryAll || queryOperation == QueryOperation.streamAll
@@ -5341,6 +5399,31 @@ final class DaoImpl {
                                     "The return type of method(" + fullClassMethodName + ") annotated by @MappedByKey must be: Map<? super "
                                             + ClassUtil.getSimpleClassName(ClassUtil.wrap(mappedByKeyMethod.getReturnType())) + ", ? super "
                                             + ClassUtil.getSimpleClassName(entityClass) + ">. It can't be: " + method.getGenericReturnType());
+                        }
+
+                        final Class<? extends Map> mapClass = mappedByKeyAnno.mapClass();
+
+                        // The proxy returns an instance of mapClass, so it must also satisfy a more-specific
+                        // declared return type (for example LinkedHashMap). Without this check a method that
+                        // returned LinkedHashMap while using the default HashMap factory initialized normally,
+                        // then failed with ClassCastException only after the query had executed.
+                        if (!returnType.isAssignableFrom(mapClass)) {
+                            throw new IllegalArgumentException("The mapClass: " + ClassUtil.getCanonicalClassName(mapClass)
+                                    + " configured by @MappedByKey on method: " + fullClassMethodName + " is not assignable to the declared return type: "
+                                    + ClassUtil.getCanonicalClassName(returnType));
+                        }
+
+                        if (mapClass.isInterface() || Modifier.isAbstract(mapClass.getModifiers())) {
+                            throw new IllegalArgumentException(
+                                    "The mapClass: " + ClassUtil.getCanonicalClassName(mapClass) + " configured by @MappedByKey on method: "
+                                            + fullClassMethodName + " must be a concrete Map implementation with a no-argument constructor");
+                        }
+
+                        try {
+                            mapClass.getDeclaredConstructor();
+                        } catch (final NoSuchMethodException e) {
+                            throw new IllegalArgumentException("The mapClass: " + ClassUtil.getCanonicalClassName(mapClass)
+                                    + " configured by @MappedByKey on method: " + fullClassMethodName + " must have a no-argument constructor", e);
                         }
                     }
 
@@ -5704,6 +5787,18 @@ final class DaoImpl {
             } else {
                 final Transactional transactionalAnno = Stream.of(method.getAnnotations()).select(Transactional.class).last().orElseNull();
 
+                if (transactionalAnno != null && transactionalAnno.propagation() != Propagation.SUPPORTS
+                        && transactionalAnno.propagation() != Propagation.MANDATORY
+                        && (BaseStream.class.isAssignableFrom(returnType) || java.util.stream.BaseStream.class.isAssignableFrom(returnType))) {
+                    // REQUIRED/REQUIRES_NEW can complete an invocation-owned transaction before consumption.
+                    // NOT_SUPPORTED/NEVER enforce a non-transactional context only for the invocation, but lazy query
+                    // setup can occur later after an outer transaction is restored or a new one starts. SUPPORTS and
+                    // MANDATORY are safe when the caller consumes the stream before changing/completing its context.
+                    throw new UnsupportedOperationException(
+                            "@Transactional with propagation " + transactionalAnno.propagation() + " is not supported on stream-returning method: "
+                                    + fullClassMethodName + ". Consume the stream inside a non-streaming transactional method instead");
+                }
+
                 //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
                 //        throw new UnsupportedOperationException(
                 //                "Annotation @Transactional is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
@@ -5742,8 +5837,8 @@ final class DaoImpl {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                            final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                            final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno) {
@@ -5751,7 +5846,7 @@ final class DaoImpl {
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
+                                JdbcUtil.setSqlPerfLogThresholdMillis(perfLogAnno.sqlPerfLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5764,7 +5859,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                    JdbcUtil.setSqlPerfLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                 }
 
                                 if (hasSqlLogAnno) {
@@ -5788,8 +5883,8 @@ final class DaoImpl {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                            final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                            final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno) {
@@ -5797,7 +5892,7 @@ final class DaoImpl {
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
+                                JdbcUtil.setSqlPerfLogThresholdMillis(perfLogAnno.sqlPerfLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5822,7 +5917,7 @@ final class DaoImpl {
                                 } finally {
                                     if (hasPerfLogAnno) {
                                         logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
-                                        JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                        JdbcUtil.setSqlPerfLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
                                     if (hasSqlLogAnno) {
@@ -5867,8 +5962,8 @@ final class DaoImpl {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                                final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                                final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
@@ -5876,7 +5971,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
+                                    JdbcUtil.setSqlPerfLogThresholdMillis(perfLogAnno.sqlPerfLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5901,7 +5996,7 @@ final class DaoImpl {
                                     } finally {
                                         if (hasPerfLogAnno) {
                                             logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTimeNanos);
-                                            JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                            JdbcUtil.setSqlPerfLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                         }
 
                                         if (hasSqlLogAnno) {
@@ -5945,8 +6040,8 @@ final class DaoImpl {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                                final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                                final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
@@ -5954,7 +6049,7 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcUtil.sqlLogThresholdMillis(perfLogAnno.sqlLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
+                                    JdbcUtil.setSqlPerfLogThresholdMillis(perfLogAnno.sqlPerfLogThresholdMillis(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTimeNanos = hasPerfLogAnno ? System.nanoTime() : -1;
@@ -5967,7 +6062,7 @@ final class DaoImpl {
                                     }
 
                                     if (hasPerfLogAnno) {
-                                        JdbcUtil.sqlLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                        JdbcUtil.setSqlPerfLogThresholdMillis(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
                                     if (hasSqlLogAnno) {
@@ -6095,14 +6190,19 @@ final class DaoImpl {
                             try {
                                 result = temp.apply(proxy, args);
                             } finally {
-                                if (Strings.isNotEmpty(cacheKey)) {
-                                    if (isRefreshLocalThreadCacheRequired) {
-                                        localThreadCache.update(cacheKey, result, proxy, args, methodSignature);
-                                    }
+                                // Cache-key serialization is optional for query caching, but it must never
+                                // suppress write invalidation. If an argument cannot be serialized, retain the
+                                // stable method/table portion so built-in and custom caches can still identify
+                                // the affected table (and custom caches still receive args/methodSignature).
+                                final String refreshCacheKey = Strings.isNotEmpty(cacheKey) ? cacheKey
+                                        : Strings.concat(fullClassMethodName, JdbcUtil.CACHE_KEY_SPLITOR, tableName, JdbcUtil.CACHE_KEY_SPLITOR);
 
-                                    if (isAnnotatedRefreshResult) {
-                                        daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
-                                    }
+                                if (isRefreshLocalThreadCacheRequired) {
+                                    localThreadCache.update(refreshCacheKey, result, proxy, args, methodSignature);
+                                }
+
+                                if (isAnnotatedRefreshResult) {
+                                    daoCacheToUseInMethod.update(refreshCacheKey, result, proxy, args, methodSignature);
                                 }
                             }
                         } else {
@@ -6308,7 +6408,7 @@ final class DaoImpl {
                 // non-deterministic about which method is named.
                 if ((isAnnotatedRefreshResult || isAnnotatedCacheResult) && !DaoUtil.isCacheable(daoInterface)) {
                     throw new UnsupportedOperationException(
-                            "Cache is only supported for methods declared in Cacheable DAOs (NoUpdate/ReadOnly and their Unchecked variants), not supported for method: "
+                            "Cache is only supported for methods declared in Cacheable DAOs (NonUpdate/ReadOnly and their Unchecked variants), not supported for method: "
                                     + fullClassMethodName);
                 }
             }

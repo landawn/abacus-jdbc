@@ -48,7 +48,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
 sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudReadOps<T, ID, TD>, UncheckedReadOps<T, TD>
-        permits UncheckedCrudDao, UncheckedNoUpdateCrudDao, UncheckedReadOnlyCrudDao {
+        permits UncheckedCrudDao, UncheckedNonUpdateCrudDao, UncheckedReadOnlyCrudDao {
     /**
      * Returns an {@code OptionalBoolean} describing the value of a single property for the entity with the specified ID.
      * Returns an empty {@code OptionalBoolean} only when no record matches the given id. If a matching record's value is SQL {@code null},
@@ -729,6 +729,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param ids the collection of IDs to count
      * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
+     * @throws ArithmeticException if the total count across all ID batches exceeds the range of an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta

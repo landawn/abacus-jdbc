@@ -1,12 +1,12 @@
 # abacus-jdbc API Index (v4.8.1)
 - Build: unknown
 - Java: 17
-- Generated: 2026-07-04
+- Generated: 2026-07-13
 
 ## Packages
-- com.landawn.abacus.jdbc
-- com.landawn.abacus.jdbc.annotation
-- com.landawn.abacus.jdbc.dao
+- com.landawn.abacus.jdbc — Core JDBC execution, mapping, transaction, data-transfer, and code-generation APIs.
+- com.landawn.abacus.jdbc.annotation — Runtime annotations for declaring and configuring JDBC DAO methods.
+- com.landawn.abacus.jdbc.dao — Composable Data Access Object interfaces for entity-oriented JDBC operations.
 
 ## com.landawn.abacus.jdbc
 ### Class AbstractQuery (com.landawn.abacus.jdbc.AbstractQuery)
@@ -535,100 +535,100 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### setAsciiStream(...) -> This
-- **Signature:** `public This setAsciiStream(final int parameterIndex, final InputStream inputStream) throws SQLException`
+- **Signature:** `public This setAsciiStream(final int parameterIndex, final InputStream value) throws SQLException`
 - **Summary:** Sets an ASCII stream parameter value.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing ASCII data, or {@code null} to set SQL {@code NULL}
+  - `value` (`InputStream`) — the input stream containing ASCII data, or {@code null} to set SQL {@code NULL}
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setAsciiStream(final int parameterIndex, final InputStream inputStream, final int length) throws SQLException`
+- **Signature:** `public This setAsciiStream(final int parameterIndex, final InputStream value, final int length) throws SQLException`
 - **Summary:** Sets an ASCII stream parameter value with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing ASCII data
+  - `value` (`InputStream`) — the input stream containing ASCII data
   - `length` (`int`) — the number of bytes in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setAsciiStream(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException`
+- **Signature:** `public This setAsciiStream(final int parameterIndex, final InputStream value, final long length) throws SQLException`
 - **Summary:** Sets an ASCII stream parameter value with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing ASCII data
+  - `value` (`InputStream`) — the input stream containing ASCII data
   - `length` (`long`) — the number of bytes in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### setBinaryStream(...) -> This
-- **Signature:** `public This setBinaryStream(final int parameterIndex, final InputStream inputStream) throws SQLException`
+- **Signature:** `public This setBinaryStream(final int parameterIndex, final InputStream value) throws SQLException`
 - **Summary:** Sets a binary stream parameter value.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing binary data, or {@code null} to set SQL {@code NULL}
+  - `value` (`InputStream`) — the input stream containing binary data, or {@code null} to set SQL {@code NULL}
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setBinaryStream(final int parameterIndex, final InputStream inputStream, final int length) throws SQLException`
+- **Signature:** `public This setBinaryStream(final int parameterIndex, final InputStream value, final int length) throws SQLException`
 - **Summary:** Sets a binary stream parameter value with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing binary data
+  - `value` (`InputStream`) — the input stream containing binary data
   - `length` (`int`) — the number of bytes in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setBinaryStream(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException`
+- **Signature:** `public This setBinaryStream(final int parameterIndex, final InputStream value, final long length) throws SQLException`
 - **Summary:** Sets a binary stream parameter value with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing binary data
+  - `value` (`InputStream`) — the input stream containing binary data
   - `length` (`long`) — the number of bytes in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### setCharacterStream(...) -> This
-- **Signature:** `public This setCharacterStream(final int parameterIndex, final Reader reader) throws SQLException`
+- **Signature:** `public This setCharacterStream(final int parameterIndex, final Reader value) throws SQLException`
 - **Summary:** Sets a character stream parameter value.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing character data, or {@code null} to set SQL {@code NULL}
+  - `value` (`Reader`) — the reader containing character data, or {@code null} to set SQL {@code NULL}
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setCharacterStream(final int parameterIndex, final Reader reader, final int length) throws SQLException`
+- **Signature:** `public This setCharacterStream(final int parameterIndex, final Reader value, final int length) throws SQLException`
 - **Summary:** Sets a character stream parameter value with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing character data
+  - `value` (`Reader`) — the reader containing character data
   - `length` (`int`) — the number of characters in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setCharacterStream(final int parameterIndex, final Reader reader, final long length) throws SQLException`
+- **Signature:** `public This setCharacterStream(final int parameterIndex, final Reader value, final long length) throws SQLException`
 - **Summary:** Sets a character stream parameter value with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing character data
+  - `value` (`Reader`) — the reader containing character data
   - `length` (`long`) — the number of characters in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### setNCharacterStream(...) -> This
-- **Signature:** `public This setNCharacterStream(final int parameterIndex, final Reader reader) throws SQLException`
+- **Signature:** `public This setNCharacterStream(final int parameterIndex, final Reader value) throws SQLException`
 - **Summary:** Sets a national character stream parameter value.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing national character data
+  - `value` (`Reader`) — the reader containing national character data
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setNCharacterStream(final int parameterIndex, final Reader reader, final long length) throws SQLException`
+- **Signature:** `public This setNCharacterStream(final int parameterIndex, final Reader value, final long length) throws SQLException`
 - **Summary:** Sets a national character stream parameter value with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing national character data
+  - `value` (`Reader`) — the reader containing national character data
   - `length` (`long`) — the number of characters in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
@@ -642,19 +642,19 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setBlob(final int parameterIndex, final InputStream inputStream) throws SQLException`
+- **Signature:** `public This setBlob(final int parameterIndex, final InputStream value) throws SQLException`
 - **Summary:** Sets a Blob parameter value from an InputStream.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing the data for the Blob
+  - `value` (`InputStream`) — the input stream containing the data for the Blob
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setBlob(final int parameterIndex, final InputStream inputStream, final long length) throws SQLException`
+- **Signature:** `public This setBlob(final int parameterIndex, final InputStream value, final long length) throws SQLException`
 - **Summary:** Sets a Blob parameter value from an InputStream with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `inputStream` (`InputStream`) — the input stream containing the data for the Blob
+  - `value` (`InputStream`) — the input stream containing the data for the Blob
   - `length` (`long`) — the number of bytes in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
@@ -668,19 +668,19 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setClob(final int parameterIndex, final Reader reader) throws SQLException`
+- **Signature:** `public This setClob(final int parameterIndex, final Reader value) throws SQLException`
 - **Summary:** Sets a Clob parameter value from a Reader.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing the data for the Clob
+  - `value` (`Reader`) — the reader containing the data for the Clob
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setClob(final int parameterIndex, final Reader reader, final long length) throws SQLException`
+- **Signature:** `public This setClob(final int parameterIndex, final Reader value, final long length) throws SQLException`
 - **Summary:** Sets a Clob parameter value from a Reader with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing the data for the Clob
+  - `value` (`Reader`) — the reader containing the data for the Clob
   - `length` (`long`) — the number of characters in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
@@ -694,19 +694,19 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setNClob(final int parameterIndex, final Reader reader) throws SQLException`
+- **Signature:** `public This setNClob(final int parameterIndex, final Reader value) throws SQLException`
 - **Summary:** Sets an NClob parameter value from a Reader.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing the national character data
+  - `value` (`Reader`) — the reader containing the national character data
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public This setNClob(final int parameterIndex, final Reader reader, final long length) throws SQLException`
+- **Signature:** `public This setNClob(final int parameterIndex, final Reader value, final long length) throws SQLException`
 - **Summary:** Sets an NClob parameter value from a Reader with a specified length.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
-  - `reader` (`Reader`) — the reader containing the national character data
+  - `value` (`Reader`) — the reader containing the national character data
   - `length` (`long`) — the number of characters in the stream
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
@@ -1249,7 +1249,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Contract:**
   - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter.
 - **Parameters:**
-  - `batchParameters` (`Collection<?>`) — Collection where each element is one batch row. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter An empty {@code collection} adds no batch rows and returns this query.
+  - `batchParameters` (`Collection<?>`) — Collection where each element is one batch row. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter. An empty collection adds no batch rows and returns this query unchanged.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters is null
@@ -1257,8 +1257,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `@Beta public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds multiple sets of typed parameters for batch execution.
 - **Parameters:**
-  - `batchParameters` (`Collection<? extends T>`) — Collection of parameters
-  - `type` (`Class<T>`) — the class type of the parameters An empty {@code collection} adds no batch rows and returns this query.
+  - `batchParameters` (`Collection<? extends T>`) — Collection of parameters; each element is bound as the single parameter of one batch row. An empty collection adds no batch rows and returns this query unchanged.
+  - `type` (`Class<T>`) — the class type of the parameters
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters or type is null
@@ -1268,7 +1268,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Contract:**
   - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter.
 - **Parameters:**
-  - `batchParameters` (`Iterator<?>`) — Iterator over batch rows. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter An empty {@code iterator} adds no batch rows and returns this query.
+  - `batchParameters` (`Iterator<?>`) — Iterator over batch rows. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter. An empty iterator adds no batch rows and returns this query unchanged.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters is null
@@ -1276,7 +1276,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `@Beta public <T> This addBatchParameters(final Iterator<? extends T> batchParameters, final Class<T> type) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds multiple sets of typed parameters for batch execution using an iterator.
 - **Parameters:**
-  - `batchParameters` (`Iterator<? extends T>`) — Iterator over parameters
+  - `batchParameters` (`Iterator<? extends T>`) — Iterator over parameters; each element is bound as the single parameter of one batch row. An empty iterator adds no batch rows and returns this query unchanged.
   - `type` (`Class<T>`) — the class type of the parameters
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
@@ -1884,6 +1884,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.
   - <p> If the query returns no rows, the result is an empty {@code Optional} .
   - If the query returns more than one row, {@link DuplicateResultException} is thrown.
+  - {@code findFirst} / {@code queryForSingle*} return the <i> first </i> matching row/value and silently ignore any extra rows; {@code findOnlyOne} / {@code queryForUnique*} require <i> at most one </i> match and throw {@link DuplicateResultException} when more than one row is found.
 - **Parameters:**
   - (none)
 - **Returns:** An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise empty
@@ -2832,7 +2833,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Executes the SQL statement and applies the provided function to extract a result.
 - **Contract:**
   - This is useful when you need to access statement metadata or handle complex result processing.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Drain the first result set fully inside the func List<String> rows = preparedQuery.executeThenApply(stmt -> { final List<String> out = new ArrayList<>(); try (ResultSet rs = stmt.getResultSet()) { while (rs.next()) out.add(rs.getString(1)); } return out; }); // Get update count and check warnings Integer count = preparedQuery.executeThenApply(stmt -> { int updateCount = stmt.getUpdateCount(); SQLWarning warning = stmt.getWarnings(); if (warning != null) { logger.warn("SQL Warning: " + warning.getMessage()); } return updateCount; }); } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Drain the first result set fully inside the func List<String> rows = preparedQuery.executeThenApply(stmt -> { final List<String> out = new ArrayList<>(); try (ResultSet rs = stmt.getResultSet()) { while (rs.next()) out.add(rs.getString(1)); } return out; }); // Get update count and check warnings Integer count = preparedQuery.executeThenApply(stmt -> { int updateCount = stmt.getUpdateCount(); SQLWarning warning = stmt.getWarnings(); if (warning != null) { logger.warn("SQL warning: {}", warning.getMessage()); } return updateCount; }); } </pre>
 - **Parameters:**
   - `func` (`Throwables.Function<? super Stmt, ? extends R, SQLException>`) — the function to apply to the PreparedStatement after execution. Must not be {@code null} .
 - **Returns:** the result of applying {@code func} to the executed PreparedStatement
@@ -2858,7 +2859,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Executes the SQL statement and applies the provided consumer to process the statement.
 - **Contract:**
   - This is useful for side effects or when you don't need to return a value.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Process warnings after execution preparedQuery.executeThenAccept(stmt -> { SQLWarning warning = stmt.getWarnings(); while (warning != null) { logger.warn("SQL Warning: " + warning.getMessage()); warning = warning.getNextWarning(); } }); // Process multiple result sets preparedQuery.executeThenAccept(stmt -> { boolean hasMoreResults = true; while (hasMoreResults) { if (stmt.getUpdateCount() != -1) { System.out.println("Update count: " + stmt.getUpdateCount()); } else { try (ResultSet rs = stmt.getResultSet()) { processResultSet(rs); } } hasMoreResults = stmt.getMoreResults(); } }); } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Process warnings after execution preparedQuery.executeThenAccept(stmt -> { SQLWarning warning = stmt.getWarnings(); while (warning != null) { logger.warn("SQL warning: {}", warning.getMessage()); warning = warning.getNextWarning(); } }); // Process multiple result sets preparedQuery.executeThenAccept(stmt -> { boolean hasMoreResults = true; while (hasMoreResults) { if (stmt.getUpdateCount() != -1) { System.out.println("Update count: " + stmt.getUpdateCount()); } else { try (ResultSet rs = stmt.getResultSet()) { processResultSet(rs); } } hasMoreResults = stmt.getMoreResults(); } }); } </pre>
 - **Parameters:**
   - `consumer` (`Throwables.Consumer<? super Stmt, SQLException>`) — the consumer to apply to the PreparedStatement after execution. Must not be {@code null} .
 - **Throws:**
@@ -2877,8 +2878,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.lang.IllegalArgumentException` — if the provided consumer is null
   - `java.sql.SQLException` — if a database access error occurs or the bi-consumer throws
 - **See also:** #executeThenAccept(Throwables.Consumer), #execute()
-##### asyncCall(...) -> ContinuableFuture<R>
-- **Signature:** `@Beta public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
+##### callAsync(...) -> ContinuableFuture<R>
+- **Signature:** `@Beta public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action using this query instance.
 - **Parameters:**
   - `sqlAction` (`Throwables.Function<? super This, ? extends R, SQLException>`) — the SQL action to be executed asynchronously. Must not be {@code null} .
@@ -2886,8 +2887,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if the provided SQL action is null
-- **See also:** #asyncCall(Throwables.Function, Executor), #asyncRun(Throwables.Consumer)
-- **Signature:** `@Beta public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
+- **See also:** #callAsync(Throwables.Function, Executor), #runAsync(Throwables.Consumer)
+- **Signature:** `@Beta public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action using this query instance with a custom executor.
 - **Contract:**
   - This is useful when you want to control the thread pool used for database operations.
@@ -2898,9 +2899,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if sqlAction or executor is null
-- **See also:** #asyncCall(Throwables.Function), #asyncRun(Throwables.Consumer)
-##### asyncRun(...) -> ContinuableFuture<Void>
-- **Signature:** `@Beta public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
+- **See also:** #callAsync(Throwables.Function), #runAsync(Throwables.Consumer)
+##### runAsync(...) -> ContinuableFuture<Void>
+- **Signature:** `@Beta public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action without returning a result.
 - **Parameters:**
   - `sqlAction` (`Throwables.Consumer<? super This, SQLException>`) — the SQL action to be executed asynchronously. Must not be {@code null} .
@@ -2908,8 +2909,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if the provided SQL action is null
-- **See also:** #asyncRun(Throwables.Consumer, Executor), #asyncCall(Throwables.Function)
-- **Signature:** `@Beta public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
+- **See also:** #runAsync(Throwables.Consumer, Executor), #callAsync(Throwables.Function)
+- **Signature:** `@Beta public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action without returning a result using a custom executor.
 - **Parameters:**
   - `sqlAction` (`Throwables.Consumer<? super This, SQLException>`) — the SQL action to be executed asynchronously. Must not be {@code null} .
@@ -2918,7 +2919,39 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.lang.IllegalArgumentException` — if sqlAction or executor is null
-- **See also:** #asyncRun(Throwables.Consumer), #asyncCall(Throwables.Function)
+- **See also:** #runAsync(Throwables.Consumer), #callAsync(Throwables.Function)
+##### callAsync(...) -> ContinuableFuture<R>
+- **Signature:** `@Deprecated @Beta public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Function<? super This, ? extends R, SQLException>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalStateException`
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Function<? super This, ? extends R, SQLException>`)
+  - `executor` (`Executor`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalStateException`
+  - `java.lang.IllegalArgumentException`
+##### runAsync(...) -> ContinuableFuture<Void>
+- **Signature:** `@Deprecated @Beta public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Consumer<? super This, SQLException>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalStateException`
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Consumer<? super This, SQLException>`)
+  - `executor` (`Executor`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalStateException`
+  - `java.lang.IllegalArgumentException`
 ##### close(...) -> void
 - **Signature:** `@Override public void close()`
 - **Summary:** Closes this query instance and releases any resources associated with it.
@@ -3565,16 +3598,16 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the parameters map is {@code null}
   - `java.sql.SQLException` — if a database access error occurs or any parameter name is not valid
-- **Signature:** `public CallableQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException`
+- **Signature:** `public CallableQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets multiple parameters for this CallableQuery by extracting values from an entity object.
 - **Contract:**
   - Each parameter name in the list should correspond to a property name in the entity object.
 - **Parameters:**
   - `entity` (`Object`) — the entity object containing the parameter values. Must not be {@code null} .
-  - `parameterNames` (`Collection<String>`) — a list of parameter names corresponding to properties in the entity. Each name should match a property name in the entity class.
+  - `parameterNamesToSet` (`Collection<String>`) — a list of parameter names corresponding to properties in the entity. Each name should match a property name in the entity class.
 - **Returns:** this CallableQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code entity} or {@code parameterNames} is {@code null} , or if any name in {@code parameterNames} does not correspond to a property of the entity class
+  - `java.lang.IllegalArgumentException` — if {@code entity} or {@code parameterNamesToSet} is {@code null} , or if any name in {@code parameterNamesToSet} does not correspond to a property of the entity class
   - `java.sql.SQLException` — if a database access error occurs while binding the parameters
 - **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#getNamedParameters(String)
 - **Signature:** `@SuppressWarnings("unchecked") public CallableQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException`
@@ -3721,29 +3754,29 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
   - `java.sql.SQLException` — if a database access error occurs or if the driver rejects parameterName
 - **See also:** java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, String), java.sql.JDBCType#STRUCT
 ##### registerOutParameters(...) -> CallableQuery
-- **Signature:** `public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> register) throws IllegalArgumentException, SQLException`
+- **Signature:** `public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> registrar) throws IllegalArgumentException, SQLException`
 - **Summary:** Registers multiple OUT parameters using a functional interface approach.
 - **Contract:**
   - This method allows for more complex registration logic and is useful when you need to register multiple parameters based on dynamic conditions.
   - If an exception occurs during registration, the statement is automatically closed.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code query.registerOutParameters(q -> { q.registerOutParameter(1, Types.INTEGER); q.registerOutParameter(2, Types.VARCHAR); if (includeDetails) { q.registerOutParameter(3, Types.CLOB); } }).execute(); } </pre>
 - **Parameters:**
-  - `register` (`Jdbc.ParametersSetter<? super CallableQuery>`) — the {@link Jdbc.ParametersSetter} that will register the OUT parameters. Must not be {@code null} .
+  - `registrar` (`Jdbc.ParametersSetter<? super CallableQuery>`) — the {@link Jdbc.ParametersSetter} that will register the OUT parameters. Must not be {@code null} .
 - **Returns:** this CallableQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code register} is {@code null}
+  - `java.lang.IllegalArgumentException` — if {@code registrar} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs during parameter registration
-- **Signature:** `public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> register) throws IllegalArgumentException, SQLException`
+- **Signature:** `public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> registrar) throws IllegalArgumentException, SQLException`
 - **Summary:** Registers multiple OUT parameters using a bi-functional interface and an additional context object.
 - **Contract:**
   - If an exception occurs during registration, the statement is automatically closed.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code record ReportConfig(boolean includeTotal, boolean includeAvg) { } ReportConfig config = new ReportConfig(true, false); query.registerOutParameters(config, (q, cfg) -> { int paramIndex = 1; q.registerOutParameter(paramIndex++, Types.VARCHAR); // always return a status message if (cfg.includeTotal()) { q.registerOutParameter(paramIndex++, Types.DECIMAL); } if (cfg.includeAvg()) { q.registerOutParameter(paramIndex++, Types.DECIMAL, 2); } }).execute(); } </pre>
 - **Parameters:**
   - `parameter` (`T`) — the context object to be passed to the {@code BiParametersSetter} .
-  - `register` (`Jdbc.BiParametersSetter<? super CallableQuery, ? super T>`) — the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null} .
+  - `registrar` (`Jdbc.BiParametersSetter<? super CallableQuery, ? super T>`) — the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null} .
 - **Returns:** this CallableQuery instance for method chaining
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code register} is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code registrar} is {@code null} .
   - `java.sql.SQLException` — if a database access error occurs during parameter registration.
 ##### executeThenApply(...) -> R
 - **Signature:** `@Override public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> func) throws SQLException`
@@ -4077,7 +4110,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "batch_processing_queue"; long lockDuration = 10 * 60 * 1000; // Lock for 10 minutes long waitTimeout = 30 * 1000; // Wait up to 30 seconds to acquire String lockCode = dbLock.lock(resourceIdentifier, lockDuration, waitTimeout); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Execute the batch processing logic // ...
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource to lock. Must not be {@code null} or empty.
-  - `liveTime` (`long`) — the duration in milliseconds for which the lock is valid. Must be positive.
+  - `liveTime` (`long`) — the lease-expiry window in milliseconds; the background refresh task extends this window while the lock remains held. Must be positive.
   - `timeout` (`long`) — the maximum time in milliseconds to wait for the lock. Must be non-negative.
 - **Returns:** a unique {@code String} code representing the acquired lock, or {@code null} if the lock could not be acquired within the specified timeout, or if the calling thread was interrupted while waiting (in which case the thread's interrupt status is preserved).
 - **See also:** #lock(String, long, long, long)
@@ -4090,7 +4123,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "inventory_update_process"; long lockDuration = 5 * 60 * 1000; // Lock for 5 minutes long acquisitionTimeout = 10 * 1000; // Wait up to 10 seconds long retryInterval = 500; // Retry every 500 milliseconds String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform the inventory update // ...
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource to lock. Must not be {@code null} or empty.
-  - `liveTime` (`long`) — the duration in milliseconds for which the lock is valid. Must be positive.
+  - `liveTime` (`long`) — the lease-expiry window in milliseconds; the background refresh task extends this window while the lock remains held. Must be positive.
   - `timeout` (`long`) — the maximum time in milliseconds to wait for the lock. Must be non-negative.
   - `retryInterval` (`long`) — the time in milliseconds to wait between retry attempts. A value of 0 means an internal minimum (1 ms) delay is used to avoid a tight spin loop. Must be non-negative.
 - **Returns:** a unique {@code String} code representing the acquired lock, or {@code null} if the lock could not be acquired within the specified timeout, or if the calling thread was interrupted while waiting (in which case the thread's interrupt status is preserved).
@@ -4151,41 +4184,41 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #importData(Dataset, Collection, Connection, String)
-- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql) throws SQLException`
+- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql) throws SQLException`
 - **Summary:** Imports selected columns from a Dataset to a database table using the provided Connection and insert SQL statement.
 - **Contract:**
-  - Only the specified columns will be imported, and their order in the SQL must match {@code selectColumnNames} .
+  - Only the specified columns will be imported, and their order in the SQL must match {@code columnNames} .
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be selected for import
+  - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
   - `conn` (`Connection`) — the Connection to the database
-  - `insertSql` (`String`) — the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
+  - `insertSql` (`String`) — the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException`
 - **Summary:** Imports selected columns from a Dataset to a database table with configurable batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be selected for import
+  - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
   - `conn` (`Connection`) — the Connection to the database
-  - `insertSql` (`String`) — the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
+  - `insertSql` (`String`) — the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException`
 - **Summary:** Imports filtered data from a Dataset to a database table with configurable batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be selected for import
+  - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
   - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
   - `conn` (`Connection`) — the Connection to the database
-  - `insertSql` (`String`) — the SQL insert statement with placeholders; placeholder order must match {@code selectColumnNames}
+  - `insertSql` (`String`) — the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
-- **Returns:** the number of rows successfully imported
+- **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@SuppressWarnings("rawtypes") public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
@@ -4198,7 +4231,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("rawtypes") public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
+- **Signature:** `@SuppressWarnings("rawtypes") @Deprecated public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
 - **Summary:** Imports data from a Dataset to a database table with custom column type mapping and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
@@ -4210,7 +4243,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("rawtypes") public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
+- **Signature:** `@SuppressWarnings("rawtypes") @Deprecated public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
 - **Summary:** Imports filtered data from a Dataset to a database table with custom column type mapping and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
@@ -4220,20 +4253,20 @@ Utility class for database import/export operations, CSV processing, and data co
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
   - `columnTypeMap` (`Map<String, ? extends Type>`) — a map specifying the types of the columns for type conversion
-- **Returns:** the number of rows successfully imported
+- **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a Dataset to a database table with a custom statement setter.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
   - `conn` (`Connection`) — the Connection to the database
   - `insertSql` (`String`) — the SQL insert statement with placeholders
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a Dataset to a database table with a custom statement setter and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
@@ -4241,11 +4274,11 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL insert statement with placeholders
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports filtered data from a Dataset to a database table with a custom statement setter and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
@@ -4254,8 +4287,8 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL insert statement with placeholders
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
-- **Returns:** the number of rows successfully imported
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+- **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public static int importData(final Dataset dataset, final PreparedStatement stmt) throws SQLException`
@@ -4266,38 +4299,38 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt) throws SQLException`
+- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt) throws SQLException`
 - **Summary:** Imports selected columns from a Dataset to a database table using the provided PreparedStatement.
 - **Contract:**
   - Only the specified columns will be imported, and their order must match the PreparedStatement parameters.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be selected for import
+  - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException`
 - **Summary:** Imports selected columns from a Dataset to a database table using the provided PreparedStatement with batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be selected for import
+  - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException`
 - **Summary:** Imports filtered data from selected columns of a Dataset to a database table using the provided PreparedStatement.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be selected for import
+  - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
   - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
-- **Returns:** the number of rows successfully imported
+- **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@SuppressWarnings("rawtypes") public static int importData(final Dataset dataset, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
@@ -4309,7 +4342,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings("rawtypes") public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
+- **Signature:** `@SuppressWarnings("rawtypes") @Deprecated public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException`
 - **Summary:** Imports data from a Dataset to a database table using the provided PreparedStatement with custom column type mapping and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
@@ -4320,7 +4353,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@SuppressWarnings({ "rawtypes", "null" }) public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException`
+- **Signature:** `@SuppressWarnings({ "rawtypes", "null" }) @Deprecated public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException`
 - **Summary:** Imports filtered data from a Dataset to a database table using the provided PreparedStatement with custom column type mapping and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
@@ -4329,31 +4362,31 @@ Utility class for database import/export operations, CSV processing, and data co
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
   - `columnTypeMap` (`Map<String, ? extends Type>`) — a map specifying the types of the columns for type conversion
-- **Returns:** the number of rows successfully imported
+- **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , or any key in {@code columnTypeMap} is not a column of the dataset
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `public static int importData(final Dataset dataset, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
 - **Returns:** the number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException`
+- **Signature:** `@Deprecated public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException`
 - **Summary:** Imports filtered data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
@@ -4361,23 +4394,23 @@ Utility class for database import/export operations, CSV processing, and data co
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
-- **Returns:** the number of rows successfully imported
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row
+- **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from an Iterator to the database using the specified DataSource and SQL insert statement.
 - **Parameters:**
   - `iter` (`Iterator<? extends T>`) — the Iterator containing the data to be imported
   - `targetDataSource` (`javax.sql.DataSource`) — the DataSource to obtain database connections from
   - `insertSql` (`String`) — the SQL insert statement with parameter placeholders ( {@code ?} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
 - **Returns:** the total number of rows successfully inserted
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** LineIterator#of(File), LineIterator#of(Reader)
-- **Signature:** `public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from an Iterator to the database using the provided Connection with configurable batch processing.
 - **Parameters:**
   - `iter` (`Iterator<? extends T>`) — the Iterator containing the data to be imported
@@ -4385,12 +4418,12 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL insert statement with parameter placeholders ( {@code ?} )
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
 - **Returns:** the total number of rows successfully inserted
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** LineIterator#of(File), LineIterator#of(Reader)
-- **Signature:** `public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from an Iterator to the database using the provided PreparedStatement with configurable batch processing.
 - **Contract:**
   - <p> This method is useful when you need to reuse a PreparedStatement or have specific statement configuration requirements.
@@ -4400,23 +4433,23 @@ Utility class for database import/export operations, CSV processing, and data co
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — a BiConsumer to map iterator elements to {@link PreparedQuery} parameters
 - **Returns:** the total number of rows successfully inserted
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** LineIterator#of(File), LineIterator#of(Reader)
 ##### importCsv(...) -> long
-- **Signature:** `public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV file to the database using the specified DataSource.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
   - `targetDataSource` (`javax.sql.DataSource`) — the DataSource to obtain database connections from
   - `insertSql` (`String`) — the SQL insert statement with parameter placeholders ( {@code ?} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
 - **Returns:** the total number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV file to the database using the provided Connection with configurable batch processing.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
@@ -4424,22 +4457,22 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL insert statement with parameter placeholders ( {@code ?} )
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
 - **Returns:** the total number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final File file, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `public static long importCsv(final File file, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV file to the database using the provided PreparedStatement with default batch settings.
 - **Contract:**
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import with custom prepared statement configuration File csvFile = new File("transactions.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS); long rowsImported = DataTransferUtil.importCsv(csvFile, stmt, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setBigDecimal(2, new BigDecimal(row\[1\])); query.setString(3, row\[2\]); query.setDate(4, Date.valueOf(row\[3\])); }); // Can retrieve generated keys if needed ResultSet generatedKeys = stmt.getGeneratedKeys(); } </pre>
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
 - **Returns:** the total number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV file to the database using the provided PreparedStatement with configurable batch processing.
 - **Contract:**
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import large dataset with progress tracking File csvFile = new File("large_dataset.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO records (id, data, timestamp) VALUES (?, ?, ?)"); AtomicLong processedRows = new AtomicLong(0); long totalRows = DataTransferUtil.importCsv(csvFile, stmt, 5000, 100, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setString(2, row\[1\]); query.setTimestamp(3, Timestamp.valueOf(row\[2\])); long processed = processedRows.incrementAndGet(); if (processed % 10000 == 0) { System.out.println("Processed " + processed + " rows..."); } }); System.out.println("Import completed.
@@ -4448,11 +4481,11 @@ Utility class for database import/export operations, CSV processing, and data co
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
 - **Returns:** the total number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV file to the database with row filtering capability.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
@@ -4460,11 +4493,11 @@ Utility class for database import/export operations, CSV processing, and data co
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
 - **Returns:** the total number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV Reader to the database using the specified DataSource.
 - **Contract:**
   - This method is useful when the CSV data comes from a source other than a file.
@@ -4472,33 +4505,33 @@ Utility class for database import/export operations, CSV processing, and data co
   - `reader` (`Reader`) — the Reader to read the CSV data from
   - `targetDataSource` (`javax.sql.DataSource`) — the DataSource to obtain database connections from
   - `insertSql` (`String`) — the SQL insert statement with parameter placeholders ( {@code ?} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values
 - **Returns:** the total number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final Reader reader, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `public static long importCsv(final Reader reader, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV Reader to the database using the provided PreparedStatement with default batch settings.
 - **Contract:**
   - The Reader will be wrapped in a BufferedReader for optimal performance if not already buffered.
 - **Parameters:**
   - `reader` (`Reader`) — the Reader to read the CSV data from
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
 - **Returns:** the total number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a CSV Reader to the database using the provided PreparedStatement with configurable batch processing.
 - **Parameters:**
   - `reader` (`Reader`) — the Reader to read the CSV data from
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
 - **Returns:** the total number of rows successfully imported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException`
+- **Signature:** `@Deprecated public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException`
 - **Summary:** Imports data from a CSV Reader to the database with row filtering capability and configurable batch processing.
 - **Contract:**
   - </p> <p> This method combines all import features: </p> <ul> <li> Custom data source (Reader) </li> <li> Row filtering before import </li> <li> Configurable batch processing </li> <li> Custom value mapping </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import CSV data with complex filtering and validation Reader reader = new FileReader("user_data.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)"); // Complex filter: valid email, age >= 18, allowed countries Set<String> allowedCountries = Set.of("US", "CA", "UK", "AU"); Predicate<String\[\]> complexFilter = row -> { // Validate email format (simple check) if (!row\[1\].contains("@")) return false; // Check age >= 18 try { if (Integer.parseInt(row\[2\]) < 18) return false; } catch (NumberFormatException e) { return false; } // Check allowed countries return allowedCountries.contains(row\[3\]); }; long rowsImported = DataTransferUtil.importCsv(reader, complexFilter, stmt, 2000, 0, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setString(2, row\[1\].toLowerCase()); // normalize email query.setInt(3, Integer.parseInt(row\[2\])); query.setString(4, row\[3\]); }); System.out.println("Imported " + rowsImported + " valid users"); } </pre>
@@ -4508,7 +4541,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values
 - **Returns:** the total number of rows successfully imported (after filtering)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
@@ -4532,7 +4565,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> selectColumnNames, final File output) throws SQLException`
+- **Signature:** `@Deprecated public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> columnNames, final File output) throws SQLException`
 - **Summary:** Exports selected columns from the database to a CSV file using the provided Connection and SQL query.
 - **Contract:**
   - This method allows you to specify which columns from the query result should be included in the CSV.
@@ -4540,7 +4573,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to the database (will not be closed by this method)
   - `selectSql` (`String`) — the SQL query to execute for retrieving data
-  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
+  - `columnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
   - `output` (`File`) — the File to write the CSV data to (will be created if doesn't exist)
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
@@ -4555,11 +4588,11 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long exportCsv(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException`
+- **Signature:** `@Deprecated public static long exportCsv(final PreparedStatement stmt, final Collection<String> columnNames, final File output) throws SQLException`
 - **Summary:** Exports selected columns from the database to a CSV file using the provided PreparedStatement.
 - **Parameters:**
   - `stmt` (`PreparedStatement`) — the PreparedStatement to execute (will not be closed by this method)
-  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
+  - `columnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
   - `output` (`File`) — the File to write the CSV data to (will be created if doesn't exist)
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
@@ -4574,14 +4607,14 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException`
+- **Signature:** `@Deprecated public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final File output) throws SQLException`
 - **Summary:** Exports selected columns from a ResultSet to a CSV file.
 - **Contract:**
   - <p> Column names are case-sensitive and must match exactly with the column labels in the ResultSet.
   - If a specified column is not found in the ResultSet, an IllegalArgumentException will be thrown.
 - **Parameters:**
   - `rs` (`ResultSet`) — the ResultSet containing the data to export (will not be closed by this method)
-  - `selectColumnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
+  - `columnNames` (`Collection<String>`) — collection of column names to include in export ( {@code null} or empty for all columns)
   - `output` (`File`) — the File to write the CSV data to (will be created if doesn't exist)
 - **Returns:** the total number of rows exported to the CSV file
 - **Throws:**
@@ -4593,7 +4626,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the DataSource to obtain database connections from
   - `selectSql` (`String`) — the SQL query to execute for retrieving data
-  - `output` (`Writer`) — the Writer to write the CSV data to (will not be closed by this method)
+  - `output` (`Writer`) — the Writer to write the CSV data to (will be flushed but not closed by this method)
 - **Returns:** the total number of rows exported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4602,7 +4635,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to the database (will not be closed by this method)
   - `selectSql` (`String`) — the SQL query to execute for retrieving data
-  - `output` (`Writer`) — the Writer to write the CSV data to (will not be closed by this method)
+  - `output` (`Writer`) — the Writer to write the CSV data to (will be flushed but not closed by this method)
 - **Returns:** the total number of rows exported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4614,11 +4647,11 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows exported
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output) throws IllegalArgumentException, SQLException`
+- **Signature:** `@Deprecated public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final Writer output) throws IllegalArgumentException, SQLException`
 - **Summary:** Exports data from a ResultSet to a Writer in CSV format with column selection.
 - **Parameters:**
   - `rs` (`ResultSet`) — the ResultSet containing the data to be exported (will not be closed by this method)
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be selected for export; if {@code null} or empty, all columns are exported
+  - `columnNames` (`Collection<String>`) — the collection of column names to be selected for export; if {@code null} or empty, all columns are exported
   - `output` (`Writer`) — the Writer to write the CSV data to (will be flushed but not closed by this method)
 - **Returns:** the number of rows exported
 - **Throws:**
@@ -4644,7 +4677,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs or either table doesn't exist
-- **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final int batchSize) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final int batchSize) throws SQLException`
 - **Summary:** Copies all data from a table in the source data source to a table in the target data source with a specified batch size for performance tuning.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the data source from which to copy data
@@ -4655,7 +4688,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final Collection<String> selectColumnNames) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final Collection<String> columnNames) throws SQLException`
 - **Summary:** Copies specified columns from a table in the source data source to a table in the target data source.
 - **Contract:**
   - <p> This method is useful when you need to copy only a subset of columns or when the target table has a different structure than the source table.
@@ -4664,18 +4697,18 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetDataSource` (`javax.sql.DataSource`) — the data source to which to copy data
   - `sourceTableName` (`String`) — the name of the table in the source data source
   - `targetTableName` (`String`) — the name of the table in the target data source
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to copy; {@code null} or empty copies all columns
+  - `columnNames` (`Collection<String>`) — the collection of column names to copy; {@code null} or empty copies all columns
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs or any specified column doesn't exist
-- **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final Collection<String> selectColumnNames, final int batchSize) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final Collection<String> columnNames, final int batchSize) throws SQLException`
 - **Summary:** Copies specified columns from a table in the source data source to a table in the target data source with a custom batch size for performance tuning.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the data source from which to copy data
   - `targetDataSource` (`javax.sql.DataSource`) — the data source to which to copy data
   - `sourceTableName` (`String`) — the name of the table in the source data source
   - `targetTableName` (`String`) — the name of the table in the target data source
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to copy; {@code null} or empty copies all columns
+  - `columnNames` (`Collection<String>`) — the collection of column names to copy; {@code null} or empty copies all columns
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
@@ -4690,7 +4723,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs or SQL statements are invalid
-- **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize, final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize, final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize) throws SQLException`
 - **Summary:** Copies data from a source data source to a target data source using custom SQL queries with specified fetch and batch sizes for performance optimization.
 - **Contract:**
   - For optimal performance, fetch size should be larger than batch size.
@@ -4704,18 +4737,18 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Copies data from a source data source to a target data source using custom SQL queries and a custom statement setter for parameter mapping.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the data source from which to copy data
   - `selectSql` (`String`) — the SQL query to select data from the source data source
   - `targetDataSource` (`javax.sql.DataSource`) — the data source to which to copy data
   - `insertSql` (`String`) — the SQL query to insert data into the target data source
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement from the result set; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement from the result set; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize, final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize, final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Copies data from a source data source to a target data source with full control over all aspects of the copy operation including SQL queries, performance settings, and parameter mapping.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the data source from which to copy data
@@ -4725,7 +4758,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL query to insert data into the target data source
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4748,7 +4781,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final int batchSize) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final int batchSize) throws SQLException`
 - **Summary:** Copies all data from a source table to a target table using the specified connections with a custom batch size for performance tuning.
 - **Parameters:**
   - `sourceConn` (`Connection`) — the connection to the source database
@@ -4759,7 +4792,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final Collection<String> selectColumnNames) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final Collection<String> columnNames) throws SQLException`
 - **Summary:** Copies specified columns from a source table to a target table using the provided connections.
 - **Contract:**
   - <p> This method is useful when copying a subset of columns or when the target table has a different structure than the source table.
@@ -4768,18 +4801,18 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetConn` (`Connection`) — the connection to the target database
   - `sourceTableName` (`String`) — the name of the source table to copy data from
   - `targetTableName` (`String`) — the name of the target table to copy data to
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be copied; {@code null} or empty copies all columns
+  - `columnNames` (`Collection<String>`) — the collection of column names to be copied; {@code null} or empty copies all columns
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs or any specified column doesn't exist
-- **Signature:** `public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final Collection<String> selectColumnNames, final int batchSize) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final Collection<String> columnNames, final int batchSize) throws SQLException`
 - **Summary:** Copies specified columns from a source table to a target table using the provided connections with a custom batch size for performance optimization.
 - **Parameters:**
   - `sourceConn` (`Connection`) — the connection to the source database
   - `targetConn` (`Connection`) — the connection to the target database
   - `sourceTableName` (`String`) — the name of the source table to copy data from
   - `targetTableName` (`String`) — the name of the target table to copy data to
-  - `selectColumnNames` (`Collection<String>`) — the collection of column names to be copied; {@code null} or empty copies all columns
+  - `columnNames` (`Collection<String>`) — the collection of column names to be copied; {@code null} or empty copies all columns
   - `batchSize` (`int`) — the number of rows to be copied in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
@@ -4794,7 +4827,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql, final int batchSize) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql, final int batchSize) throws SQLException`
 - **Summary:** Copies data between databases using custom SQL queries with specified fetch and batch sizes.
 - **Contract:**
   - For optimal performance, fetch size should be larger than batch size.
@@ -4808,18 +4841,18 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Copies data between databases using custom SQL queries and a custom statement setter.
 - **Parameters:**
   - `sourceConn` (`Connection`) — the connection to the source database
   - `selectSql` (`String`) — the SQL query to select data from the source database
   - `targetConn` (`Connection`) — the connection to the target database
   - `insertSql` (`String`) — the SQL query to insert data into the target database
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Copies data between databases with full control over all aspects of the operation.
 - **Parameters:**
   - `sourceConn` (`Connection`) — the connection to the source database
@@ -4829,11 +4862,11 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL query to insert data into the target database
   - `batchSize` (`int`) — the number of rows to be copied in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter) throws SQLException`
+- **Signature:** `@Deprecated public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Copies data from a source PreparedStatement to a target PreparedStatement with full control over batch processing and parameter mapping.
 - **Contract:**
   - <p> This low-level method provides direct control over prepared statements and is useful when you need to reuse statements or have complex statement preparation requirements.
@@ -4842,18 +4875,18 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertStmt` (`PreparedStatement`) — the PreparedStatement used to insert data into the target
   - `batchSize` (`int`) — the number of rows to process in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a BiConsumer that sets the parameters for the {@link PreparedQuery} from the ResultSet; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a BiConsumer that sets the parameters for the {@link PreparedQuery} from the ResultSet; if {@code null} , a default setter copies all columns by index
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-##### createParamSetter(...) -> Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>
-- **Signature:** `@Beta @SequentialOnly @Stateful public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> createParamSetter(final ColumnGetter<?> columnGetterForAll)`
+##### resultSetParameterSetter(...) -> Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>
+- **Signature:** `@Beta @SequentialOnly @Stateful public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> resultSetParameterSetter(final ColumnGetter<?> columnGetter)`
 - **Summary:** Creates a parameter setter for a {@link PreparedQuery} using the provided {@link ColumnGetter} .
 - **Contract:**
   - </p> <p> Because the column count is cached, the setter must only be reused for ResultSet instances with the same number of columns, and should not be shared across threads.
 - **Parameters:**
-  - `columnGetterForAll` (`ColumnGetter<?>`) — the ColumnGetter to apply to each column index in every row
-- **Returns:** a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions; a {@code NullPointerException} will be raised on first use if {@code columnGetterForAll} is {@code null}
+  - `columnGetter` (`ColumnGetter<?>`) — the ColumnGetter to apply to each column index in every row
+- **Returns:** a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions
 - **See also:** #copy(Connection, String, Connection, String, Throwables.BiConsumer)
 ##### importFrom(...) -> DatasetImportBuilder
 - **Signature:** `@Beta public static DatasetImportBuilder importFrom(final Dataset dataset)`
@@ -4965,13 +4998,13 @@ A fluent builder that configures and runs the import of a {@link Dataset} into a
 - (none)
 
 #### Public Instance Methods
-##### selectColumns(...) -> DatasetImportBuilder
-- **Signature:** `public DatasetImportBuilder selectColumns(final Collection<String> selectColumnNames)`
+##### columns(...) -> DatasetImportBuilder
+- **Signature:** `public DatasetImportBuilder columns(final Collection<String> columns)`
 - **Summary:** Restricts the import to the specified columns, in the given order.
 - **Contract:**
   - The order must match the parameter placeholders of the insert SQL.
 - **Parameters:**
-  - `selectColumnNames` (`Collection<String>`) — the column names to import; {@code null} or empty imports all columns
+  - `columns` (`Collection<String>`) — the column names to import; {@code null} or empty imports all columns. The supplied collection is copied.
 - **Returns:** this builder
 ##### filter(...) -> DatasetImportBuilder
 - **Signature:** `public DatasetImportBuilder filter(final Predicate<? super Object[]> filter)`
@@ -4985,23 +5018,23 @@ A fluent builder that configures and runs the import of a {@link Dataset} into a
 - **Parameters:**
   - `batchSize` (`int`) — the batch size (must be greater than 0 when {@code to(...)} is called)
 - **Returns:** this builder
-##### batchIntervalInMillis(...) -> DatasetImportBuilder
-- **Signature:** `public DatasetImportBuilder batchIntervalInMillis(final long batchIntervalInMillis)`
+##### batchDelay(...) -> DatasetImportBuilder
+- **Signature:** `public DatasetImportBuilder batchDelay(final Duration delay)`
 - **Summary:** Sets the pause between consecutive batch executions.
 - **Parameters:**
-  - `batchIntervalInMillis` (`long`) — the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+  - `delay` (`Duration`) — the delay between completed batches; must not be {@code null} or negative
 - **Returns:** this builder
-##### columnTypeMap(...) -> DatasetImportBuilder
-- **Signature:** `@SuppressWarnings("rawtypes") public DatasetImportBuilder columnTypeMap(final Map<String, ? extends Type> columnTypeMap)`
+##### columnTypes(...) -> DatasetImportBuilder
+- **Signature:** `@SuppressWarnings("rawtypes") public DatasetImportBuilder columnTypes(final Map<String, ? extends Type> columnTypes)`
 - **Summary:** Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
 - **Parameters:**
-  - `columnTypeMap` (`Map<String, ? extends Type>`) — a map of column name to {@link Type} ; keys must be columns of the dataset
+  - `columnTypes` (`Map<String, ? extends Type>`) — a map of column name to {@link Type} ; keys must be columns of the dataset. The supplied map is copied.
 - **Returns:** this builder
-##### stmtSetter(...) -> DatasetImportBuilder
-- **Signature:** `public DatasetImportBuilder stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> stmtSetter)`
+##### parameterSetter(...) -> DatasetImportBuilder
+- **Signature:** `public DatasetImportBuilder parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)`
 - **Summary:** Supplies a custom setter that maps each row to the statement parameters, giving full control over how values are bound.
 - **Parameters:**
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
 - **Returns:** this builder
 ##### to(...) -> int
 - **Signature:** `public int to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException`
@@ -5055,17 +5088,17 @@ A fluent builder that imports rows from an {@link Iterator} or a CSV {@link File
 - **Parameters:**
   - `batchSize` (`int`) — the batch size (must be greater than 0 when {@code to(...)} is called)
 - **Returns:** this builder
-##### batchIntervalInMillis(...) -> RowImportBuilder<T>
-- **Signature:** `public RowImportBuilder<T> batchIntervalInMillis(final long batchIntervalInMillis)`
+##### batchDelay(...) -> RowImportBuilder<T>
+- **Signature:** `public RowImportBuilder<T> batchDelay(final Duration delay)`
 - **Summary:** Sets the pause between consecutive batch executions.
 - **Parameters:**
-  - `batchIntervalInMillis` (`long`) — the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+  - `delay` (`Duration`) — the delay between completed batches; must not be {@code null} or negative
 - **Returns:** this builder
-##### stmtSetter(...) -> RowImportBuilder<T>
-- **Signature:** `public RowImportBuilder<T> stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter)`
+##### parameterSetter(...) -> RowImportBuilder<T>
+- **Signature:** `public RowImportBuilder<T> parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)`
 - **Summary:** Supplies a custom setter that binds each element to the insert statement parameters.
 - **Parameters:**
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — binds the parameters of the {@link PreparedQuery} for each element
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — binds the parameters of the {@link PreparedQuery} for each element
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException`
@@ -5107,11 +5140,11 @@ A fluent builder that exports the rows of a query/result to CSV.
 - (none)
 
 #### Public Instance Methods
-##### selectColumns(...) -> CsvExportBuilder
-- **Signature:** `public CsvExportBuilder selectColumns(final Collection<String> selectColumnNames)`
+##### columns(...) -> CsvExportBuilder
+- **Signature:** `public CsvExportBuilder columns(final Collection<String> columns)`
 - **Summary:** Restricts the export to the named columns (matched against the query's result-set column labels), in the order they appear in the result.
 - **Parameters:**
-  - `selectColumnNames` (`Collection<String>`) — the column names to export; {@code null} for all columns
+  - `columns` (`Collection<String>`) — the column names to export; {@code null} for all columns. The supplied collection is copied.
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final File output) throws SQLException`
@@ -5158,19 +5191,19 @@ A fluent builder that copies the rows of a SELECT query from a source {@link jav
 - **Parameters:**
   - `batchSize` (`int`) — the batch size (must be greater than 0 when {@code to(...)} is called)
 - **Returns:** this builder
-##### batchIntervalInMillis(...) -> CopyFromDataSource
-- **Signature:** `public CopyFromDataSource batchIntervalInMillis(final long batchIntervalInMillis)`
+##### batchDelay(...) -> CopyFromDataSource
+- **Signature:** `public CopyFromDataSource batchDelay(final Duration delay)`
 - **Summary:** Sets the pause between consecutive batch executions.
 - **Parameters:**
-  - `batchIntervalInMillis` (`long`) — the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+  - `delay` (`Duration`) — the delay between completed batches; must not be {@code null} or negative
 - **Returns:** this builder
-##### stmtSetter(...) -> CopyFromDataSource
-- **Signature:** `public CopyFromDataSource stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter)`
+##### parameterSetter(...) -> CopyFromDataSource
+- **Signature:** `public CopyFromDataSource parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)`
 - **Summary:** Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters.
 - **Contract:**
   - When {@code null} (the default), all columns are copied by index.
 - **Parameters:**
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException`
@@ -5209,19 +5242,19 @@ A fluent builder that copies the rows of a SELECT query between two {@link Conne
 - **Parameters:**
   - `batchSize` (`int`) — the batch size (must be greater than 0 when {@code to(...)} is called)
 - **Returns:** this builder
-##### batchIntervalInMillis(...) -> CopyFromConnection
-- **Signature:** `public CopyFromConnection batchIntervalInMillis(final long batchIntervalInMillis)`
+##### batchDelay(...) -> CopyFromConnection
+- **Signature:** `public CopyFromConnection batchDelay(final Duration delay)`
 - **Summary:** Sets the pause between consecutive batch executions.
 - **Parameters:**
-  - `batchIntervalInMillis` (`long`) — the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+  - `delay` (`Duration`) — the delay between completed batches; must not be {@code null} or negative
 - **Returns:** this builder
-##### stmtSetter(...) -> CopyFromConnection
-- **Signature:** `public CopyFromConnection stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter)`
+##### parameterSetter(...) -> CopyFromConnection
+- **Signature:** `public CopyFromConnection parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)`
 - **Summary:** Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters.
 - **Contract:**
   - When {@code null} (the default), all columns are copied by index.
 - **Parameters:**
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final Connection targetConn, final String insertSql) throws SQLException`
@@ -5252,19 +5285,19 @@ A fluent builder that copies the rows produced by a source {@link PreparedStatem
 - **Parameters:**
   - `batchSize` (`int`) — the batch size (must be greater than 0 when {@code to(...)} is called)
 - **Returns:** this builder
-##### batchIntervalInMillis(...) -> CopyFromStatement
-- **Signature:** `public CopyFromStatement batchIntervalInMillis(final long batchIntervalInMillis)`
+##### batchDelay(...) -> CopyFromStatement
+- **Signature:** `public CopyFromStatement batchDelay(final Duration delay)`
 - **Summary:** Sets the pause between consecutive batch executions.
 - **Parameters:**
-  - `batchIntervalInMillis` (`long`) — the interval in milliseconds (must be {@code >= 0} when {@code to(...)} is called)
+  - `delay` (`Duration`) — the delay between completed batches; must not be {@code null} or negative
 - **Returns:** this builder
-##### stmtSetter(...) -> CopyFromStatement
-- **Signature:** `public CopyFromStatement stmtSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetter)`
+##### parameterSetter(...) -> CopyFromStatement
+- **Signature:** `public CopyFromStatement parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)`
 - **Summary:** Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters.
 - **Contract:**
   - When {@code null} (the default), all columns are copied by index.
 - **Parameters:**
-  - `stmtSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final PreparedStatement insertStmt) throws SQLException`
@@ -5288,13 +5321,13 @@ A fluent builder that copies a table (or selected columns) between two {@link ja
 - (none)
 
 #### Public Instance Methods
-##### selectColumns(...) -> CopyTableFromDataSource
-- **Signature:** `public CopyTableFromDataSource selectColumns(final Collection<String> selectColumnNames)`
+##### columns(...) -> CopyTableFromDataSource
+- **Signature:** `public CopyTableFromDataSource columns(final Collection<String> columns)`
 - **Summary:** Restricts the copy to the specified columns.
 - **Contract:**
   - When {@code null} or empty (the default), all columns are copied.
 - **Parameters:**
-  - `selectColumnNames` (`Collection<String>`) — the column names to copy
+  - `columns` (`Collection<String>`) — the column names to copy. The supplied collection is copied.
 - **Returns:** this builder
 ##### batchSize(...) -> CopyTableFromDataSource
 - **Signature:** `public CopyTableFromDataSource batchSize(final int batchSize)`
@@ -5325,13 +5358,13 @@ A fluent builder that copies a table (or selected columns) between two {@link Co
 - (none)
 
 #### Public Instance Methods
-##### selectColumns(...) -> CopyTableFromConnection
-- **Signature:** `public CopyTableFromConnection selectColumns(final Collection<String> selectColumnNames)`
+##### columns(...) -> CopyTableFromConnection
+- **Signature:** `public CopyTableFromConnection columns(final Collection<String> columns)`
 - **Summary:** Restricts the copy to the specified columns.
 - **Contract:**
   - When {@code null} or empty (the default), all columns are copied.
 - **Parameters:**
-  - `selectColumnNames` (`Collection<String>`) — the column names to copy
+  - `columns` (`Collection<String>`) — the column names to copy. The supplied collection is copied.
 - **Returns:** this builder
 ##### batchSize(...) -> CopyTableFromConnection
 - **Signature:** `public CopyTableFromConnection batchSize(final int batchSize)`
@@ -5356,22 +5389,16 @@ A no-operation implementation of {@link Jdbc.Handler} for DAO instances.
 **Nullability:** unspecified
 
 #### Public Constructors
-- (none)
+- `public EmptyHandler()` — Constructs a new EmptyHandler instance.
 
 #### Public Static Methods
 - (none)
 
 #### Public Instance Methods
-##### <init>(...) -> void
-- **Signature:** `public EmptyHandler()`
-- **Summary:** Constructs a new EmptyHandler instance.
-- **Contract:**
-  - <p> This no-operation handler is used internally by the framework as a placeholder when no actual handling logic is required.
-- **Parameters:**
-  - (none)
+- (none)
 
 ### Enum FetchDirection (com.landawn.abacus.jdbc.FetchDirection)
-Enumeration representing the direction in which rows of a {@link ResultSet} will be processed.
+Enumeration representing the direction in which an application expects to traverse a {@link ResultSet} .
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -6073,7 +6100,7 @@ A fluent builder for creating customized, stateful {@code RowMapper} instances.
 - **Signature:** `@SequentialOnly @Stateful public RowMapper<Object[]> toArray()`
 - **Summary:** Builds a stateful {@code RowMapper} that maps each row to an {@code Object\[\]} .
 - **Contract:**
-  - </p> <p> <b> Warning: </b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+  - </p> <p> <b> &#9888; Warning: </b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
 - **Parameters:**
   - (none)
 - **Returns:** a new stateful {@code RowMapper<Object\[\]>}
@@ -6114,16 +6141,18 @@ A fluent builder for creating customized, stateful {@code RowMapper} instances.
 - **Signature:** `@SequentialOnly @Stateful public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher)`
 - **Summary:** Builds a stateful {@code RowMapper} that transforms each row using a custom finisher function.
 - **Contract:**
-  - </p> <p> <b> Warning: </b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+  - </p> <p> <b> &#9888; Warning: </b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
+  - The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.
 - **Parameters:**
-  - `finisher` (`Throwables.Function<DisposableObjArray, R, SQLException>`) — a function that transforms the row's values into the final result object
+  - `finisher` (`Throwables.Function<DisposableObjArray, R, SQLException>`) — a function that transforms the row's values into the final result object, must not be {@code null}
 - **Returns:** a new stateful {@code RowMapper<R>}
 - **Signature:** `@SequentialOnly @Stateful public <R> RowMapper<R> to(final Throwables.BiFunction<List<String>, DisposableObjArray, R, SQLException> finisher)`
 - **Summary:** Builds a stateful {@code RowMapper} that transforms each row using a custom finisher function.
 - **Contract:**
-  - </p> <p> <b> Warning: </b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+  - </p> <p> <b> &#9888; Warning: </b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
+  - The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.
 - **Parameters:**
-  - `finisher` (`Throwables.BiFunction<List<String>, DisposableObjArray, R, SQLException>`) — a function that transforms column labels and row values into the final result object
+  - `finisher` (`Throwables.BiFunction<List<String>, DisposableObjArray, R, SQLException>`) — a function that transforms column labels and row values into the final result object, must not be {@code null}
 - **Returns:** a new stateful {@code RowMapper<R>}
 
 ### Interface BiRowMapper (com.landawn.abacus.jdbc.Jdbc.BiRowMapper)
@@ -6203,20 +6232,20 @@ A functional interface for mapping the current row of a {@code ResultSet} to an 
   - `ignoreUnmatchedColumns` (`boolean`) — if {@code true} , columns without a matching property are silently skipped; if {@code false} , an {@code IllegalArgumentException} is thrown for any unmatched column
 - **Returns:** a new stateful {@code BiRowMapper} . Do not cache or reuse across different query structures.
 ##### toMap(...) -> BiRowMapper<Map<String, Object>>
-- **Signature:** `static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter, final IntFunction<? extends Map<String, Object>> mapSupplier)`
+- **Signature:** `static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> entryFilter, final IntFunction<? extends Map<String, Object>> mapSupplier)`
 - **Summary:** Creates a {@code BiRowMapper} that converts a row to a {@code Map} , including only the entries that satisfy the given key-value filter.
 - **Parameters:**
-  - `valueFilter` (`BiPredicate<String, Object>`) — a bi-predicate that receives the column name as the first argument and the column value as the second argument; only entries for which this predicate returns {@code true} are included
+  - `entryFilter` (`BiPredicate<String, Object>`) — a bi-predicate that receives the column name as the first argument and the column value as the second argument; only entries for which this predicate returns {@code true} are included
   - `mapSupplier` (`IntFunction<? extends Map<String, Object>>`) — a function that provides a new map instance, given the column count
 - **Returns:** a {@code BiRowMapper} that produces a filtered {@code Map}
-- **Signature:** `@SequentialOnly @Stateful static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> valueFilter, final IntFunction<? extends Map<String, Object>> mapSupplier)`
+- **Signature:** `@SequentialOnly @Stateful static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> entryFilter, final IntFunction<? extends Map<String, Object>> mapSupplier)`
 - **Summary:** Creates a stateful {@code BiRowMapper} that converts a row to a {@code Map} using a custom {@code RowExtractor} and then filters the results.
 - **Contract:**
   - This method is useful when you need custom value extraction logic (via {@code RowExtractor} ) combined with filtering.
   - It should not be cached, shared, or used in parallel streams.
 - **Parameters:**
   - `rowExtractor` (`RowExtractor`) — the custom extractor to get values from the {@code ResultSet} row
-  - `valueFilter` (`BiPredicate<String, Object>`) — a bi-predicate that receives the column name as the first argument and the column value as the second argument; only entries for which this predicate returns {@code true} are included
+  - `entryFilter` (`BiPredicate<String, Object>`) — a bi-predicate that receives the column name as the first argument and the column value as the second argument; only entries for which this predicate returns {@code true} are included
   - `mapSupplier` (`IntFunction<? extends Map<String, Object>>`) — a function that provides a new map instance, given the column count
 - **Returns:** a new stateful {@code BiRowMapper} .
 - **Signature:** `@SequentialOnly @Stateful static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter)`
@@ -6909,7 +6938,7 @@ Provides predefined {@link RowMapper} and {@link BiParametersSetter} instances f
 - **Signature:** `public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType)`
 - **Summary:** Gets a {@code RowMapper} that extracts a value of the specified type from the first column.
 - **Parameters:**
-  - `firstColumnType` (`Class<? extends T>`) — the class of the value in the first column.
+  - `firstColumnType` (`Class<? extends T>`) — the class of the value in the first column, must not be {@code null}
 - **Returns:** a {@code RowMapper} for the specified type.
 - **Signature:** `public static <T> RowMapper<T> get(final Type<? extends T> type)`
 - **Summary:** Gets a {@code RowMapper} that extracts a value of the specified Abacus-common {@code Type} from the first column.
@@ -6932,12 +6961,12 @@ Provides predefined {@link RowMapper} and {@link BiParametersSetter} instances f
 - **Signature:** `@SuppressWarnings("rawtypes") public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type)`
 - **Summary:** Creates a {@code BiParametersSetter} for setting a value of the specified type as the first parameter of a {@code PreparedStatement} .
 - **Parameters:**
-  - `type` (`Class<T>`) — the class of the parameter.
+  - `type` (`Class<T>`) — the class of the parameter, must not be {@code null}
 - **Returns:** a {@code BiParametersSetter} for the specified type.
 - **Signature:** `@SuppressWarnings("rawtypes") public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type)`
 - **Summary:** Creates a {@code BiParametersSetter} for setting a value of the specified Abacus-common {@code Type} as the first parameter of a {@code PreparedStatement} .
 - **Parameters:**
-  - `type` (`Type<T>`) — the {@code Type} of the parameter.
+  - `type` (`Type<T>`) — the {@code Type} of the parameter, must not be {@code null}
 - **Returns:** a {@code BiParametersSetter} for the specified type.
 
 #### Public Instance Methods
@@ -6950,7 +6979,8 @@ Represents an output parameter for a stored procedure call.
 **Nullability:** unspecified
 
 #### Public Constructors
-- (none)
+- `public OutParam()`
+- `public OutParam(int parameterIndex, String parameterName, int sqlType, String typeName, int scale)`
 
 #### Public Static Methods
 ##### of(...) -> OutParam
@@ -6964,10 +6994,66 @@ Represents an output parameter for a stored procedure call.
 - **Returns:** a new {@code OutParam} instance.
 
 #### Public Instance Methods
-##### <init>(...) -> void
-- **Signature:** `class OutParam { /** * The 1-based index of the parameter in the stored procedure call. */ private int parameterIndex; /** * The name of the parameter. This is optional and used for named parameter calls. */ private String parameterName; /** * The SQL type of the parameter, as defined in {@code java.sql.Types}. */ private int sqlType; /** * The database-specific type name. This is generally used for user-defined or complex types. */ private String typeName; /** * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types. */ private int scale; /** * A factory method to create an {@code OutParam} with the specified index and SQL type. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParam idOut = OutParam.of(1, Types.INTEGER); * int idx = idOut.getParameterIndex(); // returns 1 * int type = idOut.getSqlType(); // returns Types.INTEGER * String name = idOut.getParameterName(); // returns null (index-based registration) * * // parameterIndex is 1-based and must be greater than 0. * OutParam bad = OutParam.of(0, Types.INTEGER); // throws IllegalArgumentException * }</pre> * * @param parameterIndex the 1-based index of the parameter (must be {@code > 0}). * @param sqlType the SQL type from {@code java.sql.Types}. * @return a new {@code OutParam} instance. * @throws IllegalArgumentException if {@code parameterIndex <= 0} — index is 1-based, * and passing 0 here would cause the downstream consumer to fall through to the * name-based path with a null name, producing an opaque driver error. */ public static OutParam of(int parameterIndex, int sqlType) { N.checkArgument(parameterIndex > 0, "'parameterIndex' must be greater than 0 (1-based), but was: %s", parameterIndex); final OutParam outParam = new OutParam(); outParam.setParameterIndex(parameterIndex); outParam.setSqlType(sqlType); return outParam; } } /** * A container for the values of output parameters produced by a stored procedure * execution. Values can be retrieved by their 1-based parameter index or by parameter name, * depending on how the underlying {@link OutParam} was registered. * * <p>This type is not directly instantiable by callers; instances are produced by the framework * (e.g. by {@code CallableQuery} methods that accept a list of {@code OutParam}s).</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // After executing a stored procedure with output parameters * OutParamResult result = callableQuery.executeAndGetOutParameters(); * * // Retrieve by index * int id = result.getOutParamValue(1); * * // Retrieve by name * String name = result.getOutParamValue("result_name"); * }</pre> * * @see OutParam */ @EqualsAndHashCode @ToString public static final class OutParamResult { private final List<OutParam> outParams; private final Map<Object, Object> outParamValues; /** * Constructs an {@code OutParamResult} with the specified output parameters and their values. * * @param outParams the list of {@code OutParam} definitions. * @param outParamValues a map of output parameter values, keyed by index or name. */ OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) { this.outParams = outParams; this.outParamValues = outParamValues; } /** * Retrieves the value of an output parameter by its 1-based index. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * int id = result.getOutParamValue(1); // returns the value registered at index 1 * Object none = result.getOutParamValue(99); // returns null (no value at index 99) * }</pre> * * @param <T> expected parameter value type * @param parameterIndex the 1-based index of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final int parameterIndex) { return (T) outParamValues.get(parameterIndex); } /** * Retrieves the value of an output parameter by its name. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * String name = result.getOutParamValue("result_name"); // returns the value registered under "result_name" * Object none = result.getOutParamValue("unknown"); // returns null (no such name) * }</pre> * * @param <T> expected parameter value type * @param parameterName the name of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final String parameterName) { return (T) outParamValues.get(parameterName); } /** * Returns a map containing all output parameter values. The keys of the map are * either the parameter index ({@code Integer}) or name ({@code String}). * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * Map<Object, Object> all = result.getOutParamValues(); * Object byIndex = all.get(1); // value keyed by 1-based index * Object byName = all.get("result_name"); // value keyed by parameter name * }</pre> * * @return an unmodifiable view of the map of all output parameter values. */ public Map<Object, Object> getOutParamValues() { return ImmutableMap.wrap(outParamValues); } /** * Returns the list of {@link OutParam} definitions that were used to register the output parameters. * * <p><b>Usage Examples:</b></p> * <pre>{@code * OutParamResult result = callableQuery.executeAndGetOutParameters(); * List<OutParam> defs = result.getOutParams(); * int size = defs.size(); // number of registered out-parameters * int firstIndex = defs.get(0).getParameterIndex(); // 1-based index of the first out-param * }</pre> * * @return an unmodifiable view of the list of {@code OutParam} objects. */ public List<OutParam> getOutParams() { return ImmutableList.wrap(outParams); } } /** * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called. * * <p>Both {@link #beforeInvoke} and {@link #afterInvoke} have empty default implementations, so * implementations only need to override the hooks they care about.</p> * * <p>Implementations should be thread-safe if the same handler instance is registered against * multiple DAO proxies or invoked concurrently.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> loggingHandler = new Handler<>() { * public void beforeInvoke(UserDao proxy, Object[] args, * Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { * System.out.println("Calling method: " + methodSignature._1.getName()); * } * public void afterInvoke(Object result, UserDao proxy, Object[] args, * Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { * System.out.println("Method returned: " + result); * } * }; * }</pre> * * @param <P> DAO proxy type * @see HandlerFactory */ @Beta public interface Handler<P> { /** * This method is invoked before the actual DAO method is called. It can be used for * logging, argument validation, security checks, or transaction management. * * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } /** * This method is invoked after the DAO method completes, whether successfully or with an exception. * Handlers are invoked in the reverse order of their {@link #beforeInvoke} calls; if this * handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke} * is not invoked for it. It can be used for logging results, result transformation, or resource cleanup. * * <p>Exceptions thrown from this method are logged and attached as suppressed exceptions to any primary * failure from the DAO method itself (they never replace it); if the DAO method completed normally, the * first such exception is propagated to the caller.</p> * * @param result the value returned by the method. Will be {@code null} if the method's return type is * {@code void} or if the method threw an exception (in which case the throwable is not * surfaced here). * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } } /** * A factory for creating and managing {@link Handler} instances. It provides a central registry * for handlers and supports integration with the Spring Framework's application context. * * <p>Handlers can be registered manually via {@link #register(Handler)} or retrieved from * the Spring application context if available. The factory also provides convenience methods * to create handlers from lambda expressions.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Create a handler with before/after actions * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result) * ); * * // Register and retrieve a handler by class * HandlerFactory.register(myHandler); * Handler<?> h = HandlerFactory.get(MyHandler.class); * }</pre> * * @see Handler */ public static final class HandlerFactory { @SuppressWarnings("rawtypes") static final Handler EMPTY = new Handler() { // Do nothing. }; private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>(); private static final SpringApplicationContext springAppContext; static { handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY); handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY); SpringApplicationContext tmp = null; try { tmp = new SpringApplicationContext(); } catch (final Exception | LinkageError e) { // ignore. } springAppContext = tmp; } /** * Registers a handler by creating a new instance of the specified handler class. * The handler is registered using its canonical class name as the qualifier. * The class must have an accessible no-argument constructor; the instance is created * via reflection. * * <p><b>Usage Examples:</b></p> * <pre>{@code * boolean registered = HandlerFactory.register(MyHandler.class); // returns true if newly registered * boolean again = HandlerFactory.register(MyHandler.class); // returns false (already registered) * * HandlerFactory.register((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * @param handlerClass the handler class to instantiate and register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if it is abstract or otherwise cannot be * instantiated (e.g. it has no accessible no-argument constructor). The reflective instantiation is performed * by {@code N.newInstance(Class)}. */ public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { N.checkArgNotNull(handlerClass, cs.handlerClass); return register(N.newInstance(handlerClass)); } /** * Registers a handler instance. The handler is registered using its canonical class name as the qualifier. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<MyDao> handler = new MyHandler(); * boolean registered = HandlerFactory.register(handler); // returns true if newly registered * boolean again = HandlerFactory.register(new MyHandler()); // returns false (same qualifier already present) * * HandlerFactory.register((Handler<?>) null); // throws IllegalArgumentException * }</pre> * * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handler} is {@code null}, or if {@code handler}'s class has no canonical name * (e.g. an anonymous, local, or lambda-built handler); use {@link #register(String, Handler)} with an explicit qualifier for those. */ public static boolean register(final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotNull(handler, cs.handler); return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler); } /** * Registers a handler instance with a specific qualifier string. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<MyDao> handler = new MyHandler(); * boolean registered = HandlerFactory.register("myHandler", handler); // returns true if newly registered * boolean again = HandlerFactory.register("myHandler", new MyHandler()); // returns false (qualifier already present) * * HandlerFactory.register("", handler); // throws IllegalArgumentException (empty qualifier) * }</pre> * * @param qualifier the unique identifier for the handler. * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}. */ public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotEmpty(qualifier, cs.qualifier); N.checkArgNotNull(handler, cs.handler); return handlerPool.putIfAbsent(qualifier, handler) == null; } /** * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found, * it attempts to retrieve it from the Spring application context if available. * * <p>A handler resolved from the Spring context is cached into the internal registry only if no * entry already exists for this qualifier (first-wins), so a Spring bean can never silently * overwrite a handler explicitly registered via {@link #register(String, Handler)}.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * HandlerFactory.register("myHandler", new MyHandler()); * Handler<?> h = HandlerFactory.get("myHandler"); // returns the registered handler * Handler<?> none = HandlerFactory.get("no.such.Handler"); // returns null (not registered, no Spring bean) * * HandlerFactory.get(""); // throws IllegalArgumentException (empty qualifier) * }</pre> * * @param qualifier the unique identifier for the handler. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code qualifier} is empty. */ public static Handler<?> get(final String qualifier) { //NOSONAR N.checkArgNotEmpty(qualifier, cs.qualifier); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; // putIfAbsent (first-wins) so a Spring bean can never silently overwrite a handler // explicitly registered via register(...) -- register() itself uses putIfAbsent. handlerPool.putIfAbsent(qualifier, result); } } catch (final Exception e) { // Spring context lookup failed (no such bean, context not ready, or bean creation error) — return null } } return result; } /** * Retrieves a handler by its class. It first checks the internal registry using the class's * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring * application context. * * <p>A handler resolved from the Spring context is then cached into the internal registry, replacing * any existing entry for this qualifier.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * HandlerFactory.register(new MyHandler()); * Handler<?> h = HandlerFactory.get(MyHandler.class); // returns the registered handler * Handler<?> none = HandlerFactory.get(UnregisteredHandler.class); // returns null (not registered, no Spring bean) * * HandlerFactory.get((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * @param handlerClass the class of the handler to retrieve. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); final String qualifier = ClassUtil.getCanonicalClassName(handlerClass); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { result = springAppContext.getBean(handlerClass); } catch (final Exception e) { // Bean not found in Spring context by class } if (result == null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; } } catch (final Exception e) { // Bean not found in Spring context by qualifier } } if (result != null) { handlerPool.put(qualifier, result); } } return result; } /** * Retrieves a handler by its class. If the handler is not found in the registry or Spring context, * a new instance is created, registered, and returned. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<?> h = HandlerFactory.getOrCreate(MyHandler.class); // creates, registers and returns a new instance * Handler<?> same = HandlerFactory.getOrCreate(MyHandler.class); // returns the same registered instance (h == same) * * HandlerFactory.getOrCreate((Class<? extends Handler<?>>) null); // throws IllegalArgumentException * }</pre> * * <p>When a new instance has to be created, this method is race-safe: if another thread registers its own * instance for the same qualifier first, the already-registered instance is returned so that all callers * observe the same once-per-qualifier handler.</p> * * @param handlerClass the class of the handler to retrieve or create. * @return the existing or newly created handler instance. May be {@code null} only if {@code N.newInstance} returns * {@code null} for the given class. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if a new instance has to be created and * the class is abstract or otherwise cannot be instantiated (e.g. it has no accessible no-argument constructor). */ public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); Handler<?> result = get(handlerClass); if (result == null) { result = N.newInstance(handlerClass); if (result != null) { // register(...) returns false if another thread won the race and registered // its own instance first. Without re-fetching, this thread would return its // own unregistered instance — breaking the once-per-qualifier identity // contract callers rely on for stateful handler bookkeeping. if (!register(result)) { final Handler<?> registered = get(handlerClass); if (registered != null) { result = registered; } } } } return result; } /** * Creates a {@code Handler} with a custom action to be executed before method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.createForBeforeInvoke( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName())); * // The handler's beforeInvoke runs the action; afterInvoke is a no-op. * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..." * * HandlerFactory.createForBeforeInvoke((Throwables.TriConsumer<Object, Object[], * Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param beforeInvokeAction the action to perform before the method is called. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}. */ public static <T> Handler<T> createForBeforeInvoke( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> beforeInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with a custom action to be executed after method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.createForAfterInvoke( * (result, proxy, args, sig) -> System.out.println("After: " + result)); * // The handler's afterInvoke runs the action; beforeInvoke is a no-op. * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..." * * HandlerFactory.createForAfterInvoke((Throwables.QuadConsumer<Object, Object, Object[], * Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception). * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}. */ public static <T> Handler<T> createForAfterInvoke( final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, ? extends RuntimeException> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with custom actions to be executed both before and after method invocation. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result)); * handler.beforeInvoke(daoProxy, args, sig); // prints "Before: ..." * handler.afterInvoke(returnValue, daoProxy, args, sig); // prints "After: ..." * * // Both actions are required; passing null for either throws. * HandlerFactory.create((proxy, args, sig) -> {}, null); // throws IllegalArgumentException * }</pre> * * @param <T> proxy type * @param <E> exception type that actions can throw * @param beforeInvokeAction the action to perform before the method is called. * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception). * @return a new {@code Handler} instance. * @throws IllegalArgumentException if either action is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction, final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } private HandlerFactory() { // utility class - prevent instantiation. } } /** * An interface for caching the results of DAO method calls. Implementations can provide * various caching strategies (e.g., in-memory, distributed) to improve application performance. * * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p> * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p> * * <p>Two built-in implementations are provided:</p> * <ul> * <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li> * <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li> * </ul> * * @see DefaultDaoCache * @see DaoCacheByMap */ public interface DaoCache { /** * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@link DefaultDaoCache} * which uses a {@link KeyedObjectPool} for in-memory caching with TTL and idle time-based eviction. * * @param capacity the maximum number of entries in the cache. * @param evictDelay the interval in milliseconds for the eviction scheduler to run. * @return a new {@code DaoCache} instance. */ static DaoCache create(final int capacity, final long evictDelay) { return new DefaultDaoCache(capacity, evictDelay); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not * perform automatic eviction. * * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap() { return new DaoCacheByMap(); } /** * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom * map implementations (e.g., {@code ConcurrentHashMap}) for caching. * * <p>The provided map must be thread-safe (e.g., {@code ConcurrentHashMap}) if the DAO is * accessed concurrently, because the framework reads, writes, and invalidates entries from * whatever threads invoke the DAO methods.</p> * * @param map the map to use for caching. * @return a new {@code DaoCache} instance backed by the provided map. * @throws IllegalArgumentException if {@code map} is {@code null}. */ static DaoCache createByMap(Map<String, Object> map) { N.checkArgNotNull(map, "map"); return new DaoCacheByMap(map); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap} created with the * given initial capacity. This cache does not perform automatic eviction. * * @param capacity the initial capacity of the backing map. * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap(final int capacity) { return new DaoCacheByMap(capacity); } /** * Retrieves a cached result. The implementation can use the provided parameters to customize * the cache key generation if needed. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A return value of * {@code null} is treated as a cache miss by the framework, so implementations should not store * {@code null} results.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * // defaultCacheKey format: fullMethodName#tableName#jsonArrayOfParameters * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); * if (hit == null) { * // cache miss: execute the query and populate the cache via put(...) * } * }</pre> * * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance on which the method was called. * @param args the arguments passed to the method. * @param methodSignature a tuple containing method metadata. * @return the cached result, or {@code null} if not found. */ Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with default time-to-live (TTL) settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result} * is typically rejected (and not cached), since {@code null} is indistinguishable from a cache miss in * {@link #get(String, Object, Object[], Tuple3)}.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * User user = ...; // result of a query * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // cached == true when the non-null result was stored * }</pre> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with custom time-to-live (TTL) and idle time settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result} * is typically rejected (and not cached). Whether {@code liveTime}/{@code maxIdleTime} are honored depends on * the implementation; map-backed caches such as {@link DaoCacheByMap} ignore them.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * User user = ...; * // Cache for at most 60 seconds, evicting after 10 seconds of inactivity. * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, 60_000L, 10_000L, daoProxy, args, sig); * }</pre> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Updates the cache after a data modification operation (e.g., insert, update, delete). This method * is responsible for invalidating or clearing cache entries that may be affected by the operation. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. Typical implementations * invalidate every entry whose key references the affected table (parsed from {@code defaultCacheKey}), or * clear the whole cache when the table name cannot be determined.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * DaoCache cache = DaoCache.create(1000, 3000); * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // After updating the "users" table, invalidate the cached entries for that table. * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig); * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null * }</pre> * * @param defaultCacheKey the default cache key from the modification method. * @param result the result of the modification operation (e.g., number of rows affected). * @param daoProxy the DAO proxy instance. * @param args the arguments of the modification method. * @param methodSignature a tuple containing method metadata. */ void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); } /** * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching * with support for time-to-live (TTL) and idle time-based eviction. * * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all * entries associated with the affected table. If the table name cannot be determined from the cache key, * the entire cache is cleared.</p> * * @see DaoCache#create(int, long) */ public static final class DefaultDaoCache implements DaoCache { private final KeyedObjectPool<String, PoolableAdapter<Object>> pool; /** * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay. * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Holds up to 1000 entries; the eviction thread runs every 3 seconds. * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000); * boolean cached = cache.put(key, result, daoProxy, args, sig); // returns true (non-null result cached) * Object hit = cache.get(key, daoProxy, args, sig); // returns the cached result * boolean rejected = cache.put(key2, null, daoProxy, args, sig); // returns false (null result not cached) * }</pre> * * @param capacity the maximum number of entries the cache can hold. * @param evictDelay the interval in milliseconds for the background eviction thread. */ public DefaultDaoCache(final int capacity, final long evictDelay) { pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay); } /** * Retrieves a previously cached result from the backing {@link KeyedObjectPool}. * The {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused by this * implementation; only {@code defaultCacheKey} is consulted. * * @param defaultCacheKey the cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted). */ @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final PoolableAdapter<Object> w = pool.get(defaultCacheKey); return w == null ? null : w.value(); } /** * Caches a result using the framework default TTL ({@code JdbcUtil.DEFAULT_CACHE_LIVE_TIME}) and * default max idle time ({@code JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME}). * * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned, so that a cached * value can never be confused with a miss in {@link #get(String, Object, Object[], Tuple3)}. The * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p> * * @param defaultCacheKey the cache key; must not be {@code null}. * @param result the method result to cache; if {@code null}, nothing is cached. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} * or the backing pool rejected the entry. * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}. */ @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); // Reject null result to match DaoCacheByMap.put — otherwise a cached null is // indistinguishable from a miss (the sentinel-free contract of get()) and the // entry silently poisons cache capacity without ever being useful. if (result == null) { return false; } return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME)); } /** * Caches a result with the given time-to-live and max idle time, honored by the backing {@link KeyedObjectPool}. * * <p>A {@code null} {@code result} is intentionally not cached and {@code false} is returned. The * {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused.</p> * * @param defaultCacheKey the cache key; must not be {@code null}. * @param result the method result to cache; if {@code null}, nothing is cached. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata (unused). * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} * or the backing pool rejected the entry. * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}. */ @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime)); } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries whose key references that table (matched case-insensitively). * Otherwise, it clears the entire cache. * No action is taken for built-in update operations that report zero affected rows (an * {@code int}/{@code long} result of {@code 0}). The {@code daoProxy} and {@code args} arguments are unused. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000); * // Cache key format: fullMethodName#tableName#jsonArrayOfParameters * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig); * // An update against the "users" table invalidates all entries for that table. * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig); * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted) * }</pre> * * @param defaultCacheKey the cache key from the modification method (used to extract the affected table name). * @param result the result of the modification operation; a zero row count for a built-in update is treated as a no-op. * @param daoProxy the DAO proxy instance (unused). * @param args the method arguments (unused). * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { pool.clear(); } else { pool.keySet().stream().filter(k -> cacheKeyMatchesTable(k, updatedTableName)).toList().forEach(pool::remove); } } } /** * A simple implementation of {@link DaoCache} backed by a {@code Map} (defaults to * {@code ConcurrentHashMap}). Unlike {@link DefaultDaoCache}, this implementation does not * support automatic eviction or TTL-based expiration. Entries remain in the cache until explicitly * invalidated by a data modification operation or manual clearing. * * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p> * * @see DaoCache#createByMap() * @see DaoCache#createByMap(Map) */ record DaoCacheByMap(Map<String, Object> cache) implements DaoCache { /** * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}. */ public DaoCacheByMap() { this(new ConcurrentHashMap<>()); } /** * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity. * * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}. */ public DaoCacheByMap(final int capacity) { this(new ConcurrentHashMap<>(capacity)); } /** * Creates a {@code DaoCacheByMap} backed by a provided map instance. * * @param cache the map to be used for caching. * @throws IllegalArgumentException if {@code cache} is {@code null}. */ DaoCacheByMap { N.checkArgNotNull(cache, "cache"); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { return cache.get(defaultCacheKey); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Stores the result in the cache. The {@code liveTime} and {@code maxIdleTime} parameters * are ignored because this implementation does not support TTL-based eviction. */ @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries whose key references that table (matched case-insensitively). * Otherwise, it clears the entire cache. * No action is taken for built-in update operations that report zero affected rows (an * {@code int}/{@code long} result of {@code 0}). */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { cache.clear(); } else { cache.entrySet().removeIf(e -> cacheKeyMatchesTable(e.getKey(), updatedTableName)); } } } private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) { final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); return Strings.isNotEmpty(cachedTableName) && cachedTableName.equalsIgnoreCase(tableName); } }`
+##### getParameterIndex(...) -> int
+- **Signature:** `public int getParameterIndex()`
 - **Parameters:**
   - (none)
+- **Returns:** unspecified
+##### setParameterIndex(...) -> void
+- **Signature:** `public void setParameterIndex(int parameterIndex)`
+- **Parameters:**
+  - `parameterIndex` (`int`)
+##### getParameterName(...) -> String
+- **Signature:** `public String getParameterName()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setParameterName(...) -> void
+- **Signature:** `public void setParameterName(String parameterName)`
+- **Parameters:**
+  - `parameterName` (`String`)
+##### getSqlType(...) -> int
+- **Signature:** `public int getSqlType()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setSqlType(...) -> void
+- **Signature:** `public void setSqlType(int sqlType)`
+- **Parameters:**
+  - `sqlType` (`int`)
+##### getTypeName(...) -> String
+- **Signature:** `public String getTypeName()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setTypeName(...) -> void
+- **Signature:** `public void setTypeName(String typeName)`
+- **Parameters:**
+  - `typeName` (`String`)
+##### getScale(...) -> int
+- **Signature:** `public int getScale()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setScale(...) -> void
+- **Signature:** `public void setScale(int scale)`
+- **Parameters:**
+  - `scale` (`int`)
+##### equals(...) -> boolean
+- **Signature:** `public boolean equals(Object other)`
+- **Parameters:**
+  - `other` (`Object`)
+- **Returns:** unspecified
+##### hashCode(...) -> int
+- **Signature:** `public int hashCode()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
 
 ### Class OutParamResult (com.landawn.abacus.jdbc.Jdbc.OutParamResult)
 A container for the values of output parameters produced by a stored procedure execution.
@@ -6998,13 +7084,13 @@ A container for the values of output parameters produced by a stored procedure e
 - **Summary:** Returns a map containing all output parameter values.
 - **Parameters:**
   - (none)
-- **Returns:** an unmodifiable view of the map of all output parameter values.
+- **Returns:** an unmodifiable snapshot of the map of all output parameter values.
 ##### getOutParams(...) -> List<OutParam>
 - **Signature:** `public List<OutParam> getOutParams()`
 - **Summary:** Returns the list of {@link OutParam} definitions that were used to register the output parameters.
 - **Parameters:**
   - (none)
-- **Returns:** an unmodifiable view of the list of {@code OutParam} objects.
+- **Returns:** an unmodifiable snapshot of the list of {@code OutParam} objects. The definitions are copied when this result is created, so later changes to the query's registrations do not alter this result.
 
 ### Interface Handler (com.landawn.abacus.jdbc.Jdbc.Handler)
 A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented Programming (AOP) interceptor.
@@ -7091,6 +7177,8 @@ A factory for creating and managing {@link Handler} instances.
 - **Summary:** Retrieves a handler by its class.
 - **Contract:**
   - If not found, it attempts to retrieve it from the Spring application context.
+  - <p> A handler resolved from the Spring context is cached only if no entry already exists for this qualifier.
+  - This preserves an explicitly registered handler if registration races with resolution.
 - **Parameters:**
   - `handlerClass` (`Class<? extends Handler<?>>`) — the class of the handler to retrieve.
 - **Returns:** the handler instance, or {@code null} if not found.
@@ -7229,18 +7317,12 @@ The default implementation of {@link DaoCache} , using a {@link KeyedObjectPool}
 **Nullability:** unspecified
 
 #### Public Constructors
-- (none)
+- `public DefaultDaoCache(final int capacity, final long evictDelay)` — Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay.
 
 #### Public Static Methods
 - (none)
 
 #### Public Instance Methods
-##### <init>(...) -> void
-- **Signature:** `public DefaultDaoCache(final int capacity, final long evictDelay)`
-- **Summary:** Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay.
-- **Parameters:**
-  - `capacity` (`int`) — the maximum number of entries the cache can hold.
-  - `evictDelay` (`long`) — the interval in milliseconds for the background eviction thread.
 ##### get(...) -> Object
 - **Signature:** `@Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)`
 - **Summary:** Retrieves a previously cached result from the backing {@link KeyedObjectPool} .
@@ -7273,7 +7355,7 @@ The default implementation of {@link DaoCache} , using a {@link KeyedObjectPool}
 - **Returns:** {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} or the backing pool rejected the entry.
 ##### update(...) -> void
 - **Signature:** `@Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)`
-- **Summary:** Implements cache invalidation.
+- **Summary:** Updates the cache after a data modification.
 - **Contract:**
   - If the table name can be determined from the cache key, it removes all cache entries whose key references that table (matched case-insensitively).
 - **Parameters:**
@@ -7579,6 +7661,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the table cannot be queried
+- **See also:** #generateNamedUpdateSql(Connection, String, String), #generateNamedUpdateSql(Connection, String, Collection, Collection, String), #generateUpdateSql(DataSource, String, Collection, Collection, String)
 - **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table using an existing connection, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
@@ -7619,19 +7702,413 @@ Configuration class for customizing entity code generation.
 **Nullability:** unspecified
 
 #### Public Constructors
-- (none)
+- `public EntityCodeConfig()`
+- `public EntityCodeConfig(String srcDir, String packageName, String className, BiFunction<String, String, String> fieldNameConverter, QuadFunction<String, String, String, String, String> fieldTypeConverter, List<FieldMapping> customFieldMappings, List<Tuple2<String, String>> fieldTypeAnnotationArguments, boolean useBoxedTypes, boolean mapBigIntegerToLong, boolean mapBigDecimalToDouble, Collection<String> readOnlyFields, Collection<String> nonUpdatableFields, Collection<String> idFields, Collection<String> excludedFields, String additionalClassBodySource, List<String> classNamesToImport, Class<? extends Annotation> tableAnnotationClass, Class<? extends Annotation> columnAnnotationClass, Class<? extends Annotation> idAnnotationClass, boolean generateChainAccessors, boolean generateBuilder, boolean generateCopyMethod, boolean generatePropNameTable, JsonXmlConfig jsonXmlConfig)`
+
+#### Public Static Methods
+##### builder(...) -> EntityCodeConfigBuilder
+- **Signature:** `public static EntityCodeConfigBuilder builder()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+#### Public Instance Methods
+##### getSrcDir(...) -> String
+- **Signature:** `public String getSrcDir()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setSrcDir(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setSrcDir(String srcDir)`
+- **Parameters:**
+  - `srcDir` (`String`)
+- **Returns:** unspecified
+##### getPackageName(...) -> String
+- **Signature:** `public String getPackageName()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setPackageName(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setPackageName(String packageName)`
+- **Parameters:**
+  - `packageName` (`String`)
+- **Returns:** unspecified
+##### getClassName(...) -> String
+- **Signature:** `public String getClassName()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setClassName(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setClassName(String className)`
+- **Parameters:**
+  - `className` (`String`)
+- **Returns:** unspecified
+##### getFieldNameConverter(...) -> BiFunction<String, String, String>
+- **Signature:** `public BiFunction<String, String, String> getFieldNameConverter()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setFieldNameConverter(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setFieldNameConverter(BiFunction<String, String, String> fieldNameConverter)`
+- **Parameters:**
+  - `fieldNameConverter` (`BiFunction<String, String, String>`)
+- **Returns:** unspecified
+##### getFieldTypeConverter(...) -> QuadFunction<String, String, String, String, String>
+- **Signature:** `public QuadFunction<String, String, String, String, String> getFieldTypeConverter()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setFieldTypeConverter(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setFieldTypeConverter(QuadFunction<String, String, String, String, String> fieldTypeConverter)`
+- **Parameters:**
+  - `fieldTypeConverter` (`QuadFunction<String, String, String, String, String>`)
+- **Returns:** unspecified
+##### getCustomFieldMappings(...) -> List<FieldMapping>
+- **Signature:** `public List<FieldMapping> getCustomFieldMappings()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setCustomFieldMappings(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setCustomFieldMappings(List<FieldMapping> customFieldMappings)`
+- **Parameters:**
+  - `customFieldMappings` (`List<FieldMapping>`)
+- **Returns:** unspecified
+##### getFieldTypeAnnotationArguments(...) -> List<Tuple2<String, String>>
+- **Signature:** `public List<Tuple2<String, String>> getFieldTypeAnnotationArguments()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setFieldTypeAnnotationArguments(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setFieldTypeAnnotationArguments(List<Tuple2<String, String>> fieldTypeAnnotationArguments)`
+- **Parameters:**
+  - `fieldTypeAnnotationArguments` (`List<Tuple2<String, String>>`)
+- **Returns:** unspecified
+##### isUseBoxedTypes(...) -> boolean
+- **Signature:** `public boolean isUseBoxedTypes()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setUseBoxedTypes(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setUseBoxedTypes(boolean useBoxedTypes)`
+- **Parameters:**
+  - `useBoxedTypes` (`boolean`)
+- **Returns:** unspecified
+##### isMapBigIntegerToLong(...) -> boolean
+- **Signature:** `public boolean isMapBigIntegerToLong()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setMapBigIntegerToLong(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setMapBigIntegerToLong(boolean mapBigIntegerToLong)`
+- **Parameters:**
+  - `mapBigIntegerToLong` (`boolean`)
+- **Returns:** unspecified
+##### isMapBigDecimalToDouble(...) -> boolean
+- **Signature:** `public boolean isMapBigDecimalToDouble()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setMapBigDecimalToDouble(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setMapBigDecimalToDouble(boolean mapBigDecimalToDouble)`
+- **Parameters:**
+  - `mapBigDecimalToDouble` (`boolean`)
+- **Returns:** unspecified
+##### getReadOnlyFields(...) -> Collection<String>
+- **Signature:** `public Collection<String> getReadOnlyFields()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setReadOnlyFields(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setReadOnlyFields(Collection<String> readOnlyFields)`
+- **Parameters:**
+  - `readOnlyFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### getNonUpdatableFields(...) -> Collection<String>
+- **Signature:** `public Collection<String> getNonUpdatableFields()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setNonUpdatableFields(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setNonUpdatableFields(Collection<String> nonUpdatableFields)`
+- **Parameters:**
+  - `nonUpdatableFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### getIdFields(...) -> Collection<String>
+- **Signature:** `public Collection<String> getIdFields()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setIdFields(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setIdFields(Collection<String> idFields)`
+- **Parameters:**
+  - `idFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### getExcludedFields(...) -> Collection<String>
+- **Signature:** `public Collection<String> getExcludedFields()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setExcludedFields(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setExcludedFields(Collection<String> excludedFields)`
+- **Parameters:**
+  - `excludedFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### getAdditionalClassBodySource(...) -> String
+- **Signature:** `public String getAdditionalClassBodySource()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setAdditionalClassBodySource(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setAdditionalClassBodySource(String additionalClassBodySource)`
+- **Parameters:**
+  - `additionalClassBodySource` (`String`)
+- **Returns:** unspecified
+##### getClassNamesToImport(...) -> List<String>
+- **Signature:** `public List<String> getClassNamesToImport()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setClassNamesToImport(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setClassNamesToImport(List<String> classNamesToImport)`
+- **Parameters:**
+  - `classNamesToImport` (`List<String>`)
+- **Returns:** unspecified
+##### getTableAnnotationClass(...) -> Class<? extends Annotation>
+- **Signature:** `public Class<? extends Annotation> getTableAnnotationClass()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setTableAnnotationClass(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setTableAnnotationClass(Class<? extends Annotation> tableAnnotationClass)`
+- **Parameters:**
+  - `tableAnnotationClass` (`Class<? extends Annotation>`)
+- **Returns:** unspecified
+##### getColumnAnnotationClass(...) -> Class<? extends Annotation>
+- **Signature:** `public Class<? extends Annotation> getColumnAnnotationClass()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setColumnAnnotationClass(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setColumnAnnotationClass(Class<? extends Annotation> columnAnnotationClass)`
+- **Parameters:**
+  - `columnAnnotationClass` (`Class<? extends Annotation>`)
+- **Returns:** unspecified
+##### getIdAnnotationClass(...) -> Class<? extends Annotation>
+- **Signature:** `public Class<? extends Annotation> getIdAnnotationClass()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setIdAnnotationClass(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setIdAnnotationClass(Class<? extends Annotation> idAnnotationClass)`
+- **Parameters:**
+  - `idAnnotationClass` (`Class<? extends Annotation>`)
+- **Returns:** unspecified
+##### isGenerateChainAccessors(...) -> boolean
+- **Signature:** `public boolean isGenerateChainAccessors()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setGenerateChainAccessors(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setGenerateChainAccessors(boolean generateChainAccessors)`
+- **Parameters:**
+  - `generateChainAccessors` (`boolean`)
+- **Returns:** unspecified
+##### isGenerateBuilder(...) -> boolean
+- **Signature:** `public boolean isGenerateBuilder()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setGenerateBuilder(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setGenerateBuilder(boolean generateBuilder)`
+- **Parameters:**
+  - `generateBuilder` (`boolean`)
+- **Returns:** unspecified
+##### isGenerateCopyMethod(...) -> boolean
+- **Signature:** `public boolean isGenerateCopyMethod()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setGenerateCopyMethod(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setGenerateCopyMethod(boolean generateCopyMethod)`
+- **Parameters:**
+  - `generateCopyMethod` (`boolean`)
+- **Returns:** unspecified
+##### isGeneratePropNameTable(...) -> boolean
+- **Signature:** `public boolean isGeneratePropNameTable()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setGeneratePropNameTable(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setGeneratePropNameTable(boolean generatePropNameTable)`
+- **Parameters:**
+  - `generatePropNameTable` (`boolean`)
+- **Returns:** unspecified
+##### getJsonXmlConfig(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig getJsonXmlConfig()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setJsonXmlConfig(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig setJsonXmlConfig(JsonXmlConfig jsonXmlConfig)`
+- **Parameters:**
+  - `jsonXmlConfig` (`JsonXmlConfig`)
+- **Returns:** unspecified
+##### equals(...) -> boolean
+- **Signature:** `public boolean equals(Object other)`
+- **Parameters:**
+  - `other` (`Object`)
+- **Returns:** unspecified
+##### hashCode(...) -> int
+- **Signature:** `public int hashCode()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+### Record FieldMapping (com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig.FieldMapping)
+Maps a database column to an optional generated field name and Java field type.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- `public FieldMapping(String columnName, String fieldName, Class<?> fieldType)`
 
 #### Public Static Methods
 - (none)
 
 #### Public Instance Methods
-##### <init>(...) -> void
-- **Signature:** `class EntityCodeConfig { /** * The source directory where the generated entity class file will be saved. * If specified, the generated class will be written to this directory following the package structure. * Example: "./src/main/java" */ private String srcDir; /** * The package name for the generated entity class. * Example: "com.example.entity" */ private String packageName; /** * The class name for the generated entity. * If not specified, it will be derived from the table name using camelCase conversion. */ private String className; /** * Function to convert database column names to Java field names. * First parameter is entity/table name, second is column name. * Default implementation converts column names to camelCase. * Example: (tableName, columnName) -> Strings.toCamelCase(columnName) */ private BiFunction<String, String, String> fieldNameConverter; /** * Function to convert database column types to Java field types. * Parameters: entity/table name, field name, column name, column class name (from ResultSetMetaData). * Example: (entity, field, column, className) -> className.replace("java.lang.", "") */ private QuadFunction<String, String, String, String, String> fieldTypeConverter; /** * List of customized field mappings. * Each tuple contains: (column name, field name, field class). * Allows overriding default field names and types for specific columns. */ private List<Tuple3<String, String, Class<?>>> customizedFields; /** * List of customized database type annotations. * Each tuple contains: (field name, {@code @Type} annotation argument expression). * The second element is emitted verbatim as the argument to {@code @Type(...)}, so it must be * a valid annotation argument — {@code @Type} declares {@code String value()}, so use the quoted * attribute form: e.g., {@code Tuple.of("tags", "name = \"List<String>\"")} produces * {@code @Type(name = "List<String>")}. * Used to generate {@code @Type} annotations for fields whose database types * require explicit type mapping. */ private List<Tuple2<String, String>> customizedFieldDbTypes; /** * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.). * Default is {@code false} (uses primitives where possible). */ private boolean useBoxedType; /** * Whether to map {@link BigInteger} columns to {@code long} type. * Default is {@code false}. */ private boolean mapBigIntegerToLong; /** * Whether to map {@link BigDecimal} columns to {@code double} type. * Default is {@code false}. */ private boolean mapBigDecimalToDouble; /** * Collection of field names that should be annotated with {@code @ReadOnly}. * Read-only fields cannot be updated or inserted. A field cannot be both read-only and non-updatable. */ private Collection<String> readOnlyFields; /** * Collection of field names that should be annotated with {@code @NonUpdatable}. * Non-updatable fields can be inserted but cannot be updated. A field cannot be both read-only and non-updatable. */ private Collection<String> nonUpdatableFields; /** * Collection of field names that should be annotated with {@code @Id}. * These fields represent the primary key columns of the table. * If not specified, primary keys are auto-detected from database metadata. */ private Collection<String> idFields; /** * A single field name to be annotated with {@code @Id}. * This is a convenience alternative to {@link #idFields} when there is only one primary key column. */ private String idField; /** * Collection of field names to exclude from the generated entity class. * Fields in this collection will not appear in the generated code. */ private Collection<String> excludedFields; /** * Additional fields or lines of code to append to the generated entity class body. * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}). * Lines starting with {@code //} are treated as comments and stripped during field parsing. */ private String additionalFieldsOrLines; /** * List of fully qualified class names to add as import statements in the generated entity class. * Example: {@code Arrays.asList("java.time.LocalDate", "com.example.MyType")} */ private List<String> classNamesToImport; /** * The annotation class to use for the {@code @Table} annotation on the generated entity. * Default is {@link com.landawn.abacus.annotation.Table}. * Can be set to {@code jakarta.persistence.Table} or {@code javax.persistence.Table} for JPA compatibility. */ private Class<? extends Annotation> tableAnnotationClass; /** * The annotation class to use for the {@code @Column} annotation on generated fields. * Default is {@link com.landawn.abacus.annotation.Column}. * Can be set to {@code jakarta.persistence.Column} or {@code javax.persistence.Column} for JPA compatibility. */ private Class<? extends Annotation> columnAnnotationClass; /** * The annotation class to use for the {@code @Id} annotation on primary key fields. * Default is {@link com.landawn.abacus.annotation.Id}. * Can be set to {@code jakarta.persistence.Id} or {@code javax.persistence.Id} for JPA compatibility. */ private Class<? extends Annotation> idAnnotationClass; /** * Whether to generate Lombok {@code @Accessors(chain = true)} annotation on the entity class. * When {@code true}, setter methods return {@code this} for method chaining. * Default is {@code false}. */ private boolean chainAccessor; /** * Whether to generate Lombok {@code @Builder} annotation on the entity class. * Default is {@code false}. */ private boolean generateBuilder; /** * Whether to generate a {@code copy()} method in the entity class. * The copy method creates a shallow copy of the entity with all field values copied. * Default is {@code false}. */ private boolean generateCopyMethod; /** * Whether to generate an inner interface containing field name constants. * The interface is named {@code x} (see {@link JdbcCodeGenerationUtil#X}) and contains * {@code String} constants for each field name, providing compile-time-safe field-name references. * Default is {@code false}. */ private boolean generateFieldNameTable; // /** // * Reserved configuration flag intended to extend the field-name table class name with additional context. // * Currently unused by the generator; retained for binary compatibility and future extension. // * Default is {@code false}. // */ // private boolean extendFieldNameTableClassName; // private String fieldNameTableClassName; // Always be "NT"; // private List<Tuple2<String, String>> customizedJsonFields; /** * Configuration for JSON and XML serialization/deserialization annotations. * When set, a {@code @JsonXmlConfig} annotation is generated on the entity class * with the specified settings for naming policy, date format, etc. * This feature is marked as {@code @Beta} and may change in future releases. */ @Beta private JsonXmlConfig jsonXmlConfig; /** * Configuration for JSON and XML serialization/deserialization settings. * * <p>This class allows customization of how entity fields are serialized to * and deserialized from JSON and XML formats. It includes settings for naming * conventions, field filtering, date/time formatting, and enum handling.</p> * * <p>This feature is experimental and may be subject to changes * in future releases.</p> */ @Builder @Data @AllArgsConstructor @Accessors(chain = true) public static final class JsonXmlConfig { /** * The naming policy for JSON/XML serialization (e.g., {@code CAMEL_CASE}, {@code SNAKE_CASE}, {@code SCREAMING_SNAKE_CASE}). * Controls how Java field names are converted to JSON/XML property names. */ private NamingPolicy namingPolicy; /** * Comma-separated list of field names to ignore during JSON/XML serialization. * Example: {@code "password, secretKey, internalId"} */ private String ignoredFields; /** * The date format pattern used for serializing date/time fields. * Example: {@code "yyyy-MM-dd HH:mm:ss"} */ private String dateFormat; /** * The time zone ID used for date/time formatting. * Example: {@code "UTC"}, {@code "America/New_York"} */ private String timeZone; /** * The number format pattern used for serializing numeric fields. * Example: {@code "#,##0.00"} */ private String numberFormat; /** * The enum serialization strategy. * Controls whether enums are serialized by name or ordinal. */ private EnumType enumerated; /** * Constructs a new JsonXmlConfig instance with default values. */ public JsonXmlConfig() { } } } }`
+##### columnName(...) -> String
+- **Signature:** `public String columnName()`
 - **Parameters:**
   - (none)
+- **Returns:** unspecified
+##### fieldName(...) -> String
+- **Signature:** `public String fieldName()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### fieldType(...) -> Class<?>
+- **Signature:** `public Class<?> fieldType()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### equals(...) -> boolean
+- **Signature:** `public boolean equals(Object other)`
+- **Parameters:**
+  - `other` (`Object`)
+- **Returns:** unspecified
+##### hashCode(...) -> int
+- **Signature:** `public int hashCode()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
 
 ### Class JsonXmlConfig (com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig)
 Configuration for JSON and XML serialization/deserialization settings.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- `public JsonXmlConfig()` — Constructs a new JsonXmlConfig instance with default values.
+- `public JsonXmlConfig(NamingPolicy namingPolicy, String ignoredFields, String dateFormat, String timeZone, String numberFormat, EnumType enumerated)`
+
+#### Public Static Methods
+##### builder(...) -> JsonXmlConfigBuilder
+- **Signature:** `public static JsonXmlConfigBuilder builder()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+#### Public Instance Methods
+##### getNamingPolicy(...) -> NamingPolicy
+- **Signature:** `public NamingPolicy getNamingPolicy()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setNamingPolicy(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig setNamingPolicy(NamingPolicy namingPolicy)`
+- **Parameters:**
+  - `namingPolicy` (`NamingPolicy`)
+- **Returns:** unspecified
+##### getIgnoredFields(...) -> String
+- **Signature:** `public String getIgnoredFields()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setIgnoredFields(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig setIgnoredFields(String ignoredFields)`
+- **Parameters:**
+  - `ignoredFields` (`String`)
+- **Returns:** unspecified
+##### getDateFormat(...) -> String
+- **Signature:** `public String getDateFormat()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setDateFormat(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig setDateFormat(String dateFormat)`
+- **Parameters:**
+  - `dateFormat` (`String`)
+- **Returns:** unspecified
+##### getTimeZone(...) -> String
+- **Signature:** `public String getTimeZone()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setTimeZone(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig setTimeZone(String timeZone)`
+- **Parameters:**
+  - `timeZone` (`String`)
+- **Returns:** unspecified
+##### getNumberFormat(...) -> String
+- **Signature:** `public String getNumberFormat()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setNumberFormat(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig setNumberFormat(String numberFormat)`
+- **Parameters:**
+  - `numberFormat` (`String`)
+- **Returns:** unspecified
+##### getEnumerated(...) -> EnumType
+- **Signature:** `public EnumType getEnumerated()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### setEnumerated(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig setEnumerated(EnumType enumerated)`
+- **Parameters:**
+  - `enumerated` (`EnumType`)
+- **Returns:** unspecified
+##### equals(...) -> boolean
+- **Signature:** `public boolean equals(Object other)`
+- **Parameters:**
+  - `other` (`Object`)
+- **Returns:** unspecified
+##### hashCode(...) -> int
+- **Signature:** `public int hashCode()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+### Class JsonXmlConfigBuilder (com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig.JsonXmlConfigBuilder)
+Builder generated by Lombok for {@code JsonXmlConfig}.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -7643,11 +8120,190 @@ Configuration for JSON and XML serialization/deserialization settings.
 - (none)
 
 #### Public Instance Methods
-##### <init>(...) -> void
-- **Signature:** `public JsonXmlConfig()`
-- **Summary:** Constructs a new JsonXmlConfig instance with default values.
+##### namingPolicy(...) -> JsonXmlConfigBuilder
+- **Signature:** `public JsonXmlConfigBuilder namingPolicy(NamingPolicy namingPolicy)`
+- **Parameters:**
+  - `namingPolicy` (`NamingPolicy`)
+- **Returns:** unspecified
+##### ignoredFields(...) -> JsonXmlConfigBuilder
+- **Signature:** `public JsonXmlConfigBuilder ignoredFields(String ignoredFields)`
+- **Parameters:**
+  - `ignoredFields` (`String`)
+- **Returns:** unspecified
+##### dateFormat(...) -> JsonXmlConfigBuilder
+- **Signature:** `public JsonXmlConfigBuilder dateFormat(String dateFormat)`
+- **Parameters:**
+  - `dateFormat` (`String`)
+- **Returns:** unspecified
+##### timeZone(...) -> JsonXmlConfigBuilder
+- **Signature:** `public JsonXmlConfigBuilder timeZone(String timeZone)`
+- **Parameters:**
+  - `timeZone` (`String`)
+- **Returns:** unspecified
+##### numberFormat(...) -> JsonXmlConfigBuilder
+- **Signature:** `public JsonXmlConfigBuilder numberFormat(String numberFormat)`
+- **Parameters:**
+  - `numberFormat` (`String`)
+- **Returns:** unspecified
+##### enumerated(...) -> JsonXmlConfigBuilder
+- **Signature:** `public JsonXmlConfigBuilder enumerated(EnumType enumerated)`
+- **Parameters:**
+  - `enumerated` (`EnumType`)
+- **Returns:** unspecified
+##### build(...) -> JsonXmlConfig
+- **Signature:** `public JsonXmlConfig build()`
 - **Parameters:**
   - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+### Class EntityCodeConfigBuilder (com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig.EntityCodeConfigBuilder)
+Builder generated by Lombok for {@code EntityCodeConfig}.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- (none)
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+##### srcDir(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder srcDir(String srcDir)`
+- **Parameters:**
+  - `srcDir` (`String`)
+- **Returns:** unspecified
+##### packageName(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder packageName(String packageName)`
+- **Parameters:**
+  - `packageName` (`String`)
+- **Returns:** unspecified
+##### className(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder className(String className)`
+- **Parameters:**
+  - `className` (`String`)
+- **Returns:** unspecified
+##### fieldNameConverter(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder fieldNameConverter(BiFunction<String, String, String> fieldNameConverter)`
+- **Parameters:**
+  - `fieldNameConverter` (`BiFunction<String, String, String>`)
+- **Returns:** unspecified
+##### fieldTypeConverter(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder fieldTypeConverter(QuadFunction<String, String, String, String, String> fieldTypeConverter)`
+- **Parameters:**
+  - `fieldTypeConverter` (`QuadFunction<String, String, String, String, String>`)
+- **Returns:** unspecified
+##### customFieldMappings(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder customFieldMappings(List<FieldMapping> customFieldMappings)`
+- **Parameters:**
+  - `customFieldMappings` (`List<FieldMapping>`)
+- **Returns:** unspecified
+##### fieldTypeAnnotationArguments(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder fieldTypeAnnotationArguments(List<Tuple2<String, String>> fieldTypeAnnotationArguments)`
+- **Parameters:**
+  - `fieldTypeAnnotationArguments` (`List<Tuple2<String, String>>`)
+- **Returns:** unspecified
+##### useBoxedTypes(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder useBoxedTypes(boolean useBoxedTypes)`
+- **Parameters:**
+  - `useBoxedTypes` (`boolean`)
+- **Returns:** unspecified
+##### mapBigIntegerToLong(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder mapBigIntegerToLong(boolean mapBigIntegerToLong)`
+- **Parameters:**
+  - `mapBigIntegerToLong` (`boolean`)
+- **Returns:** unspecified
+##### mapBigDecimalToDouble(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder mapBigDecimalToDouble(boolean mapBigDecimalToDouble)`
+- **Parameters:**
+  - `mapBigDecimalToDouble` (`boolean`)
+- **Returns:** unspecified
+##### readOnlyFields(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder readOnlyFields(Collection<String> readOnlyFields)`
+- **Parameters:**
+  - `readOnlyFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### nonUpdatableFields(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder nonUpdatableFields(Collection<String> nonUpdatableFields)`
+- **Parameters:**
+  - `nonUpdatableFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### idFields(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder idFields(Collection<String> idFields)`
+- **Parameters:**
+  - `idFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### excludedFields(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder excludedFields(Collection<String> excludedFields)`
+- **Parameters:**
+  - `excludedFields` (`Collection<String>`)
+- **Returns:** unspecified
+##### additionalClassBodySource(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder additionalClassBodySource(String additionalClassBodySource)`
+- **Parameters:**
+  - `additionalClassBodySource` (`String`)
+- **Returns:** unspecified
+##### classNamesToImport(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder classNamesToImport(List<String> classNamesToImport)`
+- **Parameters:**
+  - `classNamesToImport` (`List<String>`)
+- **Returns:** unspecified
+##### tableAnnotationClass(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder tableAnnotationClass(Class<? extends Annotation> tableAnnotationClass)`
+- **Parameters:**
+  - `tableAnnotationClass` (`Class<? extends Annotation>`)
+- **Returns:** unspecified
+##### columnAnnotationClass(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder columnAnnotationClass(Class<? extends Annotation> columnAnnotationClass)`
+- **Parameters:**
+  - `columnAnnotationClass` (`Class<? extends Annotation>`)
+- **Returns:** unspecified
+##### idAnnotationClass(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder idAnnotationClass(Class<? extends Annotation> idAnnotationClass)`
+- **Parameters:**
+  - `idAnnotationClass` (`Class<? extends Annotation>`)
+- **Returns:** unspecified
+##### generateChainAccessors(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder generateChainAccessors(boolean generateChainAccessors)`
+- **Parameters:**
+  - `generateChainAccessors` (`boolean`)
+- **Returns:** unspecified
+##### generateBuilder(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder generateBuilder(boolean generateBuilder)`
+- **Parameters:**
+  - `generateBuilder` (`boolean`)
+- **Returns:** unspecified
+##### generateCopyMethod(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder generateCopyMethod(boolean generateCopyMethod)`
+- **Parameters:**
+  - `generateCopyMethod` (`boolean`)
+- **Returns:** unspecified
+##### generatePropNameTable(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder generatePropNameTable(boolean generatePropNameTable)`
+- **Parameters:**
+  - `generatePropNameTable` (`boolean`)
+- **Returns:** unspecified
+##### jsonXmlConfig(...) -> EntityCodeConfigBuilder
+- **Signature:** `public EntityCodeConfigBuilder jsonXmlConfig(JsonXmlConfig jsonXmlConfig)`
+- **Parameters:**
+  - `jsonXmlConfig` (`JsonXmlConfig`)
+- **Returns:** unspecified
+##### build(...) -> EntityCodeConfig
+- **Signature:** `public EntityCodeConfig build()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
 
 ### Class JdbcUtil (com.landawn.abacus.jdbc.JdbcUtil)
 Utility class providing high-level JDBC operations with automatic resource management, transaction support, and connection pooling integration.
@@ -7969,22 +8625,22 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** ResultSetMetaData#getColumnLabel(int), ResultSetMetaData#getColumnName(int)
 ##### getColumnIndex(...) -> int
-- **Signature:** `public static int getColumnIndex(final ResultSet rs, final String columnName) throws SQLException`
+- **Signature:** `public static int getColumnIndex(final ResultSet rs, final String columnLabel) throws SQLException`
 - **Summary:** Returns the 1-based index of the column with the given name (or label) in a {@link ResultSet} .
 - **Contract:**
   - Returns {@code -1} when no column matches.
 - **Parameters:**
   - `rs` (`ResultSet`) — the {@link ResultSet} to search within; must not be {@code null}
-  - `columnName` (`String`) — the column label or name to look up; case-insensitive
+  - `columnLabel` (`String`) — the column label (or name) to look up; case-insensitive
 - **Returns:** the 1-based index of the matching column, or {@code -1} if none matches
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #getColumnIndex(ResultSetMetaData, String)
-- **Signature:** `public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnName) throws SQLException`
+- **Signature:** `public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnLabel) throws SQLException`
 - **Summary:** Returns the 1-based index of a column from {@link ResultSetMetaData} given its name.
 - **Parameters:**
   - `rsmd` (`ResultSetMetaData`) — The {@link ResultSetMetaData} to search within.
-  - `columnName` (`String`) — The name or label of the column to find.
+  - `columnLabel` (`String`) — The label (or name) of the column to find.
 - **Returns:** The 1-based index of the column, or -1 if not found.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs.
@@ -8061,7 +8717,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - Reusing a single statement is more efficient than creating new prepared statements for each execution, especially when the same query is executed repeatedly with different parameters.
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
   - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
-  - </p> <p> <b> Key Features: </b> </p> <ul> <li> Automatic resource management when used with try-with-resources </li> <li> Support for method chaining with fluent parameter setting API </li> <li> Integration with transaction context for transactional operations </li> <li> Type-safe result mapping to Java objects, Lists, Maps, and more </li> <li> Stream support for memory-efficient processing of large result sets </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Basic query execution with single result // If closeAfterExecution(false) is not called, // there is no need to place the query instance in a try-catch block for closure.
+  - </p> <p> <b> Key Features: </b> </p> <ul> <li> Automatic resource management when used with try-with-resources </li> <li> Support for method chaining with fluent parameter setting API </li> <li> Integration with transaction context for transactional operations </li> <li> Type-safe result mapping to Java objects, Lists, Maps, and more </li> <li> Stream support for memory-efficient processing of large result sets </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Basic query execution with single result // If closeAfterExecution(false) is not called, // there is no need to place the query instance in a try-with-resources block to close it.
   - Optional<User> user = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?") .setLong(1, userId).findFirst(User.class); if (user.isPresent()) { System.out.println("Found: " + user.get().getName()); } // Query with multiple parameters returning a list List<Order> orders = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE customer_id = ?
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to get the connection from, must not be {@code null}
@@ -8087,7 +8743,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code sql} is {@code null} or empty.
   - `java.sql.SQLException` — if a database access error occurs or the driver does not support auto-generated keys.
 - **See also:** Statement#RETURN_GENERATED_KEYS
-- **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] returnColumnIndexes) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query to make auto-generated keys available from specified column indexes.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
@@ -8095,13 +8751,13 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to get the connection from.
   - `sql` (`String`) — The SQL statement to prepare.
-  - `returnColumnIndexes` (`int[]`) — An array of column indexes that should be made available for retrieval.
+  - `generatedKeyColumnIndexes` (`int[]`) — An array of column indexes that should be made available for retrieval.
 - **Returns:** A new {@link PreparedQuery} instance.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the arguments are {@code null} or empty.
   - `java.sql.SQLException` — if a database access error occurs.
 - **See also:** Connection#prepareStatement(String, int\[\])
-- **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query to make auto-generated keys available from specified column names.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
@@ -8109,7 +8765,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to get the connection from.
   - `sql` (`String`) — The SQL statement to prepare.
-  - `returnColumnNames` (`String[]`) — An array of column names that should be made available for retrieval.
+  - `generatedKeyColumnNames` (`String[]`) — An array of column names that should be made available for retrieval.
 - **Returns:** A new {@link PreparedQuery} instance.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the arguments are {@code null} or empty.
@@ -8132,7 +8788,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Summary:** Prepares a SQL query using a provided {@link Connection} .
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (Connection conn = dataSource.getConnection()) { // If closeAfterExecution(false) is not called, // there is no need to place the query instance in a try-catch block for closure.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (Connection conn = dataSource.getConnection()) { // If closeAfterExecution(false) is not called, // there is no need to place the query instance in a try-with-resources block to close it.
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use for the query. It will not be closed by this method.
   - `sql` (`String`) — The SQL query to prepare.
@@ -8145,7 +8801,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Summary:** Prepares a SQL query with auto-generated keys support using a provided {@link Connection} .
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (Connection conn = dataSource.getConnection()) { // If closeAfterExecution(false) is not called, // there is no need to place query instance in a try-catch block for closure.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (Connection conn = dataSource.getConnection()) { // If closeAfterExecution(false) is not called, // there is no need to place the query instance in a try-with-resources block to close it.
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use. It will not be closed by this method.
   - `sql` (`String`) — The SQL statement to prepare.
@@ -8154,26 +8810,26 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code conn} or {@code sql} is {@code null} or empty.
   - `java.sql.SQLException` — if a database access error occurs.
-- **Signature:** `public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] returnColumnIndexes) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query to retrieve auto-generated keys from specified column indexes, using a provided {@link Connection} .
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use. It will not be closed by this method.
   - `sql` (`String`) — The SQL statement to prepare.
-  - `returnColumnIndexes` (`int[]`) — An array of 1-based column indexes of generated keys to return.
+  - `generatedKeyColumnIndexes` (`int[]`) — An array of 1-based column indexes of generated keys to return.
 - **Returns:** A new {@link PreparedQuery} instance.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any argument is {@code null} or empty.
   - `java.sql.SQLException` — if a database access error occurs.
-- **Signature:** `public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query to retrieve auto-generated keys from specified column names, using a provided {@link Connection} .
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use. It will not be closed by this method.
   - `sql` (`String`) — The SQL statement to prepare.
-  - `returnColumnNames` (`String[]`) — An array of column names of generated keys to return.
+  - `generatedKeyColumnNames` (`String[]`) — An array of column names of generated keys to return.
 - **Returns:** A new {@link PreparedQuery} instance.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any argument is {@code null} or empty.
@@ -8228,7 +8884,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `namedSql` (`String`) — The SQL query with named parameters (e.g., {@code :paramName} ).
 - **Returns:** A new {@link NamedQuery} instance.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code namedSql} is {@code null} or empty.
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
   - `java.sql.SQLException` — if a database access error occurs.
 - **See also:** NamedQuery, #prepareNamedQuery(Connection, String)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys) throws IllegalArgumentException, SQLException`
@@ -8243,10 +8899,10 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `autoGeneratedKeys` (`boolean`) — Whether auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL string is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL string is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
-- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] returnColumnIndexes) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
@@ -8254,13 +8910,13 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
-  - `returnColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
+  - `generatedKeyColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL string, or returnColumnIndexes is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL string, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
-- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
@@ -8268,10 +8924,10 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
-  - `returnColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
+  - `generatedKeyColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL string, or returnColumnNames is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL string, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException`
@@ -8285,7 +8941,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function to create a PreparedStatement with custom configuration
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL string is {@code null} or empty, or if {@code stmtCreator} is {@code null}
+  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL string is {@code null} or empty, if {@code stmtCreator} is {@code null} , or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException`
@@ -8297,7 +8953,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `namedSql` (`String`) — The named SQL string to prepare
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final boolean autoGeneratedKeys) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with auto-generated keys support using the provided Connection.
@@ -8309,31 +8965,31 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `autoGeneratedKeys` (`boolean`) — Whether auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
-- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] returnColumnIndexes) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided Connection.
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
 - **Parameters:**
   - `conn` (`Connection`) — The Connection to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
-  - `returnColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
+  - `generatedKeyColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection, named SQL string, or returnColumnIndexes is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the Connection, named SQL string, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
-- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided Connection.
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
 - **Parameters:**
   - `conn` (`Connection`) — The Connection to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
-  - `returnColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
+  - `generatedKeyColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection, named SQL string, or returnColumnNames is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the Connection, named SQL string, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query using a custom statement creator with the provided Connection.
@@ -8345,7 +9001,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function to create a PreparedStatement with custom configuration
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty, or if {@code stmtCreator} is {@code null}
+  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty, if {@code stmtCreator} is {@code null} , or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query using the provided DataSource and ParsedSql object.
@@ -8375,7 +9031,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if the DataSource or named SQL is {@code null} or invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
-- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] returnColumnIndexes) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
@@ -8383,13 +9039,13 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
-  - `returnColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
+  - `generatedKeyColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
+  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
-- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
@@ -8397,10 +9053,10 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
-  - `returnColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
+  - `generatedKeyColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
+  - `java.lang.IllegalArgumentException` — if the DataSource, named SQL, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException`
@@ -8440,29 +9096,29 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the Connection or named SQL is {@code null} or invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
-- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] returnColumnIndexes) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided Connection and ParsedSql object.
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
 - **Parameters:**
   - `conn` (`Connection`) — The Connection to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
-  - `returnColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
+  - `generatedKeyColumnIndexes` (`int[]`) — The column indexes for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or returnColumnIndexes is {@code null} or empty, or if the named SQL is invalid
+  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or generatedKeyColumnIndexes is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
-- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames) throws IllegalArgumentException, SQLException`
+- **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided Connection and ParsedSql object.
 - **Contract:**
   - The caller MUST close the provided {@code Connection} to avoid resource leaks.
 - **Parameters:**
   - `conn` (`Connection`) — The Connection to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
-  - `returnColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
+  - `generatedKeyColumnNames` (`String[]`) — The column names for which auto-generated keys should be returned
 - **Returns:** A NamedQuery object representing the prepared named SQL query
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or returnColumnNames is {@code null} or empty, or if the named SQL is invalid
+  - `java.lang.IllegalArgumentException` — if the Connection, named SQL, or generatedKeyColumnNames is {@code null} or empty, or if the named SQL is invalid
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query using a custom statement creator with the provided Connection and ParsedSql object.
@@ -8488,7 +9144,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `namedSql` (`String`) — The named SQL string to prepare
 - **Returns:** A NamedQuery object configured for big result sets
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL string is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the DataSource or named SQL string is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `@Beta public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query optimized for large result sets using the provided DataSource and ParsedSql object.
@@ -8513,7 +9169,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `namedSql` (`String`) — The named SQL string to prepare
 - **Returns:** A NamedQuery object configured for big result sets
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty
+  - `java.lang.IllegalArgumentException` — if the Connection or named SQL string is {@code null} or empty, or if the named SQL contains positional (unnamed) parameters
   - `java.sql.SQLException` — if a SQL exception occurs while preparing the query
 - **Signature:** `@Beta public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query optimized for large result sets using the provided Connection and a pre-parsed {@link ParsedSql} .
@@ -8936,13 +9592,13 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** a Stream of the extracted results
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the provided arguments are invalid
-- **Signature:** `public static <T> Stream<T> stream(final ResultSet rs, final String columnName) throws IllegalArgumentException`
+- **Signature:** `public static <T> Stream<T> stream(final ResultSet rs, final String columnLabel) throws IllegalArgumentException`
 - **Summary:** Creates a stream from the provided ResultSet using the specified column name.
 - **Contract:**
   - This is useful when you only need values from a single column identified by name.
 - **Parameters:**
   - `rs` (`ResultSet`) — the ResultSet to create a stream from
-  - `columnName` (`String`) — the name of the column to extract data from
+  - `columnLabel` (`String`) — the label (or name) of the column to extract data from
 - **Returns:** a Stream of the extracted results
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the provided arguments are invalid
@@ -8974,18 +9630,18 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the provided arguments are invalid
 ##### queryByPage(...) -> Stream<Dataset>
-- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
   - ORDER BY id LIMIT 1000"; JdbcUtil.queryByPage(dataSource, query, 1000, (preparedQuery, previousPage) -> { if (previousPage == null) { preparedQuery.setLong(1, 0); } else { long lastId = previousPage.moveToRow(previousPage.size() - 1).getLong("id"); preparedQuery.setLong(1, lastId); } }).forEach(page -> { System.out.println("Processing " + page.size() + " records"); // Process the page }); } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the DataSource to get the connection from
-  - `query` (`String`) — the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
+  - `sql` (`String`) — the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
   - `pageSize` (`int`) — the number of rows to fetch per page
   - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, Dataset>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
 - **Returns:** a Stream of Dataset, each representing a page of results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation.
@@ -8994,12 +9650,12 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - ORDER BY order_id LIMIT 500"; ResultExtractor<List<Order>> ordersExtractor = rs -> { List<Order> orders = new ArrayList<>(); while (rs.next()) { orders.add(new Order(rs.getLong("order_id"), rs.getDate("order_date"))); } return orders; }; JdbcUtil.queryByPage(dataSource, query, 500, (preparedQuery, previousOrders) -> { if (previousOrders == null) { preparedQuery.setDate(1, startDate); } else { Order lastOrder = previousOrders.get(previousOrders.size() - 1); preparedQuery.setDate(1, lastOrder.getOrderDate()); } }, ordersExtractor) .forEach(orders -> processOrderBatch(orders)); } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the DataSource to get the connection from
-  - `query` (`String`) — the SQL query to run for each page
+  - `sql` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
   - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.ResultExtractor<R>`) — the ResultExtractor to extract results from the ResultSet
 - **Returns:** a Stream of the extracted results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation.
@@ -9007,23 +9663,23 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - The extractor should therefore return a container of the page's rows \\u2014 with a scalar result the stream never ends on its own.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the DataSource to get the connection from
-  - `query` (`String`) — the SQL query to run for each page
+  - `sql` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
   - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.BiResultExtractor<R>`) — the BiResultExtractor to extract results from the ResultSet
 - **Returns:** a Stream of the extracted results
-- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final Connection conn, final String sql, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - The query must be ordered by at least one key/id and have a result size limitation.
   - ORDER BY id LIMIT 1000"; try (Connection conn = dataSource.getConnection()) { JdbcUtil.queryByPage(conn, query, 1000, (preparedQuery, previousPage) -> { if (previousPage == null) { preparedQuery.setLong(1, 0L); // first page: id > 0 } else { // Read the id from the last row of the previous page.
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to use for queries
-  - `query` (`String`) — the SQL query to run for each page
+  - `sql` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
   - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, Dataset>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
 - **Returns:** a Stream of Dataset, each representing a page of results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String sql, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - <p> The stream ends when a page's extracted result is empty: a {@code Dataset} , {@code Collection} , {@code Map} , {@code Iterable} or {@code Iterator} result is checked for emptiness; any other non-null result is treated as non-empty.
@@ -9031,19 +9687,19 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - 0L : previousIds.get(previousIds.size() - 1); preparedQuery.setLong(1, lastId); }, toIds) .forEach(ids -> System.out.println("Got " + ids.size() + " ids")); } // Iteration stops when a page returns no rows.
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to use for queries
-  - `query` (`String`) — the SQL query to run for each page
+  - `sql` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
   - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.ResultExtractor<R>`) — the ResultExtractor to extract results from the ResultSet
 - **Returns:** a Stream of the extracted results
-- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
+- **Signature:** `@SuppressWarnings("rawtypes") public static <R> Stream<R> queryByPage(final Connection conn, final String sql, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
 - **Contract:**
   - <p> The stream ends when a page's extracted result is empty: a {@code Dataset} , {@code Collection} , {@code Map} , {@code Iterable} or {@code Iterator} result is checked for emptiness; any other non-null result is treated as non-empty.
   - The extractor should therefore return a container of the page's rows \\u2014 with a scalar result the stream never ends on its own.
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to use for queries
-  - `query` (`String`) — the SQL query to run for each page
+  - `sql` (`String`) — the SQL query to run for each page
   - `pageSize` (`int`) — the number of rows to fetch per page
   - `parametersSetter` (`Jdbc.BiParametersSetter<? super AbstractQuery, R>`) — the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page)
   - `resultExtractor` (`Jdbc.BiResultExtractor<R>`) — the BiResultExtractor to extract results from the ResultSet
@@ -9095,23 +9751,24 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName)`
 - **Summary:** Creates a new {@link DBLock} backed by the specified database table for implementing cross-process / cross-JVM advisory locks.
 - **Contract:**
-  - <p> The lock table must already exist (this method does not create it).
+  - <p> The lock table is created automatically when it does not exist.
   - A successful {@code lock(target)} call returns a unique lock code that the caller must pass back to {@code unlock(target, code)} to release the lock.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "distributed_locks"); String lockCode = dbLock.lock("job_processor"); if (lockCode != null) { try { // Perform exclusive operation } finally { dbLock.unlock("job_processor", lockCode); } } } </pre>
+  - Close the returned instance when it is no longer needed so its refresh task stops and any remaining locks are released.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "distributed_locks"); try { String lockCode = dbLock.lock("job_processor"); if (lockCode != null) { try { // Perform exclusive operation } finally { dbLock.unlock("job_processor", lockCode); } } } finally { dbLock.close(); } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} to use for acquiring connections
-  - `tableName` (`String`) — the name of the existing table that stores lock records
+  - `tableName` (`String`) — the name of the table that stores lock records; created when absent
 - **Returns:** a new {@link DBLock} instance bound to {@code ds} and {@code tableName}
 - **See also:** DBLock
-##### asyncRun(...) -> ContinuableFuture<Void>
-- **Signature:** `@Beta public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException`
+##### runAsync(...) -> ContinuableFuture<Void>
+- **Signature:** `@Beta public static ContinuableFuture<Void> runAsync(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action in a separate thread.
 - **Parameters:**
   - `sqlAction` (`Throwables.Runnable<Exception>`) — The SQL action to be executed asynchronously
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the specified SQL action is {@code null}
-- **Signature:** `@Beta public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2) throws IllegalArgumentException`
+- **Signature:** `@Beta public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs two SQL actions in separate threads.
 - **Parameters:**
   - `sqlAction1` (`Throwables.Runnable<Exception>`) — The first SQL action to be executed asynchronously
@@ -9119,7 +9776,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A Tuple2 containing two ContinuableFuture objects representing the results of the asynchronous computations
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null}
-- **Signature:** `@Beta public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) throws IllegalArgumentException`
+- **Signature:** `@Beta public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs three SQL actions in separate threads.
 - **Parameters:**
   - `sqlAction1` (`Throwables.Runnable<Exception>`) — The first SQL action to be executed asynchronously
@@ -9128,7 +9785,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null}
-- **Signature:** `@Beta public static <T> ContinuableFuture<Void> asyncRun(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T> ContinuableFuture<Void> runAsync(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with the given parameter.
 - **Parameters:**
   - `parameter` (`T`) — The parameter to be passed to the SQL action
@@ -9136,7 +9793,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-- **Signature:** `@Beta public static <T, U> ContinuableFuture<Void> asyncRun(final T parameter1, final U parameter2, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T, U> ContinuableFuture<Void> runAsync(final T parameter1, final U parameter2, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with two parameters.
 - **Parameters:**
   - `parameter1` (`T`) — The first parameter to be passed to the SQL action
@@ -9145,7 +9802,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-- **Signature:** `@Beta public static <A, B, C> ContinuableFuture<Void> asyncRun(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <A, B, C> ContinuableFuture<Void> runAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with three parameters.
 - **Parameters:**
   - `parameter1` (`A`) — The first parameter to be passed to the SQL action
@@ -9155,15 +9812,15 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-##### asyncCall(...) -> ContinuableFuture<R>
-- **Signature:** `@Beta public static <R> ContinuableFuture<R> asyncCall(final Callable<? extends R> sqlAction) throws IllegalArgumentException`
+##### callAsync(...) -> ContinuableFuture<R>
+- **Signature:** `@Beta public static <R> ContinuableFuture<R> callAsync(final Callable<? extends R> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action and returns a result.
 - **Parameters:**
   - `sqlAction` (`Callable<? extends R>`) — The SQL action that produces a result
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-- **Signature:** `@Beta public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls two SQL actions and returns their results.
 - **Parameters:**
   - `sqlAction1` (`Callable<? extends R1>`) — The first SQL action that produces a result
@@ -9171,7 +9828,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A Tuple2 containing two ContinuableFutures representing the results of the asynchronous computations
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null}
-- **Signature:** `@Beta public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2, final Callable<? extends R3> sqlAction3) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2, final Callable<? extends R3> sqlAction3) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls three SQL actions and returns their results.
 - **Parameters:**
   - `sqlAction1` (`Callable<? extends R1>`) — The first SQL action that produces a result
@@ -9180,7 +9837,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null}
-- **Signature:** `@Beta public static <T, R> ContinuableFuture<R> asyncCall(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T, R> ContinuableFuture<R> callAsync(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with one parameter and returns a result.
 - **Parameters:**
   - `parameter` (`T`) — The parameter to pass to the SQL action
@@ -9188,7 +9845,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-- **Signature:** `@Beta public static <T, U, R> ContinuableFuture<R> asyncCall(final T parameter1, final U parameter2, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T, U, R> ContinuableFuture<R> callAsync(final T parameter1, final U parameter2, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with two parameters and returns a result.
 - **Parameters:**
   - `parameter1` (`T`) — The first parameter to pass to the SQL action
@@ -9197,7 +9854,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-- **Signature:** `@Beta public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <A, B, C, R> ContinuableFuture<R> callAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with three parameters and returns a result.
 - **Parameters:**
   - `parameter1` (`A`) — The first parameter to pass to the SQL action
@@ -9207,6 +9864,98 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
+##### runAsync(...) -> ContinuableFuture<Void>
+- **Signature:** `@Deprecated @Beta public static ContinuableFuture<Void> runAsync(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Runnable<Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2) throws IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction1` (`Throwables.Runnable<Exception>`)
+  - `sqlAction2` (`Throwables.Runnable<Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) throws IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction1` (`Throwables.Runnable<Exception>`)
+  - `sqlAction2` (`Throwables.Runnable<Exception>`)
+  - `sqlAction3` (`Throwables.Runnable<Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <T> ContinuableFuture<Void> runAsync(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `parameter` (`T`)
+  - `sqlAction` (`Throwables.Consumer<? super T, Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <T, U> ContinuableFuture<Void> runAsync(final T parameter1, final U parameter2, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `parameter1` (`T`)
+  - `parameter2` (`U`)
+  - `sqlAction` (`Throwables.BiConsumer<? super T, ? super U, Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <A, B, C> ContinuableFuture<Void> runAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `parameter1` (`A`)
+  - `parameter2` (`B`)
+  - `parameter3` (`C`)
+  - `sqlAction` (`Throwables.TriConsumer<? super A, ? super B, ? super C, Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+##### callAsync(...) -> ContinuableFuture<R>
+- **Signature:** `@Deprecated @Beta public static <R> ContinuableFuture<R> callAsync(final Callable<? extends R> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction` (`Callable<? extends R>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2) throws IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction1` (`Callable<? extends R1>`)
+  - `sqlAction2` (`Callable<? extends R2>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2, final Callable<? extends R3> sqlAction3) throws IllegalArgumentException`
+- **Parameters:**
+  - `sqlAction1` (`Callable<? extends R1>`)
+  - `sqlAction2` (`Callable<? extends R2>`)
+  - `sqlAction3` (`Callable<? extends R3>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <T, R> ContinuableFuture<R> callAsync(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `parameter` (`T`)
+  - `sqlAction` (`Throwables.Function<? super T, ? extends R, Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <T, U, R> ContinuableFuture<R> callAsync(final T parameter1, final U parameter2, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `parameter1` (`T`)
+  - `parameter2` (`U`)
+  - `sqlAction` (`Throwables.BiFunction<? super T, ? super U, ? extends R, Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
+- **Signature:** `@Deprecated @Beta public static <A, B, C, R> ContinuableFuture<R> callAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Parameters:**
+  - `parameter1` (`A`)
+  - `parameter2` (`B`)
+  - `parameter3` (`C`)
+  - `sqlAction` (`Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception>`)
+- **Returns:** unspecified
+- **Throws:**
+  - `java.lang.IllegalArgumentException`
 ##### getOutParameters(...) -> OutParamResult
 - **Signature:** `public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException`
 - **Summary:** Retrieves the output parameters from the given CallableStatement.
@@ -9408,38 +10157,46 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - <p> <b> Usage Examples: </b> </p> <pre> {@code JdbcUtil.setSqlLogHandler((sql, startTime, endTime) -> { long duration = endTime - startTime; if (duration > 1000) { // Log slow queries logger.warn("Slow query ({}ms): {}", duration, sql); } // Send metrics to monitoring system metricsCollector.recordSqlExecution(sql, duration); }); } </pre>
 - **Parameters:**
   - `sqlLogHandler` (`TriConsumer<String, Long, Long>`) — the handler that receives: SQL statement, start time (ms), end time (ms)
-##### sqlLogThresholdMillis(...) -> void
-- **Signature:** `public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog)`
+##### setSqlPerfLogThresholdMillis(...) -> void
+- **Signature:** `public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis)`
 - **Summary:** Sets the minimum execution time threshold for SQL performance logging in the current thread.
 - **Parameters:**
-  - `minExecutionTimeForSqlPerfLog` (`long`) — the minimum execution time in milliseconds (use a negative value to disable)
-- **Signature:** `public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength)`
+  - `sqlPerfLogThresholdMillis` (`long`) — the minimum execution time in milliseconds (use a negative value to disable)
+- **Signature:** `public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength)`
 - **Summary:** Sets the minimum execution time threshold for SQL performance logging in the current thread with a specified maximum SQL log length.
 - **Parameters:**
-  - `minExecutionTimeForSqlPerfLog` (`long`) — the minimum execution time in milliseconds (use a negative value to disable)
+  - `sqlPerfLogThresholdMillis` (`long`) — the minimum execution time in milliseconds (use a negative value to disable)
   - `maxSqlLogLength` (`int`) — the maximum length of SQL statements in performance logs
-##### sqlLogThresholdMillis(...) -> long
-- **Signature:** `public static long sqlLogThresholdMillis()`
+##### getSqlPerfLogThresholdMillis(...) -> long
+- **Signature:** `public static long getSqlPerfLogThresholdMillis()`
 - **Summary:** Gets the current minimum execution time threshold for SQL performance logging in the current thread.
 - **Parameters:**
   - (none)
 - **Returns:** the minimum execution time in milliseconds (default is 1000ms)
+##### sqlPerfLogThresholdMillis(...) -> void
+- **Signature:** `@Deprecated public static void sqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis)`
+- **Parameters:**
+  - `sqlPerfLogThresholdMillis` (`long`)
+- **Signature:** `@Deprecated public static void sqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength)`
+- **Parameters:**
+  - `sqlPerfLogThresholdMillis` (`long`)
+  - `maxSqlLogLength` (`int`)
+- **Signature:** `@Deprecated public static long sqlPerfLogThresholdMillis()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
 ##### runWithSqlLogDisabled(...) -> void
 - **Signature:** `public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E`
-- **Summary:** Executes the specified action with SQL logging temporarily disabled.
-- **Contract:**
-  - Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
+- **Summary:** Executes the specified action with the standard SQL log temporarily disabled on the current thread.
 - **Parameters:**
-  - `sqlAction` (`Throwables.Runnable<E>`) — the action to execute without SQL logging
+  - `sqlAction` (`Throwables.Runnable<E>`) — the action to execute without the standard SQL log, must not be {@code null}
 - **Throws:**
   - `E` — if the action throws an exception
 ##### callWithSqlLogDisabled(...) -> R
 - **Signature:** `public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws E`
-- **Summary:** Executes the specified callable with SQL logging temporarily disabled and returns its result.
-- **Contract:**
-  - Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
+- **Summary:** Executes the specified callable with the standard SQL log temporarily disabled on the current thread.
 - **Parameters:**
-  - `sqlAction` (`Throwables.Callable<? extends R, E>`) — the callable to execute without SQL logging
+  - `sqlAction` (`Throwables.Callable<? extends R, E>`) — the callable to execute without the standard SQL log, must not be {@code null}
 - **Returns:** the result of the callable
 - **Throws:**
   - `E` — if the callable throws an exception
@@ -9644,38 +10401,11 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code daoInterface} or {@code idExtractor} is {@code null}
 - **See also:** #setIdExtractorForDao(Class, RowMapper)
-##### openDaoCacheOnCurrentThread(...) -> Jdbc.DaoCache
-- **Signature:** `public static Jdbc.DaoCache openDaoCacheOnCurrentThread()`
-- **Summary:** Enables DAO query result caching for the current thread.
-- **Contract:**
-  - Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-- **Parameters:**
-  - (none)
-- **Returns:** the created DaoCache for the current thread
-- **See also:** Jdbc.DaoCache#createByMap(), #closeDaoCacheOnCurrentThread()
-- **Signature:** `public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException`
-- **Summary:** Enables the specified DAO cache for the current thread.
-- **Contract:**
-  - Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-- **Parameters:**
-  - `localThreadCache` (`Jdbc.DaoCache`) — the cache to use for the current thread, must not be {@code null}
-- **Returns:** the specified localThreadCache
-- **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code localThreadCache} is {@code null}
-- **See also:** Jdbc.DaoCache#createByMap(), Jdbc.DaoCache#createByMap(Map), #closeDaoCacheOnCurrentThread()
-##### closeDaoCacheOnCurrentThread(...) -> void
-- **Signature:** `public static void closeDaoCacheOnCurrentThread()`
-- **Summary:** Closes and removes the DAO cache for the current thread.
-- **Contract:**
-  - This method should always be called in a finally block after starting a thread-local cache to prevent memory leaks.
-- **Parameters:**
-  - (none)
-- **See also:** #openDaoCacheOnCurrentThread(), #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
 ##### createDao(...) -> TD
 - **Signature:** `@SuppressWarnings("rawtypes") public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds)`
 - **Summary:** Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.
 - **Contract:**
-  - ORDER BY created_at DESC") List<User> findByStatus(String status); @Query("SELECT * FROM users WHERE age >= :minAge AND city = :city") Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User("john@example.com", "John Doe"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail("john@example.com"); if (user.isPresent()) { System.out.println("Found: " + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus("ACTIVE"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, "New York")) { long count = stream .filter(u -> u.getEmail().endsWith("@company.com")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus("INACTIVE"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, OrderDao> { // Aggregate queries @Query("SELECT COUNT(*) FROM orders WHERE status = ?") long countByStatus(String status); @Query("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @Query(id = "findOrdersWithCustomerDetails") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus("PENDING"); // Async operations (inherited from the DAO root interface) ContinuableFuture<Optional<Order>> future = orderDao.asyncCall(dao -> dao.get(orderId)); future.thenRunAsync(order -> { order.ifPresent(o -> System.out.println("Order: " + o.getId())); }); } </pre> <p> <b> Performance and memory considerations: </b> </p> <p> <i> Initialization is heavy; per-call usage is cheap.
+  - ORDER BY created_at DESC") List<User> findByStatus(String status); @Query("SELECT * FROM users WHERE age >= :minAge AND city = :city") Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User("john@example.com", "John Doe"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail("john@example.com"); if (user.isPresent()) { System.out.println("Found: " + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus("ACTIVE"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, "New York")) { long count = stream .filter(u -> u.getEmail().endsWith("@company.com")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus("INACTIVE"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, OrderDao> { // Aggregate queries @Query("SELECT COUNT(*) FROM orders WHERE status = ?") long countByStatus(String status); @Query("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @Query(id = "findOrdersWithCustomerDetails") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus("PENDING"); // Async operations (inherited from the DAO root interface) ContinuableFuture<Optional<Order>> future = orderDao.callAsync(dao -> dao.get(orderId)); future.thenRunAsync(order -> { order.ifPresent(o -> System.out.println("Order: " + o.getId())); }); } </pre> <p> <b> Performance and memory considerations: </b> </p> <p> <i> Initialization is heavy; per-call usage is cheap.
   - If you observe heap pressure on an older version, upgrade {@code abacus-query} or set the system property to {@code 2} .
   - If your {@code @Service} classes inject DAOs via constructor (the usual pattern), instantiating the service at startup forces Spring to materialize the constructor-injected DAOs immediately \\u2014 the {@code @Lazy} on the provider is silently overridden.
   - To genuinely defer DAO creation you must <b> also </b> annotate the injection point as {@code @Lazy} , OR enable {@code spring.main.lazy-initialization=true} globally (which has wider side effects \\u2014 it can mask config errors that would otherwise fail-fast).
@@ -9707,6 +10437,48 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `daoCreationOptions` (`DaoCreationOptions`) — the creation options; when {@code null} , all defaults are applied (equivalent to {@link #createDao(Class, javax.sql.DataSource)} )
 - **Returns:** a dynamically generated DAO instance implementing the specified interface. Cache and reuse this instance; do not call {@code createDao} per request.
 - **See also:** #createDao(Class, javax.sql.DataSource), #createDao(Class, javax.sql.DataSource, SqlDialect), DaoCreationOptions
+##### openDaoCacheScope(...) -> DaoCacheScope
+- **Signature:** `public static DaoCacheScope openDaoCacheScope()`
+- **Summary:** Opens a DAO-cache scope for the current thread using a new map-backed cache.
+- **Parameters:**
+  - (none)
+- **Returns:** a scope containing the newly created cache
+- **See also:** #openDaoCacheScope(Jdbc.DaoCache), Jdbc.DaoCache#createByMap()
+- **Signature:** `public static DaoCacheScope openDaoCacheScope(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException`
+- **Summary:** Opens a DAO-cache scope for the current thread using the specified cache.
+- **Contract:**
+  - Closing the returned scope restores the cache that was active before the scope was opened, or removes the thread-local value if there was no previous cache.
+- **Parameters:**
+  - `localThreadCache` (`Jdbc.DaoCache`) — the cache to use in the scope, must not be {@code null}
+- **Returns:** a scope containing {@code localThreadCache}
+- **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code localThreadCache} is {@code null}
+- **See also:** #openDaoCacheScope()
+##### openDaoCacheOnCurrentThread(...) -> Jdbc.DaoCache
+- **Signature:** `@Deprecated public static Jdbc.DaoCache openDaoCacheOnCurrentThread()`
+- **Summary:** Enables DAO query result caching for the current thread.
+- **Contract:**
+  - This legacy method must be paired with {@link #closeDaoCacheOnCurrentThread()} in a {@code finally} block and does not restore a cache binding that it replaces.
+- **Parameters:**
+  - (none)
+- **Returns:** the created DaoCache for the current thread
+- **See also:** Jdbc.DaoCache#createByMap(), #openDaoCacheScope(), #closeDaoCacheOnCurrentThread()
+- **Signature:** `@Deprecated public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException`
+- **Summary:** Enables the specified DAO cache for the current thread.
+- **Contract:**
+  - This legacy method must be paired with {@link #closeDaoCacheOnCurrentThread()} in a {@code finally} block and does not restore a cache binding that it replaces.
+- **Parameters:**
+  - `localThreadCache` (`Jdbc.DaoCache`) — the cache to use for the current thread, must not be {@code null}
+- **Returns:** the specified localThreadCache
+- **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code localThreadCache} is {@code null}
+- **See also:** Jdbc.DaoCache#createByMap(), Jdbc.DaoCache#createByMap(Map), #openDaoCacheScope(Jdbc.DaoCache), #closeDaoCacheOnCurrentThread()
+##### closeDaoCacheOnCurrentThread(...) -> void
+- **Signature:** `@Deprecated public static void closeDaoCacheOnCurrentThread()`
+- **Summary:** Removes the DAO-cache binding for the current thread.
+- **Parameters:**
+  - (none)
+- **See also:** #openDaoCacheOnCurrentThread(), #openDaoCacheOnCurrentThread(Jdbc.DaoCache), #openDaoCacheScope()
 
 #### Public Instance Methods
 - (none)
@@ -9718,14 +10490,130 @@ Immutable bundle of optional settings for {@link JdbcUtil#createDao(Class, javax
 **Nullability:** unspecified
 
 #### Public Constructors
+- `public DaoCreationOptions(String targetTableName, Dsl dsl, SqlMapper sqlMapper, Jdbc.DaoCache cache, Executor executor)`
+
+#### Public Static Methods
+##### builder(...) -> DaoCreationOptionsBuilder
+- **Signature:** `public static DaoCreationOptionsBuilder builder()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+#### Public Instance Methods
+##### targetTableName(...) -> String
+- **Signature:** `public String targetTableName()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### dsl(...) -> Dsl
+- **Signature:** `public Dsl dsl()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### sqlMapper(...) -> SqlMapper
+- **Signature:** `public SqlMapper sqlMapper()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### cache(...) -> Jdbc.DaoCache
+- **Signature:** `public Jdbc.DaoCache cache()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### executor(...) -> Executor
+- **Signature:** `public Executor executor()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### equals(...) -> boolean
+- **Signature:** `public boolean equals(Object other)`
+- **Parameters:**
+  - `other` (`Object`)
+- **Returns:** unspecified
+##### hashCode(...) -> int
+- **Signature:** `public int hashCode()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+### Class DaoCreationOptionsBuilder (com.landawn.abacus.jdbc.JdbcUtil.DaoCreationOptions.DaoCreationOptionsBuilder)
+Builder generated by Lombok for {@code DaoCreationOptions}.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
 - (none)
 
 #### Public Static Methods
 - (none)
 
 #### Public Instance Methods
-##### <init>(...) -> void
-- **Signature:** `class DaoCreationOptions { /** * The database table name the DAO operates on. When {@code null} (the default), the table name is * derived from the entity class associated with the DAO interface. */ private String targetTableName; /** * The SQL builder dialect used to generate CRUD SQL. When {@code null} (the default), {@link Dsl#PSC} * is used. Its {@code sqlDialect().sqlPolicy()} must be {@code null} or * {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}; supplying a * named-SQL dialect causes {@link JdbcUtil#createDao(Class, javax.sql.DataSource, DaoCreationOptions)} to * fail with {@link IllegalArgumentException}. */ private Dsl dsl; /** * An optional {@link SqlMapper} providing externalized, pre-defined SQL statements keyed by ID. * May be {@code null}. */ private SqlMapper sqlMapper; /** * An optional {@link Jdbc.DaoCache} for caching results of methods annotated with {@code @CacheResult}. * May be {@code null}. Supplying a non-{@code null} cache is only permitted for cacheable read-only / * no-update DAO interfaces (such as {@code ReadOnlyDao}, {@code NoUpdateCrudDao}, and the unchecked * variants); otherwise DAO creation fails with {@link UnsupportedOperationException}. */ private Jdbc.DaoCache cache; /** * An optional {@link Executor} for the DAO's asynchronous operations. When {@code null} (the default), * the shared async executor is used. */ private Executor executor; } // ==============================================Jdbc Context=======================================================>> }`
+##### targetTableName(...) -> DaoCreationOptionsBuilder
+- **Signature:** `public DaoCreationOptionsBuilder targetTableName(String targetTableName)`
+- **Parameters:**
+  - `targetTableName` (`String`)
+- **Returns:** unspecified
+##### dsl(...) -> DaoCreationOptionsBuilder
+- **Signature:** `public DaoCreationOptionsBuilder dsl(Dsl dsl)`
+- **Parameters:**
+  - `dsl` (`Dsl`)
+- **Returns:** unspecified
+##### sqlMapper(...) -> DaoCreationOptionsBuilder
+- **Signature:** `public DaoCreationOptionsBuilder sqlMapper(SqlMapper sqlMapper)`
+- **Parameters:**
+  - `sqlMapper` (`SqlMapper`)
+- **Returns:** unspecified
+##### cache(...) -> DaoCreationOptionsBuilder
+- **Signature:** `public DaoCreationOptionsBuilder cache(Jdbc.DaoCache cache)`
+- **Parameters:**
+  - `cache` (`Jdbc.DaoCache`)
+- **Returns:** unspecified
+##### executor(...) -> DaoCreationOptionsBuilder
+- **Signature:** `public DaoCreationOptionsBuilder executor(Executor executor)`
+- **Parameters:**
+  - `executor` (`Executor`)
+- **Returns:** unspecified
+##### build(...) -> DaoCreationOptions
+- **Signature:** `public DaoCreationOptions build()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+
+### Class DaoCacheScope (com.landawn.abacus.jdbc.JdbcUtil.DaoCacheScope)
+A current-thread DAO-cache binding that restores the previous binding when closed.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- (none)
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+##### cache(...) -> Jdbc.DaoCache
+- **Signature:** `public Jdbc.DaoCache cache()`
+- **Summary:** Returns the cache bound to the current thread by this scope.
+- **Parameters:**
+  - (none)
+- **Returns:** the scope's cache
+##### close(...) -> void
+- **Signature:** `@Override public void close()`
+- **Summary:** Restores the DAO-cache binding that preceded this scope.
+- **Contract:**
+  - Nested scopes must be closed in reverse order.
 - **Parameters:**
   - (none)
 
@@ -9775,32 +10663,32 @@ Manages join relationships between entities in JDBC operations.
 - **See also:** JoinedBy, #getEntityJoinInfo(Class, Class, String)
 
 #### Public Instance Methods
-##### getSelectSqlPlan(...) -> Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-- **Signature:** `public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(final Dsl sbc)`
+##### selectSqlPlan(...) -> Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
+- **Signature:** `public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> selectSqlPlan(final Dsl dsl)`
 - **Summary:** Retrieves the SQL plan for single-entity select operations.
 - **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
+  - `dsl` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection of selected property names (a {@code null} or empty collection yields the default all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a {@link PreparedStatement}
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
-##### getBatchSelectSqlPlan(...) -> Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-- **Signature:** `public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR final Dsl sbc)`
+##### batchSelectSqlPlan(...) -> Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
+- **Signature:** `public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchSelectSqlPlan( //NOSONAR final Dsl dsl)`
 - **Summary:** Retrieves the SQL plan for batch select operations.
 - **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
+  - `dsl` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection of selected property names and the batch size (a {@code null} or empty collection yields the default all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity in the batch onto a {@link PreparedStatement}
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
-##### getDeleteSqlPlan(...) -> Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-- **Signature:** `public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Dsl sbc)`
+##### deleteSqlPlan(...) -> Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
+- **Signature:** `public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSqlPlan(final Dsl dsl)`
 - **Summary:** Retrieves the SQL plan for delete operations.
 - **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
+  - `dsl` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple containing the delete SQL ( {@code _1} ), the middle (join) table delete SQL ( {@code _2} , always {@code null} in the current implementation \\u2014 reserved for future use when per-entity cascade-delete control is supported), and the parameter setter ( {@code _3} ) that binds the join key(s) of a single source entity onto a {@link PreparedStatement}
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
-##### getBatchDeleteSqlPlan(...) -> Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-- **Signature:** `public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR final Dsl sbc)`
+##### batchDeleteSqlPlan(...) -> Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
+- **Signature:** `public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchDeleteSqlPlan( //NOSONAR final Dsl dsl)`
 - **Summary:** Retrieves the SQL plan for batch delete operations.
 - **Parameters:**
-  - `sbc` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
+  - `dsl` (`Dsl`) — the SQL builder DSL to use; must be one of {@link Dsl#PSC} , {@link Dsl#PAC} , or {@link Dsl#PLC}
 - **Returns:** a non- {@code null} tuple of (main delete SQL builder ( {@code _1} ), middle/join table delete SQL builder ( {@code _2} , always {@code null} in the current implementation \\u2014 reserved for future use when per-entity cascade-delete control is supported), and parameter setter ( {@code _3} ) that binds the join key(s) of every entity in the batch onto a {@link PreparedStatement} )
 - **See also:** Dsl#PSC, Dsl#PAC, Dsl#PLC
 ##### setJoinPropEntities(...) -> void
@@ -10622,7 +11510,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets multiple parameters from a Map containing parameter names and their values.
 - **Contract:**
-  - <p> For each named parameter declared in the SQL, this method looks the name up in the map; if the map contains a matching key, {@link #setObject(String, Object)} is called for that parameter.
+  - <p> For each named parameter declared in the SQL, this method looks the name up in the map; if the map contains a matching key, its value is bound to that parameter using the default SQL type mapping (as if by {@code setObject} ).
   - Named parameters that are absent from the map are left unbound and must be bound before the query is executed.
 - **Parameters:**
   - `parameters` (`Map<String, ?>`) — a map containing parameter names (without the ':' prefix) as keys and their values
@@ -10693,21 +11581,6 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #setParameters(Object), #addBatchParameters(Collection), #addBatch()
 
-### Enum OP (com.landawn.abacus.jdbc.OP)
-Execution modes understood by {@link AbstractQuery} and the {@code op} element of {@link com.landawn.abacus.jdbc.annotation.Query} .
-
-**Thread-safety:** unspecified
-**Nullability:** unspecified
-
-#### Public Constructors
-- (none)
-
-#### Public Static Methods
-- (none)
-
-#### Public Instance Methods
-- (none)
-
 ### Class PreparedQuery (com.landawn.abacus.jdbc.PreparedQuery)
 Fluent wrapper around a {@link PreparedStatement} .
 
@@ -10738,6 +11611,21 @@ Transaction participation policies used by {@link com.landawn.abacus.jdbc.annota
 #### Public Instance Methods
 - (none)
 
+### Enum QueryOperation (com.landawn.abacus.jdbc.QueryOperation)
+Execution modes selected through the {@code op} element of {@link com.landawn.abacus.jdbc.annotation.Query} , each corresponding to a terminal operation of {@link AbstractQuery} .
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- (none)
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+- (none)
+
 ### Class SpringApplicationContext (com.landawn.abacus.jdbc.SpringApplicationContext)
 A utility class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
 
@@ -10745,7 +11633,7 @@ A utility class that provides access to Spring's ApplicationContext for bean ret
 **Nullability:** unspecified
 
 #### Public Constructors
-- (none)
+- `public SpringApplicationContext()` — Constructs a new {@code SpringApplicationContext} .
 
 #### Public Static Methods
 - (none)
@@ -10758,11 +11646,6 @@ A utility class that provides access to Spring's ApplicationContext for bean ret
   - Invoked by Spring to supply the {@link ApplicationContext} when an instance of this class is registered as a Spring bean.
 - **Parameters:**
   - `applicationContext` (`ApplicationContext`) — the Spring application context
-##### <init>(...) -> void
-- **Signature:** `public SpringApplicationContext()`
-- **Summary:** Constructs a new {@code SpringApplicationContext} .
-- **Parameters:**
-  - (none)
 ##### getBean(...) -> Object
 - **Signature:** `public Object getBean(final String name)`
 - **Summary:** Retrieves a bean from the Spring ApplicationContext by its name.
@@ -10850,7 +11733,8 @@ Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 - **Contract:**
   - The actual JDBC {@code COMMIT} is issued only when the outermost scope commits (reference count reaches zero).
   - </p> <p> If the transaction has been marked for rollback only (status {@link Status#MARKED_ROLLBACK} because an inner scope rolled back), the outermost commit is converted into a rollback rather than a commit; this method returns normally in that case (or throws {@link UncheckedSQLException} if that rollback itself fails).
-  - </p> <p> When the outermost scope actually commits, the status transitions to {@link Status#COMMITTED} on success or {@link Status#FAILED_COMMIT} on failure.
+  - </p> <p> When the outermost scope actually commits, the status transitions to {@link Status#COMMITTED} on success.
+  - On failure the status first becomes {@link Status#FAILED_COMMIT} and an automatic rollback is attempted, leaving the status {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if that rollback also fails).
   - After the commit attempt (success or failure) the connection's original auto-commit and isolation level are restored, and the connection is released back to its data source if this transaction was created with connection ownership.
 - **Parameters:**
   - (none)
@@ -10862,7 +11746,6 @@ Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 - **Contract:**
   - </p> <p> After a successful rollback the status transitions to {@link Status#ROLLED_BACK} , the connection's original auto-commit and isolation level are restored, and the connection is released back to its data source if this transaction was created with connection ownership.
   - If the underlying {@code Connection.rollback()} fails, the status becomes {@link Status#FAILED_ROLLBACK} and an {@link UncheckedSQLException} is thrown.
-  - </p> <p> <b> Note: </b> Prefer {@link #rollbackIfNotCommitted()} in finally blocks; it is idempotent and avoids double-decrement bugs when the rollback path is also reached after a failed commit.
 - **Parameters:**
   - (none)
 - **Throws:**
@@ -10872,7 +11755,7 @@ Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 - **Summary:** Rolls back the transaction if it has not been committed successfully.
 - **Contract:**
   - Rolls back the transaction if it has not been committed successfully.
-  - This method is safe to call multiple times and will only perform a rollback if the transaction is still active, marked for rollback, or in a failed-commit state.
+  - It rolls back when the transaction is still active, marked for rollback, or in a failed-commit state.
   - It will do nothing if the transaction has already been committed or rolled back.
 - **Parameters:**
   - (none)
@@ -11000,7 +11883,6 @@ Minimal contract for a JDBC transaction managed by this library.
 - **Summary:** Rolls back the transaction if it has not been committed successfully.
 - **Contract:**
   - Rolls back the transaction if it has not been committed successfully.
-  - This method is safe to call multiple times and will only perform a rollback if the transaction is still active, marked for rollback, or in a failed-commit state.
 - **Parameters:**
   - (none)
 - **Throws:**
@@ -11118,15 +12000,15 @@ Enables caching at the DAO level for database query results.
 - **Signature:** `int capacity() default JdbcUtil.DEFAULT_CACHE_CAPACITY`
 - **Summary:** Specifies the maximum number of entries the cache can hold.
 - **Contract:**
-  - When the cache is at capacity, the underlying pool's eviction policy determines which entries are removed to make room for new ones (the default {@link Jdbc.DefaultDaoCache} relies on the {@code KeyedObjectPool} 's default policy combined with TTL/idle-time-based eviction; see {@link CacheResult#liveTime()} and {@link CacheResult#maxIdleTime()} ).
+  - When the cache is at capacity, the underlying pool's eviction policy determines which entries are removed to make room for new ones (the default {@link Jdbc.DefaultDaoCache} relies on the {@code KeyedObjectPool} 's default policy combined with TTL/idle-time-based eviction; see {@link CacheResult#maxLiveTimeMillis()} and {@link CacheResult#maxIdleTimeMillis()} ).
 - **Parameters:**
   - (none)
 - **Returns:** the maximum number of cache entries
-##### evictDelay(...) -> long
-- **Signature:** `long evictDelay() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY`
+##### evictDelayMillis(...) -> long
+- **Signature:** `long evictDelayMillis() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY`
 - **Summary:** Specifies the interval (in milliseconds) at which the background eviction scheduler runs to remove expired entries from the cache.
 - **Contract:**
-  - This is <em> not </em> the per-entry time-to-live; entry expiration is controlled by {@link CacheResult#liveTime()} and {@link CacheResult#maxIdleTime()} when the {@link CacheResult} annotation is used on individual methods.
+  - This is <em> not </em> the per-entry time-to-live; entry expiration is controlled by {@link CacheResult#maxLiveTimeMillis()} and {@link CacheResult#maxIdleTimeMillis()} when the {@link CacheResult} annotation is used on individual methods.
 - **Parameters:**
   - (none)
 - **Returns:** the interval in milliseconds between eviction sweeps
@@ -11161,20 +12043,20 @@ Enables method-level result caching for DAO query methods.
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} to enable caching, {@code false} (default) to leave it disabled
-##### liveTime(...) -> long
-- **Signature:** `long liveTime() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME`
+##### maxLiveTimeMillis(...) -> long
+- **Signature:** `long maxLiveTimeMillis() default JdbcUtil.DEFAULT_CACHE_LIVE_TIME`
 - **Summary:** Specifies the maximum time (in milliseconds) a cached entry can live.
 - **Parameters:**
   - (none)
 - **Returns:** the maximum cache entry lifetime in milliseconds; defaults to {@link JdbcUtil#DEFAULT_CACHE_LIVE_TIME} (30 minutes)
-##### maxIdleTime(...) -> long
-- **Signature:** `long maxIdleTime() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME`
+##### maxIdleTimeMillis(...) -> long
+- **Signature:** `long maxIdleTimeMillis() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME`
 - **Summary:** Specifies the maximum idle time (in milliseconds) for a cached entry.
 - **Contract:**
   - If an entry is not accessed within this time, it expires and is removed.
   - This is useful for frequently accessed data that should expire if unused.
-  - <p> The entry expires when either {@code liveTime} or {@code maxIdleTime} is exceeded, whichever comes first.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Expire if not accessed for 10 minutes @CacheResult(enabled = true, liveTime = 3600000, maxIdleTime = 600000) @Query("SELECT * FROM user_sessions WHERE token = :token") UserSession getSession(@Bind("token") String token) throws SQLException; } </pre>
+  - <p> The entry expires when either {@code maxLiveTimeMillis} or {@code maxIdleTimeMillis} is exceeded, whichever comes first.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Expire if not accessed for 10 minutes @CacheResult(enabled = true, maxLiveTimeMillis = 3600000, maxIdleTimeMillis = 600000) @Query("SELECT * FROM user_sessions WHERE token = :token") UserSession getSession(@Bind("token") String token) throws SQLException; } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the maximum idle time in milliseconds; defaults to {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes)
@@ -11194,26 +12076,41 @@ Enables method-level result caching for DAO query methods.
 - **Parameters:**
   - (none)
 - **Returns:** the maximum result size to cache; the default {@link Integer#MAX_VALUE} means no maximum
-##### serializer(...) -> String
-- **Signature:** `String serializer() default "none"`
+##### serialization(...) -> CacheSerialization
+- **Signature:** `CacheSerialization serialization() default CacheSerialization.NONE`
 - **Summary:** Specifies the serialization strategy for cache storage and retrieval.
 - **Contract:**
   - This determines how objects are copied when stored in or retrieved from cache.
 - **Parameters:**
   - (none)
-- **Returns:** the serialization strategy name
+- **Returns:** the serialization strategy
 - **See also:** <a href="https://github.com/EsotericSoftware/kryo">,Kryo Serialization,</a>
 ##### filter(...) -> String\[\]
 - **Signature:** `String[] filter() default { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exists", "notExists", "count" }`
 - **Summary:** Specifies filter patterns for methods when the annotation is applied at the class level.
 - **Contract:**
   - Specifies filter patterns for methods when the annotation is applied at the class level.
-  - A method matches if its name starts with a filter entry, or if the entry matches the full method name as a regex.
+  - A method matches if its name starts with a filter entry (case-insensitive), or if the entry matches the full method name as a regex.
   - </p> <p> This filter is ignored when the annotation is applied at the method level.
   - </p> <p> When the annotation is applied at the type level, methods whose names contain {@code "page"} or {@code "paginate"} (case-insensitive) are always skipped from caching, regardless of this filter.
 - **Parameters:**
   - (none)
 - **Returns:** array of method name patterns to cache; the default targets common read methods: {@code query} , {@code queryFor} , {@code list} , {@code get} , {@code batchGet} , {@code find} , {@code findFirst} , {@code findOnlyOne} , {@code exists} , {@code notExists} , and {@code count}
+
+### Enum CacheSerialization (com.landawn.abacus.jdbc.annotation.CacheSerialization)
+Defines how DAO results are copied when stored in or retrieved from a cache.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- (none)
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+- (none)
 
 ### Annotation DaoConfig (com.landawn.abacus.jdbc.annotation.DaoConfig)
 Provides DAO-level configuration options that affect query generation and execution behavior.
@@ -11232,7 +12129,7 @@ Provides DAO-level configuration options that affect query generation and execut
 - **Signature:** `boolean addLimitForSingleQuery() default false`
 - **Summary:** Controls whether to automatically add a LIMIT clause (or its database equivalent) to single-result {@link com.landawn.abacus.query.condition.Condition Condition} -based query methods declared by {@code Dao} / {@code CrudDao} .
 - **Contract:**
-  - <p> When {@code true} , the framework appends: </p> <ul> <li> {@code LIMIT 1} for {@code exists(Condition)} and {@code findFirst(...)} variants </li> <li> {@code LIMIT 2} for {@code findOnlyOne(...)} variants (so duplicates can still be detected) </li> </ul> <p> The LIMIT is <em> not </em> added for {@code count(Condition)} (which already issues a {@code SELECT COUNT(*)} ) or for arbitrary user-supplied SQL in {@link Query @Query} methods.
+  - <p> When {@code true} , the framework appends: </p> <ul> <li> {@code LIMIT 1} for {@code exists(Condition)} , {@code findFirst(...)} and {@code queryForSingleXxx(...)} variants </li> <li> {@code LIMIT 2} for {@code findOnlyOne(...)} and {@code queryForUniqueXxx(...)} variants (so duplicates can still be detected) </li> </ul> <p> The LIMIT is <em> not </em> added for {@code count(Condition)} (which already issues a {@code SELECT COUNT(*)} ) or for arbitrary user-supplied SQL in {@link Query @Query} methods.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(addLimitForSingleQuery = true) public interface ProductDao extends CrudDao<Product, Long, ProductDao> { // Built-in Condition-based methods will have LIMIT 1 appended // when invoked through the proxy.
 - **Parameters:**
   - (none)
@@ -11294,7 +12191,7 @@ Controls whether query results should be fetched based on the entity class prope
 - **Signature:** `boolean value() default true`
 - **Summary:** Specifies whether to fetch only columns that match entity class properties.
 - **Contract:**
-  - <p> When {@code true} (default): </p> <ul> <li> Only columns with matching properties in the entity class are fetched </li> <li> Provides better performance by reducing data transfer </li> <li> Results in cleaner Dataset with only relevant columns </li> </ul> <p> When {@code false} : </p> <ul> <li> All columns from the query result are fetched </li> <li> Useful when you need additional calculated or joined columns </li> <li> May include columns that don't map to entity properties </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Entity class public class User { private Long id; private String name; private String email; // Getters and setters } // DAO method @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email") @FetchColumnByEntityClass(false) // Need to fetch login_count Dataset getUserLoginStats(); } </pre>
+  - <p> When {@code true} (default): </p> <ul> <li> Only columns with matching properties in the entity class are fetched </li> <li> Avoids materializing unrelated columns in the returned {@code Dataset} </li> <li> Results in cleaner Dataset with only relevant columns </li> </ul> <p> When {@code false} : </p> <ul> <li> All columns from the query result are fetched </li> <li> Useful when you need additional calculated or joined columns </li> <li> May include columns that don't map to entity properties </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Entity class public class User { private Long id; private String name; private String email; // Getters and setters } // DAO method @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email") @FetchColumnByEntityClass(false) // Need to fetch login_count Dataset getUserLoginStats(); } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} to fetch only entity columns, {@code false} to fetch all columns; defaults to {@code true} , and a value declared here overrides the DAO-level {@link DaoConfig#fetchColumnByEntityClassForDatasetQuery()} default
@@ -11326,7 +12223,7 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
 - **Summary:** Specifies the handler implementation class.
 - **Contract:**
   - The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
-  - <p> The handler lifecycle methods are called in this order: </p> <ol> <li> {@code beforeInvoke()} - Before the actual method invocation </li> <li> Actual DAO method execution </li> <li> {@code afterInvoke()} - After the method completes (whether successfully or with an exception) </li> </ol> <p> Example handler implementation: </p> <pre> {@code public class SecurityHandler implements Jdbc.Handler<UserDao> { @Override public void beforeInvoke(UserDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Check user permissions if (!hasPermission(methodSignature._1)) { throw new SecurityException("Access denied"); } } @Override public void afterInvoke(Object result, UserDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Can filter or log results filterSensitiveData(result); } } } </pre>
+  - <p> The handler lifecycle methods are called in this order: </p> <ol> <li> {@code beforeInvoke()} - Before the actual method invocation </li> <li> Actual DAO method execution </li> <li> {@code afterInvoke()} - After the method completes (whether successfully or with an exception); it can observe the result but cannot replace the returned reference </li> </ol> <p> Example handler implementation: </p> <pre> {@code public class SecurityHandler implements Jdbc.Handler<UserDao> { @Override public void beforeInvoke(UserDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Check user permissions if (!hasPermission(methodSignature._1)) { throw new SecurityException("Access denied"); } } @Override public void afterInvoke(Object result, UserDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Can filter or log results filterSensitiveData(result); } } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the handler class, defaults to {@link EmptyHandler} (no-op)
@@ -11335,6 +12232,8 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
 - **Summary:** Specifies filter patterns for methods when the annotation is applied at the class level.
 - **Contract:**
   - Specifies filter patterns for methods when the annotation is applied at the class level.
+  - <p> Each entry matches when the method name starts with that entry (case-insensitive) or when the entry matches the full method name as a regular expression.
+  - Multiple patterns are combined with OR logic \\u2014 a method is intercepted if it matches at least one entry.
   - </p> <p> This filter is ignored when the annotation is applied at the method level.
 - **Parameters:**
   - (none)
@@ -11350,7 +12249,7 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
   - (none)
 - **Returns:** {@code true} if handler only applies to external calls, {@code false} (default) otherwise
 
-### Annotation HandlerList (com.landawn.abacus.jdbc.annotation.HandlerList)
+### Annotation Handlers (com.landawn.abacus.jdbc.annotation.Handlers)
 Container annotation for multiple {@link Handler} declarations on the same DAO method or type.
 
 **Thread-safety:** unspecified
@@ -11368,8 +12267,9 @@ Container annotation for multiple {@link Handler} declarations on the same DAO m
 - **Summary:** Returns the array of {@link Handler} annotations contained in this list.
 - **Contract:**
   - <p> When multiple handlers are applied to a DAO or method, they form a chain of interceptors.
-  - </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Accessing HandlerList programmatically via reflection HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class); if (handlers != null) { for (Handler handler : handlers.value()) { System.out.println("Handler impl: " + handler.impl()); System.out.println("Filter: " + Arrays.toString(handler.filter())); } } // Multiple handlers are automatically wrapped in HandlerList @Handler(impl = LoggingHandler.class) @Handler(impl = SecurityHandler.class) @Handler(impl = CacheHandler.class) public interface UserDao extends CrudDao<User, Long, UserDao> { // The compiler wraps these in a HandlerList annotation } } </pre> <p> This element is mandatory and has no default value.
-  - When the compiler synthesizes the container from repeated {@link Handler @Handler} annotations it always populates this array, and an explicit {@code @HandlerList} must supply at least one {@code @Handler} .
+  - </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Accessing Handlers programmatically via reflection Handlers handlers = MyDao.class.getAnnotation(Handlers.class); if (handlers != null) { for (Handler handler : handlers.value()) { System.out.println("Handler impl: " + handler.impl()); System.out.println("Filter: " + Arrays.toString(handler.filter())); } } // Multiple handlers are automatically wrapped in Handlers @Handler(impl = LoggingHandler.class) @Handler(impl = SecurityHandler.class) @Handler(impl = CacheHandler.class) public interface UserDao extends CrudDao<User, Long, UserDao> { // The compiler wraps these in a Handlers annotation } } </pre> <p> This element is mandatory and has no default value.
+  - When the compiler synthesizes the container from repeated {@link Handler @Handler} annotations it populates this array.
+  - An explicit container must supply the array, but Java permits it to be empty; an empty container simply installs no handlers.
 - **Parameters:**
   - (none)
 - **Returns:** the array of {@link Handler} annotations contained in this list
@@ -11387,11 +12287,11 @@ Transforms query results into a Map structure where each result row is keyed by 
 - (none)
 
 #### Public Instance Methods
-##### keyName(...) -> String
-- **Signature:** `String keyName() default ""`
+##### value(...) -> String
+- **Signature:** `String value() default ""`
 - **Summary:** Specifies the target-entity property name to use as the map key.
 - **Contract:**
-  - </p> <p> If {@code keyName} is left empty, the framework falls back to the target entity's single id property name; a DAO whose entity has no id property then fails initialization with {@code IllegalArgumentException} .
+  - </p> <p> If left empty, the framework falls back to the target entity's single id property name; a DAO whose entity has no id property then fails initialization with {@code IllegalArgumentException} .
 - **Parameters:**
   - (none)
 - **Returns:** the field name to use as map key, or empty string to fall back to the entity's id property
@@ -11399,7 +12299,8 @@ Transforms query results into a Map structure where each result row is keyed by 
 - **Signature:** `@SuppressWarnings("rawtypes") Class<? extends Map> mapClass() default HashMap.class`
 - **Summary:** Specifies the Map implementation class to use for the result.
 - **Contract:**
-  - The class must have a no-argument constructor.
+  - The class must be concrete, have a no-argument constructor, and be assignable to the DAO method's declared return type.
+  - For example, a method returning {@code LinkedHashMap} must explicitly select {@code LinkedHashMap.class} ; the default {@link HashMap} is only compatible with return types that can accept a {@code HashMap} , such as {@code Map} or {@code HashMap} .
 - **Parameters:**
   - (none)
 - **Returns:** the {@code Map} implementation class to instantiate; defaults to {@link HashMap}
@@ -11486,7 +12387,7 @@ Declares an {@code OUT} or {@code INOUT} parameter for a stored-procedure DAO me
 - **Returns:** the SQL type constant from {@link java.sql.Types}
 - **See also:** Types
 
-### Annotation OutParameterList (com.landawn.abacus.jdbc.annotation.OutParameterList)
+### Annotation OutParameters (com.landawn.abacus.jdbc.annotation.OutParameters)
 Container annotation for repeatable {@link OutParameter} declarations on a single stored-procedure DAO method.
 
 **Thread-safety:** unspecified
@@ -11503,7 +12404,7 @@ Container annotation for repeatable {@link OutParameter} declarations on a singl
 - **Signature:** `OutParameter[] value()`
 - **Summary:** The array of {@link OutParameter} annotations contained in this list.
 - **Contract:**
-  - <p> This array is automatically populated when using multiple {@link OutParameter} annotations on a method via the {@link java.lang.annotation.Repeatable} mechanism; direct use of {@code @OutParameterList} is rarely needed.
+  - <p> This array is automatically populated when using multiple {@link OutParameter} annotations on a method via the {@link java.lang.annotation.Repeatable} mechanism; direct use of {@code @OutParameters} is rarely needed.
 - **Parameters:**
   - (none)
 - **Returns:** the contained {@link OutParameter} annotations
@@ -11521,8 +12422,8 @@ Enables SQL and DAO-method performance logging for the annotated method (or for 
 - (none)
 
 #### Public Instance Methods
-##### minExecutionTimeForSql(...) -> long
-- **Signature:** `long minExecutionTimeForSql() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG`
+##### sqlPerfLogThresholdMillis(...) -> long
+- **Signature:** `long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG`
 - **Summary:** Specifies the minimum execution time threshold (in milliseconds) for logging SQL performance.
 - **Parameters:**
   - (none)
@@ -11535,8 +12436,8 @@ Enables SQL and DAO-method performance logging for the annotated method (or for 
 - **Parameters:**
   - (none)
 - **Returns:** the maximum number of characters to include from SQL statements in logs; defaults to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} (1024 characters)
-##### minExecutionTimeForOperation(...) -> long
-- **Signature:** `long minExecutionTimeForOperation() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG`
+##### daoMethodPerfLogThresholdMillis(...) -> long
+- **Signature:** `long daoMethodPerfLogThresholdMillis() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG`
 - **Summary:** Specifies the minimum execution time threshold (in milliseconds) for logging DAO method performance.
 - **Parameters:**
   - (none)
@@ -11545,7 +12446,7 @@ Enables SQL and DAO-method performance logging for the annotated method (or for 
 - **Signature:** `String[] filter() default { ".*" }`
 - **Summary:** Specifies the type-level method-name filter.
 - **Contract:**
-  - <p> Each entry matches when it is contained in the method name ignoring case, or when it matches the full method name as a regular expression.
+  - <p> Each entry matches when the method name starts with it (ignoring case), or when it matches the full method name as a regular expression.
 - **Parameters:**
   - (none)
 - **Returns:** array of filter patterns (default matches all methods)
@@ -11609,45 +12510,45 @@ Declares how a DAO method should execute SQL.
   - (none)
 - **Returns:** SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
 - **See also:** RegExUtil#JAVA_IDENTIFIER_MATCHER
-##### op(...) -> OP
-- **Signature:** `OP op() default OP.DEFAULT`
+##### op(...) -> QueryOperation
+- **Signature:** `QueryOperation op() default QueryOperation.DEFAULT`
 - **Summary:** Specifies the operation type for this query.
 - **Contract:**
-  - <p> The operation type influences: </p> <ul> <li> Result set processing strategy </li> <li> Return type handling and conversion </li> <li> Performance optimizations applied by the framework </li> <li> Expected behavior for edge cases (e.g., empty results) </li> </ul> <p> Common operation types: </p> <ul> <li> {@link OP#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases) </li> <li> {@link OP#list} - Returns all results as a List </li> <li> {@link OP#stream} - (Deprecated) Returns results as a Stream; prefer {@link OP#DEFAULT} with a {@code Stream} return type </li> <li> {@link OP#findFirst} - Returns the first result wrapped in Optional </li> <li> {@link OP#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link OP#exists} - Returns boolean indicating if any results exist </li> <li> {@link OP#queryForSingle} - Returns a single scalar value </li> <li> {@link OP#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link OP#update} - Executes UPDATE/INSERT/DELETE and returns row count </li> <li> {@link OP#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Existence check @Query(value = "SELECT 1 FROM users WHERE email = :email", op = OP.exists) boolean emailExists(@Bind("email") String email); // Single scalar value @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = OP.queryForSingle) long countActiveUsers(); // First result from ordered query @Query(value = "SELECT * FROM users ORDER BY created_date DESC", op = OP.findFirst) Optional<User> findLatestUser(); // At most one match (throws DuplicateResultException if more than one matches; null if none) @Query(value = "SELECT * FROM users WHERE id = :id", op = OP.findOnlyOne) User getUserById(@Bind("id") Long id); // Stream for large result sets (a Stream return type makes the framework stream automatically) @Query(value = "SELECT * FROM large_table", fetchSize = 1000) Stream<Record> streamAllRecords(); // Explicit update operation @Query(value = "DELETE FROM audit_logs WHERE created_date < :cutoff", op = OP.update) int purgeOldLogs(@Bind("cutoff") Date cutoff); } </pre> <p> When to specify explicitly: </p> <ul> <li> For existence checks: use {@code OP.exists} for performance </li> <li> For scalar aggregates: use {@code OP.queryForSingle} </li> <li> When you need strict validation: use {@code OP.findOnlyOne} </li> <li> For large result sets: return a {@code Stream} with an appropriate fetch size (the framework streams automatically) </li> </ul> <p> Note: In most cases, {@link OP#DEFAULT} is sufficient as the framework intelligently determines the appropriate operation based on the SQL statement type and method return type.
+  - <p> The operation type influences: </p> <ul> <li> Result set processing strategy </li> <li> Return type handling and conversion </li> <li> Performance optimizations applied by the framework </li> <li> Expected behavior for edge cases (e.g., empty results) </li> </ul> <p> Common operation types: </p> <ul> <li> {@link QueryOperation#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases) </li> <li> {@link QueryOperation#list} - Returns all results as a List </li> <li> {@link QueryOperation#stream} - (Deprecated) Returns results as a Stream; prefer {@link QueryOperation#DEFAULT} with a {@code Stream} return type </li> <li> {@link QueryOperation#findFirst} - Returns the first result wrapped in Optional </li> <li> {@link QueryOperation#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link QueryOperation#exists} - Returns boolean indicating if any results exist </li> <li> {@link QueryOperation#queryForSingle} - Returns a single scalar value </li> <li> {@link QueryOperation#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link QueryOperation#update} - Executes UPDATE/INSERT/DELETE and returns row count </li> <li> {@link QueryOperation#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Existence check @Query(value = "SELECT 1 FROM users WHERE email = :email", op = QueryOperation.exists) boolean emailExists(@Bind("email") String email); // Single scalar value @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = QueryOperation.queryForSingle) long countActiveUsers(); // First result from ordered query @Query(value = "SELECT * FROM users ORDER BY created_date DESC", op = QueryOperation.findFirst) Optional<User> findLatestUser(); // At most one match (throws DuplicateResultException if more than one matches; null if none) @Query(value = "SELECT * FROM users WHERE id = :id", op = QueryOperation.findOnlyOne) User getUserById(@Bind("id") Long id); // Stream for large result sets (a Stream return type makes the framework stream automatically) @Query(value = "SELECT * FROM large_table", fetchSize = 1000) Stream<Record> streamAllRecords(); // Explicit update operation @Query(value = "DELETE FROM audit_logs WHERE created_date < :cutoff", op = QueryOperation.update) int purgeOldLogs(@Bind("cutoff") Date cutoff); } </pre> <p> When to specify explicitly: </p> <ul> <li> For existence checks: use {@code QueryOperation.exists} for performance </li> <li> For scalar aggregates: use {@code QueryOperation.queryForSingle} </li> <li> When you need strict validation: use {@code QueryOperation.findOnlyOne} </li> <li> For large result sets: return a {@code Stream} with an appropriate fetch size (the framework streams automatically) </li> </ul> <p> Note: In most cases, {@link QueryOperation#DEFAULT} is sufficient as the framework intelligently determines the appropriate operation based on the SQL statement type and method return type.
 - **Parameters:**
   - (none)
-- **Returns:** the operation type, defaults to {@link OP#DEFAULT}
-- **See also:** OP
-##### isProcedure(...) -> boolean
-- **Signature:** `boolean isProcedure() default false`
+- **Returns:** the operation type, defaults to {@link QueryOperation#DEFAULT}
+- **See also:** QueryOperation
+##### procedure(...) -> boolean
+- **Signature:** `boolean procedure() default false`
 - **Summary:** Indicates whether the SQL statement is a stored procedure call.
 - **Contract:**
   - When {@code true} , the framework treats the SQL as a callable statement and handles input/output parameters accordingly.
-  - @Query(value = "{call calculate_bonus(?, ?, ?)}", isProcedure = true, op = OP.executeAndGetOutParameters) @OutParameter(position = 3, sqlType = Types.DECIMAL) // bonus (OUT) Jdbc.OutParamResult calculateBonus(long employeeId, int performanceScore) throws SQLException; // BigDecimal bonus = dao.calculateBonus(1L, 95).getOutParamValue(3); } </pre> <p> When to use: </p> <ul> <li> Calling stored procedures or functions in the database </li> <li> When the SQL syntax follows the callable statement format (e.g., {@code {call procedure_name(?, ?)}} ) </li> <li> When using output parameters that need to be registered and retrieved </li> </ul>
+  - @Query(value = "{call calculate_bonus(?, ?, ?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters) @OutParameter(position = 3, sqlType = Types.DECIMAL) // bonus (OUT) Jdbc.OutParamResult calculateBonus(long employeeId, int performanceScore) throws SQLException; // BigDecimal bonus = dao.calculateBonus(1L, 95).getOutParamValue(3); } </pre> <p> When to use: </p> <ul> <li> Calling stored procedures or functions in the database </li> <li> When the SQL syntax follows the callable statement format (e.g., {@code {call procedure_name(?, ?)}} ) </li> <li> When using output parameters that need to be registered and retrieved </li> </ul>
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} if the SQL is a stored procedure call; {@code false} (default) otherwise
-- **See also:** OutParameter, OutParameterList
-##### isBatch(...) -> boolean
-- **Signature:** `boolean isBatch() default false`
+- **See also:** OutParameter, OutParameters
+##### batch(...) -> boolean
+- **Signature:** `boolean batch() default false`
 - **Summary:** Indicates whether this query should be executed as a batch operation.
 - **Contract:**
   - Indicates whether this query should be executed as a batch operation.
   - When {@code true} , the method should accept collection-type parameters and execute the query multiple times with different parameter sets in a single batch for better performance.
-  - <p> Batch operations significantly improve performance when executing the same SQL statement multiple times with different parameters by: </p> <ul> <li> Reducing network round trips to the database </li> <li> Allowing the database to optimize execution plans </li> <li> Minimizing parsing and compilation overhead </li> <li> Enabling better resource utilization </li> </ul> <p> When to use batch operations: </p> <ul> <li> Inserting multiple records (most common use case) </li> <li> Updating multiple records with different values </li> <li> Deleting multiple records based on different criteria </li> <li> Any scenario where the same SQL runs many times with different parameters </li> </ul> <p> Basic batch insert examples: </p> <pre> {@code // Batch insert with entity list: the single Collection parameter supplies one entity per batch row @Query(value = "INSERT INTO users (name, email, status) " + "VALUES (:name, :email, :status)", isBatch = true) List<Long> batchInsertUsers(List<User> users) throws SQLException; // Returns the generated keys (or declare void if they are not needed) } </pre> <p> Batch update/delete examples: </p> <pre> {@code // Batch update with entity list @Query(value = "UPDATE users SET status = :status WHERE id = :id", isBatch = true) int batchUpdateStatus(List<User> users) throws SQLException; // Returns the total affected-row count summed across all batch rows // Batch delete: for positional SQL each element of the Collection is one row's value // (or an Object\[\]/List of values for multi-parameter SQL) @Query(value = "DELETE FROM temp_records WHERE id = ?", isBatch = true) int batchDelete(List<Long> ids) throws SQLException; } </pre> <p> Advanced batch examples: </p> <pre> {@code // Large batch with custom batch size @Query(value = "INSERT INTO event_log (timestamp, event_type, data) " + "VALUES (:timestamp, :eventType, :data)", isBatch = true, batchSize = 1000) void batchLogEvents(List<EventLog> events) throws SQLException; // Processes 1000 records per database round trip // Batch with timeout for large operations; the optional second int parameter // overrides batchSize() at call time (0 falls back to the default batch size) @Query(value = "INSERT INTO historical_data (date, metric, value) " + "VALUES (:date, :metric, :value)", isBatch = true, queryTimeout = 300) void importHistoricalData(List<HistoricalData> rows, int batchSize) throws SQLException; } </pre> <p> Return type requirements: </p> <ul> <li> Batch INSERT: {@code void} , or {@code List<ID>} to receive the generated keys </li> <li> Batch UPDATE/DELETE: {@code int} / {@code Integer} , {@code long} / {@code Long} , {@code boolean} / {@code Boolean} or {@code void} \\u2014 the affected-row counts are summed across all batch rows (a per-row {@code int\[\]} result is not supported) </li> </ul> <p> Parameter requirements: </p> <ul> <li> Exactly one {@code Collection} parameter supplies the batch rows: entities/Maps (or single values/ {@code Object\[\]} / {@code List} rows) whose properties bind to the named parameters, one element per batch row </li> <li> An optional second {@code int} parameter overrides {@link #batchSize()} at call time </li> <li> No other parameters are supported for batch methods </li> </ul> <p> Performance considerations: </p> <ul> <li> Use {@link #batchSize()} to control how many items are sent per database round trip </li> <li> Larger batch sizes reduce round trips but increase memory usage </li> <li> Optimal batch size depends on network latency, row size, and database configuration </li> <li> Consider database transaction log size and timeout limits </li> <li> Batch operations are typically 10-100× faster than individual operations </li> </ul> <p> Error handling: </p> <ul> <li> If any batch item fails, the entire batch typically fails (depends on database/driver) </li> <li> Consider wrapping batch operations in transactions for atomicity </li> <li> Validate data before batching to minimize mid-batch failures </li> </ul> <p> Best practices: </p> <ul> <li> Use batch operations for bulk data loading and imports </li> <li> Set appropriate {@link #batchSize()} based on your data and environment </li> <li> Use {@link #queryTimeout()} for long-running batch operations </li> <li> Monitor memory usage with large batches </li> <li> Consider using transactions to ensure all-or-nothing semantics </li> <li> Validate collection parameters have matching sizes </li> </ul>
+  - <p> Batch operations significantly improve performance when executing the same SQL statement multiple times with different parameters by: </p> <ul> <li> Reducing network round trips to the database </li> <li> Allowing the database to optimize execution plans </li> <li> Minimizing parsing and compilation overhead </li> <li> Enabling better resource utilization </li> </ul> <p> When to use batch operations: </p> <ul> <li> Inserting multiple records (most common use case) </li> <li> Updating multiple records with different values </li> <li> Deleting multiple records based on different criteria </li> <li> Any scenario where the same SQL runs many times with different parameters </li> </ul> <p> Basic batch insert examples: </p> <pre> {@code // Batch insert with entity list: the single Collection parameter supplies one entity per batch row @Query(value = "INSERT INTO users (name, email, status) " + "VALUES (:name, :email, :status)", batch = true) List<Long> batchInsertUsers(List<User> users) throws SQLException; // Returns the generated keys (or declare void if they are not needed) } </pre> <p> Batch update/delete examples: </p> <pre> {@code // Batch update with entity list @Query(value = "UPDATE users SET status = :status WHERE id = :id", batch = true) int batchUpdateStatus(List<User> users) throws SQLException; // Returns the total affected-row count summed across all batch rows // Batch delete: for positional SQL each element of the Collection is one row's value // (or an Object\[\]/List of values for multi-parameter SQL) @Query(value = "DELETE FROM temp_records WHERE id = ?", batch = true) int batchDelete(List<Long> ids) throws SQLException; } </pre> <p> Advanced batch examples: </p> <pre> {@code // Large batch with custom batch size @Query(value = "INSERT INTO event_log (timestamp, event_type, data) " + "VALUES (:timestamp, :eventType, :data)", batch = true, batchSize = 1000) void batchLogEvents(List<EventLog> events) throws SQLException; // Processes 1000 records per database round trip // Batch with timeout for large operations; the optional second int parameter // overrides batchSize() at call time (0 falls back to the default batch size) @Query(value = "INSERT INTO historical_data (date, metric, value) " + "VALUES (:date, :metric, :value)", batch = true, queryTimeoutSeconds = 300) void importHistoricalData(List<HistoricalData> rows, int batchSize) throws SQLException; } </pre> <p> Return type requirements: </p> <ul> <li> Batch INSERT: {@code void} , or {@code List<ID>} to receive the generated keys </li> <li> Batch UPDATE/DELETE: {@code int} / {@code Integer} , {@code long} / {@code Long} , {@code boolean} / {@code Boolean} or {@code void} \\u2014 the affected-row counts are summed across all batch rows (a per-row {@code int\[\]} result is not supported) </li> </ul> <p> Parameter requirements: </p> <ul> <li> Exactly one {@code Collection} parameter supplies the batch rows: entities/Maps (or single values/ {@code Object\[\]} / {@code List} rows) whose properties bind to the named parameters, one element per batch row </li> <li> An optional second {@code int} parameter overrides {@link #batchSize()} at call time </li> <li> No other parameters are supported for batch methods </li> </ul> <p> Performance considerations: </p> <ul> <li> Use {@link #batchSize()} to control how many items are sent per database round trip </li> <li> Larger batch sizes reduce round trips but increase memory usage </li> <li> Optimal batch size depends on network latency, row size, and database configuration </li> <li> Consider database transaction log size and timeout limits </li> <li> Measure with the target driver and database; batching benefits vary with row size, network latency, and driver rewrite behavior </li> </ul> <p> Error handling: </p> <ul> <li> If any batch item fails, the entire batch typically fails (depends on database/driver) </li> <li> Consider wrapping batch operations in transactions for atomicity </li> <li> Validate data before batching to minimize mid-batch failures </li> </ul> <p> Best practices: </p> <ul> <li> Use batch operations for bulk data loading and imports </li> <li> Set appropriate {@link #batchSize()} based on your data and environment </li> <li> Use {@link #queryTimeoutSeconds()} for long-running batch operations </li> <li> Monitor memory usage with large batches </li> <li> Consider using transactions to ensure all-or-nothing semantics </li> <li> Validate that each batch row supplies every SQL parameter required by the statement </li> </ul>
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} for batch operations; {@code false} (default) for single operations
 - **See also:** #batchSize()
-##### isSingleParameter(...) -> boolean
-- **Signature:** `boolean isSingleParameter() default false`
-- **Summary:** Indicates whether a single method parameter that is a collection or array should be treated as a single value rather than being expanded for batch operations or IN clauses.
+##### collectionAsSingleParameter(...) -> boolean
+- **Signature:** `boolean collectionAsSingleParameter() default false`
+- **Summary:** Controls whether the sole statement argument is bound once as a single JDBC value instead of being decomposed by the DAO proxy.
 - **Contract:**
-  - Indicates whether a single method parameter that is a collection or array should be treated as a single value rather than being expanded for batch operations or IN clauses.
-  - <p> Default behavior ( {@code isSingleParameter = false} ): </p> <ul> <li> Collections/arrays in IN clauses are expanded: {@code WHERE id IN (:ids)} with {@code List<Long> ids} </li> <li> For batch operations, collections represent multiple rows to process </li> </ul> <p> When {@code isSingleParameter = true} : </p> <ul> <li> The collection/array is passed as a single value to the database </li> <li> Useful for database-native array types (e.g., PostgreSQL arrays) </li> <li> Useful for JSON array columns </li> <li> Useful for blob/clob data that happens to be an array </li> </ul> <p> Common use cases: </p> <pre> {@code // PostgreSQL array containment operator @Query(value = "SELECT * FROM products WHERE tags @> :tags", isSingleParameter = true) List<Product> findByTags(@Bind("tags") String\[\] tags); // PostgreSQL array equality @Query(value = "SELECT * FROM events WHERE participants = :participants", isSingleParameter = true) List<Event> findByExactParticipants(@Bind("participants") Long\[\] participants); // JSON array column (isSingleParameter requires exactly one statement parameter) @Query(value = "UPDATE configs SET options = :options::jsonb WHERE name = 'default'", isSingleParameter = true) int updateDefaultConfigOptions(@Bind("options") String\[\] options); // Array intersection @Query(value = "SELECT * FROM items WHERE categories && :categories", isSingleParameter = true) List<Item> findByCategoryOverlap(@Bind("categories") String\[\] categories); } </pre> <p> Contrast with default behavior: </p> <pre> {@code // Default: collection is expanded for IN clause (use @BindList with {ids} template syntax) @Query(value = "SELECT * FROM users WHERE id IN ({ids})") List<User> findByIds(@BindList("ids") List<Long> ids); // Becomes: SELECT * FROM users WHERE id IN (?, ?, ?, ...) // With isSingleParameter: collection passed as single array value @Query(value = "SELECT * FROM users WHERE id = ANY(:ids)", isSingleParameter = true) List<User> findByIdsArray(@Bind("ids") Long\[\] ids); // PostgreSQL: id = ANY($1) where $1 is an array parameter } </pre> <p> Important notes: </p> <ul> <li> Only applicable when the method has a single collection/array parameter or when specifically needed for one parameter </li> <li> Database must support the native array or collection type being used </li> <li> Not commonly needed for standard SQL; primarily for database-specific features </li> </ul>
+  - <p> Default behavior ( {@code collectionAsSingleParameter = false} ): </p> <ul> <li> A sole, unannotated collection/array used with positional {@code ?} SQL supplies the individual positional values </li> <li> For batch operations, the outer collection supplies the rows to process </li> </ul> <p> When {@code collectionAsSingleParameter = true} : </p> <ul> <li> The collection/array is passed as a single value to the database </li> <li> Useful for database-native array types (e.g., PostgreSQL arrays) </li> <li> Useful for JSON array columns </li> <li> Useful for blob/clob data that happens to be an array </li> </ul> <p> Common use cases: </p> <pre> {@code // PostgreSQL array containment operator using one positional JDBC value @Query(value = "SELECT * FROM products WHERE tags @> ?", collectionAsSingleParameter = true) List<Product> findByTags(String\[\] tags); // PostgreSQL array equality @Query(value = "SELECT * FROM events WHERE participants = ?", collectionAsSingleParameter = true) List<Event> findByExactParticipants(Long\[\] participants); // JSON/array column (collectionAsSingleParameter requires exactly one statement parameter) @Query(value = "UPDATE configs SET options = ?
+  - WHERE name = 'default'", collectionAsSingleParameter = true) int updateDefaultConfigOptions(String\[\] options); // Array intersection @Query(value = "SELECT * FROM items WHERE categories && ?", collectionAsSingleParameter = true) List<Item> findByCategoryOverlap(String\[\] categories); } </pre> <p> Contrast with default behavior: </p> <pre> {@code // Variable-length IN expansion is a separate @BindList feature @Query(value = "SELECT * FROM users WHERE id IN ({ids})") List<User> findByIds(@BindList("ids") List<Long> ids); // Becomes: SELECT * FROM users WHERE id IN (?, ?, ?, ...) // With collectionAsSingleParameter: the array is passed once to one positional placeholder @Query(value = "SELECT * FROM users WHERE id = ANY(?)", collectionAsSingleParameter = true) List<User> findByIdsArray(Long\[\] ids); // PostgreSQL: id = ANY($1) where $1 is an array parameter } </pre> <p> Important notes: </p> <ul> <li> The collection/array must be the method's only statement/query parameter; fragment and other framework-recognized auxiliary parameters are not statement parameters </li> <li> Database must support the native array or collection type being used </li> <li> Not commonly needed for standard SQL; primarily for database-specific features </li> </ul>
 - **Parameters:**
   - (none)
-- **Returns:** {@code true} if collection/array parameters should be treated as single values; {@code false} (default) for standard expansion behavior
+- **Returns:** {@code true} if the sole statement argument should be bound once as a single value; {@code false} (default) to use the normal positional/batch decomposition rules
 ##### fragmentsContainNamedParameters(...) -> boolean
 - **Signature:** `@Beta boolean fragmentsContainNamedParameters() default false`
 - **Summary:** Indicates whether the SQL statement contains template variables defined by the {@link SqlFragment} or {@link SqlFragmentList} annotations that will be replaced with query fragments containing named parameters.
@@ -11657,30 +12558,30 @@ Declares how a DAO method should execute SQL.
   - (none)
 - **Returns:** {@code true} if template variables defined by {@link SqlFragment} or {@link SqlFragmentList} will be replaced with query fragments containing named parameters; {@code false} otherwise
 - **See also:** SqlFragment, SqlFragmentList
-##### autoSetSysTimeParam(...) -> boolean
-- **Signature:** `@Beta boolean autoSetSysTimeParam() default false`
+##### injectCurrentTimeParameters(...) -> boolean
+- **Signature:** `@Beta boolean injectCurrentTimeParameters() default false`
 - **Summary:** Enables automatic system-time parameter injection for the query.
 - **Contract:**
   - When {@code true} , the named parameters {@code :now} and {@code :sysTime} are automatically set to the current system timestamp, and the named parameter {@code :sysDate} is automatically set to the current system date, without requiring any of them to be passed as method parameters.
-  - </p> <p> Basic examples: </p> <pre> {@code // Finding currently active records @Query(value = "SELECT * FROM promotions " + "WHERE start_date <= :sysTime AND end_date >= :sysDate", autoSetSysTimeParam = true) List<Promotion> findActivePromotions(); // :sysTime and :sysDate are automatically set to current timestamp and date // Audit logging @Query(value = "INSERT INTO audit_log (action, user_id, timestamp) " + "VALUES (:action, :userId, :sysTime)", autoSetSysTimeParam = true) int logAction(@Bind("action") String action, @Bind("userId") Long userId); // Updating with timestamp @Query(value = "UPDATE users SET last_login = :sysTime WHERE id = :id", autoSetSysTimeParam = true) int updateLastLogin(@Bind("id") Long id); } </pre> <p> Advanced examples: </p> <pre> {@code // Complex time-based filtering @Query(value = "SELECT e.* FROM events e " + "WHERE e.start_time <= :sysTime " + " AND e.end_time >= :sysTime " + " AND e.category = :category", autoSetSysTimeParam = true) List<Event> findCurrentEvents(@Bind("category") String category); // Combining with other parameters @Query(value = "SELECT * FROM subscriptions " + "WHERE user_id = :userId " + " AND start_date <= :sysTime " + " AND (end_date IS NULL OR end_date >= :sysTime)", autoSetSysTimeParam = true) List<Subscription> findActiveSubscriptions(@Bind("userId") Long userId); // Data archival based on current time @Query(value = "INSERT INTO archive_logs " + "SELECT *, :sysTime as archived_at FROM logs " + "WHERE created_date < :cutoffDate", autoSetSysTimeParam = true) int archiveOldLogs(@Bind("cutoffDate") Date cutoffDate); // Scheduled task execution tracking @Query(value = "UPDATE scheduled_tasks " + "SET last_run = :sysTime, next_run = :sysTime + INTERVAL :intervalMinutes MINUTE " + "WHERE task_id = :taskId", autoSetSysTimeParam = true) int updateTaskExecution(@Bind("taskId") String taskId, @Bind("intervalMinutes") int interval); } </pre> <p> Multiple timestamp usage: </p> <pre> {@code // Using :sysTime multiple times in the same query @Query(value = "INSERT INTO user_sessions (user_id, created_at, last_activity) " + "VALUES (:userId, :sysTime, :sysTime)", autoSetSysTimeParam = true) int createSession(@Bind("userId") Long userId); // Combining automatic and manual timestamps @Query(value = "SELECT * FROM bookings " + "WHERE booking_date >= :startDate " + " AND booking_date <= :sysDate", autoSetSysTimeParam = true) List<Booking> findBookingsSince(@Bind("startDate") Date startDate); } </pre> <p> Important considerations: </p> <ul> <li> The system-time parameters ( {@code :now} , {@code :sysTime} , {@code :sysDate} ) are each set once when the query is executed, ensuring consistency across the query </li> <li> The value is obtained from the application server's system time, not the database server </li> <li> For database server time, use SQL functions like {@code CURRENT_TIMESTAMP} or {@code NOW()} instead </li> <li> The timestamp format and precision depend on the database column type and JDBC driver </li> <li> Cannot manually override the {@code :now} , {@code :sysTime} , or {@code :sysDate} parameters when this is enabled </li> </ul> <p> When not to use this feature: </p> <ul> <li> When you need explicit control over the timestamp value </li> <li> When you need database server time instead of application time </li> <li> When the timestamp should be passed in from external sources </li> <li> When you need different timestamps for different parts of a complex operation </li> </ul>
+  - </p> <p> Basic examples: </p> <pre> {@code // Finding currently active records @Query(value = "SELECT * FROM promotions " + "WHERE start_date <= :sysTime AND end_date >= :sysDate", injectCurrentTimeParameters = true) List<Promotion> findActivePromotions(); // :sysTime and :sysDate are automatically set to current timestamp and date // Audit logging @Query(value = "INSERT INTO audit_log (action, user_id, timestamp) " + "VALUES (:action, :userId, :sysTime)", injectCurrentTimeParameters = true) int logAction(@Bind("action") String action, @Bind("userId") Long userId); // Updating with timestamp @Query(value = "UPDATE users SET last_login = :sysTime WHERE id = :id", injectCurrentTimeParameters = true) int updateLastLogin(@Bind("id") Long id); } </pre> <p> Advanced examples: </p> <pre> {@code // Complex time-based filtering @Query(value = "SELECT e.* FROM events e " + "WHERE e.start_time <= :sysTime " + " AND e.end_time >= :sysTime " + " AND e.category = :category", injectCurrentTimeParameters = true) List<Event> findCurrentEvents(@Bind("category") String category); // Combining with other parameters @Query(value = "SELECT * FROM subscriptions " + "WHERE user_id = :userId " + " AND start_date <= :sysTime " + " AND (end_date IS NULL OR end_date >= :sysTime)", injectCurrentTimeParameters = true) List<Subscription> findActiveSubscriptions(@Bind("userId") Long userId); // Data archival based on current time @Query(value = "INSERT INTO archive_logs " + "SELECT *, :sysTime as archived_at FROM logs " + "WHERE created_date < :cutoffDate", injectCurrentTimeParameters = true) int archiveOldLogs(@Bind("cutoffDate") Date cutoffDate); // Scheduled task execution tracking @Query(value = "UPDATE scheduled_tasks " + "SET last_run = :sysTime, next_run = :sysTime + INTERVAL :intervalMinutes MINUTE " + "WHERE task_id = :taskId", injectCurrentTimeParameters = true) int updateTaskExecution(@Bind("taskId") String taskId, @Bind("intervalMinutes") int interval); } </pre> <p> Multiple timestamp usage: </p> <pre> {@code // Using :sysTime multiple times in the same query @Query(value = "INSERT INTO user_sessions (user_id, created_at, last_activity) " + "VALUES (:userId, :sysTime, :sysTime)", injectCurrentTimeParameters = true) int createSession(@Bind("userId") Long userId); // Combining automatic and manual timestamps @Query(value = "SELECT * FROM bookings " + "WHERE booking_date >= :startDate " + " AND booking_date <= :sysDate", injectCurrentTimeParameters = true) List<Booking> findBookingsSince(@Bind("startDate") Date startDate); } </pre> <p> Important considerations: </p> <ul> <li> The system-time parameters ( {@code :now} , {@code :sysTime} , {@code :sysDate} ) are each set once when the query is executed, ensuring consistency across the query </li> <li> The value is obtained from the application server's system time, not the database server </li> <li> For database server time, use SQL functions like {@code CURRENT_TIMESTAMP} or {@code NOW()} instead </li> <li> The timestamp format and precision depend on the database column type and JDBC driver </li> <li> Cannot manually override the {@code :now} , {@code :sysTime} , or {@code :sysDate} parameters when this is enabled </li> </ul> <p> When not to use this feature: </p> <ul> <li> When you need explicit control over the timestamp value </li> <li> When you need database server time instead of application time </li> <li> When the timestamp should be passed in from external sources </li> <li> When you need different timestamps for different parts of a complex operation </li> </ul>
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} to automatically inject current timestamp as {@code :sysTime} or {@code :now} , and current date as {@code :sysDate} , without requiring them as method parameters; {@code false} (default) for no automatic injection
-##### queryTimeout(...) -> int
-- **Signature:** `int queryTimeout() default -1`
+##### queryTimeoutSeconds(...) -> int
+- **Signature:** `int queryTimeoutSeconds() default -1`
 - **Summary:** Specifies the query timeout in seconds.
 - **Contract:**
   - If the query execution exceeds this timeout, it will be cancelled and a timeout exception will be thrown.
-  - <p> Setting an appropriate timeout is important for: </p> <ul> <li> Preventing resource exhaustion from long-running queries </li> <li> Meeting Service Level Agreement (SLA) requirements </li> <li> Detecting and failing fast on inefficient queries </li> <li> Protecting the application from database performance issues </li> <li> Preventing connection pool starvation </li> </ul> <p> Timeout guidelines (in seconds): </p> <ul> <li> {@code -1} (default) - Uses the default timeout configured in the connection or DataSource </li> <li> {@code 0} - No timeout (wait indefinitely - not recommended) </li> <li> {@code 1-5} - For simple, well-indexed queries that should be very fast </li> <li> {@code 10-30} - For complex queries with joins or aggregations </li> <li> {@code 60+} - For batch operations, data migrations, or reporting queries </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Quick lookup that should complete fast @Query(value = "SELECT * FROM users WHERE id = :id", queryTimeout = 2) User getUserById(@Bind("id") Long id); // Complex reporting query @Query(value = "SELECT ...
+  - <p> Setting an appropriate timeout is important for: </p> <ul> <li> Preventing resource exhaustion from long-running queries </li> <li> Meeting Service Level Agreement (SLA) requirements </li> <li> Detecting and failing fast on inefficient queries </li> <li> Protecting the application from database performance issues </li> <li> Preventing connection pool starvation </li> </ul> <p> Timeout guidelines (in seconds): </p> <ul> <li> {@code -1} (default) - This annotation leaves the statement timeout unchanged </li> <li> {@code 0} - No timeout (wait indefinitely - not recommended) </li> <li> {@code 1-5} - For simple, well-indexed queries that should be very fast </li> <li> {@code 10-30} - For complex queries with joins or aggregations </li> <li> {@code 60+} - For batch operations, data migrations, or reporting queries </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Quick lookup that should complete fast @Query(value = "SELECT * FROM users WHERE id = :id", queryTimeoutSeconds = 2) User getUserById(@Bind("id") Long id); // Complex reporting query @Query(value = "SELECT ...
 - **Parameters:**
   - (none)
-- **Returns:** the timeout in seconds, or {@code -1} to use the default configured timeout
+- **Returns:** the timeout in seconds, or {@code -1} to leave the statement timeout unchanged
 ##### fetchSize(...) -> int
 - **Signature:** `int fetchSize() default -1`
 - **Summary:** Specifies the JDBC fetch size for the query.
 - **Contract:**
   - <p> The fetch size is a hint to the JDBC driver about the number of rows that should be fetched from the database when more rows are needed.
-  - Higher values significantly improve performance for large result sets </li> <li> <strong> SQL Server: </strong> Adaptive fetch size based on packet size </li> </ul> <p> Important notes: </p> <ul> <li> Fetch size is a hint; drivers may ignore or adjust it </li> <li> Very large fetch sizes can cause OutOfMemoryError if rows are large </li> <li> Optimal fetch size depends on network latency, row size, and available memory </li> <li> For {@code Stream} return types, fetch size enables {@code true} lazy loading </li> <li> Profile and test with realistic data to find optimal values </li> <li> Consider using different fetch sizes for different environments (dev vs.
+  - Higher values significantly improve performance for large result sets </li> <li> <strong> SQL Server: </strong> Adaptive fetch size based on packet size </li> </ul> <p> Important notes: </p> <ul> <li> Fetch size is a hint; drivers may ignore or adjust it </li> <li> Very large fetch sizes can cause OutOfMemoryError if rows are large </li> <li> Optimal fetch size depends on network latency, row size, and available memory </li> <li> For {@code Stream} return types, fetch size is a buffering hint; actual cursor and prefetch behavior remains driver-specific </li> <li> Profile and test with realistic data to find optimal values </li> <li> Consider using different fetch sizes for different environments (dev vs.
 - **Parameters:**
   - (none)
 - **Returns:** the fetch size hint for the JDBC driver; only positive values are forwarded to the statement ( {@code -1} and {@code 0} both leave it unset). When unset, the framework may still apply its own per-operation fetch size for SELECTs (e.g. 1 for find-first/exists style queries, 2 for find-only-one/unique queries, and a large-result configuration for streaming) rather than the raw driver default
@@ -11688,13 +12589,13 @@ Declares how a DAO method should execute SQL.
 - **Signature:** `int batchSize() default JdbcUtil.DEFAULT_BATCH_SIZE`
 - **Summary:** Specifies the number of items to process in each database round trip for batch operations.
 - **Contract:**
-  - Only applicable when {@link #isBatch()} is {@code true} .
+  - Only applicable when {@link #batch()} is {@code true} .
   - batchSize = 100 - Total database round trips: 10,000 / 100 = 100 trips - Each trip processes 100 INSERT statements - Memory per trip: ~100 × row size - More round trips but less memory per trip </pre> <p> Factors to consider when choosing batch size: </p> <ul> <li> <strong> Row size: </strong> Larger rows require smaller batch sizes to avoid memory issues </li> <li> <strong> Network latency: </strong> High latency benefits from larger batches </li> <li> <strong> Database limits: </strong> Some databases have maximum transaction sizes or statement counts </li> <li> <strong> Available memory: </strong> Limited memory requires smaller batches </li> <li> <strong> Concurrent operations: </strong> Consider memory usage across all concurrent operations </li> <li> <strong> Error handling: </strong> Smaller batches may be easier to retry on partial failures </li> </ul> <p> Database-specific considerations: </p> <ul> <li> <strong> PostgreSQL: </strong> Can handle very large batches efficiently; consider 1000-5000 </li> <li> <strong> MySQL: </strong> May have max_allowed_packet limit; typically 500-2000 </li> <li> <strong> Oracle: </strong> Efficient with batches of 100-1000 </li> <li> <strong> SQL Server: </strong> Generally efficient with 500-1000 </li> </ul> <p> Memory usage estimation: </p> <pre> Approximate memory per batch = batchSize × averageRowSize × 2 (×2 accounts for driver buffering and object overhead) Example calculations: - Small rows (100 bytes), batchSize 5000 \\u2192 ~1MB per batch - Medium rows (1KB), batchSize 1000 \\u2192 ~2MB per batch - Large rows (10KB), batchSize 100 \\u2192 ~2MB per batch - Very large rows (100KB), batchSize 10 \\u2192 ~2MB per batch </pre> <p> Best practices: </p> <ul> <li> Start with the default and measure performance </li> <li> Profile with realistic data volumes and row sizes </li> <li> Monitor memory usage under load </li> <li> Consider different values for different environments (dev vs.
   - prod) </li> <li> Document the rationale for non-default batch sizes </li> <li> Test with edge cases (very small and very large datasets) </li> </ul> <p> Common anti-patterns to avoid: </p> <ul> <li> Using batch size of 1 (defeats the purpose of batching) </li> <li> Using extremely large batch sizes without memory testing </li> <li> Ignoring database-specific limitations </li> <li> Not adjusting batch size when row size changes significantly </li> </ul>
 - **Parameters:**
   - (none)
 - **Returns:** the number of items to process per batch, defaults to {@link JdbcUtil#DEFAULT_BATCH_SIZE}
-- **See also:** #isBatch(), JdbcUtil#DEFAULT_BATCH_SIZE
+- **See also:** #batch(), JdbcUtil#DEFAULT_BATCH_SIZE
 
 ### Annotation RefreshCache (com.landawn.abacus.jdbc.annotation.RefreshCache)
 Triggers invalidation of the DAO's result cache after the annotated method completes.
@@ -11719,7 +12620,7 @@ Triggers invalidation of the DAO's result cache after the annotated method compl
 - **Signature:** `String[] filter() default { "update", "delete", "deleteById", "insert", "save", "add", "remove", "upsert", "batchUpdate", "batchDelete", "batchDeleteByIds", "batchInsert", "batchSave", "batchAdd", "batchRemove", "batchUpsert", "execute" }`
 - **Summary:** Specifies the type-level method-name filter.
 - **Contract:**
-  - <p> Each entry matches when the method name starts with that entry or when the entry matches the full method name as a regular expression.
+  - <p> Each entry matches when the method name starts with that entry (case-insensitive) or when the entry matches the full method name as a regular expression.
 - **Parameters:**
   - (none)
 - **Returns:** array of filter patterns for method names that should trigger cache refresh; the default targets common write methods such as {@code update} , {@code delete} , {@code deleteById} , {@code insert} , {@code save} , {@code add} , {@code remove} , {@code upsert} , {@code execute} and their {@code batch*} variants
@@ -11805,7 +12706,7 @@ Toggles whether SQL statements are logged for a DAO method (or all matching meth
 - **Signature:** `String[] filter() default { ".*" }`
 - **Summary:** Specifies the type-level method-name filter.
 - **Contract:**
-  - <p> Each entry matches when it is contained in the method name ignoring case, or when it matches the full method name as a regular expression.
+  - <p> Each entry matches when the method name starts with it (ignoring case), or when it matches the full method name as a regular expression.
 - **Parameters:**
   - (none)
 - **Returns:** array of filter patterns (default matches all methods)
@@ -11879,8 +12780,8 @@ Declares transaction settings for a DAO method managed by the Abacus JDBC proxy.
   - (none)
 - **Returns:** the configured propagation behavior; defaults to {@link Propagation#REQUIRED}
 - **See also:** Propagation
-##### isolation(...) -> IsolationLevel
-- **Signature:** `IsolationLevel isolation() default IsolationLevel.DEFAULT`
+##### isolationLevel(...) -> IsolationLevel
+- **Signature:** `IsolationLevel isolationLevel() default IsolationLevel.DEFAULT`
 - **Summary:** Specifies the transaction isolation level.
 - **Parameters:**
   - (none)
@@ -11930,7 +12831,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - Each entity will be inserted if new or updated if it already exists, matching by ID fields.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException`
@@ -11938,26 +12839,26 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws SQLException`
+- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws SQLException`
 - **Summary:** Performs batch upsert based on the specified unique properties for matching.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each entity (must not be empty)
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+  - `matchPropNames` (`Collection<String>`) — the property names that uniquely identify each entity (must not be empty)
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize) throws SQLException`
+- **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws SQLException`
 - **Summary:** Performs batch upsert based on the specified unique properties with a custom batch size.
 - **Contract:**
   - When both inserts and updates are needed (or either set is large), the operation is wrapped in a transaction.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each entity (must not be empty)
+  - `matchPropNames` (`Collection<String>`) — the property names that uniquely identify each entity (must not be empty)
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 
@@ -12000,21 +12901,21 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** a PreparedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final int[] returnColumnIndexes) throws SQLException`
+- **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes) throws SQLException`
 - **Summary:** Creates a PreparedQuery that will return specific columns as generated keys.
 - **Contract:**
   - This is useful when you need to retrieve specific auto-generated column values.
 - **Parameters:**
   - `sql` (`String`) — the SQL query string
-  - `returnColumnIndexes` (`int[]`) — array of column indexes to return as generated keys
+  - `generatedKeyColumnIndexes` (`int[]`) — array of column indexes to return as generated keys
 - **Returns:** a PreparedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final String[] returnColumnNames) throws SQLException`
+- **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames) throws SQLException`
 - **Summary:** Creates a PreparedQuery that will return specific named columns as generated keys.
 - **Parameters:**
   - `sql` (`String`) — the SQL query string
-  - `returnColumnNames` (`String[]`) — array of column names to return as generated keys
+  - `generatedKeyColumnNames` (`String[]`) — array of column names to return as generated keys
 - **Returns:** a PreparedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -12035,19 +12936,19 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final int[] returnColumnIndexes) throws SQLException`
+- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes) throws SQLException`
 - **Summary:** Creates a NamedQuery that will return specific columns as generated keys.
 - **Parameters:**
   - `namedSql` (`String`) — the named SQL query string
-  - `returnColumnIndexes` (`int[]`) — array of column indexes to return
+  - `generatedKeyColumnIndexes` (`int[]`) — array of column indexes to return
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final String[] returnColumnNames) throws SQLException`
+- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames) throws SQLException`
 - **Summary:** Creates a NamedQuery that will return specific named columns as generated keys.
 - **Parameters:**
   - `namedSql` (`String`) — the named SQL query string
-  - `returnColumnNames` (`String[]`) — array of column names to return
+  - `generatedKeyColumnNames` (`String[]`) — array of column names to return
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -12059,19 +12960,19 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] returnColumnIndexes) throws SQLException`
+- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws SQLException`
 - **Summary:** Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.
 - **Parameters:**
   - `namedSql` (`ParsedSql`) — the pre-parsed named query
-  - `returnColumnIndexes` (`int[]`) — array of column indexes to return
+  - `generatedKeyColumnIndexes` (`int[]`) — array of column indexes to return
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] returnColumnNames) throws SQLException`
+- **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws SQLException`
 - **Summary:** Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.
 - **Parameters:**
   - `namedSql` (`ParsedSql`) — the pre-parsed named query
-  - `returnColumnNames` (`String[]`) — array of column names to return
+  - `generatedKeyColumnNames` (`String[]`) — array of column names to return
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -12110,14 +13011,14 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### upsert(...) -> T
-- **Signature:** `default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws SQLException`
+- **Signature:** `default T upsert(final T entity, final Collection<String> matchPropNames) throws SQLException`
 - **Summary:** Performs an upsert operation - inserts if not exists, updates if exists.
 - **Contract:**
   - Performs an upsert operation - inserts if not exists, updates if exists.
   - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User("john@example.com", "John Doe"); User saved = dao.upsert(user, Arrays.asList("email")); // Inserts if email doesn't exist, updates if it does } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-  - `uniquePropNamesForQuery` (`Collection<String>`) — property names that uniquely identify the record
+  - `matchPropNames` (`Collection<String>`) — property names that uniquely identify the record
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -12289,30 +13190,50 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
 - **Returns:** a NamedQuery configured for large results
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-##### asyncCall(...) -> ContinuableFuture<R>
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @NonDBOperation default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction)`
+##### callAsync(...) -> ContinuableFuture<R>
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @NonDBOperation default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction)`
 - **Summary:** Executes an asynchronous database operation using the default executor.
 - **Parameters:**
   - `sqlAction` (`Throwables.Function<? super TD, ? extends R, SQLException>`) — function that performs database operations
 - **Returns:** ContinuableFuture with the operation result
-- **Signature:** `@Beta @NonDBOperation default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor)`
+- **Signature:** `@Beta @NonDBOperation default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor)`
 - **Summary:** Executes an asynchronous database operation using the specified executor.
 - **Parameters:**
   - `sqlAction` (`Throwables.Function<? super TD, ? extends R, SQLException>`) — function that performs database operations
   - `executor` (`Executor`) — the executor to run the operation
 - **Returns:** ContinuableFuture with the operation result
-##### asyncRun(...) -> ContinuableFuture<Void>
-- **Signature:** `@SuppressWarnings("deprecation") @Beta @NonDBOperation default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction)`
+##### runAsync(...) -> ContinuableFuture<Void>
+- **Signature:** `@SuppressWarnings("deprecation") @Beta @NonDBOperation default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction)`
 - **Summary:** Executes an asynchronous database operation without return value using default executor.
 - **Parameters:**
   - `sqlAction` (`Throwables.Consumer<? super TD, SQLException>`) — consumer that performs database operations
 - **Returns:** ContinuableFuture that completes when operation finishes
-- **Signature:** `@Beta @NonDBOperation default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor)`
+- **Signature:** `@Beta @NonDBOperation default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor)`
 - **Summary:** Executes an asynchronous database operation without return value using specified executor.
 - **Parameters:**
   - `sqlAction` (`Throwables.Consumer<? super TD, SQLException>`) — consumer that performs database operations
   - `executor` (`Executor`) — the executor to run the operation
 - **Returns:** ContinuableFuture that completes when operation finishes
+##### callAsync(...) -> ContinuableFuture<R>
+- **Signature:** `@Deprecated @Beta @NonDBOperation default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction)`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Function<? super TD, ? extends R, SQLException>`)
+- **Returns:** unspecified
+- **Signature:** `@Deprecated @Beta @NonDBOperation default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor)`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Function<? super TD, ? extends R, SQLException>`)
+  - `executor` (`Executor`)
+- **Returns:** unspecified
+##### runAsync(...) -> ContinuableFuture<Void>
+- **Signature:** `@Deprecated @Beta @NonDBOperation default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction)`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Consumer<? super TD, SQLException>`)
+- **Returns:** unspecified
+- **Signature:** `@Deprecated @Beta @NonDBOperation default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor)`
+- **Parameters:**
+  - `sqlAction` (`Throwables.Consumer<? super TD, SQLException>`)
+  - `executor` (`Executor`)
+- **Returns:** unspecified
 
 ### Class DaoUtil (com.landawn.abacus.jdbc.dao.DaoUtil)
 Internal utility class providing helper methods for DAO operations.
@@ -12329,7 +13250,7 @@ Internal utility class providing helper methods for DAO operations.
 - **Summary:** Returns whether the specified DAO interface supports DAO result caching.
 - **Parameters:**
   - `daoInterface` (`Class<?>`) — the DAO interface to inspect.
-- **Returns:** {@code true} if {@code daoInterface} extends {@link NoUpdateDao} or {@link ReadOnlyDao} (and therefore cannot perform update/delete operations that would invalidate cached rows); otherwise {@code false} .
+- **Returns:** {@code true} if {@code daoInterface} extends {@link NonUpdateDao} or {@link ReadOnlyDao} (and therefore cannot perform update/delete operations that would invalidate cached rows); otherwise {@code false} .
 ##### isCrudReadOps(...) -> boolean
 - **Signature:** `public static boolean isCrudReadOps(final Class<?> daoInterface)`
 - **Summary:** Returns whether the specified DAO interface exposes readable CRUD operations.
@@ -12338,9 +13259,9 @@ Internal utility class providing helper methods for DAO operations.
 - **Returns:** {@code true} if {@code daoInterface} extends {@link CrudReadOps} ; otherwise {@code false} .
 ##### getDeclaredIdExtractor(...) -> Jdbc.BiRowMapper
 - **Signature:** `@SuppressWarnings("rawtypes") public static Jdbc.BiRowMapper getDeclaredIdExtractor(final DaoBase dao)`
-- **Summary:** Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-read-capable DAO (any {@link CrudReadOps} variant, including the no-update and read-only composites), otherwise {@code null} .
+- **Summary:** Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-insert-capable DAO (any {@link CrudInsertOps} variant, including the non-update composite), otherwise {@code null} .
 - **Contract:**
-  - Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-read-capable DAO (any {@link CrudReadOps} variant, including the no-update and read-only composites), otherwise {@code null} .
+  - Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-insert-capable DAO (any {@link CrudInsertOps} variant, including the non-update composite), otherwise {@code null} .
 - **Parameters:**
   - `dao` (`DaoBase`) — the DAO instance to inspect.
 - **Returns:** the DAO's declared id extractor, or {@code null} if the DAO has none.
@@ -12382,11 +13303,11 @@ Internal utility class providing helper methods for DAO operations.
 - **Returns:** {@code true} if methods declared by {@code declaringClass} are join-entity helper operations; otherwise {@code false} .
 ##### generateId(...) -> Object
 - **Signature:** `@SuppressWarnings({ "rawtypes", "unchecked", "deprecation" }) public static Object generateId(final DaoBase dao) throws SQLException`
-- **Summary:** Generates a new ID for entity insertion by delegating to {@link CrudReadOps#generateId()} .
+- **Summary:** Generates a new ID for entity insertion by delegating to {@link CrudInsertOps#generateId()} .
 - **Contract:**
   - <p> The default {@code generateId()} implementation throws {@link UnsupportedOperationException} ; a value is only produced when the DAO overrides it with a client-side ID generation strategy (for example a UUID or sequence).
 - **Parameters:**
-  - `dao` (`DaoBase`) — the DAO used to generate the identifier; must implement {@link CrudReadOps} .
+  - `dao` (`DaoBase`) — the DAO used to generate the identifier; must implement {@link CrudInsertOps} .
 - **Returns:** the generated identifier.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs while generating the identifier.
@@ -12447,7 +13368,7 @@ Helper mix-in for loading and deleting join entities (related entities mapped wi
 #### Public Instance Methods
 - (none)
 
-### Interface NoUpdateCrudDao (com.landawn.abacus.jdbc.dao.NoUpdateCrudDao)
+### Interface NonUpdateCrudDao (com.landawn.abacus.jdbc.dao.NonUpdateCrudDao)
 CRUD DAO that disables update and delete operations while permitting read and insert operations.
 
 **Thread-safety:** unspecified
@@ -12462,7 +13383,7 @@ CRUD DAO that disables update and delete operations while permitting read and in
 #### Public Instance Methods
 - (none)
 
-### Interface NoUpdateDao (com.landawn.abacus.jdbc.dao.NoUpdateDao)
+### Interface NonUpdateDao (com.landawn.abacus.jdbc.dao.NonUpdateDao)
 DAO that allows read and insert operations but disables update and delete.
 
 **Thread-safety:** unspecified
@@ -12558,17 +13479,17 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - The entity must have ID field(s) defined.
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-- **Returns:** the inserted or updated entity
+- **Returns:** the saved entity (either newly inserted or updated)
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException`
+- **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException`
 - **Summary:** Performs an upsert operation: inserts the entity if it doesn't exist based on the specified unique properties, otherwise updates the existing entity.
 - **Contract:**
   - Performs an upsert operation: inserts the entity if it doesn't exist based on the specified unique properties, otherwise updates the existing entity.
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify the record
-- **Returns:** the inserted or updated entity
+  - `matchPropNames` (`Collection<String>`) — the property names that uniquely identify the record
+- **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws UncheckedSQLException`
@@ -12578,7 +13499,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
   - `cond` (`Condition`) — the condition to check for existing record
-- **Returns:** the inserted or updated entity
+- **Returns:** the saved entity: the inserted {@code entity} when no existing record was found, or the loaded database entity (with non-id properties copied from {@code entity} ) when an existing record was updated
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### batchUpsert(...) -> List<T>
@@ -12588,7 +13509,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - Entities are inserted if they don't exist (based on ID), otherwise updated.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException`
@@ -12598,26 +13519,26 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
   - `batchSize` (`int`) — the size of each batch
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException`
+- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws UncheckedSQLException`
 - **Summary:** Batch upserts multiple entities based on the specified unique properties.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each record
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+  - `matchPropNames` (`Collection<String>`) — the property names that uniquely identify each record
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> uniquePropNamesForQuery, final int batchSize) throws UncheckedSQLException`
+- **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws UncheckedSQLException`
 - **Summary:** Batch upserts multiple entities based on the specified unique properties using the specified batch size.
 - **Contract:**
-  - Performing batch insert and batch update operations <p> When both inserts and updates are needed (or either set is larger than {@code batchSize} ), the operation is wrapped in a transaction.
+  - This method efficiently handles large collections by: <ol> <li> Querying existing records in batches </li> <li> Separating entities into insert and update groups </li> <li> Performing batch insert and batch update operations </li> </ol> <p> When both inserts and updates are needed (or either set is larger than {@code batchSize} ), the operation is wrapped in a transaction.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `uniquePropNamesForQuery` (`Collection<String>`) — the property names that uniquely identify each record
+  - `matchPropNames` (`Collection<String>`) — the property names that uniquely identify each record
   - `batchSize` (`int`) — the size of each batch
-- **Returns:** a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+- **Returns:** a list of saved entities (both inserted and updated), in the same iteration order as {@code entities} ; an empty list if {@code entities} is {@code null} or empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 
@@ -12650,13 +13571,13 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 
 #### Public Instance Methods
 ##### upsert(...) -> T
-- **Signature:** `@Override default T upsert(final T entity, final Collection<String> uniquePropNamesForQuery) throws UncheckedSQLException`
+- **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
 - **Contract:**
   - Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-  - `uniquePropNamesForQuery` (`Collection<String>`) — the list of property names that uniquely identify the record
+  - `matchPropNames` (`Collection<String>`) — the list of property names that uniquely identify the record
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
@@ -12687,7 +13608,7 @@ Helper mix-in for loading and deleting join entities with unchecked exceptions.
 #### Public Instance Methods
 - (none)
 
-### Interface UncheckedNoUpdateCrudDao (com.landawn.abacus.jdbc.dao.UncheckedNoUpdateCrudDao)
+### Interface UncheckedNonUpdateCrudDao (com.landawn.abacus.jdbc.dao.UncheckedNonUpdateCrudDao)
 A specialized CRUD DAO interface that disables update and delete operations while allowing read and insert operations.
 
 **Thread-safety:** unspecified
@@ -12702,7 +13623,7 @@ A specialized CRUD DAO interface that disables update and delete operations whil
 #### Public Instance Methods
 - (none)
 
-### Interface UncheckedNoUpdateDao (com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao)
+### Interface UncheckedNonUpdateDao (com.landawn.abacus.jdbc.dao.UncheckedNonUpdateDao)
 Interface for an unchecked Data Access Object (DAO) that disables update and delete operations while allowing read and insert operations.
 
 **Thread-safety:** unspecified

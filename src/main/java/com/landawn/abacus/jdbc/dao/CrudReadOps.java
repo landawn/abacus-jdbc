@@ -58,7 +58,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see CrudDao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T, TD> permits CrudDao, NoUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
+sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T, TD> permits CrudDao, NonUpdateCrudDao, ReadOnlyCrudDao, UncheckedCrudReadOps {
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
@@ -637,7 +637,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final Class<T> entityClass = targetEntityClass();
-        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdPropNames(entityClass);
+        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.idPropNames(entityClass);
         final Object firstId = N.firstElement(ids).get();
         final boolean isEntityId = firstId instanceof EntityId;
         final boolean isMap = firstId instanceof Map;
@@ -720,6 +720,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param ids the collection of IDs to count
      * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
+     * @throws ArithmeticException if the total count across all ID batches exceeds the range of an {@code int}
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -730,7 +731,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final Class<T> entityClass = targetEntityClass();
-        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.getIdPropNames(entityClass);
+        final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.idPropNames(entityClass);
         final Object firstId = N.firstElement(ids).get();
         final boolean isEntityId = firstId instanceof EntityId;
         final boolean isMap = firstId instanceof Map;
@@ -740,14 +741,14 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
         final List<ID> idList = ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
         final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
-        int result = 0;
+        long result = 0;
 
         for (int i = 0, size = idList.size(); i < size; i += batchSize) {
             final List<ID> batch = idList.subList(i, Math.min(i + batchSize, size));
             result += count(DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap));
         }
 
-        return result;
+        return Math.toIntExact(result);
     }
 
     /**
@@ -810,7 +811,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
+        final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
@@ -945,7 +946,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
+        final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);

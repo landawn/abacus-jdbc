@@ -99,7 +99,7 @@ public enum QueryOperation {
 
     /**
      * Retrieves all matching records.
-     * No rows are treated as an empty result.
+     * No rows are represented by an empty collection-like result.
      *
      * <p>This is the most common operation for queries that return multiple records.
      * All results are loaded into memory at once, so use with caution for large result sets.</p>

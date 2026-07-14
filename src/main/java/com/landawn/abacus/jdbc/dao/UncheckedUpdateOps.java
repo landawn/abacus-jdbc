@@ -27,7 +27,7 @@ import com.landawn.abacus.query.condition.Condition;
 /**
  * Unchecked-exception update capability: the {@link UpdateOps} operations re-declared to throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException}.
- * 
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
  * @see UpdateOps
@@ -100,7 +100,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     @Override
     default int update(final T entity, final Condition cond) throws UncheckedSQLException {
         @SuppressWarnings("deprecation")
-        final Collection<String> propNamesToUpdate = QueryUtil.getUpdatePropNames(targetEntityClass(), null);
+        final Collection<String> propNamesToUpdate = QueryUtil.updatePropNames(targetEntityClass(), null);
 
         return update(entity, propNamesToUpdate, cond);
     }

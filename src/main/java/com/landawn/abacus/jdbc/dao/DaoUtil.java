@@ -87,12 +87,12 @@ public final class DaoUtil {
      * Returns whether the specified DAO interface supports DAO result caching.
      *
      * @param daoInterface the DAO interface to inspect.
-     * @return {@code true} if {@code daoInterface} extends {@link NoUpdateDao} or {@link ReadOnlyDao}
+     * @return {@code true} if {@code daoInterface} extends {@link NonUpdateDao} or {@link ReadOnlyDao}
      *         (and therefore cannot perform update/delete operations that would invalidate cached rows);
      *         otherwise {@code false}.
      */
     public static boolean isCacheable(final Class<?> daoInterface) {
-        return NoUpdateDao.class.isAssignableFrom(daoInterface) || ReadOnlyDao.class.isAssignableFrom(daoInterface);
+        return NonUpdateDao.class.isAssignableFrom(daoInterface) || ReadOnlyDao.class.isAssignableFrom(daoInterface);
     }
 
     /**
@@ -107,7 +107,7 @@ public final class DaoUtil {
 
     /**
      * Returns the {@code idExtractor()} declared by the given DAO when it is a CRUD-insert-capable DAO
-     * (any {@link CrudInsertOps} variant, including the no-update composite), otherwise {@code null}.
+     * (any {@link CrudInsertOps} variant, including the non-update composite), otherwise {@code null}.
      *
      * @param dao the DAO instance to inspect.
      * @return the DAO's declared id extractor, or {@code null} if the DAO has none.
@@ -238,11 +238,15 @@ public final class DaoUtil {
      * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
      * @param entityInfo the bean information for the entity class
      * @return the extracted ID value (simple value for single ID, {@link Seid} for composite ID)
-     * @throws IllegalArgumentException if entity is {@code null}
+     * @throws IllegalArgumentException if {@code entity}, {@code idPropNameList}, or
+     *                                  {@code entityInfo} is {@code null}, or if
+     *                                  {@code idPropNameList} is empty
      */
     @SuppressWarnings({ "deprecation", "unchecked" })
     static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
         N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotEmpty(idPropNameList, "idPropNameList");
+        N.checkArgNotNull(entityInfo, "entityInfo");
 
         if (idPropNameList.size() == 1) {
             return entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
@@ -286,9 +290,14 @@ public final class DaoUtil {
      * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
      * @param entityInfo the bean information for the entity class
      * @return a function that extracts ID values from entities
+     * @throws IllegalArgumentException if {@code idPropNameList} or {@code entityInfo} is
+     *                                  {@code null}, or if {@code idPropNameList} is empty
      */
     @SuppressWarnings({ "deprecation", "unchecked" })
     static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final BeanInfo entityInfo) {
+        N.checkArgNotEmpty(idPropNameList, "idPropNameList");
+        N.checkArgNotNull(entityInfo, "entityInfo");
+
         if (idPropNameList.size() == 1) {
             final PropInfo idPropInfo = entityInfo.getPropInfo(idPropNameList.get(0));
 
@@ -336,14 +345,14 @@ public final class DaoUtil {
     /**
      * A consumer that configures a {@link PreparedStatement} for handling large query results efficiently.
      * Sets the fetch direction to {@link ResultSet#FETCH_FORWARD} and raises the fetch size to
-     * {@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_BIG_RESULT} (a larger pre-configured size is preserved,
+     * {@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET} (a larger pre-configured size is preserved,
      * matching {@code JdbcUtil.stmtSetterForBigQueryResult}).
      */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
-        if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT) {
-            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET) {
+            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
         }
     };
 

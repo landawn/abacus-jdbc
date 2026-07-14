@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -35,13 +36,15 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p>The cache key is automatically generated based on the method name and parameters.
  * Results are cached after the first execution and returned from cache for subsequent
- * calls with the same parameters until the cache expires or is invalidated.</p>
+ * calls with the same parameters until the cache expires or is invalidated. A {@code null}
+ * method result is not cached; use an empty {@code Optional}, collection, or other non-null
+ * result object when caching an explicit "no result" value is important.</p>
  *
  * <p>Per its {@code @Target}, this annotation can be placed on an individual DAO method, or on a
  * DAO interface type to enable caching for every method whose name matches {@link #filter()}.</p>
  *
  * <p><strong>Restriction:</strong> {@code @CacheResult} (together with {@link Cache @Cache} and
- * {@link RefreshCache @RefreshCache}) is only honored on cacheable DAOs &mdash; {@code NoUpdateDao} or
+ * {@link RefreshCache @RefreshCache}) is only honored on cacheable DAOs &mdash; {@code NonUpdateDao} or
  * {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying it to a DAO that supports
  * update/delete operations fails with
  * {@code UnsupportedOperationException} at DAO initialization time. Use {@link Cache @Cache} on the same
@@ -56,7 +59,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
+ * public interface UserDao extends NonUpdateCrudDao<User, Long, UserDao> {
  *     // Cache individual user lookups for 30 minutes
  *     @CacheResult(enabled = true, maxLiveTimeMillis = 1800000, maxIdleTimeMillis = 600000)
  *     @Query("SELECT * FROM users WHERE id = :id")
@@ -75,7 +78,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Apply caching to all matching methods at type level
  * @CacheResult(enabled = true, maxLiveTimeMillis = 600000, filter = {"find.*", "get.*"})
- * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
+ * public interface ProductDao extends NonUpdateCrudDao<Product, Long, ProductDao> {
  *     // All find* and get* methods will be cached
  * }
  * }</pre>
@@ -98,6 +101,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see RefreshCache
  * @see <a href="https://github.com/EsotericSoftware/kryo">Kryo Serialization</a>
  */
+@Documented
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
@@ -265,7 +269,7 @@ public @interface CacheResult {
      * @CacheResult(enabled = true,
      *              maxLiveTimeMillis = 600000,
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})
-     * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
+     * public interface UserDao extends NonUpdateCrudDao<User, Long, UserDao> {
      *     // Matched by the filter - results are cached:
      *     @Query("SELECT * FROM users WHERE status = :status")
      *     List<User> findByStatus(@Bind("status") String status) throws SQLException;

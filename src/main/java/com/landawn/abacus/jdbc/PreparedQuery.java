@@ -23,8 +23,9 @@ import java.sql.PreparedStatement;
  *
  * <p>{@code PreparedQuery} exposes the generic execution and mapping operations defined by
  * {@link AbstractQuery} for SQL that already uses positional JDBC parameters. The wrapped
- * statement is closed after execution unless {@link #closeAfterExecution(boolean)} is used
- * to keep it open for reuse.</p>
+ * statement is closed after a materializing execution unless {@link #closeAfterExecution(boolean)}
+ * is used to keep it open for reuse. Lazy streams retain the statement until the stream is closed,
+ * and asynchronous operations retain it until the task completes.</p>
  *
  * @see AbstractQuery
  * @see NamedQuery

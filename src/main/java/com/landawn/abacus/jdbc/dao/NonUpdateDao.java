@@ -44,7 +44,7 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface AuditLogDao extends NoUpdateDao<AuditLog, AuditLogDao> {
+ * public interface AuditLogDao extends NonUpdateDao<AuditLog, AuditLogDao> {
  * }
  *
  * AuditLogDao dao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
@@ -63,5 +63,5 @@ import com.landawn.abacus.annotation.Beta;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface NoUpdateDao<T, TD extends NoUpdateDao<T, TD>> extends ReadOps<T, TD>, InsertOps<T, TD> {
+public non-sealed interface NonUpdateDao<T, TD extends NonUpdateDao<T, TD>> extends ReadOps<T, TD>, InsertOps<T, TD> {
 }

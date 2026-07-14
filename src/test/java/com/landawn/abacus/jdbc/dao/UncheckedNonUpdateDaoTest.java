@@ -10,31 +10,31 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-public class UncheckedNoUpdateDaoTest extends TestBase {
+public class UncheckedNonUpdateDaoTest extends TestBase {
 
-    private interface DummyUncheckedNoUpdateDao extends UncheckedNoUpdateDao<Object, DummyUncheckedNoUpdateDao> {
+    private interface DummyUncheckedNonUpdateDao extends UncheckedNonUpdateDao<Object, DummyUncheckedNonUpdateDao> {
     }
 
-    private final DummyUncheckedNoUpdateDao dao = createDefaultMethodProxy(DummyUncheckedNoUpdateDao.class);
+    private final DummyUncheckedNonUpdateDao dao = createDefaultMethodProxy(DummyUncheckedNonUpdateDao.class);
 
     @Test
     public void testIsInterface() {
-        assertTrue(UncheckedNoUpdateDao.class.isInterface());
+        assertTrue(UncheckedNonUpdateDao.class.isInterface());
     }
 
     @Test
     public void testExtendsUncheckedDao() {
-        assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedNoUpdateDao.class));
+        assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedNonUpdateDao.class));
     }
 
     @Test
-    public void testExtendsNoUpdateDao() {
-        assertTrue(NoUpdateDao.class.isAssignableFrom(UncheckedNoUpdateDao.class));
+    public void testExtendsNonUpdateDao() {
+        assertTrue(NonUpdateDao.class.isAssignableFrom(UncheckedNonUpdateDao.class));
     }
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(2, UncheckedNoUpdateDao.class.getTypeParameters().length);
+        assertEquals(2, UncheckedNonUpdateDao.class.getTypeParameters().length);
     }
 
     @SuppressWarnings("unchecked")

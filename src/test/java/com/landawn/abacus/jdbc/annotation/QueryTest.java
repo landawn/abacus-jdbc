@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -18,6 +19,18 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.QueryOperation;
 
 public class QueryTest extends TestBase {
+
+    @Test
+    public void testPublicJdbcAnnotationsAreDocumented() {
+        Class<?>[] annotationTypes = { Bind.class, BindList.class, Cache.class, CacheResult.class, DaoConfig.class, FetchColumnByEntityClass.class,
+                Handler.class, Handlers.class, MappedByKey.class, MergedById.class, NonDBOperation.class, OutParameter.class, OutParameters.class,
+                PerfLog.class, PrefixFieldMapping.class, Query.class, RefreshCache.class, SqlFragment.class, SqlFragmentList.class, SqlLogEnabled.class,
+                SqlScript.class, SqlSource.class, Transactional.class };
+
+        for (Class<?> annotationType : annotationTypes) {
+            assertNotNull(annotationType.getAnnotation(Documented.class), annotationType.getName());
+        }
+    }
 
     @Test
     public void testRetentionPolicy() {

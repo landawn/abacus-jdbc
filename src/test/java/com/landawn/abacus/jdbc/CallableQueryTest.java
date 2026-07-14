@@ -3,6 +3,8 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -99,9 +101,9 @@ public class CallableQueryTest extends TestBase {
         Boolean isResultSet = callableQuery.executeThenApply((stmt, outParams, firstResultSet) -> {
             assertSame(callableStatement, stmt);
             assertEquals(1, outParams.size());
-            assertEquals("total", outParams.get(0).getParameterName());
-            assertEquals(Types.DECIMAL, outParams.get(0).getSqlType());
-            assertEquals(2, outParams.get(0).getScale());
+            assertEquals("total", outParams.get(0).parameterName());
+            assertEquals(Types.DECIMAL, outParams.get(0).sqlType());
+            assertEquals(2, outParams.get(0).scale());
             return firstResultSet;
         });
 
@@ -1015,19 +1017,7 @@ public class CallableQueryTest extends TestBase {
 
         final Jdbc.OutParamResult result = callableQuery.executeAndGetOutParameters();
         assertEquals(1, result.getOutParams().size());
-        assertEquals(1, result.getOutParams().get(0).getParameterIndex());
-    }
-
-    @Test
-    public void testExecuteThenAcceptCannotMutateRegisteredOutParameterDefinition() throws SQLException {
-        when(callableStatement.execute()).thenReturn(false, false);
-        when(callableStatement.getUpdateCount()).thenReturn(-1);
-        callableQuery.closeAfterExecution(false).registerOutParameter(1, Types.INTEGER);
-
-        callableQuery.executeThenAccept((stmt, definitions, isResultSet) -> definitions.get(0).setParameterIndex(2));
-
-        final Jdbc.OutParamResult result = callableQuery.executeAndGetOutParameters();
-        assertEquals(1, result.getOutParams().get(0).getParameterIndex());
+        assertEquals(1, result.getOutParams().get(0).parameterIndex());
     }
 
     // --- executeAndGetOutParameters() (L2374) ---
@@ -1057,6 +1047,24 @@ public class CallableQueryTest extends TestBase {
         assertEquals(System.identityHashCode(rs), rs.hashCode());
         assertTrue(rs.toString().contains("did not return a ResultSet"));
         verify(callableStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+    }
+
+    @Test
+    public void testExecuteQuery_SkipsNullResultSetClaimAndFindsLaterResultSet() throws SQLException {
+        final ResultSet laterResultSet = mock(ResultSet.class);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        when(callableStatement.getResultSet()).thenReturn(null, laterResultSet);
+        when(callableStatement.getMoreResults()).thenReturn(true);
+
+        final ResultSet actual = callableQuery.executeQuery();
+
+        assertNotNull(actual);
+        assertNotSame(laterResultSet, actual);
+        assertFalse(actual.next());
+        verify(callableStatement).getMoreResults();
+        verify(callableStatement, Mockito.times(2)).getResultSet();
+        verify(laterResultSet).next();
     }
 
     @Test
@@ -1655,6 +1663,17 @@ public class CallableQueryTest extends TestBase {
         verify(callableStatement).close();
     }
 
+    @Test
+    public void testSetParameters_ClosesOnError() throws SQLException {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("key", "value");
+        final AssertionError bindingError = new AssertionError("boom");
+        doThrow(bindingError).when(callableStatement).setString("key", "value");
+
+        assertSame(bindingError, assertThrows(AssertionError.class, () -> callableQuery.setParameters(params)));
+        verify(callableStatement).close();
+    }
+
     // --- registerOutParameter by index replacement (L2078 PC) ---
 
     @Test
@@ -1667,9 +1686,9 @@ public class CallableQueryTest extends TestBase {
         Boolean isResultSet = callableQuery.executeThenApply((stmt, outParams, firstResultSet) -> {
             assertSame(callableStatement, stmt);
             assertEquals(1, outParams.size());
-            assertEquals(1, outParams.get(0).getParameterIndex());
-            assertEquals(Types.DECIMAL, outParams.get(0).getSqlType());
-            assertEquals(2, outParams.get(0).getScale());
+            assertEquals(1, outParams.get(0).parameterIndex());
+            assertEquals(Types.DECIMAL, outParams.get(0).sqlType());
+            assertEquals(2, outParams.get(0).scale());
             return firstResultSet;
         });
 
@@ -2184,7 +2203,7 @@ public class CallableQueryTest extends TestBase {
     }
 
     // ============================================================================
-    // emptyResultSet() / defaultResultSetReturnValue() proxies — L2346-2424
+    // emptyResultSet() proxy
     // Reached via executeQuery() when the procedure produces no result set.
     // ============================================================================
 
@@ -2194,25 +2213,32 @@ public class CallableQueryTest extends TestBase {
         return callableQuery.executeQuery();
     }
 
-    // ResultSet proxy: close/isClosed/wasNull + primitive & void defaults — L2371-2379, L2392, L2404-2419
+    // The no-result fallback has valid empty-cursor characteristics but no current row.
     @Test
-    public void testEmptyResultSetProxy_DefaultReturns() throws SQLException {
+    public void testEmptyResultSetProxy_EmptyCursorContract() throws SQLException {
         ResultSet rs = emptyResultSetProxy();
         assertFalse(rs.next());
-        assertFalse(rs.wasNull());
-        assertFalse(rs.getBoolean(1)); // boolean → false
-        assertEquals(0, rs.getByte(1)); // byte → (byte) 0
-        assertEquals(0, rs.getShort(1)); // short → (short) 0
-        assertEquals(0, rs.getInt(1)); // int → 0
-        assertEquals(0L, rs.getLong(1)); // long → 0L
-        assertEquals(0F, rs.getFloat(1)); // float → 0F
-        assertEquals(0D, rs.getDouble(1)); // double → 0D
-        rs.clearWarnings(); // void return → null, no exception
+        assertSame(callableStatement, rs.getStatement());
+        assertEquals(ResultSet.TYPE_FORWARD_ONLY, rs.getType());
+        assertEquals(ResultSet.CONCUR_READ_ONLY, rs.getConcurrency());
+        assertEquals(ResultSet.CLOSE_CURSORS_AT_COMMIT, rs.getHoldability());
+        assertEquals(ResultSet.FETCH_FORWARD, rs.getFetchDirection());
+        assertEquals(0, rs.getFetchSize());
+        assertEquals(0, rs.getRow());
+        assertFalse(rs.isBeforeFirst());
+        assertFalse(rs.isAfterLast());
+        assertNull(rs.getWarnings());
+        rs.clearWarnings();
+
+        assertThrows(SQLException.class, rs::wasNull);
+        assertThrows(SQLException.class, () -> rs.getBoolean(1));
+        assertThrows(SQLException.class, () -> rs.getInt(1));
+        assertThrows(SQLException.class, () -> rs.updateInt(1, 1));
+
         assertFalse(rs.isClosed());
         rs.close();
         assertTrue(rs.isClosed());
-        // TODO: the Character.TYPE branch (L2420-2421) is unreachable here — neither ResultSet
-        // nor ResultSetMetaData declares a method that returns primitive char.
+        assertThrows(SQLException.class, rs::next);
     }
 
     // ResultSet proxy: unwrap / isWrapperFor — L2380-2389
@@ -2244,9 +2270,9 @@ public class CallableQueryTest extends TestBase {
         assertFalse(md.isWrapperFor(String.class));
         assertSame(md, md.unwrap(ResultSetMetaData.class)); // L2350-2355
         assertThrows(SQLException.class, () -> md.unwrap(String.class)); // L2357
-        // defaultResultSetReturnValue primitive branches reached via metadata methods
-        assertFalse(md.isAutoIncrement(1)); // boolean → false
-        assertEquals(0, md.getColumnType(1)); // int → 0
+        // There is no valid column index in zero-column metadata.
+        assertThrows(SQLException.class, () -> md.isAutoIncrement(1));
+        assertThrows(SQLException.class, () -> md.getColumnType(1));
         // toString/hashCode/equals identity branches — L2398-2403
         assertTrue(md.toString().contains("Empty ResultSet metadata"));
         assertEquals(System.identityHashCode(md), md.hashCode());

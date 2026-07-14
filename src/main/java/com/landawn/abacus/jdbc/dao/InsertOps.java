@@ -38,7 +38,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see CrudInsertOps
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> permits Dao, NoUpdateDao, CrudInsertOps, UncheckedInsertOps {
+sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> permits Dao, NonUpdateDao, CrudInsertOps, UncheckedInsertOps {
     /**
      * Saves (inserts) the specified entity to the database.
      * All insertable properties of the entity (i.e., excluding {@code @ReadOnly}, {@code @Transient}, etc.)

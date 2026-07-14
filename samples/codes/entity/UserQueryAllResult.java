@@ -6,33 +6,26 @@ import java.util.Set;
 import jakarta.persistence.Column;
 import javax.persistence.Id;
 
-import com.landawn.abacus.annotation.JsonXmlConfig;
 import com.landawn.abacus.annotation.NonUpdatable;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
-import com.landawn.abacus.annotation.Type;
-import com.landawn.abacus.util.EnumType;
-import com.landawn.abacus.util.NamingPolicy;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
 
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Accessors(chain = true)
-@JsonXmlConfig(namingPolicy = NamingPolicy.SCREAMING_SNAKE_CASE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumType.ORDINAL)
 @Table(name = "UserQueryAllResult")
 public class UserQueryAllResult {
 
     @Id
-    @ReadOnly
+    @NonUpdatable
     @Column(name = "ID")
-    private Long id;
+    private long id;
 
     @Column(name = "FIRST_NAME")
     private String firstName;
@@ -46,28 +39,14 @@ public class UserQueryAllResult {
     @Column(name = "EMAIL")
     private String email;
 
-    @NonUpdatable
+    @ReadOnly
     @Column(name = "CREATE_TIME")
-    @Type(name = "List<String>")
-    private java.util.Date create_time;
+    private java.sql.Timestamp createTime;
 
     // test
     private List<User> users;
 
     private Set<User> userSet; // test
-
-    public UserQueryAllResult copy() {
-        final UserQueryAllResult copy = new UserQueryAllResult();
-        copy.id = this.id;
-        copy.firstName = this.firstName;
-        copy.lastName = this.lastName;
-        copy.prop1 = this.prop1;
-        copy.email = this.email;
-        copy.create_time = this.create_time;
-        copy.users = this.users;
-        copy.userSet = this.userSet;
-        return copy;
-    }
 
     /*
      * Auto-generated class for property(field) name table by abacus-jdbc.
@@ -89,8 +68,8 @@ public class UserQueryAllResult {
         /** Property(field) name {@code "email"} */
         String email = "email";
 
-        /** Property(field) name {@code "create_time"} */
-        String create_time = "create_time";
+        /** Property(field) name {@code "createTime"} */
+        String createTime = "createTime";
 
     }
 

@@ -45,9 +45,9 @@ public class PerfLogTest extends TestBase {
 
     @Test
     public void testPerfLog_SqlLogThresholdMillisDefault() throws Exception {
-        Method method = PerfLog.class.getDeclaredMethod("sqlLogThresholdMillis");
+        Method method = PerfLog.class.getDeclaredMethod("sqlPerfLogThresholdMillis");
         Object defaultValue = method.getDefaultValue();
-        assertEquals(JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG, defaultValue);
+        assertEquals(JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS, defaultValue);
         assertEquals(1000L, defaultValue);
     }
 
@@ -61,9 +61,9 @@ public class PerfLogTest extends TestBase {
 
     @Test
     public void testPerfLog_DaoMethodLogThresholdMillisDefault() throws Exception {
-        Method method = PerfLog.class.getDeclaredMethod("daoMethodLogThresholdMillis");
+        Method method = PerfLog.class.getDeclaredMethod("daoMethodPerfLogThresholdMillis");
         Object defaultValue = method.getDefaultValue();
-        assertEquals(JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG, defaultValue);
+        assertEquals(JdbcUtil.DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS, defaultValue);
         assertEquals(3000L, defaultValue);
     }
 
@@ -86,7 +86,7 @@ public class PerfLogTest extends TestBase {
 
     @Test
     public void testPerfLog_SqlLogThresholdMillisReturnType() throws Exception {
-        Method method = PerfLog.class.getDeclaredMethod("sqlLogThresholdMillis");
+        Method method = PerfLog.class.getDeclaredMethod("sqlPerfLogThresholdMillis");
         assertEquals(long.class, method.getReturnType());
     }
 
@@ -105,6 +105,7 @@ public class PerfLogTest extends TestBase {
     @Test
     public void testPerfLog_ElementCount() {
         Method[] methods = PerfLog.class.getDeclaredMethods();
-        assertEquals(4, methods.length, "PerfLog should have exactly 4 elements: sqlLogThresholdMillis, maxSqlLogLength, daoMethodLogThresholdMillis, filter");
+        assertEquals(4, methods.length,
+                "PerfLog should have exactly 4 elements: sqlPerfLogThresholdMillis, maxSqlLogLength, daoMethodPerfLogThresholdMillis, filter");
     }
 }

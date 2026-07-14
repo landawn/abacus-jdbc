@@ -104,7 +104,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
+        final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return upsert(entity, idPropNameList);
     }
@@ -195,7 +195,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -216,7 +217,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entities the collection of entities to upsert
      * @param batchSize the size of each batch
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -230,7 +232,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
 
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
+        final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return batchUpsert(entities, idPropNameList, batchSize);
     }
@@ -248,7 +250,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entities the collection of entities to upsert
      * @param matchPropNames the property names that uniquely identify each record
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -283,7 +286,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param entities the collection of entities to upsert
      * @param matchPropNames the property names that uniquely identify each record
      * @param batchSize the size of each batch
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive, if {@code matchPropNames} is {@code null} or empty,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
      * @throws IllegalStateException if more than one existing record matches one entity's unique key

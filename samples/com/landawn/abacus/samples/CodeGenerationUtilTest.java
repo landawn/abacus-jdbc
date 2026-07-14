@@ -115,12 +115,20 @@ class CodeGenerationUtilTest {
                     private Set<User> userSet; // test
                 """;
 
-        ecc.setClassName("UserQueryAllResult");
-        ecc.setAdditionalClassBodySource(additionalLines);
-        ecc.setIdAnnotationClass(javax.persistence.Id.class);
-        ecc.setColumnAnnotationClass(jakarta.persistence.Column.class);
-        ecc.setTableAnnotationClass(com.landawn.abacus.annotation.Table.class);
-        ecc.setGeneratePropNameTable(true);
+        ecc = EntityCodeConfig.builder()
+                .packageName("codes.entity")
+                .srcDir("./samples")
+                .idFields(List.of("id"))
+                .readOnlyFields(N.asSet("createTime"))
+                .nonUpdatableFields(N.asSet("id"))
+                .generateBuilder(true)
+                .className("UserQueryAllResult")
+                .additionalClassBodySource(additionalLines)
+                .idAnnotationClass(javax.persistence.Id.class)
+                .columnAnnotationClass(jakarta.persistence.Column.class)
+                .tableAnnotationClass(com.landawn.abacus.annotation.Table.class)
+                .generatePropNameTable(true)
+                .build();
         // ecc.setClassNamesToImport(N.asList("codes.entity.User", "jakarta.persistence.Column"));
         str = JdbcCodeGenerationUtil.generateEntityClassByQuery(dataSource, "UserQueryAllResult", "select * from user1", ecc);
         System.out.println(str);

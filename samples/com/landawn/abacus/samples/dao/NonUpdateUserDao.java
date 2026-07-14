@@ -17,11 +17,11 @@ import com.landawn.abacus.jdbc.annotation.Cache;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.CacheSerialization;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
-import com.landawn.abacus.jdbc.dao.NoUpdateCrudDao;
+import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
 import com.landawn.abacus.samples.entity.User;
 
 @CacheResult(enabled = true, serialization = CacheSerialization.NONE)
 @Cache(capacity = 1000, evictDelayMillis = 6000)
 @RefreshCache
-public interface NoUpdateUserDao extends NoUpdateCrudDao<User, Long, NoUpdateUserDao> {
+public interface NonUpdateUserDao extends NonUpdateCrudDao<User, Long, NonUpdateUserDao> {
 }

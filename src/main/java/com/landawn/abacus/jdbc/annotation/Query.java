@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -98,6 +99,7 @@ import com.landawn.abacus.util.RegExUtil;
  * @see OutParameter
  * @see OutParameters
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Query {
@@ -419,7 +421,8 @@ public @interface Query {
      *   <li>Larger batch sizes reduce round trips but increase memory usage</li>
      *   <li>Optimal batch size depends on network latency, row size, and database configuration</li>
      *   <li>Consider database transaction log size and timeout limits</li>
-     *   <li>Batch operations are typically 10-100× faster than individual operations</li>
+     *   <li>Measure with the target driver and database; batching benefits vary with row size,
+     *       network latency, and driver rewrite behavior</li>
      * </ul>
      *
      * <p>Error handling:</p>
@@ -436,7 +439,7 @@ public @interface Query {
      *   <li>Use {@link #queryTimeoutSeconds()} for long-running batch operations</li>
      *   <li>Monitor memory usage with large batches</li>
      *   <li>Consider using transactions to ensure all-or-nothing semantics</li>
-     *   <li>Validate collection parameters have matching sizes</li>
+     *   <li>Validate that each batch row supplies every SQL parameter required by the statement</li>
      * </ul>
      *
      * @return {@code true} for batch operations; {@code false} (default) for single operations
@@ -445,14 +448,15 @@ public @interface Query {
     boolean batch() default false;
 
     /**
-     * Controls whether a collection or array argument is bound as one JDBC value rather than being
-     * expanded for batch operations or {@code IN} clauses. This element does not describe the number
-     * of parameters declared by the DAO method.
+     * Controls whether the sole statement argument is bound once as a single JDBC value instead of
+     * being decomposed by the DAO proxy. This flag does not rewrite the SQL and does not expand a
+     * variable-length {@code IN} list; use {@link BindList} for that purpose.
      *
      * <p>Default behavior ({@code collectionAsSingleParameter = false}):</p>
      * <ul>
-     *   <li>Collections/arrays in IN clauses are expanded: {@code WHERE id IN (:ids)} with {@code List<Long> ids}</li>
-     *   <li>For batch operations, collections represent multiple rows to process</li>
+     *   <li>A sole, unannotated collection/array used with positional {@code ?} SQL supplies the
+     *       individual positional values</li>
+     *   <li>For batch operations, the outer collection supplies the rows to process</li>
      * </ul>
      *
      * <p>When {@code collectionAsSingleParameter = true}:</p>
@@ -465,50 +469,51 @@ public @interface Query {
      *
      * <p>Common use cases:</p>
      * <pre>{@code
-     * // PostgreSQL array containment operator
-     * @Query(value = "SELECT * FROM products WHERE tags @> :tags",
+     * // PostgreSQL array containment operator using one positional JDBC value
+     * @Query(value = "SELECT * FROM products WHERE tags @> ?",
      *        collectionAsSingleParameter = true)
-     * List<Product> findByTags(@Bind("tags") String[] tags);
+     * List<Product> findByTags(String[] tags);
      *
      * // PostgreSQL array equality
-     * @Query(value = "SELECT * FROM events WHERE participants = :participants",
+     * @Query(value = "SELECT * FROM events WHERE participants = ?",
      *        collectionAsSingleParameter = true)
-     * List<Event> findByExactParticipants(@Bind("participants") Long[] participants);
+     * List<Event> findByExactParticipants(Long[] participants);
      *
-     * // JSON array column (collectionAsSingleParameter requires exactly one statement parameter)
-     * @Query(value = "UPDATE configs SET options = :options::jsonb WHERE name = 'default'",
+     * // JSON/array column (collectionAsSingleParameter requires exactly one statement parameter)
+     * @Query(value = "UPDATE configs SET options = ? WHERE name = 'default'",
      *        collectionAsSingleParameter = true)
-     * int updateDefaultConfigOptions(@Bind("options") String[] options);
+     * int updateDefaultConfigOptions(String[] options);
      *
      * // Array intersection
-     * @Query(value = "SELECT * FROM items WHERE categories && :categories",
+     * @Query(value = "SELECT * FROM items WHERE categories && ?",
      *        collectionAsSingleParameter = true)
-     * List<Item> findByCategoryOverlap(@Bind("categories") String[] categories);
+     * List<Item> findByCategoryOverlap(String[] categories);
      * }</pre>
      *
      * <p>Contrast with default behavior:</p>
      * <pre>{@code
-     * // Default: collection is expanded for IN clause (use @BindList with {ids} template syntax)
+     * // Variable-length IN expansion is a separate @BindList feature
      * @Query(value = "SELECT * FROM users WHERE id IN ({ids})")
      * List<User> findByIds(@BindList("ids") List<Long> ids);
      * // Becomes: SELECT * FROM users WHERE id IN (?, ?, ?, ...)
      *
-     * // With collectionAsSingleParameter: collection passed as single array value
-     * @Query(value = "SELECT * FROM users WHERE id = ANY(:ids)",
+     * // With collectionAsSingleParameter: the array is passed once to one positional placeholder
+     * @Query(value = "SELECT * FROM users WHERE id = ANY(?)",
      *        collectionAsSingleParameter = true)
-     * List<User> findByIdsArray(@Bind("ids") Long[] ids);
+     * List<User> findByIdsArray(Long[] ids);
      * // PostgreSQL: id = ANY($1) where $1 is an array parameter
      * }</pre>
      *
      * <p>Important notes:</p>
      * <ul>
-     *   <li>The collection/array must map to the single SQL statement parameter; the DAO method may still declare auxiliary parameters</li>
+     *   <li>The collection/array must be the method's only statement/query parameter; fragment and
+     *       other framework-recognized auxiliary parameters are not statement parameters</li>
      *   <li>Database must support the native array or collection type being used</li>
      *   <li>Not commonly needed for standard SQL; primarily for database-specific features</li>
      * </ul>
      *
-     * @return {@code true} if collection/array parameters should be treated as single values;
-     *         {@code false} (default) for standard expansion behavior
+     * @return {@code true} if the sole statement argument should be bound once as a single value;
+     *         {@code false} (default) to use the normal positional/batch decomposition rules
      */
     boolean collectionAsSingleParameter() default false;
 
@@ -664,7 +669,7 @@ public @interface Query {
      *
      * <p>Timeout guidelines (in seconds):</p>
      * <ul>
-     *   <li>{@code -1} (default) - Uses the default timeout configured in the connection or DataSource</li>
+     *   <li>{@code -1} (default) - This annotation leaves the statement timeout unchanged</li>
      *   <li>{@code 0} - No timeout (wait indefinitely - not recommended)</li>
      *   <li>{@code 1-5} - For simple, well-indexed queries that should be very fast</li>
      *   <li>{@code 10-30} - For complex queries with joins or aggregations</li>
@@ -703,7 +708,7 @@ public @interface Query {
      * <p>Note: The actual timeout behavior depends on the JDBC driver implementation.
      * Some drivers may not support all timeout values or may have their own minimum/maximum limits.</p>
      *
-     * @return the timeout in seconds, or {@code -1} to use the default configured timeout
+     * @return the timeout in seconds, or {@code -1} to leave the statement timeout unchanged
      */
     int queryTimeoutSeconds() default -1;
 
@@ -721,13 +726,15 @@ public @interface Query {
      *   <li><strong>Performance:</strong> Larger fetch sizes reduce network round trips but increase memory usage</li>
      *   <li><strong>Memory:</strong> Higher fetch size means more rows buffered in memory</li>
      *   <li><strong>Latency:</strong> Smaller fetch sizes may increase latency for large result sets</li>
-     *   <li><strong>Streaming:</strong> Important for {@link java.util.stream.Stream} return types to enable {@code true} lazy loading</li>
+     *   <li><strong>Streaming:</strong> Can influence driver buffering while a lazy
+     *       {@link java.util.stream.Stream} is consumed, but does not by itself guarantee
+     *       server-side cursor streaming</li>
      * </ul>
      *
      * <p>Fetch size guidelines (number of rows):</p>
      * <ul>
-     *   <li>{@code -1} (default) - Uses the JDBC driver's default fetch size (often 10-50 rows)</li>
-     *   <li>{@code 0} - Same as {@code -1}: left unset, so the JDBC driver's default fetch size applies</li>
+     *   <li>{@code -1} (default) or {@code 0} - This annotation does not set a positive fetch-size
+     *       override; the framework may still apply an operation-specific hint</li>
      *   <li>{@code 10-100} - Small result sets, interactive queries, or small row sizes</li>
      *   <li>{@code 100-1000} - Medium result sets with moderate row sizes</li>
      *   <li>{@code 1000-10000} - Large result sets, batch processing, or reporting queries</li>
@@ -801,7 +808,8 @@ public @interface Query {
      *   <li>Fetch size is a hint; drivers may ignore or adjust it</li>
      *   <li>Very large fetch sizes can cause OutOfMemoryError if rows are large</li>
      *   <li>Optimal fetch size depends on network latency, row size, and available memory</li>
-     *   <li>For {@code Stream} return types, fetch size enables {@code true} lazy loading</li>
+     *   <li>For {@code Stream} return types, fetch size is a buffering hint; actual cursor and
+     *       prefetch behavior remains driver-specific</li>
      *   <li>Profile and test with realistic data to find optimal values</li>
      *   <li>Consider using different fetch sizes for different environments (dev vs. production)</li>
      * </ul>

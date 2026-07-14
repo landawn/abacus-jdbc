@@ -23,7 +23,7 @@ public class UncheckedReadOnlyDaoTest extends TestBase {
     }
 
     @Test
-    public void testExtendsUncheckedNoUpdateDao() {
+    public void testExtendsUncheckedNonUpdateDao() {
         assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedReadOnlyDao.class));
     }
 

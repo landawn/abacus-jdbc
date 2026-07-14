@@ -174,7 +174,7 @@ public class JdbcUtilTest extends TestBase {
 
         assertNotNull(query);
         verify(mockPreparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
-        verify(mockPreparedStatement).setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        verify(mockPreparedStatement).setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
     }
 
     @Test
@@ -1318,9 +1318,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testGetOutParametersBitUsesBooleanMapping() throws SQLException {
-        final OutParam namedBit = new OutParam();
-        namedBit.setParameterName("enabled");
-        namedBit.setSqlType(Types.BIT);
+        final OutParam namedBit = OutParam.of("enabled", Types.BIT);
         when(mockCallableStatement.getBoolean(1)).thenReturn(true);
         when(mockCallableStatement.getBoolean("enabled")).thenReturn(false);
 
@@ -1371,13 +1369,8 @@ public class JdbcUtilTest extends TestBase {
         final byte[] blobData = "blob out".getBytes(StandardCharsets.UTF_8);
         final String clobData = "clob out";
 
-        final OutParam blobParam = new OutParam();
-        blobParam.setParameterName("blob_out");
-        blobParam.setSqlType(Types.BLOB);
-
-        final OutParam clobParam = new OutParam();
-        clobParam.setParameterName("clob_out");
-        clobParam.setSqlType(Types.CLOB);
+        final OutParam blobParam = OutParam.of("blob_out", Types.BLOB);
+        final OutParam clobParam = OutParam.of("clob_out", Types.CLOB);
 
         when(mockCallableStatement.getBlob("blob_out")).thenReturn(mockBlob);
         when(mockBlob.length()).thenReturn((long) blobData.length);
@@ -1396,9 +1389,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testGetOutParameters_BlobSizeOverflowThrowsAndFreesBlob() throws SQLException {
-        final OutParam blobParam = new OutParam();
-        blobParam.setParameterName("blob_out");
-        blobParam.setSqlType(Types.BLOB);
+        final OutParam blobParam = OutParam.of("blob_out", Types.BLOB);
 
         when(mockCallableStatement.getBlob("blob_out")).thenReturn(mockBlob);
         when(mockBlob.length()).thenReturn(Integer.MAX_VALUE + 1L);
@@ -1409,9 +1400,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testGetOutParameters_ResultSetValueExtractedAndClosed() throws SQLException {
-        final OutParam rowsParam = new OutParam();
-        rowsParam.setParameterName("rows");
-        rowsParam.setSqlType(Types.OTHER);
+        final OutParam rowsParam = new OutParam(0, "rows", Types.OTHER, null, 0);
 
         when(mockCallableStatement.getObject("rows")).thenReturn(mockResultSet);
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
@@ -1763,16 +1752,16 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testSetMinExecutionTimeForSqlPerfLog() {
-        JdbcUtil.sqlLogThresholdMillis(500);
-        assertEquals(500, JdbcUtil.sqlLogThresholdMillis());
+        JdbcUtil.setSqlPerfLogThresholdMillis(500);
+        assertEquals(500, JdbcUtil.getSqlPerfLogThresholdMillis());
 
-        JdbcUtil.sqlLogThresholdMillis(1000, 2048);
-        assertEquals(1000, JdbcUtil.sqlLogThresholdMillis());
+        JdbcUtil.setSqlPerfLogThresholdMillis(1000, 2048);
+        assertEquals(1000, JdbcUtil.getSqlPerfLogThresholdMillis());
     }
 
     @Test
     public void testGetMinExecutionTimeForSqlPerfLog() {
-        long defaultTime = JdbcUtil.sqlLogThresholdMillis();
+        long defaultTime = JdbcUtil.getSqlPerfLogThresholdMillis();
         assertTrue(defaultTime >= 0);
     }
 
@@ -1965,9 +1954,9 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRun() throws Exception {
+    public void testRunAsync() throws Exception {
         final boolean[] executed = { false };
-        ContinuableFuture<Void> future = JdbcUtil.asyncRun(() -> {
+        ContinuableFuture<Void> future = JdbcUtil.runAsync(() -> {
             executed[0] = true;
         });
 
@@ -1978,9 +1967,9 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRunMultiple() throws Exception {
+    public void testRunAsyncMultiple() throws Exception {
         final boolean[] executed = { false, false };
-        Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.asyncRun(() -> {
+        Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.runAsync(() -> {
             executed[0] = true;
         }, () -> {
             executed[1] = true;
@@ -1997,9 +1986,9 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRunTriple() throws Exception {
+    public void testRunAsyncTriple() throws Exception {
         final boolean[] executed = { false, false, false };
-        Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.asyncRun(() -> {
+        Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.runAsync(() -> {
             executed[0] = true;
         }, () -> {
             executed[1] = true;
@@ -2021,8 +2010,8 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRunWithParameter() throws Exception {
-        ContinuableFuture<Void> future = JdbcUtil.asyncRun("test", str -> {
+    public void testRunAsyncWithParameter() throws Exception {
+        ContinuableFuture<Void> future = JdbcUtil.runAsync("test", str -> {
             assertEquals("test", str);
         });
 
@@ -2031,8 +2020,8 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRunWithTwoParameters() throws Exception {
-        ContinuableFuture<Void> future = JdbcUtil.asyncRun("test", 123, (str, num) -> {
+    public void testRunAsyncWithTwoParameters() throws Exception {
+        ContinuableFuture<Void> future = JdbcUtil.runAsync("test", 123, (str, num) -> {
             assertEquals("test", str);
             assertEquals(123, num);
         });
@@ -2042,8 +2031,8 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRunWithThreeParameters() throws Exception {
-        ContinuableFuture<Void> future = JdbcUtil.asyncRun("a", "b", "c", (p1, p2, p3) -> {
+    public void testRunAsyncWithThreeParameters() throws Exception {
+        ContinuableFuture<Void> future = JdbcUtil.runAsync("a", "b", "c", (p1, p2, p3) -> {
             assertEquals("a", p1);
             assertEquals("b", p2);
             assertEquals("c", p3);
@@ -2054,24 +2043,24 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncCall() throws Exception {
-        ContinuableFuture<String> future = JdbcUtil.asyncCall(() -> "result");
+    public void testCallAsync() throws Exception {
+        ContinuableFuture<String> future = JdbcUtil.callAsync(() -> "result");
 
         assertNotNull(future);
         assertEquals("result", future.get(1, TimeUnit.SECONDS));
     }
 
     @Test
-    public void testAsyncCallMultiple() throws Exception {
-        Tuple2<ContinuableFuture<String>, ContinuableFuture<Integer>> futures = JdbcUtil.asyncCall(() -> "test", () -> 123);
+    public void testCallAsyncMultiple() throws Exception {
+        Tuple2<ContinuableFuture<String>, ContinuableFuture<Integer>> futures = JdbcUtil.callAsync(() -> "test", () -> 123);
 
         assertEquals("test", futures._1.get(1, TimeUnit.SECONDS));
         assertEquals(123, futures._2.get(1, TimeUnit.SECONDS));
     }
 
     @Test
-    public void testAsyncCallTriple() throws Exception {
-        Tuple3<ContinuableFuture<String>, ContinuableFuture<Integer>, ContinuableFuture<Boolean>> futures = JdbcUtil.asyncCall(() -> "test", () -> 123,
+    public void testCallAsyncTriple() throws Exception {
+        Tuple3<ContinuableFuture<String>, ContinuableFuture<Integer>, ContinuableFuture<Boolean>> futures = JdbcUtil.callAsync(() -> "test", () -> 123,
                 () -> true);
 
         assertEquals("test", futures._1.get(1, TimeUnit.SECONDS));
@@ -2080,22 +2069,22 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testAsyncCallWithParameter() throws Exception {
-        ContinuableFuture<String> future = JdbcUtil.asyncCall("input", str -> str + "!");
+    public void testCallAsyncWithParameter() throws Exception {
+        ContinuableFuture<String> future = JdbcUtil.callAsync("input", str -> str + "!");
 
         assertEquals("input!", future.get(1, TimeUnit.SECONDS));
     }
 
     @Test
-    public void testAsyncCallWithTwoParameters() throws Exception {
-        ContinuableFuture<String> future = JdbcUtil.asyncCall("a", "b", (p1, p2) -> p1 + p2);
+    public void testCallAsyncWithTwoParameters() throws Exception {
+        ContinuableFuture<String> future = JdbcUtil.callAsync("a", "b", (p1, p2) -> p1 + p2);
 
         assertEquals("ab", future.get(1, TimeUnit.SECONDS));
     }
 
     @Test
-    public void testAsyncCallWithThreeParameters() throws Exception {
-        ContinuableFuture<String> future = JdbcUtil.asyncCall("a", "b", "c", (p1, p2, p3) -> p1 + p2 + p3);
+    public void testCallAsyncWithThreeParameters() throws Exception {
+        ContinuableFuture<String> future = JdbcUtil.callAsync("a", "b", "c", (p1, p2, p3) -> p1 + p2 + p3);
 
         assertEquals("abc", future.get(1, TimeUnit.SECONDS));
     }
@@ -2162,6 +2151,7 @@ public class JdbcUtilTest extends TestBase {
     //    }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testStartDaoCacheOnCurrentThread() {
         Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
         assertNotNull(cache);
@@ -2175,6 +2165,7 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testStartDaoCacheOnCurrentThreadWithCache() {
         Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
         Jdbc.DaoCache result = JdbcUtil.openDaoCacheOnCurrentThread(cache);
@@ -2185,6 +2176,7 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testCloseDaoCacheOnCurrentThread() {
         JdbcUtil.openDaoCacheOnCurrentThread();
         JdbcUtil.closeDaoCacheOnCurrentThread();
@@ -2238,7 +2230,8 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testDaoCacheScopeCloseIsIdempotent() {
-        final Jdbc.DaoCache previousCache = JdbcUtil.openDaoCacheOnCurrentThread();
+        final JdbcUtil.DaoCacheScope outerScope = JdbcUtil.openDaoCacheScope();
+        final Jdbc.DaoCache previousCache = outerScope.cache();
         final JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope();
 
         scope.close();
@@ -2246,6 +2239,93 @@ public class JdbcUtilTest extends TestBase {
 
         scope.close();
         assertSame(previousCache, JdbcUtil.localThreadCache_TL.get());
+
+        outerScope.close();
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testDaoCacheScopesRejectOutOfOrderClose() {
+        final JdbcUtil.DaoCacheScope outerScope = JdbcUtil.openDaoCacheScope();
+        final JdbcUtil.DaoCacheScope innerScope = JdbcUtil.openDaoCacheScope();
+
+        try {
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class, outerScope::close);
+            assertTrue(thrown.getMessage().contains("reverse order"));
+            assertSame(innerScope.cache(), JdbcUtil.localThreadCache_TL.get());
+        } finally {
+            innerScope.close();
+            outerScope.close();
+        }
+
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testDaoCacheScopesRejectOutOfOrderCloseWithSameCache() {
+        final Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
+        final JdbcUtil.DaoCacheScope outerScope = JdbcUtil.openDaoCacheScope(cache);
+        final JdbcUtil.DaoCacheScope innerScope = JdbcUtil.openDaoCacheScope(cache);
+
+        try {
+            assertThrows(IllegalStateException.class, outerScope::close);
+            assertSame(cache, JdbcUtil.localThreadCache_TL.get());
+        } finally {
+            innerScope.close();
+            outerScope.close();
+        }
+
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testDaoCacheScopeRejectsCloseFromDifferentThread() throws InterruptedException {
+        final JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope();
+        final java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        final Thread otherThread = new Thread(() -> {
+            try {
+                scope.close();
+            } catch (final Throwable e) {
+                failure.set(e);
+            }
+        });
+
+        try {
+            otherThread.start();
+            otherThread.join();
+
+            assertTrue(failure.get() instanceof IllegalStateException);
+            assertSame(scope.cache(), JdbcUtil.localThreadCache_TL.get());
+        } finally {
+            scope.close();
+        }
+
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testLegacyDaoCacheLifecycleRejectedInsideScope() {
+        final Jdbc.DaoCache legacyCache = JdbcUtil.openDaoCacheOnCurrentThread();
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
+            assertThrows(IllegalStateException.class, JdbcUtil::openDaoCacheOnCurrentThread);
+            assertThrows(IllegalStateException.class, () -> JdbcUtil.openDaoCacheOnCurrentThread(Jdbc.DaoCache.createByMap()));
+            assertThrows(IllegalStateException.class, JdbcUtil::closeDaoCacheOnCurrentThread);
+            assertSame(scope.cache(), JdbcUtil.localThreadCache_TL.get());
+        }
+
+        assertSame(legacyCache, JdbcUtil.localThreadCache_TL.get());
+        JdbcUtil.closeDaoCacheOnCurrentThread();
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testManualDaoCacheLifecycleMethodsAreDeprecated() throws NoSuchMethodException {
+        assertTrue(JdbcUtil.class.getMethod("openDaoCacheOnCurrentThread").isAnnotationPresent(Deprecated.class));
+        assertTrue(JdbcUtil.class.getMethod("openDaoCacheOnCurrentThread", Jdbc.DaoCache.class).isAnnotationPresent(Deprecated.class));
+        assertTrue(JdbcUtil.class.getMethod("closeDaoCacheOnCurrentThread").isAnnotationPresent(Deprecated.class));
+        assertFalse(JdbcUtil.class.getMethod("openDaoCacheScope").isAnnotationPresent(Deprecated.class));
     }
 
     @Test
@@ -2300,7 +2380,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testDefaultFetchSizeForBigResult() {
-        assertEquals(1000, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        assertEquals(1000, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
     }
 
     @Test
@@ -2330,12 +2410,12 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testDefaultMinExecutionTimeForSqlPerfLog() {
-        assertEquals(1000L, JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG);
+        assertEquals(1000L, JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS);
     }
 
     @Test
     public void testDefaultMinExecutionTimeForDaoMethodPerfLog() {
-        assertEquals(3000L, JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG);
+        assertEquals(3000L, JdbcUtil.DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS);
     }
 
     @Test
@@ -2824,14 +2904,22 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testGetDBProductInfo_NullProductNameAndVersion() throws SQLException {
+    public void testGetDBProductInfo_NullProductNameThrowsIllegalArgumentException() throws SQLException {
         when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn(null);
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn(null);
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getDBProductInfo(mockConnection));
+    }
+
+    @Test
+    public void testGetDBProductInfo_NullProductVersionIsNormalized() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("TestDB");
         when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn(null);
 
         ProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
 
         assertNotNull(info);
-        assertNull(info.name());
+        assertEquals("TestDB", info.name());
         assertEquals("", info.version());
     }
 
@@ -2906,10 +2994,10 @@ public class JdbcUtilTest extends TestBase {
         assertDoesNotThrow(() -> JdbcUtil.enableSqlLog(-1));
     }
 
-    // sqlLogThresholdMillis with custom maxLogLength
+    // sqlPerfLogThresholdMillis with custom maxLogLength
     @Test
     public void testSetMinExecutionTimeForSqlPerfLog_WithMaxLength() {
-        assertDoesNotThrow(() -> JdbcUtil.sqlLogThresholdMillis(100, 512));
+        assertDoesNotThrow(() -> JdbcUtil.setSqlPerfLogThresholdMillis(100, 512));
     }
 
     // callWithSqlLogDisabled when log already disabled
@@ -3284,6 +3372,93 @@ public class JdbcUtilTest extends TestBase {
         assertSame(primary, thrown, "the primary batch failure must propagate, not the rollback failure");
         assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
         assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+    }
+
+    @Test
+    @DisplayName("executeBatchUpdate(conn, ...): attempts rollback after commit failure and preserves rollback failure")
+    public void testExecuteBatchUpdateRollsBackAfterCommitFailure() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException commitFailure = new SQLException("commit failed");
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
+        doThrow(commitFailure).when(mockConnection).commit();
+        doThrow(rollbackFailure).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(commitFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(rollbackFailure, thrown.getSuppressed()[0]);
+        verify(mockConnection).rollback();
+        verify(mockConnection).setAutoCommit(true);
+    }
+
+    @Test
+    @DisplayName("executeLargeBatchUpdate(conn, ...): attempts rollback after commit failure and preserves rollback failure")
+    public void testExecuteLargeBatchUpdateRollsBackAfterCommitFailure() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException commitFailure = new SQLException("large commit failed");
+        final SQLException rollbackFailure = new SQLException("large rollback failed");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+        doThrow(commitFailure).when(mockConnection).commit();
+        doThrow(rollbackFailure).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeLargeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(commitFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(rollbackFailure, thrown.getSuppressed()[0]);
+        verify(mockConnection).rollback();
+        verify(mockConnection).setAutoCommit(true);
+    }
+
+    @Test
+    @DisplayName("executeBatchUpdate(conn, ...): unchecked rollback/cleanup failures do not mask the batch failure")
+    public void testExecuteBatchUpdatePreservesPrimaryFailureWhenUncheckedCleanupFails() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException batchFailure = new SQLException("batch failed");
+        final IllegalStateException rollbackFailure = new IllegalStateException("rollback failed unchecked");
+        final AssertionError restoreFailure = new AssertionError("restore auto-commit failed");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        org.mockito.Mockito.doNothing().when(mockConnection).setAutoCommit(false);
+        doThrow(restoreFailure).when(mockConnection).setAutoCommit(true);
+        doThrow(batchFailure).when(mockPreparedStatement).executeBatch();
+        doThrow(rollbackFailure).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(batchFailure, thrown);
+        assertArrayEquals(new Throwable[] { rollbackFailure, restoreFailure }, thrown.getSuppressed());
+    }
+
+    @Test
+    @DisplayName("executeLargeBatchUpdate(conn, ...): unchecked rollback/cleanup failures do not mask the commit failure")
+    public void testExecuteLargeBatchUpdatePreservesCommitFailureWhenUncheckedCleanupFails() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException commitFailure = new SQLException("large commit failed");
+        final AssertionError rollbackFailure = new AssertionError("large rollback failed unchecked");
+        final IllegalStateException restoreFailure = new IllegalStateException("restore auto-commit failed unchecked");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        org.mockito.Mockito.doNothing().when(mockConnection).setAutoCommit(false);
+        doThrow(restoreFailure).when(mockConnection).setAutoCommit(true);
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+        doThrow(commitFailure).when(mockConnection).commit();
+        doThrow(rollbackFailure).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeLargeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(commitFailure, thrown);
+        assertArrayEquals(new Throwable[] { rollbackFailure, restoreFailure }, thrown.getSuppressed());
     }
 
     // Regression: tableExists(metadata, ...) used to verify only TABLE_NAME when the pattern contained

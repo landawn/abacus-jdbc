@@ -82,9 +82,9 @@ public enum IsolationLevel {
      * Indicates that transactions are not supported by the underlying database or driver.
      * Corresponds to {@link Connection#TRANSACTION_NONE}.
      *
-     * <p>This is a descriptive value only: per the JDBC specification it cannot be passed to
-     * {@code Connection.setTransactionIsolation(...)}, so using it with
-     * {@code JdbcUtil.beginTransaction(...)} raises an {@code UncheckedSQLException} (wrapping the driver's {@code SQLException}) on spec-compliant drivers.</p>
+     * <p>This is a descriptive value returned by JDBC for a connection that does not support
+     * transactions. It is not a usable isolation level for beginning a transaction and should
+     * not be passed to {@code JdbcUtil.beginTransaction(...)}.</p>
      *
      * @deprecated This isolation level is rarely encountered in modern relational databases and
      *             cannot be used to begin a transaction.
@@ -127,10 +127,10 @@ public enum IsolationLevel {
 
     /**
      * Prevents "dirty reads" and "non-repeatable reads."
-     * At this isolation level, a transaction is guaranteed to read the same data
-     * if it re-reads any row within the same transaction. This means that once a
-     * row is read, no other transaction can modify or delete it until the reading
-     * transaction commits or rolls back.
+     * At this isolation level, a transaction does not observe another transaction's
+     * committed modification when it re-reads the same row. A database may provide this
+     * guarantee through locking, multiversion concurrency control, or another strategy;
+     * it does not necessarily prevent another transaction from modifying the physical row.
      *
      * <p>However, "phantom reads" can still occur. If a transaction executes a query
      * that returns a set of rows, and another transaction inserts new rows that
@@ -153,8 +153,8 @@ public enum IsolationLevel {
      *
      * <p>{@code SERIALIZABLE} provides the strongest data consistency guarantees,
      * effectively eliminating all concurrency anomalies. However, this comes at the
-     * cost of potentially significant performance degradation due to extensive locking
-     * and reduced concurrency. It should be used only when absolute data integrity
+     * cost of potentially significant performance degradation or increased transaction
+     * conflicts, depending on the database implementation. It should be used only when strong consistency
      * is paramount and the performance impact is acceptable.</p>
      *
      * <p>Corresponds to {@link Connection#TRANSACTION_SERIALIZABLE}.</p>
@@ -162,9 +162,9 @@ public enum IsolationLevel {
     SERIALIZABLE(Connection.TRANSACTION_SERIALIZABLE);
 
     /**
-     * The integer value representing this isolation level. For all levels except {@link #DEFAULT}
+     * The integer value representing this isolation level. For all levels except {@link #DEFAULT},
      * this is the corresponding {@link Connection} {@code TRANSACTION_*} constant; for {@link #DEFAULT}
-     * it is {@code -1}.
+     * it is {@code -1}. {@link #NONE} is descriptive rather than a usable isolation setting.
      */
     private final int intValue;
 
@@ -180,9 +180,11 @@ public enum IsolationLevel {
 
     /**
      * Returns the raw JDBC integer constant value associated with this {@code IsolationLevel}.
-     * For every level except {@link #DEFAULT}, this value can be directly used with
+     * For the four transactional levels, this value can be directly used with
      * {@link Connection#setTransactionIsolation(int)}. {@code DEFAULT} returns {@code -1}
-     * and is a framework sentinel meaning "leave the connection's current/default isolation unchanged".
+     * and is a framework sentinel meaning "leave the connection's current/default isolation unchanged";
+     * {@link #NONE} describes a connection that does not support transactions and must not be passed
+     * to that setter.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

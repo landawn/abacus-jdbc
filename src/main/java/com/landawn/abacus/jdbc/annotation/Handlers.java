@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -61,6 +62,7 @@ import java.lang.annotation.Target;
  *
  * @see Handler
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 public @interface Handlers {
@@ -98,8 +100,9 @@ public @interface Handlers {
      * }</pre>
      *
      * <p>This element is mandatory and has no default value. When the compiler synthesizes the
-     * container from repeated {@link Handler @Handler} annotations it always populates this array,
-     * and an explicit {@code @Handlers} must supply at least one {@code @Handler}.</p>
+     * container from repeated {@link Handler @Handler} annotations it populates this array. An
+     * explicit container must supply the array, but Java permits it to be empty; an empty container
+     * simply installs no handlers.</p>
      *
      * @return the array of {@link Handler} annotations contained in this list
      */

@@ -210,7 +210,7 @@ public final class JdbcUtil {
      * Default fetch size applied when preparing queries that are expected to return a large result set.
      * Value: {@code 1000}.
      */
-    public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
+    public static final int DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET = 1000;
 
     /**
      * Default fetch size for stream-based result processing. Value: {@code 100}.
@@ -243,13 +243,13 @@ public final class JdbcUtil {
      * that complete in less than this threshold are not logged at the {@code SQL-PERF} level.
      * Value: {@code 1000} (1 second).
      */
-    public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG = 1000L;
+    public static final long DEFAULT_PERF_LOG_THRESHOLD_MILLIS = 1000L;
 
     /**
      * Default minimum execution time (in milliseconds) for DAO method performance logging.
      * Value: {@code 3000} (3 seconds).
      */
-    public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG = 3000L;
+    public static final long DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS = 3000L;
 
     /**
      * Default maximum idle time for cache entries in milliseconds. Value: {@code 180_000} (3 minutes).
@@ -347,8 +347,8 @@ public final class JdbcUtil {
 
     static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = ThreadLocal.withInitial(() -> new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH));
 
-    static final ThreadLocal<SqlLogConfig> minExecutionTimeForSqlPerfLog_TL = ThreadLocal
-            .withInitial(() -> new SqlLogConfig(DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG, DEFAULT_MAX_SQL_LOG_LENGTH));
+    static final ThreadLocal<SqlLogConfig> perfLogThresholdMillis_TL = ThreadLocal
+            .withInitial(() -> new SqlLogConfig(DEFAULT_PERF_LOG_THRESHOLD_MILLIS, DEFAULT_MAX_SQL_LOG_LENGTH));
 
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
 
@@ -379,6 +379,8 @@ public final class JdbcUtil {
 
     static final ThreadLocal<Jdbc.DaoCache> localThreadCache_TL = new ThreadLocal<>();
 
+    private static final ThreadLocal<DaoCacheScope> daoCacheScope_TL = new ThreadLocal<>();
+
     static {
         try {
             isInSpring = ClassUtil.forName("org.springframework.jdbc.datasource.DataSourceUtils") != null;
@@ -407,7 +409,8 @@ public final class JdbcUtil {
      *
      * @param ds The DataSource from which to obtain a database connection.
      * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
-     * @throws IllegalArgumentException if {@code ds} is {@code null}.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the database metadata reports a
+     *         null, empty, or blank product name.
      * @throws UncheckedSQLException if a database access error occurs while trying to connect to the database.
      * @see #getDBProductInfo(Connection)
      * @see SqlDialect.ProductInfo
@@ -438,7 +441,8 @@ public final class JdbcUtil {
      *
      * @param conn The database {@link Connection} to use for retrieving metadata. It must be an active connection.
      * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
-     * @throws IllegalArgumentException if {@code conn} is {@code null}.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if the database metadata reports a
+     *         null, empty, or blank product name.
      * @throws UncheckedSQLException if a database access error occurs while retrieving metadata.
      * @see #getDBProductInfo(javax.sql.DataSource)
      * @see DatabaseMetaData
@@ -2610,7 +2614,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.util.NamingPolicy
      */
     public static ImmutableMap<String, String> getColumnToPropNameMap(final Class<?> entityClass) {
-        return QueryUtil.getColumn2PropNameMap(entityClass);
+        return QueryUtil.columnToPropNameMap(entityClass);
     }
 
     /**
@@ -2700,11 +2704,11 @@ public final class JdbcUtil {
     }
 
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
-        // stmt.setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        // stmt.setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
-        if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT) {
-            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET) {
+            stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
         }
     };
 
@@ -5357,6 +5361,7 @@ public final class JdbcUtil {
         PreparedStatement stmt = null;
         boolean noException = false;
         boolean autoCommitDisabled = false;
+        Throwable primaryFailure = null;
 
         try {
             if (originalAutoCommit && listOfParameters.size() > 1) {
@@ -5388,24 +5393,48 @@ public final class JdbcUtil {
             noException = true;
 
             return res;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
             if (autoCommitDisabled) {
+                Throwable completionFailure = primaryFailure;
+
                 try {
                     if (noException) {
-                        conn.commit();
+                        try {
+                            conn.commit();
+                        } catch (final SQLException | RuntimeException | Error commitFailure) {
+                            completionFailure = commitFailure;
+                            // A failed COMMIT leaves the transaction outcome uncertain. Make the same
+                            // best-effort rollback used by SqlTransaction and keep COMMIT as the primary
+                            // failure if rollback also fails.
+                            try {
+                                conn.rollback();
+                            } catch (final SQLException | RuntimeException | Error rollbackFailure) {
+                                commitFailure.addSuppressed(rollbackFailure);
+                            }
+
+                            throw commitFailure;
+                        }
                     } else {
                         try {
                             conn.rollback();
-                        } catch (final SQLException e) {
+                        } catch (final SQLException | RuntimeException | Error e) {
                             // Don't mask the batch failure that is already propagating.
+                            primaryFailure.addSuppressed(e);
                             logger.warn("Failed to roll back after batch failure", e);
                         }
                     }
                 } finally {
                     try {
                         conn.setAutoCommit(true);
-                    } catch (final SQLException e) {
+                    } catch (final SQLException | RuntimeException | Error e) {
                         // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
+                        if (completionFailure != null) {
+                            completionFailure.addSuppressed(e);
+                        }
+
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
                     } finally {
                         JdbcUtil.closeQuietly(stmt);
@@ -5606,6 +5635,7 @@ public final class JdbcUtil {
         PreparedStatement stmt = null;
         boolean noException = false;
         boolean autoCommitDisabled = false;
+        Throwable primaryFailure = null;
 
         try {
             if (originalAutoCommit && listOfParameters.size() > 1) {
@@ -5637,24 +5667,45 @@ public final class JdbcUtil {
             noException = true;
 
             return res;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
             if (autoCommitDisabled) {
+                Throwable completionFailure = primaryFailure;
+
                 try {
                     if (noException) {
-                        conn.commit();
+                        try {
+                            conn.commit();
+                        } catch (final SQLException | RuntimeException | Error commitFailure) {
+                            completionFailure = commitFailure;
+                            try {
+                                conn.rollback();
+                            } catch (final SQLException | RuntimeException | Error rollbackFailure) {
+                                commitFailure.addSuppressed(rollbackFailure);
+                            }
+
+                            throw commitFailure;
+                        }
                     } else {
                         try {
                             conn.rollback();
-                        } catch (final SQLException e) {
+                        } catch (final SQLException | RuntimeException | Error e) {
                             // Don't mask the batch failure that is already propagating.
+                            primaryFailure.addSuppressed(e);
                             logger.warn("Failed to roll back after batch failure", e);
                         }
                     }
                 } finally {
                     try {
                         conn.setAutoCommit(true);
-                    } catch (final SQLException e) {
+                    } catch (final SQLException | RuntimeException | Error e) {
                         // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
+                        if (completionFailure != null) {
+                            completionFailure.addSuppressed(e);
+                        }
+
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
                     } finally {
                         JdbcUtil.closeQuietly(stmt);
@@ -5864,7 +5915,7 @@ public final class JdbcUtil {
     }
 
     static ResultSet executeQuery(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -5891,7 +5942,7 @@ public final class JdbcUtil {
     }
 
     static int executeUpdate(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -5914,7 +5965,7 @@ public final class JdbcUtil {
     }
 
     static long executeLargeUpdate(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -5937,7 +5988,7 @@ public final class JdbcUtil {
     }
 
     static int[] executeBatch(final Statement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -5968,7 +6019,7 @@ public final class JdbcUtil {
     }
 
     static long[] executeLargeBatch(final Statement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -6044,7 +6095,7 @@ public final class JdbcUtil {
     }
 
     static boolean execute(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -8682,7 +8733,7 @@ public final class JdbcUtil {
             return N.allMatch(((EntityId) value).entrySet(), it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
         } else if (Beans.isBeanClass(value.getClass())) {
             final Class<?> entityClass = value.getClass();
-            final List<String> idPropNameList = QueryUtil.getIdPropNames(entityClass);
+            final List<String> idPropNameList = QueryUtil.idPropNames(entityClass);
 
             if (N.isEmpty(idPropNameList)) {
                 return true;
@@ -8720,7 +8771,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(() -> {
+     * ContinuableFuture<Void> future = JdbcUtil.runAsync(() -> {
      *     // Perform database operations
      *     JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", "active", userId);
      * });
@@ -8733,7 +8784,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the specified SQL action is {@code null}
      */
     @Beta
-    public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
+    public static ContinuableFuture<Void> runAsync(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         return asyncExecutor.execute(sqlAction);
@@ -8746,7 +8797,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.asyncRun(
+     * Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.runAsync(
      *     () -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ?", "active"),
      *     () -> JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET processed = ?", true)
      * );
@@ -8762,7 +8813,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
-    public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
+    public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1,
             final Throwables.Runnable<Exception> sqlAction2) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, cs.sqlAction1);
         N.checkArgNotNull(sqlAction2, cs.sqlAction2);
@@ -8778,7 +8829,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> futures =
-     *     JdbcUtil.asyncRun(
+     *     JdbcUtil.runAsync(
      *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ?", "active"),
      *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET processed = ?", true),
      *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE inventory SET updated = ?", new Date())
@@ -8796,7 +8847,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
-    public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
+    public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1,
             final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, cs.sqlAction1);
         N.checkArgNotNull(sqlAction2, cs.sqlAction2);
@@ -8813,7 +8864,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User entity = new User(123, "John", "john@example.com");
-     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(entity, e -> {
+     * ContinuableFuture<Void> future = JdbcUtil.runAsync(entity, e -> {
      *     JdbcUtil.executeUpdate(dataSource, "INSERT INTO users (name, email) VALUES (?, ?)", e.getName(), e.getEmail());
      * });
      *
@@ -8827,7 +8878,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <T> ContinuableFuture<Void> asyncRun(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction)
+    public static <T> ContinuableFuture<Void> runAsync(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction)
             throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -8841,7 +8892,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, status,
+     * ContinuableFuture<Void> future = JdbcUtil.runAsync(userId, status,
      *     (id, st) -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
      * );
      *
@@ -8857,7 +8908,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <T, U> ContinuableFuture<Void> asyncRun(final T parameter1, final U parameter2,
+    public static <T, U> ContinuableFuture<Void> runAsync(final T parameter1, final U parameter2,
             final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -8871,7 +8922,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, orderId, status,
+     * ContinuableFuture<Void> future = JdbcUtil.runAsync(userId, orderId, status,
      *     (uid, oid, st) -> {
      *         JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET status = ? WHERE user_id = ? AND order_id = ?",
      *                         st, uid, oid);
@@ -8892,7 +8943,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <A, B, C> ContinuableFuture<Void> asyncRun(final A parameter1, final B parameter2, final C parameter3,
+    public static <A, B, C> ContinuableFuture<Void> runAsync(final A parameter1, final B parameter2, final C parameter3,
             final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -8906,7 +8957,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<User> future = JdbcUtil.asyncCall(() -> {
+     * ContinuableFuture<User> future = JdbcUtil.callAsync(() -> {
      *     return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findFirst(User.class).orElse(null);
      * });
      *
@@ -8919,7 +8970,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <R> ContinuableFuture<R> asyncCall(final Callable<? extends R> sqlAction) throws IllegalArgumentException {
+    public static <R> ContinuableFuture<R> callAsync(final Callable<? extends R> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         return asyncExecutor.execute(sqlAction);
@@ -8932,7 +8983,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<ContinuableFuture<String>, ContinuableFuture<List<String>>> futures = JdbcUtil.asyncCall(
+     * Tuple2<ContinuableFuture<String>, ContinuableFuture<List<String>>> futures = JdbcUtil.callAsync(
      *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT name FROM users WHERE id = ?").setLong(1, userId).queryForSingleValue(String.class).orElse(null),
      *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE age > ?").setInt(1, 18).list(String.class)
      * );
@@ -8949,7 +9000,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
-    public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<? extends R1> sqlAction1,
+    public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> callAsync(final Callable<? extends R1> sqlAction1,
             final Callable<? extends R2> sqlAction2) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, cs.sqlAction1);
         N.checkArgNotNull(sqlAction2, cs.sqlAction2);
@@ -8965,7 +9016,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple3<ContinuableFuture<Long>, ContinuableFuture<BigDecimal>, ContinuableFuture<List<Product>>> futures =
-     *     JdbcUtil.asyncCall(
+     *     JdbcUtil.callAsync(
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM orders").queryForSingleValue(Long.class).orElse(0L),
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT SUM(total) FROM orders").queryForSingleValue(BigDecimal.class).orElse(BigDecimal.ZERO),
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM products WHERE stock < ?").setInt(1, 10).list(Product.class)
@@ -8986,7 +9037,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
-    public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<? extends R1> sqlAction1,
+    public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> callAsync(final Callable<? extends R1> sqlAction1,
             final Callable<? extends R2> sqlAction2, final Callable<? extends R3> sqlAction3) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction1, cs.sqlAction1);
         N.checkArgNotNull(sqlAction2, cs.sqlAction2);
@@ -9002,7 +9053,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<User> future = JdbcUtil.asyncCall(123L,
+     * ContinuableFuture<User> future = JdbcUtil.callAsync(123L,
      *     param -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, param).findFirst(User.class).orElse(null)
      * );
      *
@@ -9017,7 +9068,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <T, R> ContinuableFuture<R> asyncCall(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
+    public static <T, R> ContinuableFuture<R> callAsync(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
             throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -9031,7 +9082,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<List<Order>> future = JdbcUtil.asyncCall(userId, status,
+     * ContinuableFuture<List<Order>> future = JdbcUtil.callAsync(userId, status,
      *     (uid, st) -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE user_id = ? AND status = ?")
      *                          .setLong(1, uid).setString(2, st).list(Order.class)
      * );
@@ -9049,7 +9100,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <T, U, R> ContinuableFuture<R> asyncCall(final T parameter1, final U parameter2,
+    public static <T, U, R> ContinuableFuture<R> callAsync(final T parameter1, final U parameter2,
             final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -9063,7 +9114,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<BigDecimal> future = JdbcUtil.asyncCall(startDate, endDate, category,
+     * ContinuableFuture<BigDecimal> future = JdbcUtil.callAsync(startDate, endDate, category,
      *     (start, end, cat) -> JdbcUtil.prepareQuery(dataSource,
      *         "SELECT SUM(amount) FROM sales WHERE date BETWEEN ? AND ? AND category = ?")
      *         .setDate(1, start).setDate(2, end).setString(3, cat)
@@ -9085,7 +9136,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A parameter1, final B parameter2, final C parameter3,
+    public static <A, B, C, R> ContinuableFuture<R> callAsync(final A parameter1, final B parameter2, final C parameter3,
             final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -9211,14 +9262,14 @@ public final class JdbcUtil {
         Object value = null;
 
         for (final OutParam outParam : outParams) {
-            outParameterGetter = sqlTypeGetterMap.getOrDefault(outParam.getSqlType(), objOutParameterGetter);
+            outParameterGetter = sqlTypeGetterMap.getOrDefault(outParam.sqlType(), objOutParameterGetter);
 
-            if (outParam.getParameterIndex() > 0) {
-                key = outParam.getParameterIndex();
-                value = outParameterGetter.getOutParameter(stmt, outParam.getParameterIndex());
+            if (outParam.parameterIndex() > 0) {
+                key = outParam.parameterIndex();
+                value = outParameterGetter.getOutParameter(stmt, outParam.parameterIndex());
             } else {
-                key = outParam.getParameterName();
-                value = outParameterGetter.getOutParameter(stmt, outParam.getParameterName());
+                key = outParam.parameterName();
+                value = outParameterGetter.getOutParameter(stmt, outParam.parameterName());
             }
 
             // Primitive getters (getInt, getBoolean, ...) return 0/false for SQL NULL; only wasNull()
@@ -9333,7 +9384,7 @@ public final class JdbcUtil {
      * @return a collection of property names suitable for INSERT operations
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
+        return QueryUtil.insertPropNames(entityClass, excludedPropNames);
     }
 
     /**
@@ -9391,7 +9442,7 @@ public final class JdbcUtil {
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
-        return QueryUtil.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
+        return QueryUtil.selectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
     }
 
     /**
@@ -9428,7 +9479,7 @@ public final class JdbcUtil {
      * @return a collection of property names suitable for UPDATE operations
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
+        return QueryUtil.updatePropNames(entityClass, excludedPropNames);
     }
 
     /**
@@ -9854,7 +9905,7 @@ public final class JdbcUtil {
 
     /**
      * Writes the {@code [SQL-PERF]} log entry for a completed statement execution if it took at least
-     * {@link SqlLogConfig#minExecutionTimeForSqlPerfLog} milliseconds, and notifies the SQL log handler
+     * {@link SqlLogConfig#sqlPerfLogThresholdMillis} milliseconds, and notifies the SQL log handler
      * registered via {@link #setSqlLogHandler(TriConsumer)}, if any.
      *
      * <p>Invoked from a {@code finally} block right after the statement finishes, so it must never throw:
@@ -9880,8 +9931,8 @@ public final class JdbcUtil {
 
         final Throwables.Function<Statement, String, SQLException> sqlExtractor = N.defaultIfNull(JdbcUtil._sqlExtractor, JdbcUtil.DEFAULT_SQL_EXTRACTOR);
 
-        if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0
-                && elapsedTime >= sqlLogConfig.minExecutionTimeForSqlPerfLog) {
+        if (isSqlPerfLogAllowed && sqlLogger.isInfoEnabled() && sqlLogConfig.sqlPerfLogThresholdMillis >= 0
+                && elapsedTime >= sqlLogConfig.sqlPerfLogThresholdMillis) {
             sql = extractSqlForLog(stmt, sqlExtractor);
 
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
@@ -9922,7 +9973,7 @@ public final class JdbcUtil {
     }
 
     static boolean isToHandleSqlLog(final SqlLogConfig sqlLogConfig) {
-        return _sqlLogHandler != null || (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled());
+        return _sqlLogHandler != null || (isSqlPerfLogAllowed && sqlLogConfig.sqlPerfLogThresholdMillis >= 0 && sqlLogger.isInfoEnabled());
     }
 
     /**
@@ -10012,16 +10063,16 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Log SQL statements that take 500ms or longer
-     * JdbcUtil.sqlLogThresholdMillis(500);
+     * JdbcUtil.setSqlPerfLogThresholdMillis(500);
      *
      * // Disable performance logging
-     * JdbcUtil.sqlLogThresholdMillis(-1);
+     * JdbcUtil.setSqlPerfLogThresholdMillis(-1);
      * }</pre>
      *
-     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use a negative value to disable)
+     * @param sqlPerfLogThresholdMillis the minimum execution time in milliseconds (use a negative value to disable)
      */
-    public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog) {
-        sqlLogThresholdMillis(minExecutionTimeForSqlPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
+    public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis) {
+        setSqlPerfLogThresholdMillis(sqlPerfLogThresholdMillis, DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
@@ -10031,27 +10082,27 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Log SQL statements that take more than 1 second, with longer log length
-     * JdbcUtil.sqlLogThresholdMillis(1000, 2048);
+     * JdbcUtil.setSqlPerfLogThresholdMillis(1000, 2048);
      *
      * // Disable performance logging
-     * JdbcUtil.sqlLogThresholdMillis(-1);
+     * JdbcUtil.setSqlPerfLogThresholdMillis(-1);
      * }</pre>
      *
-     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use a negative value to disable)
+     * @param sqlPerfLogThresholdMillis the minimum execution time in milliseconds (use a negative value to disable)
      * @param maxSqlLogLength the maximum length of SQL statements in performance logs
      */
-    public static void sqlLogThresholdMillis(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
-        final SqlLogConfig config = minExecutionTimeForSqlPerfLog_TL.get();
-        // synchronized (minExecutionTimeForSqlPerfLog_TL) {
-        if (logger.isDebugEnabled() && config.minExecutionTimeForSqlPerfLog != minExecutionTimeForSqlPerfLog) {
-            if (minExecutionTimeForSqlPerfLog >= 0) {
-                logger.debug("Set SQL performance logging threshold(minExecutionTime={}, maxSqlLogLength={})", minExecutionTimeForSqlPerfLog, maxSqlLogLength);
+    public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
+        final SqlLogConfig config = perfLogThresholdMillis_TL.get();
+        // synchronized (sqlPerfLogThresholdMillis_TL) {
+        if (logger.isDebugEnabled() && config.sqlPerfLogThresholdMillis != sqlPerfLogThresholdMillis) {
+            if (sqlPerfLogThresholdMillis >= 0) {
+                logger.debug("Set SQL performance logging threshold(minExecutionTime={}, maxSqlLogLength={})", sqlPerfLogThresholdMillis, maxSqlLogLength);
             } else {
                 logger.debug("Disabled SQL performance logging");
             }
         }
 
-        config.set(minExecutionTimeForSqlPerfLog, maxSqlLogLength);
+        config.set(sqlPerfLogThresholdMillis, maxSqlLogLength);
         // }
     }
 
@@ -10061,14 +10112,14 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * long threshold = JdbcUtil.sqlLogThresholdMillis();
+     * long threshold = JdbcUtil.getSqlPerfLogThresholdMillis();
      * System.out.println("Performance logging threshold: " + threshold + "ms");
      * }</pre>
      *
      * @return the minimum execution time in milliseconds (default is 1000ms)
      */
-    public static long sqlLogThresholdMillis() {
-        return minExecutionTimeForSqlPerfLog_TL.get().minExecutionTimeForSqlPerfLog;
+    public static long getSqlPerfLogThresholdMillis() {
+        return perfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis;
     }
 
     /**
@@ -11209,7 +11260,7 @@ public final class JdbcUtil {
                 .get(key);
 
         if (map == null) {
-            final List<String> idPropNameList = QueryUtil.getIdPropNames(entityClass);
+            final List<String> idPropNameList = QueryUtil.idPropNames(entityClass);
             final boolean isNoId = N.isEmpty(idPropNameList);
             final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
             final BeanInfo entityInfo = isNoId ? null : ParserUtil.getBeanInfo(entityClass);
@@ -11271,7 +11322,7 @@ public final class JdbcUtil {
             map = new EnumMap<>(NamingPolicy.class);
 
             for (final NamingPolicy np : NamingPolicy.values()) {
-                final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, np);
+                final ImmutableMap<String, String> propColumnNameMap = QueryUtil.propToColumnNameMap(entityClass, np);
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
                         .invert()
@@ -11427,7 +11478,7 @@ public final class JdbcUtil {
      *   <li>Batch operation support for high-throughput processing</li>
      *   <li>Transaction-aware operations that participate in active transactions</li>
      *   <li>Type-safe parameter binding and result mapping</li>
-     *   <li>Asynchronous operation support via the inherited {@code asyncRun}/{@code asyncCall} methods (returning {@link ContinuableFuture})</li>
+     *   <li>Asynchronous operation support via the inherited {@code runAsync}/{@code callAsync} methods (returning {@link ContinuableFuture})</li>
      *   <li>Stream-based result processing for large datasets</li>
      * </ul>
      *
@@ -11512,7 +11563,7 @@ public final class JdbcUtil {
      * long pendingCount = orderDao.countByStatus("PENDING");
      *
      * // Async operations (inherited from the DAO root interface)
-     * ContinuableFuture<Optional<Order>> future = orderDao.asyncCall(dao -> dao.get(orderId));
+     * ContinuableFuture<Optional<Order>> future = orderDao.callAsync(dao -> dao.get(orderId));
      * future.thenRunAsync(order -> {
      *     order.ifPresent(o -> System.out.println("Order: " + o.getId()));
      * });
@@ -11665,7 +11716,7 @@ public final class JdbcUtil {
      *       defaults to none.</li>
      *   <li>{@code cache} — a {@link Jdbc.DaoCache} for {@code @CacheResult} methods. When unset,
      *       cache annotations use their configured implementation or the default DAO cache. Only permitted
-     *       for cacheable DAO interfaces such as {@code ReadOnlyDao} and {@code NoUpdateDao} (see below).</li>
+     *       for cacheable DAO interfaces such as {@code ReadOnlyDao} and {@code NonUpdateDao} (see below).</li>
      *   <li>{@code executor} — the {@link Executor} backing the DAO's asynchronous methods; defaults to the
      *       shared async executor.</li>
      * </ul>
@@ -11695,8 +11746,8 @@ public final class JdbcUtil {
      *         {@code daoInterface} is not an interface, or if the supplied {@code dsl}'s SQL policy is neither
      *         {@code null} nor {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}
      * @throws UnsupportedOperationException if a non-{@code null} {@code cache} option is supplied for a DAO
-     *         interface that supports update/delete operations (only cacheable read-only/no-update interfaces,
-     *         such as {@code ReadOnlyDao}, {@code NoUpdateCrudDao}, and the unchecked variants, may be cached)
+     *         interface that supports update/delete operations (only cacheable read-only/non-update interfaces,
+     *         such as {@code ReadOnlyDao}, {@code NonUpdateCrudDao}, and the unchecked variants, may be cached)
      * @see #createDao(Class, javax.sql.DataSource)
      * @see #createDao(Class, javax.sql.DataSource, SqlDialect)
      * @see DaoCreationOptions
@@ -11728,7 +11779,6 @@ public final class JdbcUtil {
      *
      * @see JdbcUtil#createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      */
-    @Builder
     @Value
     @Accessors(fluent = true)
     public static class DaoCreationOptions {
@@ -11756,7 +11806,7 @@ public final class JdbcUtil {
         /**
          * An optional {@link Jdbc.DaoCache} for caching results of methods annotated with {@code @CacheResult}.
          * May be {@code null}. Supplying a non-{@code null} cache is only permitted for cacheable read-only /
-         * no-update DAO interfaces (such as {@code ReadOnlyDao}, {@code NoUpdateCrudDao}, and the unchecked
+         * non-update DAO interfaces (such as {@code ReadOnlyDao}, {@code NonUpdateCrudDao}, and the unchecked
          * variants); otherwise DAO creation fails with {@link UnsupportedOperationException}.
          */
         private Jdbc.DaoCache cache;
@@ -11766,6 +11816,24 @@ public final class JdbcUtil {
          * the shared async executor is used.
          */
         private Executor executor;
+
+        /**
+         * Creates an immutable bundle of DAO creation options.
+         *
+         * @param targetTableName the target table name, or {@code null} to derive it from the DAO entity
+         * @param dsl the SQL builder dialect, or {@code null} to use {@link Dsl#PSC}
+         * @param sqlMapper the external SQL mapper, or {@code null} when external SQL is not used
+         * @param cache the DAO result cache, or {@code null} when no explicit cache is configured
+         * @param executor the asynchronous executor, or {@code null} to use the shared executor
+         */
+        @Builder
+        DaoCreationOptions(final String targetTableName, final Dsl dsl, final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) {
+            this.targetTableName = targetTableName;
+            this.dsl = dsl;
+            this.sqlMapper = sqlMapper;
+            this.cache = cache;
+            this.executor = executor;
+        }
     }
 
     /**
@@ -11803,25 +11871,32 @@ public final class JdbcUtil {
         N.checkArgNotNull(localThreadCache, cs.localThreadCache);
 
         final Jdbc.DaoCache previousCache = localThreadCache_TL.get();
-        localThreadCache_TL.set(localThreadCache);
+        final DaoCacheScope previousScope = daoCacheScope_TL.get();
+        final DaoCacheScope scope = new DaoCacheScope(localThreadCache, previousCache, previousScope);
 
-        return new DaoCacheScope(localThreadCache, previousCache);
+        localThreadCache_TL.set(localThreadCache);
+        daoCacheScope_TL.set(scope);
+
+        return scope;
     }
 
     /**
      * A current-thread DAO-cache binding that restores the previous binding when closed.
      * Instances are created by {@link JdbcUtil#openDaoCacheScope()} or
      * {@link JdbcUtil#openDaoCacheScope(Jdbc.DaoCache)} and must be closed on the thread that opened them.
+     * Nested scopes must be closed in reverse order, as happens naturally with try-with-resources.
      */
     public static final class DaoCacheScope implements AutoCloseable {
         private final Jdbc.DaoCache cache;
         private final Jdbc.DaoCache previousCache;
+        private final DaoCacheScope previousScope;
         private final Thread ownerThread;
         private boolean closed;
 
-        private DaoCacheScope(final Jdbc.DaoCache cache, final Jdbc.DaoCache previousCache) {
+        private DaoCacheScope(final Jdbc.DaoCache cache, final Jdbc.DaoCache previousCache, final DaoCacheScope previousScope) {
             this.cache = cache;
             this.previousCache = previousCache;
+            this.previousScope = previousScope;
             ownerThread = Thread.currentThread();
         }
 
@@ -11836,8 +11911,9 @@ public final class JdbcUtil {
 
         /**
          * Restores the DAO-cache binding that preceded this scope. Repeated calls have no effect.
+         * Nested scopes must be closed in reverse order.
          *
-         * @throws IllegalStateException if called from a thread other than the one that opened the scope
+         * @throws IllegalStateException if called from a different thread or while a nested scope is still open
          */
         @Override
         public void close() {
@@ -11849,6 +11925,10 @@ public final class JdbcUtil {
                 return;
             }
 
+            if (daoCacheScope_TL.get() != this) {
+                throw new IllegalStateException("Nested DaoCacheScope instances must be closed in reverse order");
+            }
+
             closed = true;
 
             if (previousCache == null) {
@@ -11856,69 +11936,80 @@ public final class JdbcUtil {
             } else {
                 localThreadCache_TL.set(previousCache);
             }
+
+            if (previousScope == null) {
+                daoCacheScope_TL.remove();
+            } else {
+                daoCacheScope_TL.set(previousScope);
+            }
         }
     }
 
     /**
      * Enables DAO query result caching for the current thread.
      * Creates a new thread-local cache that will be used by all DAOs in the current thread.
-     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-     * Prefer {@link #openDaoCacheScope()} when the cache may be nested or try-with-resources can be used.
+     * This legacy method must be paired with {@link #closeDaoCacheOnCurrentThread()} in a
+     * {@code finally} block and does not restore a cache binding that it replaces.
      *
-     * <p><b>Usage Examples:</b></p>
+     * <p>Use {@link #openDaoCacheScope()} for automatic cleanup and nest-safe restoration:</p>
      * <pre>{@code
-     * Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
-     * try {
+     * try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
      *     // DAO operations here will use the cache
      *     userDao.findById(1L);   // First call hits database
      *     userDao.findById(1L);   // Second call uses cache
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();
      * }
      * }</pre>
      *
      * @return the created DaoCache for the current thread
+     * @throws IllegalStateException if a {@link DaoCacheScope} is active on the current thread
+     * @deprecated use {@link #openDaoCacheScope()} with try-with-resources
      * @see Jdbc.DaoCache#createByMap()
      * @see #openDaoCacheScope()
      * @see #closeDaoCacheOnCurrentThread()
      */
+    @Deprecated
     public static Jdbc.DaoCache openDaoCacheOnCurrentThread() {
+        checkNoActiveDaoCacheScopeForLegacyOperation();
+
         final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
 
-        return openDaoCacheOnCurrentThread(localThreadCache);
+        localThreadCache_TL.set(localThreadCache);
+
+        return localThreadCache;
     }
 
     /**
      * Enables the specified DAO cache for the current thread.
      * The provided cache will be used by all DAOs in the current thread.
-     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
-     * Prefer {@link #openDaoCacheScope(Jdbc.DaoCache)} when the cache may be nested or try-with-resources can be used.
+     * This legacy method must be paired with {@link #closeDaoCacheOnCurrentThread()} in a
+     * {@code finally} block and does not restore a cache binding that it replaces.
      *
-     * <p><b>Usage Examples:</b></p>
+     * <p>Use {@link #openDaoCacheScope(Jdbc.DaoCache)} for automatic cleanup and nest-safe restoration:</p>
      * <pre>{@code
      * // Use a custom cache implementation
      * Map<String, Object> cacheMap = new ConcurrentHashMap<>();
      * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
      *
-     * JdbcUtil.openDaoCacheOnCurrentThread(cache);
-     * try {
+     * try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(cache)) {
      *     // DAO operations use the custom cache
      *     productDao.findPopular();
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();
      * }
      * }</pre>
      *
      * @param localThreadCache the cache to use for the current thread, must not be {@code null}
      * @return the specified localThreadCache
      * @throws IllegalArgumentException if {@code localThreadCache} is {@code null}
+     * @throws IllegalStateException if a {@link DaoCacheScope} is active on the current thread
+     * @deprecated use {@link #openDaoCacheScope(Jdbc.DaoCache)} with try-with-resources
      * @see Jdbc.DaoCache#createByMap()
      * @see Jdbc.DaoCache#createByMap(Map)
      * @see #openDaoCacheScope(Jdbc.DaoCache)
      * @see #closeDaoCacheOnCurrentThread()
      */
+    @Deprecated
     public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException {
         N.checkArgNotNull(localThreadCache, cs.localThreadCache);
+        checkNoActiveDaoCacheScopeForLegacyOperation();
 
         localThreadCache_TL.set(localThreadCache);
 
@@ -11929,24 +12020,24 @@ public final class JdbcUtil {
      * Removes the DAO-cache binding for the current thread.
      * This method does not close the cache object or restore a binding replaced by
      * {@link #openDaoCacheOnCurrentThread()}; use {@link #openDaoCacheScope()} for nest-safe lifecycle management.
-     * This method should always be called in a finally block after starting a thread-local cache
-     * to prevent memory leaks.
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * JdbcUtil.openDaoCacheOnCurrentThread();
-     * try {
-     *     // Use cached DAO operations
-     * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();   // Always clean up
-     * }
-     * }</pre>
-     *
+     * @throws IllegalStateException if a {@link DaoCacheScope} is active on the current thread
+     * @deprecated close the {@link DaoCacheScope} returned by {@link #openDaoCacheScope()}, preferably
+     *             through try-with-resources
      * @see #openDaoCacheOnCurrentThread()
      * @see #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
+     * @see #openDaoCacheScope()
      */
+    @Deprecated
     public static void closeDaoCacheOnCurrentThread() {
+        checkNoActiveDaoCacheScopeForLegacyOperation();
         localThreadCache_TL.remove();
+    }
+
+    private static void checkNoActiveDaoCacheScopeForLegacyOperation() {
+        if (daoCacheScope_TL.get() != null) {
+            throw new IllegalStateException("Legacy DAO-cache lifecycle methods cannot be used while a DaoCacheScope is active");
+        }
     }
 
     @SuppressWarnings("unused")

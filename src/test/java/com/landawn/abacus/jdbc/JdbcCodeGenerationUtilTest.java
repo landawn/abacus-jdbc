@@ -332,10 +332,11 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertThrows(NoSuchFieldException.class, () -> JdbcCodeGenerationUtil.EntityCodeConfig.class.getDeclaredField("chainAccessor"));
         assertThrows(NoSuchFieldException.class, () -> JdbcCodeGenerationUtil.EntityCodeConfig.class.getDeclaredField("generateFieldNameTable"));
 
-        assertTrue(JdbcCodeGenerationUtil.EntityCodeConfig.class.getMethod("getIdField").isAnnotationPresent(Deprecated.class));
-        assertTrue(JdbcCodeGenerationUtil.EntityCodeConfig.class.getMethod("setIdField", String.class).isAnnotationPresent(Deprecated.class));
-        assertTrue(
-                JdbcCodeGenerationUtil.EntityCodeConfig.EntityCodeConfigBuilder.class.getMethod("idField", String.class).isAnnotationPresent(Deprecated.class));
+        assertThrows(NoSuchFieldException.class, () -> JdbcCodeGenerationUtil.EntityCodeConfig.class.getDeclaredField("idField"));
+        assertThrows(NoSuchMethodException.class, () -> JdbcCodeGenerationUtil.EntityCodeConfig.class.getMethod("getIdField"));
+        assertThrows(NoSuchMethodException.class, () -> JdbcCodeGenerationUtil.EntityCodeConfig.class.getMethod("setIdField", String.class));
+        assertThrows(NoSuchMethodException.class,
+                () -> JdbcCodeGenerationUtil.EntityCodeConfig.EntityCodeConfigBuilder.class.getMethod("idField", String.class));
     }
 
     // Setup helper for a full generateEntityClass mock
@@ -826,6 +827,99 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, insertSql);
 
         assertEquals("UPDATE order_history SET id = :id, status = :status, name = 'A,B'", updateSql);
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_RejectsAdditionalValueTuples() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil
+                .convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id, status) VALUES (1, 'OPEN'), (2, 'CLOSED')"));
+
+        assertTrue(thrown.getMessage().contains("single VALUES tuple"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_AcceptsTrailingSemicolon() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE order_history SET id = 1, status = 'OPEN'",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id, status) VALUES (1, 'OPEN');"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_AcceptsSqlWhitespaceBetweenKeywords() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE order_history SET id = 1, status = 'OPEN'",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, " \nINSERT\t \tINTO\r\n order_history(id, status) VALUES (1, 'OPEN')"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_IgnoresParenthesisInsideQuotedTableIdentifier() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE `audit(log)` SET id = 1",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO \"audit(log)\"(id) VALUES (1)"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_RejectsStatementPrefix() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil
+                .convertInsertSqlToUpdateSql(dataSource, "DELETE FROM audit_log; INSERT INTO order_history(id, status) VALUES (1, 'OPEN')"));
+
+        assertTrue(thrown.getMessage().contains("Not an INSERT INTO SQL"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_RejectsMissingTableName() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO (id, status) VALUES (1, 'OPEN')"));
+
+        assertTrue(thrown.getMessage().contains("Missing table name"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_RejectsTokensAroundValuesClause() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id) garbage VALUES (1)"));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id) NOTVALUES (1)"));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id) VALUES garbage (1)"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_QuotesUnsafeTableFragment() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE `t; DROP TABLE audit; --` SET id = 1",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO t; DROP TABLE audit; -- (id) VALUES (1)"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_PreservesDialectQuotedValues() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE order_history SET name = 'A\\'B,C', status = 1",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(name, status) VALUES ('A\\'B,C', 1)"));
+        assertEquals("UPDATE order_history SET name = $tag$A,B)C$tag$, status = 1",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(name, status) VALUES ($tag$A,B)C$tag$, 1)"));
     }
 
     // Test generateEntityClass with customized EntityCodeConfig fields

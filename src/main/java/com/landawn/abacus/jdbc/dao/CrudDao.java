@@ -52,7 +52,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <p>All database operations declared here are <i>checked</i>: they propagate {@link SQLException}
  * to the caller. For a variant whose methods instead throw the unchecked
  * {@link com.landawn.abacus.exception.UncheckedSQLException}, see {@link UncheckedCrudDao}. For variants
- * that forbid mutating operations, see {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDao}.</p>
+ * that forbid mutating operations, see {@link ReadOnlyCrudDao} and {@link NonUpdateCrudDao}.</p>
  *
  * <p><b>ID semantics:</b> the entity class must declare one or more {@code @Id} properties. A single id
  * property maps directly to the {@code <ID>} type (for example {@code Long} or {@code String}), whereas a
@@ -111,7 +111,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
+        final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return upsert(entity, idPropNameList);
     }
@@ -150,7 +150,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             return entity;
         } else {
             final Class<?> cls = entity.getClass();
-            final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
+            final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
                 Beans.mergeInto(entity, dbEntity);
@@ -175,7 +175,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException {
@@ -198,7 +199,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param entities the collection of entities to upsert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
@@ -211,7 +213,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
 
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // guaranteed non-empty for a CRUD entity class.
+        final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
         return batchUpsert(entities, idPropNameList, batchSize);
     }
@@ -230,7 +232,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *
      * @param entities the collection of entities to upsert
      * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
@@ -260,7 +263,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
+     * @return a list of saved entities (both inserted and updated), in the same iteration order as
+     *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
@@ -305,14 +309,17 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
 
         final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNameList.size() == 1 ? singleKeyExtractor : entityIdExtractor;
 
+        // De-duplicate lookup keys before splitting them into query batches. Without this, equal
+        // keys that landed in different batches returned the same database row more than once,
+        // and the throwing merger below incorrectly reported a duplicate database result.
         final List<T> dbEntities = uniquePropNameList.size() == 1
-                ? Seq.of(entities, SQLException.class)
+                ? Seq.of(N.distinct(N.map(entities, singleKeyExtractor)), SQLException.class)
                         .split(batchSize)
-                        .flatmap(it -> list(Filters.in(uniquePropNameList.get(0), N.map(it, singleKeyExtractor))))
+                        .flatmap(it -> list(Filters.in(uniquePropNameList.get(0), it)))
                         .toList()
-                : Seq.of(entities, SQLException.class) //
+                : Seq.of(N.distinct(N.map(entities, entityIdExtractor)), SQLException.class) //
                         .split(batchSize)
-                        .flatmap(it -> list(Filters.idToCond(N.map(it, entityIdExtractor))))
+                        .flatmap(it -> list(Filters.idToCond(it)))
                         .toList();
 
         final Map<Object, T> dbIdEntityMap = Stream.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
@@ -329,13 +336,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         try {
             if (N.notEmpty(entitiesToInsert)) {
                 batchInsert(entitiesToInsert, batchSize);
-                result.addAll(entitiesToInsert);
             }
 
             if (N.notEmpty(entitiesToUpdate)) {
                 final Set<String> ignoredPropNames = N.newHashSet(matchPropNames);
 
-                final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
+                final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
                 if (N.notEmpty(idPropNameList)) {
                     ignoredPropNames.addAll(idPropNameList);
@@ -346,8 +352,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                         .toList();
 
                 batchUpdate(dbEntitiesToUpdate, batchSize);
-
-                result.addAll(dbEntitiesToUpdate);
             }
 
             if (tran != null) {
@@ -368,6 +372,13 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                     failure.addSuppressed(rollbackFailure);
                 }
             }
+        }
+
+        // Classification groups inserts and updates for efficient batch execution, but callers
+        // should not observe that internal grouping in the returned list.
+        for (final T entity : entities) {
+            final T dbEntity = dbIdEntityMap.get(keysExtractor.apply(entity));
+            result.add(dbEntity == null ? entity : dbEntity);
         }
 
         return result;

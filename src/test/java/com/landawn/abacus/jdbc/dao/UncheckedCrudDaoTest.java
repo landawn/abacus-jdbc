@@ -139,6 +139,17 @@ public class UncheckedCrudDaoTest extends TestBase {
     }
 
     @Test
+    public void testCountByIds_RejectsOverflowAcrossBatches() {
+        final IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final List<Long> ids = java.util.stream.LongStream.rangeClosed(0, JdbcUtil.DEFAULT_BATCH_SIZE).boxed().toList();
+
+        Mockito.doReturn(IdAnnotatedEntity.class).when(dao).targetEntityClass();
+        when(dao.count(ArgumentMatchers.any(Condition.class))).thenReturn(Integer.MAX_VALUE, 1);
+
+        assertThrows(ArithmeticException.class, () -> dao.count(ids));
+    }
+
+    @Test
     public void testBatchInsert_NamedInsertUsesDefaultBatchSize() {
         TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());
@@ -815,6 +826,8 @@ public class UncheckedCrudDaoTest extends TestBase {
             final List<BatchUpsertUser> result = dao.batchUpsert(List.of(toUpdate, toInsert));
 
             assertEquals(2, result.size());
+            assertEquals(1L, result.get(0).getId(), "updated and inserted results must retain input order");
+            assertEquals(2L, result.get(1).getId(), "updated and inserted results must retain input order");
 
             final BatchUpsertUser reloaded1 = dao.gett(1L);
             final BatchUpsertUser reloaded2 = dao.gett(2L);
@@ -822,6 +835,38 @@ public class UncheckedCrudDaoTest extends TestBase {
             assertNotNull(reloaded2);
             assertEquals("updated", reloaded1.getName());
             assertEquals("inserted", reloaded2.getName());
+        }
+
+        @Test
+        public void testBatchUpsert_DuplicateLookupKeyAcrossBatches_IsQueriedOnce() {
+            final BatchUpsertUser existing1 = new BatchUpsertUser();
+            existing1.setId(1L);
+            existing1.setName("old-1");
+            dao.insert(existing1);
+
+            final BatchUpsertUser existing2 = new BatchUpsertUser();
+            existing2.setId(2L);
+            existing2.setName("old-2");
+            dao.insert(existing2);
+
+            final BatchUpsertUser firstUpdate = new BatchUpsertUser();
+            firstUpdate.setId(1L);
+            firstUpdate.setName("first-update");
+            final BatchUpsertUser secondUpdate = new BatchUpsertUser();
+            secondUpdate.setId(2L);
+            secondUpdate.setName("second-update");
+            final BatchUpsertUser lastUpdate = new BatchUpsertUser();
+            lastUpdate.setId(1L);
+            lastUpdate.setName("last-update");
+
+            // With a batch size of two, the duplicate key 1 used to be queried in both [1, 2]
+            // and [1]. Building the result map then failed with a false duplicate-row error.
+            final List<BatchUpsertUser> result = dao.batchUpsert(List.of(firstUpdate, secondUpdate, lastUpdate), List.of("id"), 2);
+
+            assertEquals(3, result.size());
+            assertEquals(List.of(1L, 2L, 1L), result.stream().map(BatchUpsertUser::getId).toList());
+            assertEquals("last-update", dao.gett(1L).getName());
+            assertEquals("second-update", dao.gett(2L).getName());
         }
     }
 }

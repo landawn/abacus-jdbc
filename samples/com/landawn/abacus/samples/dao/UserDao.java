@@ -53,7 +53,7 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
 
-@PerfLog(sqlLogThresholdMillis = 101, daoMethodLogThresholdMillis = 100)
+@PerfLog(sqlPerfLogThresholdMillis = 101, daoMethodPerfLogThresholdMillis = 100)
 @Handler(impl = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", externalCallsOnly = true)

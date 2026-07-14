@@ -57,7 +57,7 @@ public class DaoUtilTest extends TestBase {
         DaoUtil.stmtSetterForBigQueryResult.accept(stmt);
 
         verify(stmt).setFetchDirection(ResultSet.FETCH_FORWARD);
-        verify(stmt).setFetchSize(com.landawn.abacus.jdbc.JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        verify(stmt).setFetchSize(com.landawn.abacus.jdbc.JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
     }
 
     @Test
@@ -116,7 +116,7 @@ public class DaoUtilTest extends TestBase {
     }
 
     // isReadOnlyQuery / isNoUpdateQuery are the public gates used by the DaoImpl proxy to enforce
-    // ReadOnlyDao (SELECT-only) and NoUpdateDao (SELECT/INSERT-only) restrictions.
+    // ReadOnlyDao (SELECT-only) and NonUpdateDao (SELECT/INSERT-only) restrictions.
     @Test
     public void testIsReadOnlyQuery() {
         assertTrue(SqlParser.isReadOnlyQuery("SELECT * FROM demo"));
@@ -240,6 +240,15 @@ public class DaoUtilTest extends TestBase {
         Seid id = extractor.apply(entity);
         assertNotNull(id);
         assertEquals(5L, (Long) id.get("orderId"));
+    }
+
+    @Test
+    public void testIdExtractionRejectsEmptyIdPropertyList() {
+        final BeanInfo beanInfo = ParserUtil.getBeanInfo(SimpleEntity.class);
+        final SimpleEntity entity = new SimpleEntity();
+
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.extractId(entity, List.of(), beanInfo));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.createIdExtractor(List.of(), beanInfo));
     }
 
     @Test

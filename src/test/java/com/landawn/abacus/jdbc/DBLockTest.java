@@ -216,6 +216,51 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
+    public void testSuccessfulLockAcquisitionIsLinearizedWithClose() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 1);
+        final java.util.concurrent.CountDownLatch insertCompleted = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.atomic.AtomicInteger executeCount = new java.util.concurrent.atomic.AtomicInteger();
+        final java.util.concurrent.atomic.AtomicReference<Object> outcome = new java.util.concurrent.atomic.AtomicReference<>();
+
+        when(fixture.preparedStatement.executeUpdate()).thenAnswer(invocation -> {
+            final int call = executeCount.incrementAndGet();
+
+            if (call == 2) {
+                insertCompleted.countDown();
+            }
+
+            return call == 1 ? 0 : 1;
+        });
+
+        final Thread locker = new Thread(() -> {
+            try {
+                outcome.set(fixture.lock.lock("resource-close-race", 5_000L, 1_000L, 1L));
+            } catch (final Throwable e) {
+                outcome.set(e);
+            }
+        }, "dblock-close-race");
+
+        // Holding the same monitor used by close() lets the test deterministically pause a
+        // successful INSERT at the acquisition/close linearization point.
+        synchronized (fixture.lock) {
+            locker.start();
+            assertTrue(insertCompleted.await(2, TimeUnit.SECONDS));
+
+            final long deadline = System.currentTimeMillis() + 2_000L;
+            while (locker.getState() != Thread.State.BLOCKED && locker.isAlive() && System.currentTimeMillis() < deadline) {
+                Thread.yield();
+            }
+
+            assertEquals(Thread.State.BLOCKED, locker.getState(), "lock() must synchronize successful publication with close()");
+            fixture.lock.close();
+        }
+
+        locker.join(2_000L);
+        assertTrue(outcome.get() instanceof IllegalStateException);
+        assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    @Test
     public void testClose_AlreadyClosed() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
         setField(fixture.lock, "isClosed", true);

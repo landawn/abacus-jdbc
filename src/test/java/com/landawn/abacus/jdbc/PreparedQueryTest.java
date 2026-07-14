@@ -63,6 +63,8 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -3000,11 +3002,11 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testAsyncCall() throws Exception {
+    public void testcallAsync() throws Exception {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getInt(1)).thenReturn(42);
 
-        ContinuableFuture<OptionalInt> future = query.asyncCall(q -> q.queryForInt());
+        ContinuableFuture<OptionalInt> future = query.callAsync(q -> q.queryForInt());
 
         OptionalInt result = future.get();
         assertTrue(result.isPresent());
@@ -3012,12 +3014,12 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testAsyncCallWithExecutor() throws Exception {
+    public void testcallAsyncWithExecutor() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getString(1)).thenReturn("async");
 
-        ContinuableFuture<Nullable<String>> future = query.asyncCall(q -> q.queryForString(), executor);
+        ContinuableFuture<Nullable<String>> future = query.callAsync(q -> q.queryForString(), executor);
 
         Nullable<String> result = future.get();
         assertTrue(result.isPresent());
@@ -3025,10 +3027,10 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testAsyncCallRejectedByExecutorClosesStatement() throws SQLException {
+    public void testcallAsyncRejectedByExecutorClosesStatement() throws SQLException {
         final RejectedExecutionException rejection = new RejectedExecutionException("rejected");
 
-        final RejectedExecutionException thrown = assertThrows(RejectedExecutionException.class, () -> query.asyncCall(q -> 1, command -> {
+        final RejectedExecutionException thrown = assertThrows(RejectedExecutionException.class, () -> query.callAsync(q -> 1, command -> {
             throw rejection;
         }));
 
@@ -3037,11 +3039,29 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRun() throws Exception {
+    public void testcallAsyncCancelledBeforeStartClosesStatement() throws SQLException {
+        final AtomicReference<Runnable> queuedTask = new AtomicReference<>();
+        final AtomicBoolean actionRan = new AtomicBoolean();
+        final ContinuableFuture<Integer> future = query.callAsync(q -> {
+            actionRan.set(true);
+            return 1;
+        }, queuedTask::set);
+
+        assertTrue(future.cancel(false));
+        assertTrue(query.isClosed);
+        verify(mockStmt).close();
+
+        queuedTask.get().run();
+        assertFalse(actionRan.get());
+        verify(mockStmt).close();
+    }
+
+    @Test
+    public void testrunAsync() throws Exception {
         when(mockStmt.executeUpdate()).thenReturn(1);
 
         List<Integer> captured = new ArrayList<>();
-        ContinuableFuture<Void> future = query.asyncRun(q -> {
+        ContinuableFuture<Void> future = query.runAsync(q -> {
             int updated = q.update();
             captured.add(updated);
         });
@@ -3051,12 +3071,12 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRunWithExecutor() throws Exception {
+    public void testrunAsyncWithExecutor() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         when(mockStmt.execute()).thenReturn(true);
 
         List<Boolean> captured = new ArrayList<>();
-        ContinuableFuture<Void> future = query.asyncRun(q -> {
+        ContinuableFuture<Void> future = query.runAsync(q -> {
             boolean hasResultSet = q.execute();
             captured.add(hasResultSet);
         }, executor);
@@ -3066,16 +3086,31 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRunRejectedByExecutorClosesStatement() throws SQLException {
+    public void testrunAsyncRejectedByExecutorClosesStatement() throws SQLException {
         final RejectedExecutionException rejection = new RejectedExecutionException("rejected");
 
-        final RejectedExecutionException thrown = assertThrows(RejectedExecutionException.class, () -> query.asyncRun(q -> {
+        final RejectedExecutionException thrown = assertThrows(RejectedExecutionException.class, () -> query.runAsync(q -> {
             // The rejected task must never execute.
         }, command -> {
             throw rejection;
         }));
 
         assertSame(rejection, thrown);
+        verify(mockStmt).close();
+    }
+
+    @Test
+    public void testrunAsyncCancelledBeforeStartClosesStatement() throws SQLException {
+        final AtomicReference<Runnable> queuedTask = new AtomicReference<>();
+        final AtomicBoolean actionRan = new AtomicBoolean();
+        final ContinuableFuture<Void> future = query.runAsync(q -> actionRan.set(true), queuedTask::set);
+
+        assertTrue(future.cancel(false));
+        assertTrue(query.isClosed);
+        verify(mockStmt).close();
+
+        queuedTask.get().run();
+        assertFalse(actionRan.get());
         verify(mockStmt).close();
     }
 

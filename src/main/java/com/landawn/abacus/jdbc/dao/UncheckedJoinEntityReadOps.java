@@ -23,6 +23,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.condition.Condition;
@@ -740,11 +741,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -838,12 +842,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
             throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -917,11 +924,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity to load all join entities for
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
     @Override
     default void loadAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
@@ -991,11 +1001,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
     @Override
     default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities)) {
             return;
         }
@@ -1324,11 +1337,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -1423,12 +1439,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
             throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -1500,11 +1519,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity to conditionally load all join entities for
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
     @Override
     default void loadAllJoinEntitiesIfAbsent(final T entity, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
@@ -1572,11 +1594,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to conditionally load all join entities for
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
     @Override
     default void loadAllJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities)) {
             return;
         }

@@ -79,7 +79,8 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p>This class is marked as {@link Internal} and is intended for framework use only;
  * it is package-private and not part of the public API. Application code should not
- * reference this class directly.</p>
+ * reference this class directly. Like the wrapped {@code ResultSet}, an instance is
+ * intended for single-threaded cursor access.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -135,7 +136,8 @@ final class ResultSetProxy implements ResultSet {
 
     /**
      * Unwraps this proxy to return an object that implements the given interface.
-     * Delegates to the underlying ResultSet's unwrap method.
+     * Interfaces implemented by this proxy are satisfied by the proxy itself; other
+     * interfaces are delegated to the wrapped {@code ResultSet}.
      *
      * @param <T> the type of the object to be returned
      * @param iface a Class defining an interface that the result must implement
@@ -144,12 +146,15 @@ final class ResultSetProxy implements ResultSet {
      */
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
+        if (iface != null && iface.isInstance(this)) {
+            return iface.cast(this);
+        }
+
         return delegate.unwrap(iface);
     }
 
     /**
-     * Returns {@code true} if this proxy wraps an object that implements the given interface.
-     * Delegates to the underlying ResultSet's isWrapperFor method.
+     * Returns {@code true} if this proxy or its delegate implements the given interface.
      *
      * @param iface a Class defining an interface
      * @return {@code true} if this implements the interface or directly or indirectly wraps an object that does
@@ -157,7 +162,7 @@ final class ResultSetProxy implements ResultSet {
      */
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return delegate.isWrapperFor(iface);
+        return iface != null && (iface.isInstance(this) || delegate.isWrapperFor(iface));
     }
 
     /**
@@ -823,8 +828,6 @@ final class ResultSetProxy implements ResultSet {
                 // SQLite dynamic typing) reads identically whether accessed by index or by label.
                 getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
             } else {
-                metadata = delegate.getMetaData();
-
                 final String className = ret.getClass().getName();
 
                 if ("oracle.sql.TIMESTAMP".equals(className)) {
@@ -837,6 +840,7 @@ final class ResultSetProxy implements ResultSet {
                     ret = delegate.getTimestamp(columnIndex);
                     getter = rs -> rs.getTimestamp(columnIndex);
                 } else if (className.startsWith("oracle.sql.DATE")) {
+                    metadata = delegate.getMetaData();
                     final String metaDataClassName = metadata.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
@@ -847,6 +851,7 @@ final class ResultSetProxy implements ResultSet {
                         getter = rs -> rs.getDate(columnIndex);
                     }
                 } else if (ret instanceof java.sql.Date) {
+                    metadata = delegate.getMetaData();
                     final String metaDataClassName = metadata.getColumnClassName(columnIndex);
 
                     // Mirror the oracle.sql.DATE branch and the index-path java.sql.Date branch:

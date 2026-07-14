@@ -25,12 +25,12 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.ParsedSql;
 
 /**
- * {@code NoUpdateDao} restricts a DAO to SELECT (read) and INSERT statements. The SQL-kind gate for
+ * {@code NonUpdateDao} restricts a DAO to SELECT (read) and INSERT statements. The SQL-kind gate for
  * {@code prepareQuery}/{@code prepareNamedQuery} is enforced centrally by the {@code DaoImpl} proxy
  * (no longer by per-method overrides on the interface), so these tests drive a real {@code createDao}
  * proxy rather than a Mockito mock.
  */
-public class NoUpdateDaoTest extends TestBase {
+public class NonUpdateDaoTest extends TestBase {
 
     public static final class TestEntity {
         private long id;
@@ -53,10 +53,10 @@ public class NoUpdateDaoTest extends TestBase {
         }
     }
 
-    interface TestNoUpdateDao extends NoUpdateDao<TestEntity, TestNoUpdateDao> {
+    interface TestNonUpdateDao extends NonUpdateDao<TestEntity, TestNonUpdateDao> {
     }
 
-    private TestNoUpdateDao createDao() throws SQLException {
+    private TestNonUpdateDao createDao() throws SQLException {
         final DataSource ds = mock(DataSource.class);
         final Connection conn = mock(Connection.class);
         final DatabaseMetaData meta = mock(DatabaseMetaData.class);
@@ -72,24 +72,24 @@ public class NoUpdateDaoTest extends TestBase {
         when(conn.prepareStatement(anyString(), any(int[].class))).thenReturn(stmt);
         when(conn.prepareStatement(anyString(), any(String[].class))).thenReturn(stmt);
 
-        return JdbcUtil.createDao(TestNoUpdateDao.class, ds);
+        return JdbcUtil.createDao(TestNonUpdateDao.class, ds);
     }
 
     @Test
     public void testIsInterfaceAndCapabilities() {
-        assertTrue(NoUpdateDao.class.isInterface());
-        assertEquals(2, NoUpdateDao.class.getTypeParameters().length);
+        assertTrue(NonUpdateDao.class.isInterface());
+        assertEquals(2, NonUpdateDao.class.getTypeParameters().length);
         // read + insert capabilities, but not update/delete.
-        assertTrue(InsertOps.class.isAssignableFrom(NoUpdateDao.class));
-        assertTrue(ReadOps.class.isAssignableFrom(NoUpdateDao.class));
-        assertTrue(DaoUtil.isCacheable(NoUpdateDao.class));
-        assertFalse(UpdateOps.class.isAssignableFrom(NoUpdateDao.class));
-        assertFalse(DeleteOps.class.isAssignableFrom(NoUpdateDao.class));
+        assertTrue(InsertOps.class.isAssignableFrom(NonUpdateDao.class));
+        assertTrue(ReadOps.class.isAssignableFrom(NonUpdateDao.class));
+        assertTrue(DaoUtil.isCacheable(NonUpdateDao.class));
+        assertFalse(UpdateOps.class.isAssignableFrom(NonUpdateDao.class));
+        assertFalse(DeleteOps.class.isAssignableFrom(NonUpdateDao.class));
     }
 
     @Test
     public void testPrepareQuery_SelectAndInsertAllowed_UpdateDeleteRejected() throws SQLException {
-        final TestNoUpdateDao dao = createDao();
+        final TestNonUpdateDao dao = createDao();
 
         assertNotNull(dao.prepareQuery("SELECT * FROM test"));
         assertNotNull(dao.prepareQuery("INSERT INTO test(id) VALUES (?)"));
@@ -103,17 +103,17 @@ public class NoUpdateDaoTest extends TestBase {
 
     @Test
     public void testPrepareQueryForLargeResult_SelectAllowed_DeleteRejected() throws SQLException {
-        final TestNoUpdateDao dao = createDao();
+        final TestNonUpdateDao dao = createDao();
 
         // The generated-keys prepareQuery overloads (boolean / int[] / String[]) now live on the full
-        // Dao only, so they are absent from a NoUpdateDao (calling them would be a compile error).
+        // Dao only, so they are absent from a NonUpdateDao (calling them would be a compile error).
         assertNotNull(dao.prepareQueryForLargeResult("SELECT * FROM test"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQueryForLargeResult("DELETE FROM test"));
     }
 
     @Test
     public void testPrepareNamedQuery_StringAndParsedSql() throws SQLException {
-        final TestNoUpdateDao dao = createDao();
+        final TestNonUpdateDao dao = createDao();
 
         assertNotNull(dao.prepareNamedQuery("INSERT INTO test(id) VALUES (:id)"));
         assertNotNull(dao.prepareNamedQuery(ParsedSql.parse("SELECT * FROM test WHERE id = :id")));
@@ -126,7 +126,7 @@ public class NoUpdateDaoTest extends TestBase {
 
     @Test
     public void testPrepareNamedQuery_NullParsedSql_ThrowsIllegalArgument() throws SQLException {
-        final TestNoUpdateDao dao = createDao();
+        final TestNonUpdateDao dao = createDao();
 
         assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null));
         assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQueryForLargeResult((ParsedSql) null));

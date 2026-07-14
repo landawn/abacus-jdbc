@@ -19,7 +19,7 @@ public class SqlLogConfigTest extends TestBase {
 
         assertTrue(config.isEnabled);
         assertEquals(1000, config.maxSqlLogLength);
-        assertEquals(Long.MAX_VALUE, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(Long.MAX_VALUE, config.sqlPerfLogThresholdMillis);
     }
 
     @Test
@@ -31,7 +31,7 @@ public class SqlLogConfigTest extends TestBase {
 
         assertTrue(config.isEnabled);
         assertEquals(JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH, config.maxSqlLogLength);
-        assertEquals(Long.MAX_VALUE, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(Long.MAX_VALUE, config.sqlPerfLogThresholdMillis);
     }
 
     @Test
@@ -43,7 +43,7 @@ public class SqlLogConfigTest extends TestBase {
 
         assertFalse(config.isEnabled);
         assertEquals(JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH, config.maxSqlLogLength);
-        assertEquals(Long.MAX_VALUE, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(Long.MAX_VALUE, config.sqlPerfLogThresholdMillis);
     }
 
     @Test
@@ -55,7 +55,7 @@ public class SqlLogConfigTest extends TestBase {
 
         assertFalse(config.isEnabled);
         assertEquals(2000, config.maxSqlLogLength);
-        assertEquals(5000, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(5000, config.sqlPerfLogThresholdMillis);
     }
 
     @Test
@@ -67,7 +67,7 @@ public class SqlLogConfigTest extends TestBase {
 
         assertFalse(config.isEnabled);
         assertEquals(JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH, config.maxSqlLogLength);
-        assertEquals(1000, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(1000, config.sqlPerfLogThresholdMillis);
     }
 
     @Test
@@ -96,7 +96,7 @@ public class SqlLogConfigTest extends TestBase {
 
         config.set(2000L, 4000);
 
-        assertEquals(2000L, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(2000L, config.sqlPerfLogThresholdMillis);
         assertEquals(4000, config.maxSqlLogLength);
     }
 
@@ -106,7 +106,7 @@ public class SqlLogConfigTest extends TestBase {
 
         config.set(3000L, 0);
 
-        assertEquals(3000L, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(3000L, config.sqlPerfLogThresholdMillis);
         assertEquals(JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH, config.maxSqlLogLength);
     }
 
@@ -116,11 +116,11 @@ public class SqlLogConfigTest extends TestBase {
         SqlLogConfig config = new SqlLogConfig(true, 1000);
         assertTrue(config.isEnabled);
         assertEquals(1000, config.maxSqlLogLength);
-        assertEquals(Long.MAX_VALUE, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(Long.MAX_VALUE, config.sqlPerfLogThresholdMillis);
 
         // Switch to performance logging
         config.set(5000L, 2000);
-        assertEquals(5000L, config.minExecutionTimeForSqlPerfLog);
+        assertEquals(5000L, config.sqlPerfLogThresholdMillis);
         assertEquals(2000, config.maxSqlLogLength);
 
         // Switch back to general logging

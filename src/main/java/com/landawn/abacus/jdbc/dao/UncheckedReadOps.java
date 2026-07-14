@@ -63,7 +63,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
 sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends ReadOps<T, TD>, UncheckedDaoBase<T, TD>
-        permits UncheckedCrudReadOps, UncheckedReadOnlyDao, UncheckedDao, UncheckedNoUpdateDao {
+        permits UncheckedCrudReadOps, UncheckedReadOnlyDao, UncheckedDao, UncheckedNonUpdateDao {
     /**
      * Checks if any records exist that match the specified condition.
      *

@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
@@ -30,7 +31,7 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  * Defines an interceptor handler for DAO methods or entire DAO interfaces.
  * Handlers provide AOP-like functionality to intercept and modify the behavior
  * of DAO method invocations, useful for cross-cutting concerns like logging,
- * performance monitoring, security checks, or result transformation.
+ * performance monitoring, security checks, or inspection/mutation of mutable result objects.
  *
  * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
  *
@@ -84,6 +85,7 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  * @see Jdbc.Handler
  * @see NonDBOperation
  */
+@Documented
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
@@ -121,7 +123,8 @@ public @interface Handler {
      * <ol>
      *   <li>{@code beforeInvoke()} - Before the actual method invocation</li>
      *   <li>Actual DAO method execution</li>
-     *   <li>{@code afterInvoke()} - After the method completes (whether successfully or with an exception)</li>
+     *   <li>{@code afterInvoke()} - After the method completes (whether successfully or with an exception);
+     *       it can observe the result but cannot replace the returned reference</li>
      * </ol>
      *
      * <p>Example handler implementation:</p>

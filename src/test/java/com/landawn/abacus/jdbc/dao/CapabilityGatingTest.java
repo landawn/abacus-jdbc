@@ -26,7 +26,7 @@ import com.landawn.abacus.jdbc.annotation.CacheResult;
 
 /**
  * Behavioral coverage for the capability-based DAO redesign: the {@link DaoUtil#isCacheable} cache-eligibility
- * gate (cache permitted on read-only / no-update DAOs but not on a full {@link Dao}) and the
+ * gate (cache permitted on read-only / non-update DAOs but not on a full {@link Dao}) and the
  * centralized {@code prepareQuery}/{@code prepareNamedQuery} SQL-kind gate enforced by the
  * {@code DaoImpl} proxy for CRUD-level restricted DAOs. Plus structural assertions that lock down the
  * capability composition graph.
@@ -61,7 +61,7 @@ public class CapabilityGatingTest extends TestBase {
     interface RoCrudDao extends ReadOnlyCrudDao<Account, Long, RoCrudDao> {
     }
 
-    interface NuCrudDao extends NoUpdateCrudDao<Account, Long, NuCrudDao> {
+    interface NuCrudDao extends NonUpdateCrudDao<Account, Long, NuCrudDao> {
     }
 
     @CacheResult
@@ -69,7 +69,7 @@ public class CapabilityGatingTest extends TestBase {
     }
 
     @CacheResult
-    interface CachedNoUpdateDao extends NoUpdateDao<Account, CachedNoUpdateDao> {
+    interface CachedNonUpdateDao extends NonUpdateDao<Account, CachedNonUpdateDao> {
     }
 
     @CacheResult
@@ -99,9 +99,9 @@ public class CapabilityGatingTest extends TestBase {
     public void testCacheEligibilityGate() {
         // The gate accepts exactly the read-restricted roots and their variants; every restricted DAO
         // is therefore cacheable, while a full Dao is not.
-        assertTrue(DaoUtil.isCacheable(NoUpdateDao.class));
+        assertTrue(DaoUtil.isCacheable(NonUpdateDao.class));
         assertTrue(DaoUtil.isCacheable(ReadOnlyDao.class));
-        assertTrue(DaoUtil.isCacheable(NoUpdateCrudDao.class));
+        assertTrue(DaoUtil.isCacheable(NonUpdateCrudDao.class));
         assertTrue(DaoUtil.isCacheable(ReadOnlyCrudDao.class));
         assertTrue(DaoUtil.isCacheable(UncheckedReadOnlyDao.class));
         assertFalse(DaoUtil.isCacheable(Dao.class));
@@ -109,9 +109,9 @@ public class CapabilityGatingTest extends TestBase {
     }
 
     @Test
-    public void testCacheAllowedOnReadOnlyAndNoUpdateDao() throws SQLException {
+    public void testCacheAllowedOnReadOnlyAndNonUpdateDao() throws SQLException {
         assertDoesNotThrow(() -> JdbcUtil.createDao(CachedReadOnlyDao.class, newDataSource()));
-        assertDoesNotThrow(() -> JdbcUtil.createDao(CachedNoUpdateDao.class, newDataSource()));
+        assertDoesNotThrow(() -> JdbcUtil.createDao(CachedNonUpdateDao.class, newDataSource()));
     }
 
     @Test
@@ -135,7 +135,7 @@ public class CapabilityGatingTest extends TestBase {
     }
 
     @Test
-    public void testNoUpdateCrudDao_PrepareGate() throws SQLException {
+    public void testNonUpdateCrudDao_PrepareGate() throws SQLException {
         final NuCrudDao dao = JdbcUtil.createDao(NuCrudDao.class, newDataSource());
 
         assertNotNull(dao.prepareQuery("SELECT * FROM account"));
@@ -181,11 +181,11 @@ public class CapabilityGatingTest extends TestBase {
         assertTrue(CrudInsertOps.class.isAssignableFrom(CrudDao.class));
         assertTrue(CrudUpdateOps.class.isAssignableFrom(CrudDao.class));
         assertTrue(CrudDeleteOps.class.isAssignableFrom(CrudDao.class));
-        // NoUpdateCrudDao keeps read + insert (crud), not update/delete (crud).
-        assertTrue(CrudReadOps.class.isAssignableFrom(NoUpdateCrudDao.class));
-        assertTrue(CrudInsertOps.class.isAssignableFrom(NoUpdateCrudDao.class));
-        assertFalse(CrudUpdateOps.class.isAssignableFrom(NoUpdateCrudDao.class));
-        assertFalse(CrudDeleteOps.class.isAssignableFrom(NoUpdateCrudDao.class));
+        // NonUpdateCrudDao keeps read + insert (crud), not update/delete (crud).
+        assertTrue(CrudReadOps.class.isAssignableFrom(NonUpdateCrudDao.class));
+        assertTrue(CrudInsertOps.class.isAssignableFrom(NonUpdateCrudDao.class));
+        assertFalse(CrudUpdateOps.class.isAssignableFrom(NonUpdateCrudDao.class));
+        assertFalse(CrudDeleteOps.class.isAssignableFrom(NonUpdateCrudDao.class));
         // ReadOnlyCrudDao keeps read (crud) only.
         assertTrue(CrudReadOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
         assertFalse(CrudInsertOps.class.isAssignableFrom(ReadOnlyCrudDao.class));

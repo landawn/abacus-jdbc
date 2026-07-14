@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -42,7 +43,7 @@ import com.landawn.abacus.annotation.Beta;
  * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
  *
  * <p>Note: caching (and therefore cache invalidation) is only supported on cacheable DAOs
- * ({@code NoUpdateDao}/{@code ReadOnlyDao} families), whose only write operations are the built-in
+ * ({@code NonUpdateDao}/{@code ReadOnlyDao} families), whose only write operations are the built-in
  * insert/save methods and custom {@code INSERT} queries — a custom {@code UPDATE}/{@code DELETE}
  * {@code @Query} fails DAO initialization on such DAOs.</p>
  *
@@ -50,7 +51,7 @@ import com.landawn.abacus.annotation.Beta;
  * <pre>{@code
  * @Cache(capacity = 1000)
  * @RefreshCache                                   // type-level: defaults cover insert/save/...
- * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
+ * public interface ProductDao extends NonUpdateCrudDao<Product, Long, ProductDao> {
  *
  *     @CacheResult(enabled = true, maxLiveTimeMillis = 600_000)
  *     @Query("SELECT * FROM product WHERE id = :id")
@@ -70,6 +71,7 @@ import com.landawn.abacus.annotation.Beta;
  * @see Cache
  * @see CacheResult
  */
+@Documented
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
@@ -91,7 +93,7 @@ public @interface RefreshCache {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @RefreshCache
-     * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
+     * public interface UserDao extends NonUpdateCrudDao<User, Long, UserDao> {
      *     @Query("INSERT INTO user_activity_log (user_id) VALUES (:id)")
      *     @RefreshCache(enabled = false) // Don't refresh cache for this frequent insert
      *     void logActivity(@Bind("id") long id) throws SQLException;

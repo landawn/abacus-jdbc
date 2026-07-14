@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -30,10 +31,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * elapsed time is measured with the monotonic {@code System.nanoTime()} clock and reported in
  * milliseconds. A log entry is emitted only when:</p>
  * <ul>
- *   <li>The SQL portion of the call exceeded {@link #sqlLogThresholdMillis()} milliseconds — the
+ *   <li>The SQL portion of the call exceeded {@link #sqlPerfLogThresholdMillis()} milliseconds — the
  *       statement text (capped at {@link #maxSqlLogLength()} characters) is logged at INFO level
  *       (as a {@code [SQL-PERF]} entry on the SQL logger).</li>
- *   <li>The whole DAO-method invocation exceeded {@link #daoMethodLogThresholdMillis()} ms —
+ *   <li>The whole DAO-method invocation exceeded {@link #daoMethodPerfLogThresholdMillis()} ms —
  *       the method name and total elapsed time are logged.</li>
  * </ul>
  *
@@ -47,12 +48,12 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Type-level: every method in the DAO is monitored, with a relaxed 5-second budget.
- * @PerfLog(sqlLogThresholdMillis = 1000,
- *          daoMethodLogThresholdMillis = 5000)
+ * @PerfLog(sqlPerfLogThresholdMillis = 1000,
+ *          daoMethodPerfLogThresholdMillis = 5000)
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *
  *     // Method-level override: this hot path uses a tighter threshold and shorter logs.
- *     @PerfLog(sqlLogThresholdMillis = 100,
+ *     @PerfLog(sqlPerfLogThresholdMillis = 100,
  *              maxSqlLogLength = 200)
  *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(@Bind("id") Long id) throws SQLException;
@@ -70,31 +71,15 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see SqlLogEnabled
  * @see JdbcUtil
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 public @interface PerfLog {
 
     /**
-     * Specifies the minimum execution time threshold (in milliseconds) for logging SQL performance.
-     * SQL statements that execute faster than this threshold will not be logged.
-     *
-     * <p>This helps filter out fast queries and focus on potentially problematic slow queries.
-     * Set a lower value to capture more queries or a higher value to only log the slowest ones.</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * @PerfLog(sqlLogThresholdMillis = 200) // Log SQLs taking 200ms or more
-     * List<User> findActiveUsers();
-     * }</pre>
-     *
-     * @return the minimum execution time in milliseconds for SQL logging; defaults to
-     *         {@link JdbcUtil#DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG} (1000 ms)
-     */
-    long sqlLogThresholdMillis() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG; // 1000
-
-    /**
      * Specifies the maximum length of SQL statements in performance logs.
      * SQL statements longer than this limit will be truncated to prevent excessive log sizes.
+     * A non-positive value falls back to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}.
      *
      * <p>This is useful for maintaining readable logs when dealing with complex queries
      * or queries with large parameter lists.</p>
@@ -111,22 +96,42 @@ public @interface PerfLog {
     int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 
     /**
-     * Specifies the minimum execution time threshold (in milliseconds) for logging DAO method performance.
-     * DAO operations that complete faster than this threshold will not be logged.
+     * Specifies the minimum execution time threshold (in milliseconds) for logging SQL performance.
+     * SQL statements that execute faster than this threshold will not be logged.
      *
-     * <p>This threshold is typically set higher than {@link #sqlLogThresholdMillis()} since DAO operations
-     * may include multiple SQL executions, result processing, and business logic.</p>
+     * <p>This helps filter out fast queries and focus on potentially problematic slow queries.
+     * Set a lower value to capture more queries or a higher value to only log the slowest ones.
+     * A negative value disables SQL performance logging for the annotated scope.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @PerfLog(daoMethodLogThresholdMillis = 5000) // Log operations taking 5 seconds or more
+     * @PerfLog(sqlPerfLogThresholdMillis = 200) // Log SQLs taking 200ms or more
+     * List<User> findActiveUsers();
+     * }</pre>
+     *
+     * @return the minimum execution time in milliseconds for SQL logging; defaults to
+     *         {@link JdbcUtil#DEFAULT_PERF_LOG_THRESHOLD_MILLIS} (1000 ms)
+     */
+    long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS; // 1000
+
+    /**
+     * Specifies the minimum execution time threshold (in milliseconds) for logging DAO method performance.
+     * DAO operations that complete faster than this threshold will not be logged.
+     *
+     * <p>This threshold is typically set higher than {@link #sqlPerfLogThresholdMillis()} since DAO operations
+     * may include multiple SQL executions, result processing, and business logic. A negative value
+     * disables DAO-method performance logging for the annotated scope.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * @PerfLog(daoMethodPerfLogThresholdMillis = 5000) // Log operations taking 5 seconds or more
      * void processLargeBatchUpdate(List<Order> orders);
      * }</pre>
      *
      * @return the minimum execution time in milliseconds for DAO operation logging; defaults to
-     *         {@link JdbcUtil#DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG} (3000 ms)
+     *         {@link JdbcUtil#DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS} (3000 ms)
      */
-    long daoMethodLogThresholdMillis() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000
+    long daoMethodPerfLogThresholdMillis() default JdbcUtil.DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS; // 3000
 
     /**
      * Specifies the type-level method-name filter.

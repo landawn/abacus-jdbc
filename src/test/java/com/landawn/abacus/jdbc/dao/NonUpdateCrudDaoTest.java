@@ -10,36 +10,31 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-public class UncheckedNoUpdateCrudDaoTest extends TestBase {
+public class NonUpdateCrudDaoTest extends TestBase {
 
-    private interface DummyUncheckedNoUpdateCrudDao extends UncheckedNoUpdateCrudDao<Object, String, DummyUncheckedNoUpdateCrudDao> {
+    private interface DummyNonUpdateCrudDao extends NonUpdateCrudDao<Object, String, DummyNonUpdateCrudDao> {
     }
 
-    private final DummyUncheckedNoUpdateCrudDao dao = createDefaultMethodProxy(DummyUncheckedNoUpdateCrudDao.class);
+    private final DummyNonUpdateCrudDao dao = createDefaultMethodProxy(DummyNonUpdateCrudDao.class);
 
     @Test
     public void testIsInterface() {
-        assertTrue(UncheckedNoUpdateCrudDao.class.isInterface());
+        assertTrue(NonUpdateCrudDao.class.isInterface());
     }
 
     @Test
-    public void testExtendsUncheckedNoUpdateDao() {
-        assertTrue(UncheckedNoUpdateDao.class.isAssignableFrom(UncheckedNoUpdateCrudDao.class));
+    public void testExtendsNonUpdateDao() {
+        assertTrue(NonUpdateDao.class.isAssignableFrom(NonUpdateCrudDao.class));
     }
 
     @Test
-    public void testExtendsNoUpdateCrudDao() {
-        assertTrue(NoUpdateCrudDao.class.isAssignableFrom(UncheckedNoUpdateCrudDao.class));
-    }
-
-    @Test
-    public void testExtendsUncheckedCrudDao() {
-        assertTrue(UncheckedCrudReadOps.class.isAssignableFrom(UncheckedNoUpdateCrudDao.class));
+    public void testExtendsCrudDao() {
+        assertTrue(CrudReadOps.class.isAssignableFrom(NonUpdateCrudDao.class));
     }
 
     @Test
     public void testTypeParameterCount() {
-        assertEquals(3, UncheckedNoUpdateCrudDao.class.getTypeParameters().length);
+        assertEquals(3, NonUpdateCrudDao.class.getTypeParameters().length);
     }
 
     @SuppressWarnings("unchecked")

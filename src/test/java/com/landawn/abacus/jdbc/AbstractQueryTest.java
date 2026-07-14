@@ -36,6 +36,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -64,6 +68,28 @@ public class AbstractQueryTest extends TestBase {
     static final class TestQuery extends AbstractQuery<PreparedStatement, TestQuery> {
         TestQuery(final PreparedStatement stmt) {
             super(stmt);
+        }
+    }
+
+    static final class CoordinatedCloseQuery extends AbstractQuery<PreparedStatement, CoordinatedCloseQuery> {
+        final CountDownLatch stateChecked = new CountDownLatch(1);
+        final CountDownLatch continueRegistration = new CountDownLatch(1);
+
+        CoordinatedCloseQuery(final PreparedStatement stmt) {
+            super(stmt);
+        }
+
+        @Override
+        void assertNotClosed() {
+            super.assertNotClosed();
+            stateChecked.countDown();
+
+            try {
+                continueRegistration.await();
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
+            }
         }
     }
 
@@ -539,6 +565,20 @@ public class AbstractQueryTest extends TestBase {
         assertTrue(iae.getMessage().contains("someArg"));
         assertEquals(1, iae.getSuppressed().length);
         assertSame(closeEx, iae.getSuppressed()[0]);
+    }
+
+    @Test
+    public void testCheckArgNotNull_CloseHandlerThrowsError_SuppressedException() {
+        final AssertionError closeError = new AssertionError("close handler failed");
+        query.onClose(() -> {
+            throw closeError;
+        });
+
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArgNotNull(null, "someArg"));
+
+        assertTrue(iae.getMessage().contains("someArg"));
+        assertEquals(1, iae.getSuppressed().length);
+        assertSame(closeError, iae.getSuppressed()[0]);
     }
 
     @Test
@@ -1777,5 +1817,78 @@ public class AbstractQueryTest extends TestBase {
 
         // checkArgNotNull closed the query, so the same call now reports the closed state.
         assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
+    }
+
+    @Test
+    public void testOnCloseRegistrationCannotRacePastClose() throws Exception {
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final CoordinatedCloseQuery coordinatedQuery = new CoordinatedCloseQuery(stmt);
+        final AtomicInteger closeCalls = new AtomicInteger();
+        final Thread registration = new Thread(() -> coordinatedQuery.onClose(closeCalls::incrementAndGet), "query-close-handler-registration");
+
+        registration.start();
+        assertTrue(coordinatedQuery.stateChecked.await(1, TimeUnit.SECONDS));
+
+        final Thread closer = new Thread(coordinatedQuery::close, "query-close");
+        closer.start();
+
+        // The synchronized registration section holds the same monitor used by close() until the callback has
+        // been linked. The pre-fix implementation let close() finish here and then installed a
+        // callback into an already-closed query, so the callback was permanently lost.
+        final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (closer.isAlive() && closer.getState() != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+            Thread.yield();
+        }
+
+        coordinatedQuery.continueRegistration.countDown();
+        registration.join(TimeUnit.SECONDS.toMillis(1));
+        closer.join(TimeUnit.SECONDS.toMillis(1));
+
+        assertFalse(registration.isAlive());
+        assertFalse(closer.isAlive());
+        assertEquals(1, closeCalls.get());
+        verify(stmt).close();
+    }
+
+    @Test
+    public void testNullOnCloseDoesNotRunCloseHandlersUnderQueryMonitor() {
+        final CountDownLatch registrationFinished = new CountDownLatch(1);
+        final AtomicReference<Throwable> registrationFailure = new AtomicReference<>();
+
+        query.onClose(() -> {
+            final Thread registration = new Thread(() -> {
+                try {
+                    assertThrows(IllegalStateException.class, () -> query.onClose(() -> {
+                    }));
+                } catch (final Throwable e) {
+                    registrationFailure.set(e);
+                } finally {
+                    registrationFinished.countDown();
+                }
+            }, "registration-from-close-handler");
+
+            registration.start();
+
+            try {
+                assertTrue(registrationFinished.await(1, TimeUnit.SECONDS), "close handler must not hold the monitor needed by another lifecycle call");
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
+            }
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> query.onClose(null));
+        assertTrue(query.isClosed);
+        assertNull(registrationFailure.get());
+    }
+
+    @Test
+    public void testCloseReleasesCapturedHandlerChain() {
+        query.onClose(() -> {
+        });
+
+        query.close();
+
+        assertNull(query.closeHandler);
     }
 }

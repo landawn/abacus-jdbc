@@ -67,7 +67,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see Dao
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> permits UncheckedReadOps, CrudReadOps, ReadOnlyDao, Dao, NoUpdateDao {
+sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> permits UncheckedReadOps, CrudReadOps, ReadOnlyDao, Dao, NonUpdateDao {
 
     /**
      * Checks if at least one record exists that matches the specified condition.

@@ -27,7 +27,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * unchecked parents throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}.
  * Inherited methods that are not redeclared keep their checked-exception contract.</p>
  *
- * <p>This interface extends {@link UncheckedNoUpdateDao}, {@link NoUpdateCrudDao}, {@link UncheckedCrudReadOps}
+ * <p>This interface extends {@link UncheckedNonUpdateDao}, {@link NonUpdateCrudDao}, {@link UncheckedCrudReadOps}
  * and {@link UncheckedCrudInsertOps} to provide comprehensive read/insert functionality while blocking update
  * and delete operations. It's particularly useful in audit systems, append-only data stores, or scenarios where
  * historical data must remain immutable.</p>
@@ -42,7 +42,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface AuditLogDao extends UncheckedNoUpdateCrudDao<AuditLog, Long, AuditLogDao> {
+ * public interface AuditLogDao extends UncheckedNonUpdateCrudDao<AuditLog, Long, AuditLogDao> {
  *     // Only read and insert operations available
  * }
  *
@@ -80,14 +80,14 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * @param <T> the entity type managed by this DAO
  * @param <ID> the type of the entity's primary key
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
- * @see UncheckedNoUpdateDao
- * @see NoUpdateCrudDao
+ * @see UncheckedNonUpdateDao
+ * @see NonUpdateCrudDao
  * @see UncheckedCrudReadOps
  * @see UncheckedCrudInsertOps
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface UncheckedNoUpdateCrudDao<T, ID, TD extends UncheckedNoUpdateCrudDao<T, ID, TD>>
-        extends UncheckedCrudReadOps<T, ID, TD>, UncheckedCrudInsertOps<T, ID, TD>, UncheckedNoUpdateDao<T, TD>, NoUpdateCrudDao<T, ID, TD> {
+public non-sealed interface UncheckedNonUpdateCrudDao<T, ID, TD extends UncheckedNonUpdateCrudDao<T, ID, TD>>
+        extends UncheckedCrudReadOps<T, ID, TD>, UncheckedCrudInsertOps<T, ID, TD>, UncheckedNonUpdateDao<T, TD>, NonUpdateCrudDao<T, ID, TD> {
 
 }

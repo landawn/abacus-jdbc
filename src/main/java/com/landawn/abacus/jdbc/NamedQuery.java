@@ -64,14 +64,17 @@ import com.landawn.abacus.util.N;
  * keys are not named parameters.
  *
  * <p>The backing {@code PreparedStatement} is closed by default
- * after any execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
+ * after materializing execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
  * {@code findFirst}, {@code findOnlyOne}, {@code list}, {@code execute}, and similar),
  * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
+ * Lazy streams retain the statement until the stream is closed, and asynchronous operations retain
+ * it until the task completes.
  *
  * <p>In general, do not cache or reuse the instance of this class,
  * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
  *
- * <p>The {@code ResultSet} returned by query will always be closed after execution, even if {@code closeAfterExecution} flag is set to {@code false}.
+ * <p>Result sets consumed by materializing query methods are always closed after extraction, even if
+ * the {@code closeAfterExecution} flag is set to {@code false}.
  *
  * <p>Remember: when using positional methods inherited from {@link AbstractQuery}, parameter/column
  * indexes in {@link PreparedStatement}/{@link java.sql.ResultSet} start from 1, not 0.
@@ -3865,6 +3868,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * query.setParameters(params);
      * }</pre>
+     *
+     * <p>Entries whose keys are not present in the SQL are ignored. SQL parameters absent from the map
+     * are left unchanged, allowing several calls to bind disjoint subsets.</p>
      *
      * @param parameters a map containing parameter names (without the ':' prefix) as keys and their values
      * @return this NamedQuery instance for method chaining

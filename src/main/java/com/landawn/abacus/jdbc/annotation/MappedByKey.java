@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -75,6 +76,7 @@ import java.util.Map;
  *
  * @see MergedById
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
 public @interface MappedByKey {
@@ -103,7 +105,10 @@ public @interface MappedByKey {
 
     /**
      * Specifies the Map implementation class to use for the result.
-     * The class must have a no-argument constructor.
+     * The class must be concrete, have a no-argument constructor, and be assignable to the DAO
+     * method's declared return type. For example, a method returning {@code LinkedHashMap} must
+     * explicitly select {@code LinkedHashMap.class}; the default {@link HashMap} is only compatible
+     * with return types that can accept a {@code HashMap}, such as {@code Map} or {@code HashMap}.
      *
      * <p>Common implementations:</p>
      * <ul>

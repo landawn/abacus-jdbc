@@ -130,13 +130,13 @@ public class DaoTest extends TestBase {
     }
 
     @Test
-    public void testAsyncCall_UsesCurrentDao() throws Exception {
+    public void testCallAsync_UsesCurrentDao() throws Exception {
         TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
         Executor executor = Runnable::run;
 
         when(dao.executor()).thenReturn(executor);
 
-        TestDao result = dao.asyncCall(it -> it).getNow(null);
+        TestDao result = dao.callAsync(it -> it).getNow(null);
 
         assertSame(dao, result);
     }
@@ -221,12 +221,12 @@ public class DaoTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRun_WithExplicitExecutor() {
+    public void testRunAsync_WithExplicitExecutor() {
         final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
         final Executor executor = Runnable::run;
         final Object[] observed = new Object[1];
 
-        assertDoesNotThrow(() -> dao.asyncRun(it -> observed[0] = it, executor).get());
+        assertDoesNotThrow(() -> dao.runAsync(it -> observed[0] = it, executor).get());
         assertSame(dao, observed[0]);
     }
 
@@ -493,13 +493,13 @@ public class DaoTest extends TestBase {
     }
 
     @Test
-    public void testAsyncRun_UsesDefaultExecutor() throws Exception {
+    public void testRunAsync_UsesDefaultExecutor() throws Exception {
         final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
 
         when(dao.executor()).thenReturn(Runnable::run);
 
         final boolean[] ran = { false };
-        dao.asyncRun(d -> ran[0] = true).get();
+        dao.runAsync(d -> ran[0] = true).get();
 
         assertTrue(ran[0]);
     }

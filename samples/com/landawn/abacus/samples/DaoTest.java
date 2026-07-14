@@ -84,9 +84,7 @@ public class DaoTest {
 
         List<Long> ids = userDao.batchInsertWithId(users);
 
-        JdbcUtil.openDaoCacheOnCurrentThread();
-
-        try {
+        try (JdbcUtil.DaoCacheScope ignored = JdbcUtil.openDaoCacheScope()) {
             assertEquals(users.size(), ids.size());
 
             final List<User> users2 = userDao.batchGet(ids);
@@ -100,8 +98,6 @@ public class DaoTest {
 
             N.println("Time with local thread cache: " + (System.currentTimeMillis() - start));
 
-        } finally {
-            JdbcUtil.closeDaoCacheOnCurrentThread();
         }
 
         final List<User> users2 = userDao.batchGet(ids);
@@ -593,7 +589,7 @@ public class DaoTest {
                 if (idx % 2 == 0) {
                     System.out.println("###: enable log for Thread: " + Thread.currentThread());
                     JdbcUtil.enableSqlLog();
-                    JdbcUtil.sqlLogThresholdMillis(0);
+                    JdbcUtil.setSqlPerfLogThresholdMillis(0);
                 } else {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
                 }
@@ -608,7 +604,7 @@ public class DaoTest {
                 if (idx % 2 == 0) {
                     System.out.println("###: disable log for Thread: " + Thread.currentThread());
                     JdbcUtil.disableSqlLog();
-                    JdbcUtil.sqlLogThresholdMillis(-1);
+                    JdbcUtil.setSqlPerfLogThresholdMillis(-1);
                 }
             }
         });

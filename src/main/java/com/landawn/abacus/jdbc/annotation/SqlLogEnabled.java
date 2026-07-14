@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -61,6 +62,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see PerfLog
  * @see JdbcUtil
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 public @interface SqlLogEnabled {
@@ -100,6 +102,7 @@ public @interface SqlLogEnabled {
      * Specifies the maximum length of SQL statements in logs.
      * SQL statements longer than this limit will be truncated to prevent excessive log sizes.
      * This setting only has an effect when SQL logging is enabled via {@link #value()}.
+     * A non-positive value falls back to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}.
      *
      * <p>This is particularly useful when dealing with:</p>
      * <ul>

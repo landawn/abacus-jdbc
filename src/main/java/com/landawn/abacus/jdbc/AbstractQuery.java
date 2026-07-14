@@ -44,7 +44,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -66,6 +69,7 @@ import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
+import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
@@ -108,10 +112,10 @@ import com.landawn.abacus.util.stream.Stream;
  * {@code closeAfterExecution(false)}. If {@code closeAfterExecution(false)} is not called,
  * there is no need to place the {@code AbstractQuery} instance in a try-with-resources block for closure.</p>
  *
- * <p>The {@code stream(...)}/{@code streamAllResultSets(...)} and {@code asyncCall}/{@code asyncRun} families are
- * exceptions to the close-immediately rule: they keep the underlying statement and {@code ResultSet} open until the
- * returned {@code Stream} is closed (or the async task completes), so those results must be consumed in a
- * try-with-resources block.</p>
+ * <p>The {@code stream(...)}/{@code streamAllResultSets(...)} and {@code callAsync}/{@code runAsync} families are
+ * exceptions to the close-immediately rule. A stream retains its JDBC resources until it is closed and therefore
+ * must be used in a try-with-resources block. An asynchronous operation retains them until its task completes (or is
+ * cancelled before starting); the returned future itself does not need to be closed.</p>
  *
  * <p>In general, do not cache or reuse instances of this class unless
  * {@code closeAfterExecution(false)} has been explicitly called.</p>
@@ -261,9 +265,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>This is useful for cleaning up resources that were created for this query.</p>
      *
-     * <p><b>Not thread-safe:</b> register close handlers only from the thread that owns this query.
-     * The handler chain is updated with a plain read-modify-write, so concurrent {@code onClose} calls
-     * are not synchronized and may drop a handler.</p>
+     * <p>Registration is atomic with respect to other registrations and {@link #close()}: a handler
+     * accepted by this method is guaranteed to be included in the close chain. This guarantee only
+     * covers lifecycle coordination; the query and its JDBC statement are otherwise not designed for
+     * concurrent parameter binding or execution.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -278,23 +283,32 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("hiding")
     public This onClose(final Runnable closeHandler) throws IllegalStateException, IllegalArgumentException {
-        assertNotClosed();
-        checkArgNotNull(closeHandler, cs.closeHandler);
+        synchronized (this) {
+            assertNotClosed();
 
-        if (this.closeHandler == null) {
-            this.closeHandler = closeHandler;
-        } else {
-            final Runnable tmp = this.closeHandler;
+            if (closeHandler != null) {
+                if (this.closeHandler == null) {
+                    this.closeHandler = closeHandler;
+                } else {
+                    final Runnable tmp = this.closeHandler;
 
-            this.closeHandler = () -> {
-                try {
-                    closeHandler.run();
-                } finally {
-                    tmp.run();
+                    this.closeHandler = () -> {
+                        try {
+                            closeHandler.run();
+                        } finally {
+                            tmp.run();
+                        }
+                    };
                 }
-            };
+
+                return (This) this;
+            }
         }
 
+        // checkArgNotNull closes the query before throwing. Run that cleanup outside the
+        // monitor: close handlers are user code and may call lifecycle methods from another
+        // thread, which would otherwise deadlock waiting for this method's monitor.
+        checkArgNotNull(closeHandler, cs.closeHandler);
         return (This) this;
     }
 
@@ -9878,13 +9892,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
      * is completed by another thread. Ensure proper resource management and avoid keeping
-     * connections open longer than necessary.</p>
+     * connections open longer than necessary. The action must return a materialized value;
+     * do not return a JDBC-backed lazy {@link Stream}, because this query is closed when the
+     * asynchronous action itself completes.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<User>> future = preparedQuery
      *     .setInt(1, departmentId)
-     *     .asyncCall(query -> query.list(User.class));
+     *     .callAsync(query -> query.list(User.class));
      *
      * // Do other work while query executes
      *
@@ -9896,11 +9912,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the result of the asynchronous execution
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if the provided SQL action is null
-     * @see #asyncCall(Throwables.Function, Executor)
-     * @see #asyncRun(Throwables.Consumer)
+     * @see #callAsync(Throwables.Function, Executor)
+     * @see #runAsync(Throwables.Consumer)
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction)
+    public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction)
             throws IllegalStateException, IllegalArgumentException {
         assertNotClosed();
         checkArgNotNull(sqlAction, cs.sqlAction);
@@ -9908,13 +9924,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         final This q = (This) this;
 
         try {
-            return JdbcUtil.asyncExecutor.execute(() -> {
-                try {
-                    return sqlAction.apply(q);
-                } finally {
-                    closeAfterExecutionIfAllowed();
-                }
-            });
+            return submitAsyncTask(() -> sqlAction.apply(q), JdbcUtil.asyncExecutor.getExecutor());
         } catch (final RuntimeException | Error e) {
             closeAfterFailedAsyncSubmission(e);
             throw e;
@@ -9929,7 +9939,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
      * is completed by another thread. Ensure the executor has appropriate thread pool settings
-     * to avoid resource exhaustion.</p>
+     * to avoid resource exhaustion. The action must return a materialized value; do not return
+     * a JDBC-backed lazy {@link Stream}, because this query is closed when the asynchronous
+     * action itself completes.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9938,7 +9950,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * ContinuableFuture<Integer> future = preparedQuery
      *     .setString(1, "INACTIVE")
      *     .setDate(2, sixMonthsAgo)
-     *     .asyncCall(query -> query.update(), customExecutor);
+     *     .callAsync(query -> query.update(), customExecutor);
      *
      * future.thenAccept(count ->
      *     System.out.println("Updated " + count + " inactive users")
@@ -9951,11 +9963,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the result of the asynchronous execution
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if sqlAction or executor is null
-     * @see #asyncCall(Throwables.Function)
-     * @see #asyncRun(Throwables.Consumer)
+     * @see #callAsync(Throwables.Function)
+     * @see #runAsync(Throwables.Consumer)
      */
     @Beta
-    public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor)
+    public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor)
             throws IllegalStateException, IllegalArgumentException {
         assertNotClosed();
         checkArgNotNull(sqlAction, cs.sqlAction);
@@ -9964,13 +9976,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         final This q = (This) this;
 
         try {
-            return ContinuableFuture.call(() -> {
-                try {
-                    return sqlAction.apply(q);
-                } finally {
-                    closeAfterExecutionIfAllowed();
-                }
-            }, executor);
+            return submitAsyncTask(() -> sqlAction.apply(q), executor);
         } catch (final RuntimeException | Error e) {
             closeAfterFailedAsyncSubmission(e);
             throw e;
@@ -9980,7 +9986,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Asynchronously executes the provided SQL action without returning a result.
      *
-     * <p>This method is similar to {@link #asyncCall(Throwables.Function)} but for operations that
+     * <p>This method is similar to {@link #callAsync(Throwables.Function)} but for operations that
      * don't return a value (void operations). Useful for INSERT, UPDATE, DELETE operations
      * where you only care about completion, not the result.</p>
      *
@@ -9992,7 +9998,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * ContinuableFuture<Void> future = preparedQuery
      *     .setString(1, "Processing")
      *     .setLong(2, batchId)
-     *     .asyncRun(query -> {
+     *     .runAsync(query -> {
      *         int updated = query.update();
      *         logger.info("Updated {} records for batch {}", updated, batchId);
      *     });
@@ -10005,11 +10011,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the completion of the asynchronous execution
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if the provided SQL action is null
-     * @see #asyncRun(Throwables.Consumer, Executor)
-     * @see #asyncCall(Throwables.Function)
+     * @see #runAsync(Throwables.Consumer, Executor)
+     * @see #callAsync(Throwables.Function)
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction)
+    public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction)
             throws IllegalStateException, IllegalArgumentException {
         assertNotClosed();
         checkArgNotNull(sqlAction, cs.sqlAction);
@@ -10017,13 +10023,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         final This q = (This) this;
 
         try {
-            return JdbcUtil.asyncExecutor.execute(() -> {
-                try {
-                    sqlAction.accept(q);
-                } finally {
-                    closeAfterExecutionIfAllowed();
-                }
-            });
+            return submitAsyncTask(() -> {
+                sqlAction.accept(q);
+                return null;
+            }, JdbcUtil.asyncExecutor.getExecutor());
         } catch (final RuntimeException | Error e) {
             closeAfterFailedAsyncSubmission(e);
             throw e;
@@ -10033,7 +10036,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Asynchronously executes the provided SQL action without returning a result using a custom executor.
      *
-     * <p>This method is similar to {@link #asyncRun(Throwables.Consumer)} but allows specification of
+     * <p>This method is similar to {@link #runAsync(Throwables.Consumer)} but allows specification of
      * a custom executor for the asynchronous operation.</p>
      *
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
@@ -10045,7 +10048,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * ContinuableFuture<Void> future = preparedQuery
      *     .setTimestamp(1, new Timestamp(System.currentTimeMillis()))
-     *     .asyncRun(query -> {
+     *     .runAsync(query -> {
      *         query.batchUpdate();
      *         // Send notification after batch completes
      *         notificationService.sendBatchComplete();
@@ -10057,11 +10060,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the completion of the asynchronous execution
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if sqlAction or executor is null
-     * @see #asyncRun(Throwables.Consumer)
-     * @see #asyncCall(Throwables.Function)
+     * @see #runAsync(Throwables.Consumer)
+     * @see #callAsync(Throwables.Function)
      */
     @Beta
-    public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor)
+    public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor)
             throws IllegalStateException, IllegalArgumentException {
         assertNotClosed();
         checkArgNotNull(sqlAction, cs.sqlAction);
@@ -10070,16 +10073,72 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         final This q = (This) this;
 
         try {
-            return ContinuableFuture.run(() -> {
-                try {
-                    sqlAction.accept(q);
-                } finally {
-                    closeAfterExecutionIfAllowed();
-                }
+            return submitAsyncTask(() -> {
+                sqlAction.accept(q);
+                return null;
             }, executor);
         } catch (final RuntimeException | Error e) {
             closeAfterFailedAsyncSubmission(e);
             throw e;
+        }
+    }
+
+    private <R> ContinuableFuture<R> submitAsyncTask(final Callable<? extends R> action, final Executor executor) {
+        final Object startLock = new Object();
+        final AtomicBoolean actionStarted = new AtomicBoolean();
+        final AtomicBoolean cancelledBeforeStart = new AtomicBoolean();
+        final FutureTask<R> futureTask = new FutureTask<>(() -> {
+            synchronized (startLock) {
+                if (cancelledBeforeStart.get()) {
+                    // Cancellation won the race after FutureTask decided to invoke its Callable
+                    // but before this body began. FutureTask will ignore this return value.
+                    return null;
+                }
+
+                actionStarted.set(true);
+            }
+
+            try {
+                return action.call();
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
+        }) {
+            @Override
+            protected void done() {
+                // FutureTask does not invoke its Callable when it is cancelled before run().
+                // In that case the task-body finally block above cannot release the statement.
+                boolean requiresCleanup = false;
+
+                synchronized (startLock) {
+                    if (!actionStarted.get()) {
+                        cancelledBeforeStart.set(true);
+                        requiresCleanup = true;
+                    }
+                }
+
+                if (requiresCleanup) {
+                    try {
+                        closeAfterExecutionIfAllowed();
+                    } catch (final RuntimeException | Error e) {
+                        // cancel() has no failure channel for cleanup. Do not let a user close
+                        // handler make Future.cancel unexpectedly throw after cancellation won.
+                        logger.error(e, "Failed to close Query after asynchronous task cancellation");
+                    }
+                }
+            }
+        };
+
+        return new FutureTaskAsyncExecutor(executor).executeTask(futureTask);
+    }
+
+    private static final class FutureTaskAsyncExecutor extends AsyncExecutor {
+        FutureTaskAsyncExecutor(final Executor executor) {
+            super(executor);
+        }
+
+        <R> ContinuableFuture<R> executeTask(final FutureTask<? extends R> task) {
+            return super.execute(task);
         }
     }
 
@@ -10141,6 +10200,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             isClosed = true;
             localCloseHandler = closeHandler;
+            closeHandler = null;
         }
 
         if (localCloseHandler == null) {
@@ -10282,7 +10342,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             try {
                 close();
-            } catch (final Exception e) {
+            } catch (final RuntimeException | Error e) {
                 logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }
@@ -10307,7 +10367,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             try {
                 close();
-            } catch (final Exception e) {
+            } catch (final RuntimeException | Error e) {
                 logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }
@@ -10332,7 +10392,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             try {
                 close();
-            } catch (final Exception e) {
+            } catch (final RuntimeException | Error e) {
                 logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }
@@ -10361,7 +10421,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             try {
                 close();
-            } catch (final Exception e) {
+            } catch (final RuntimeException | Error e) {
                 logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }

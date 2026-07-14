@@ -44,7 +44,7 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, EventLogDao> {
+ * public interface EventLogDao extends UncheckedNonUpdateDao<EventLog, EventLogDao> {
  *     // Can insert new logs and query existing logs
  *     // But cannot update or delete any logs
  * }
@@ -75,11 +75,11 @@ import com.landawn.abacus.annotation.Beta;
  * @param <T> the entity type managed by this DAO
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedDao
- * @see NoUpdateDao
+ * @see NonUpdateDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public non-sealed interface UncheckedNoUpdateDao<T, TD extends UncheckedNoUpdateDao<T, TD>>
-        extends UncheckedReadOps<T, TD>, UncheckedInsertOps<T, TD>, NoUpdateDao<T, TD> {
+public non-sealed interface UncheckedNonUpdateDao<T, TD extends UncheckedNonUpdateDao<T, TD>>
+        extends UncheckedReadOps<T, TD>, UncheckedInsertOps<T, TD>, NonUpdateDao<T, TD> {
 
 }

@@ -72,7 +72,6 @@ import com.landawn.abacus.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
@@ -445,10 +444,6 @@ public final class JdbcCodeGenerationUtil {
                 : new HashSet<>(configToUse.getNonUpdatableFields());
 
         final Set<String> idFields = configToUse.getIdFields() == null ? new HashSet<>() : new HashSet<>(configToUse.getIdFields());
-
-        if (Strings.isNotEmpty(configToUse.getIdField())) {
-            idFields.add(configToUse.getIdField());
-        }
 
         final Class<? extends Annotation> tableAnnotationClass = configToUse.getTableAnnotationClass() == null ? Table.class
                 : configToUse.getTableAnnotationClass();
@@ -1493,7 +1488,8 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
+     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
+     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1520,7 +1516,8 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
+     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
+     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1747,7 +1744,8 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
+     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
+     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1774,7 +1772,8 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i>verbatim</i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id}, not {@code userId})
+     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
+     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1949,17 +1948,23 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Converts an INSERT SQL statement to an UPDATE SQL statement with an optional WHERE clause.
      *
-     * <p>Expected SQL pattern: {@code INSERT INTO <table>(<col1>, <col2>, ...) VALUES (<v1>, <v2>, ...)}.
+     * <p>Expected single-row SQL pattern: {@code INSERT INTO <table>(<col1>, <col2>, ...) VALUES (<v1>, <v2>, ...)}.
      * The method parses table name, column list, and value list, then rebuilds SQL as:
      * {@code UPDATE <table> SET col1 = v1, col2 = v2, ... [WHERE ...]}.</p>
      *
      * <ul>
+     *   <li>SQL whitespace such as spaces, tabs, and line breaks is accepted between {@code INSERT}, {@code INTO}, the table name, and the column list.</li>
      *   <li>Column and value counts must match or conversion fails.</li>
+     *   <li>The parsed table name is validated as a qualified identifier and each non-simple identifier part is quoted using the database-specific quote character.</li>
      *   <li>Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
      *       (with backticks for MySQL/MariaDB, or double quotes for other databases) based on the
      *       {@link ProductInfo} resolved from {@code ds}.</li>
      *   <li>Value tokens are copied verbatim from the parsed {@code VALUES} list; they are not re-quoted,
      *       re-escaped, or otherwise transformed (the supplied INSERT is assumed to already contain valid SQL literals).</li>
+     *   <li>The parser recognizes doubled quote escapes, backslash-escaped characters, bracketed identifiers,
+     *       and PostgreSQL dollar-quoted strings while locating commas and parentheses.</li>
+     *   <li>Multi-row value tuples and trailing clauses are rejected rather than silently discarded. A single trailing
+     *       semicolon is accepted.</li>
      *   <li>The WHERE clause is appended only when {@code whereClause} is non-empty.</li>
      *   <li>All parsing and SQL assembly failures are converted to {@link IllegalArgumentException}.</li>
      * </ul>
@@ -1980,51 +1985,92 @@ public final class JdbcCodeGenerationUtil {
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause) {
+        N.checkArgNotEmpty(insertSql, "insertSql");
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
 
-        final String insertInto = "INSERT INTO ";
-        final int insertIntoLen = insertInto.length();
         final StringBuilder sb = Objectory.createStringBuilder();
 
         try {
-            final int idx = Strings.indexOfIgnoreCase(insertSql, insertInto);
+            int keywordIndex = skipSqlWhitespace(insertSql, 0);
 
-            if (idx < 0) {
+            if (!matchesSqlKeyword(insertSql, keywordIndex, "INSERT")) {
                 throw new IllegalArgumentException("Not an INSERT INTO SQL: " + insertSql);
             }
 
-            final int idx2 = insertSql.indexOf('(', idx + insertIntoLen);
+            int nextIndex = keywordIndex + "INSERT".length();
+
+            if (nextIndex >= insertSql.length() || !Character.isWhitespace(insertSql.charAt(nextIndex))) {
+                throw new IllegalArgumentException("Not an INSERT INTO SQL: " + insertSql);
+            }
+
+            keywordIndex = skipSqlWhitespace(insertSql, nextIndex);
+
+            if (!matchesSqlKeyword(insertSql, keywordIndex, "INTO")) {
+                throw new IllegalArgumentException("Not an INSERT INTO SQL: " + insertSql);
+            }
+
+            nextIndex = keywordIndex + "INTO".length();
+
+            if (nextIndex >= insertSql.length() || !Character.isWhitespace(insertSql.charAt(nextIndex))) {
+                throw new IllegalArgumentException("Not an INSERT INTO SQL: " + insertSql);
+            }
+
+            final int tableNameStart = skipSqlWhitespace(insertSql, nextIndex);
+            final int idx2 = findColumnListOpeningParenthesis(insertSql, tableNameStart);
 
             if (idx2 < 0) {
                 throw new IllegalArgumentException("Missing column list in SQL: " + insertSql);
             }
 
-            final String tableName = insertSql.substring(idx + insertIntoLen, idx2).trim();
+            final String tableName = insertSql.substring(tableNameStart, idx2).trim();
+
+            if (Strings.isEmpty(tableName)) {
+                throw new IllegalArgumentException("Missing table name in SQL: " + insertSql);
+            }
+
+            final String checkedTableName = checkTableName(tableName, dbProductInfo);
+
             final int idx3 = findClosingParenthesis(insertSql, idx2);
             final List<String> columnNames = splitSqlList(insertSql.substring(idx2 + 1, idx3), insertSql);
 
-            final int valuesIdx = indexOfIgnoreCase(insertSql, "VALUES", idx3 + 1);
+            int valuesIdx = idx3 + 1;
 
-            if (valuesIdx < 0) {
+            while (valuesIdx < insertSql.length() && Character.isWhitespace(insertSql.charAt(valuesIdx))) {
+                valuesIdx++;
+            }
+
+            final int afterValuesIdx = valuesIdx + "VALUES".length();
+
+            if (afterValuesIdx > insertSql.length() || !insertSql.regionMatches(true, valuesIdx, "VALUES", 0, "VALUES".length())
+                    || (afterValuesIdx < insertSql.length() && Character.isJavaIdentifierPart(insertSql.charAt(afterValuesIdx)))) {
                 throw new IllegalArgumentException("Missing VALUES clause in SQL: " + insertSql);
             }
 
-            final int idx4 = insertSql.indexOf('(', valuesIdx + "VALUES".length());
+            int idx4 = afterValuesIdx;
 
-            if (idx4 < 0) {
+            while (idx4 < insertSql.length() && Character.isWhitespace(insertSql.charAt(idx4))) {
+                idx4++;
+            }
+
+            if (idx4 >= insertSql.length() || insertSql.charAt(idx4) != '(') {
                 throw new IllegalArgumentException("Missing VALUES list in SQL: " + insertSql);
             }
 
             final int idx5 = findClosingParenthesis(insertSql, idx4);
             final List<String> values = splitSqlList(insertSql.substring(idx4 + 1, idx5), insertSql);
+            final String trailingSql = insertSql.substring(idx5 + 1).trim();
+
+            if (Strings.isNotEmpty(trailingSql) && !";".equals(trailingSql)) {
+                throw new IllegalArgumentException("Only a single VALUES tuple with no trailing clause can be converted: " + insertSql);
+            }
 
             if (columnNames.size() != values.size()) {
                 throw new IllegalArgumentException(
                         "Column count (" + columnNames.size() + ") does not match value count (" + values.size() + ") in SQL: " + insertSql);
             }
 
-            sb.append("UPDATE ").append(tableName).append(" SET ");
+            sb.append("UPDATE ").append(checkedTableName).append(" SET ");
 
             for (int i = 0, len = columnNames.size(); i < len; i++) {
                 if (i > 0) {
@@ -2050,26 +2096,30 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
-    private static int indexOfIgnoreCase(final String str, final String target, final int fromIndex) {
-        for (int i = Math.max(0, fromIndex), max = str.length() - target.length(); i <= max; i++) {
-            if (str.regionMatches(true, i, target, 0, target.length())) {
-                return i;
-            }
+    private static int skipSqlWhitespace(final String sql, int index) {
+        while (index < sql.length() && Character.isWhitespace(sql.charAt(index))) {
+            index++;
         }
 
-        return -1;
+        return index;
     }
 
-    private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex) {
-        int parenthesisDepth = 0;
+    private static boolean matchesSqlKeyword(final String sql, final int startIndex, final String keyword) {
+        final int endIndex = startIndex + keyword.length();
+        return startIndex >= 0 && endIndex <= sql.length() && sql.regionMatches(true, startIndex, keyword, 0, keyword.length());
+    }
+
+    private static int findColumnListOpeningParenthesis(final String sql, final int startIndex) {
         char quote = 0;
         boolean inBracketIdentifier = false;
 
-        for (int i = openingParenthesisIndex, len = sql.length(); i < len; i++) {
+        for (int i = startIndex, len = sql.length(); i < len; i++) {
             final char ch = sql.charAt(i);
 
             if (quote != 0) {
-                if (ch == quote) {
+                if (ch == '\\' && i + 1 < len) {
+                    i++;
+                } else if (ch == quote) {
                     if (i + 1 < len && sql.charAt(i + 1) == quote) {
                         i++;
                     } else {
@@ -2083,6 +2133,56 @@ public final class JdbcCodeGenerationUtil {
                     } else {
                         inBracketIdentifier = false;
                     }
+                }
+            } else if (ch == '"' || ch == '`') {
+                quote = ch;
+            } else if (ch == '[') {
+                inBracketIdentifier = true;
+            } else if (ch == '(') {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex) {
+        int parenthesisDepth = 0;
+        char quote = 0;
+        boolean inBracketIdentifier = false;
+        String dollarQuoteDelimiter = null;
+
+        for (int i = openingParenthesisIndex, len = sql.length(); i < len; i++) {
+            final char ch = sql.charAt(i);
+
+            if (dollarQuoteDelimiter != null) {
+                if (sql.startsWith(dollarQuoteDelimiter, i)) {
+                    i += dollarQuoteDelimiter.length() - 1;
+                    dollarQuoteDelimiter = null;
+                }
+            } else if (quote != 0) {
+                if (ch == '\\' && i + 1 < len) {
+                    i++;
+                } else if (ch == quote) {
+                    if (i + 1 < len && sql.charAt(i + 1) == quote) {
+                        i++;
+                    } else {
+                        quote = 0;
+                    }
+                }
+            } else if (inBracketIdentifier) {
+                if (ch == ']') {
+                    if (i + 1 < len && sql.charAt(i + 1) == ']') {
+                        i++;
+                    } else {
+                        inBracketIdentifier = false;
+                    }
+                }
+            } else if (ch == '$') {
+                dollarQuoteDelimiter = findDollarQuoteDelimiter(sql, i);
+
+                if (dollarQuoteDelimiter != null) {
+                    i += dollarQuoteDelimiter.length() - 1;
                 }
             } else if (ch == '\'' || ch == '"' || ch == '`') {
                 quote = ch;
@@ -2100,6 +2200,24 @@ public final class JdbcCodeGenerationUtil {
         }
 
         throw new IllegalArgumentException("SQL contains an unclosed parenthesis");
+    }
+
+    private static String findDollarQuoteDelimiter(final String sql, final int startIndex) {
+        final int endIndex = sql.indexOf('$', startIndex + 1);
+
+        if (endIndex < 0) {
+            return null;
+        }
+
+        for (int i = startIndex + 1; i < endIndex; i++) {
+            final char ch = sql.charAt(i);
+
+            if (i == startIndex + 1 ? !(Character.isLetter(ch) || ch == '_') : !(Character.isLetterOrDigit(ch) || ch == '_')) {
+                return null;
+            }
+        }
+
+        return sql.substring(startIndex, endIndex + 1);
     }
 
     /**
@@ -2147,15 +2265,26 @@ public final class JdbcCodeGenerationUtil {
         int parenthesisDepth = 0;
         char quote = 0;
         boolean inBracketIdentifier = false;
+        String dollarQuoteDelimiter = null;
 
         try {
             for (int i = 0, len = sqlList.length(); i < len; i++) {
                 final char ch = sqlList.charAt(i);
 
-                if (quote != 0) {
+                if (dollarQuoteDelimiter != null) {
+                    if (sqlList.startsWith(dollarQuoteDelimiter, i)) {
+                        token.append(dollarQuoteDelimiter);
+                        i += dollarQuoteDelimiter.length() - 1;
+                        dollarQuoteDelimiter = null;
+                    } else {
+                        token.append(ch);
+                    }
+                } else if (quote != 0) {
                     token.append(ch);
 
-                    if (ch == quote) {
+                    if (ch == '\\' && i + 1 < len) {
+                        token.append(sqlList.charAt(++i));
+                    } else if (ch == quote) {
                         if (i + 1 < len && sqlList.charAt(i + 1) == quote) {
                             token.append(sqlList.charAt(++i));
                         } else {
@@ -2171,6 +2300,15 @@ public final class JdbcCodeGenerationUtil {
                         } else {
                             inBracketIdentifier = false;
                         }
+                    }
+                } else if (ch == '$') {
+                    dollarQuoteDelimiter = findDollarQuoteDelimiter(sqlList, i);
+
+                    if (dollarQuoteDelimiter == null) {
+                        token.append(ch);
+                    } else {
+                        token.append(dollarQuoteDelimiter);
+                        i += dollarQuoteDelimiter.length() - 1;
                     }
                 } else if (ch == '\'' || ch == '"' || ch == '`') {
                     quote = ch;
@@ -2195,7 +2333,7 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            if (quote != 0 || inBracketIdentifier || parenthesisDepth != 0) {
+            if (dollarQuoteDelimiter != null || quote != 0 || inBracketIdentifier || parenthesisDepth != 0) {
                 throw new IllegalArgumentException("Unclosed SQL token in SQL: " + insertSql);
             }
 
@@ -2310,8 +2448,8 @@ public final class JdbcCodeGenerationUtil {
      * Configuration class for customizing entity code generation.
      * This class provides extensive options for controlling how entity classes are generated from database tables.
      *
-     * <p>This class supports builder pattern, no-argument constructor, and all-arguments constructor
-     * for flexible instantiation and configuration.</p>
+     * <p>Instances can be created with a no-argument constructor, an all-arguments constructor,
+     * or the Lombok-generated {@code builder()} method.</p>
      *
      * <p>A sample configuration example:</p>
      * <pre>{@code
@@ -2339,11 +2477,17 @@ public final class JdbcCodeGenerationUtil {
      */
     @Builder
     @Data
-    @NoArgsConstructor
     @AllArgsConstructor
     @Accessors(chain = true)
     @SuppressWarnings("missing-explicit-ctor")
     public static final class EntityCodeConfig {
+        /**
+         * Creates a configuration with all options unset or initialized to their Java default values.
+         */
+        public EntityCodeConfig() {
+            // Default configuration.
+        }
+
         /**
          * Maps a database column to an optional generated field name and Java field type.
          * A {@code null} field name or type leaves that part to the configured/default converter.
@@ -2443,55 +2587,6 @@ public final class JdbcCodeGenerationUtil {
          * If not specified, primary keys are auto-detected from database metadata.
          */
         private Collection<String> idFields;
-
-        /**
-         * A single field name to be annotated with {@code @Id}.
-         * This is a convenience alternative to {@link #idFields} when there is only one primary key column.
-         *
-         * @deprecated use {@link #idFields}; for a single ID use a singleton collection
-         */
-        @Deprecated
-        private String idField;
-
-        /**
-         * Returns the deprecated singular ID-field configuration.
-         *
-         * @return the singular ID field, or {@code null}
-         * @deprecated use {@code getIdFields()}
-         */
-        @Deprecated
-        public String getIdField() {
-            return idField;
-        }
-
-        /**
-         * Sets the deprecated singular ID-field configuration.
-         *
-         * @param idField the singular ID field
-         * @return this configuration
-         * @deprecated use {@code setIdFields(Collection)}
-         */
-        @Deprecated
-        public EntityCodeConfig setIdField(final String idField) {
-            this.idField = idField;
-            return this;
-        }
-
-        /** Customizes Lombok's generated builder API. */
-        public static class EntityCodeConfigBuilder {
-            /**
-             * Sets the deprecated singular ID-field configuration.
-             *
-             * @param idField the singular ID field
-             * @return this builder
-             * @deprecated use {@code idFields(Collection)}
-             */
-            @Deprecated
-            public EntityCodeConfigBuilder idField(final String idField) {
-                this.idField = idField;
-                return this;
-            }
-        }
 
         /**
          * Collection of field names to exclude from the generated entity class.

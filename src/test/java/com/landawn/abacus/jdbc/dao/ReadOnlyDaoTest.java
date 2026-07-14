@@ -75,13 +75,13 @@ public class ReadOnlyDaoTest extends TestBase {
     public void testIsInterfaceAndCapabilities() {
         assertTrue(ReadOnlyDao.class.isInterface());
         assertEquals(2, ReadOnlyDao.class.getTypeParameters().length);
-        // read capability + cacheable only; not insert/update/delete, and no longer a NoUpdateDao.
+        // read capability + cacheable only; not insert/update/delete, and no longer a NonUpdateDao.
         assertTrue(ReadOps.class.isAssignableFrom(ReadOnlyDao.class));
         assertTrue(DaoUtil.isCacheable(ReadOnlyDao.class));
         assertFalse(InsertOps.class.isAssignableFrom(ReadOnlyDao.class));
         assertFalse(UpdateOps.class.isAssignableFrom(ReadOnlyDao.class));
         assertFalse(DeleteOps.class.isAssignableFrom(ReadOnlyDao.class));
-        assertFalse(NoUpdateDao.class.isAssignableFrom(ReadOnlyDao.class));
+        assertFalse(NonUpdateDao.class.isAssignableFrom(ReadOnlyDao.class));
     }
 
     @Test

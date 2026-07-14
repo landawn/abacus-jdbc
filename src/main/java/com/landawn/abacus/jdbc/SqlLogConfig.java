@@ -40,7 +40,7 @@ package com.landawn.abacus.jdbc;
  * }</pre>
  *
  * @see JdbcUtil#enableSqlLog()
- * @see JdbcUtil#sqlLogThresholdMillis(long)
+ * @see JdbcUtil#setSqlPerfLogThresholdMillis(long)
  */
 final class SqlLogConfig {
     // Note: instances are strictly thread-confined (held in ThreadLocals in JdbcUtil and only read/written
@@ -57,7 +57,7 @@ final class SqlLogConfig {
      * elapsed execution time is greater than or equal to this value. {@code Long.MAX_VALUE} effectively disables
      * performance logging, and a negative value also disables it.
      */
-    long minExecutionTimeForSqlPerfLog;
+    long sqlPerfLogThresholdMillis;
 
     /**
      * Constructs a SqlLogConfig for general SQL logging.
@@ -83,7 +83,7 @@ final class SqlLogConfig {
     SqlLogConfig(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
-        minExecutionTimeForSqlPerfLog = Long.MAX_VALUE;
+        sqlPerfLogThresholdMillis = Long.MAX_VALUE;
     }
 
     /**
@@ -106,7 +106,7 @@ final class SqlLogConfig {
      * SqlLogConfig config3 = new SqlLogConfig(0L, 1000);
      * }</pre>
      *
-     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds for logging.
+     * @param sqlPerfLogThresholdMillis the minimum execution time in milliseconds for logging.
      *                                      SQL statements whose execution time is greater than or equal to this
      *                                      threshold will be logged. Set to {@code 0} to log every executed query
      *                                      based on this mechanism; pass a negative value to disable performance
@@ -114,8 +114,8 @@ final class SqlLogConfig {
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
-    SqlLogConfig(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
-        this.minExecutionTimeForSqlPerfLog = minExecutionTimeForSqlPerfLog;
+    SqlLogConfig(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
+        this.sqlPerfLogThresholdMillis = sqlPerfLogThresholdMillis;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
         isEnabled = false;
     }
@@ -146,7 +146,7 @@ final class SqlLogConfig {
     void set(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
-        this.minExecutionTimeForSqlPerfLog = Long.MAX_VALUE;
+        this.sqlPerfLogThresholdMillis = Long.MAX_VALUE;
     }
 
     /**
@@ -167,7 +167,7 @@ final class SqlLogConfig {
      * config.set(0L, 2000);
      * }</pre>
      *
-     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds for logging.
+     * @param sqlPerfLogThresholdMillis the minimum execution time in milliseconds for logging.
      *                                      SQL statements whose execution time is greater than or equal to this
      *                                      threshold will be logged. Set to {@code 0} to log every executed query
      *                                      based on this mechanism; pass a negative value to disable performance
@@ -175,9 +175,9 @@ final class SqlLogConfig {
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
-    void set(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
+    void set(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
         this.isEnabled = false;
-        this.minExecutionTimeForSqlPerfLog = minExecutionTimeForSqlPerfLog;
+        this.sqlPerfLogThresholdMillis = sqlPerfLogThresholdMillis;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
     }
 }

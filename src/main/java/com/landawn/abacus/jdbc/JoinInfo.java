@@ -906,9 +906,9 @@ public final class JoinInfo {
      * based on the join key relationships.
      *
      * <p>The joined entities are grouped by their referenced join key and then assigned to the
-     * corresponding source entities. If the join property is declared as a {@code List} and the
-     * grouped value is already a {@code List}, the list is assigned directly; otherwise a new
-     * collection of the declared type is created and populated. For a single-entity (non-collection,
+     * corresponding source entities. If the grouped value is assignable to the declared collection
+     * type, it is assigned directly; otherwise a new collection of the declared type is created and
+     * populated. For a single-entity (non-collection,
      * non-map) join property, only the first matching entity is used; for a map-valued join property,
      * exactly one matching entity per key is expected and more than one match throws
      * {@link IllegalArgumentException}. A source entity with no matching joined entity is left untouched.</p>
@@ -960,8 +960,9 @@ public final class JoinInfo {
      * {@link IllegalArgumentException}.</p>
      *
      * <p>A source entity whose extracted join key has no corresponding entry in {@code groupedPropEntities}
-     * is left untouched (its join property is not assigned, cleared, or reset). The {@code entities} collection
-     * is iterated in its natural order and is not modified by this method.</p>
+     * is left untouched (its join property is not assigned, cleared, or reset). An explicitly mapped empty list
+     * assigns an empty collection or map, or {@code null} for a single-entity property. The {@code entities}
+     * collection is iterated in its natural order and is not modified by this method.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -984,16 +985,14 @@ public final class JoinInfo {
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
         final boolean isMapProp = joinPropInfo.type.isMap();
-        final boolean isListProp = List.class.isAssignableFrom(joinPropInfo.clazz);
-
-        List<Object> propEntities = null;
 
         for (final Object entity : entities) {
-            propEntities = groupedPropEntities.get(srcEntityKeyExtractor.apply(entity));
+            final Object joinKey = srcEntityKeyExtractor.apply(entity);
+            final List<Object> propEntities = groupedPropEntities.get(joinKey);
 
             if (propEntities != null) {
                 if (isCollectionProp) {
-                    if (isListProp || joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                    if (joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
                         joinPropInfo.setPropValue(entity, propEntities);
                     } else {
                         @SuppressWarnings("rawtypes")
@@ -1008,10 +1007,14 @@ public final class JoinInfo {
 
                     @SuppressWarnings("rawtypes")
                     final Map<Object, Object> m = N.newMap((Class) joinPropInfo.clazz, 1);
-                    m.put(srcEntityKeyExtractor.apply(entity), propEntities.get(0));
+
+                    if (!propEntities.isEmpty()) {
+                        m.put(joinKey, propEntities.get(0));
+                    }
+
                     joinPropInfo.setPropValue(entity, m);
                 } else {
-                    joinPropInfo.setPropValue(entity, propEntities.get(0));
+                    joinPropInfo.setPropValue(entity, propEntities.isEmpty() ? null : propEntities.get(0));
                 }
             }
         }

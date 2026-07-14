@@ -140,6 +140,17 @@ public class CrudDaoTest extends TestBase {
     }
 
     @Test
+    public void testCountByIds_RejectsOverflowAcrossBatches() throws SQLException {
+        final IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final List<Long> ids = java.util.stream.LongStream.rangeClosed(0, JdbcUtil.DEFAULT_BATCH_SIZE).boxed().toList();
+
+        Mockito.doReturn(IdAnnotatedEntity.class).when(dao).targetEntityClass();
+        when(dao.count(ArgumentMatchers.any(Condition.class))).thenReturn(Integer.MAX_VALUE, 1);
+
+        assertThrows(ArithmeticException.class, () -> dao.count(ids));
+    }
+
+    @Test
     public void testBatchInsert_NamedInsertUsesDefaultBatchSize() throws SQLException {
         TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());

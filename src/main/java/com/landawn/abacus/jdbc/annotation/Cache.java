@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -43,7 +44,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p><strong>Restriction:</strong> {@code @Cache}, {@code @CacheResult}, and {@code @RefreshCache}
  * (whether declared at the type or method level) are only honored on cacheable DAOs &mdash; that is,
- * {@code NoUpdateDao} or {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying
+ * {@code NonUpdateDao} or {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying
  * any of them to a DAO that supports update/delete operations fails with
  * {@code UnsupportedOperationException} at initialization time.</p>
  *
@@ -55,7 +56,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Cache(capacity = 1000, evictDelayMillis = 60000) // Run eviction sweep every 60 seconds
- * public interface CountryDao extends NoUpdateCrudDao<Country, String, CountryDao> {
+ * public interface CountryDao extends NonUpdateCrudDao<Country, String, CountryDao> {
  *     // Results will be cached when annotated with @CacheResult
  *     @CacheResult(enabled = true)
  *     @Query("SELECT * FROM countries WHERE continent = :continent")
@@ -73,6 +74,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see RefreshCache
  * @see DaoCache
  */
+@Documented
 @Beta
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
@@ -93,7 +95,7 @@ public @interface Cache {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Cache(capacity = 5000) // Large cache for frequently accessed data
-     * public interface ProductDao extends NoUpdateCrudDao<Product, Long, ProductDao> {
+     * public interface ProductDao extends NonUpdateCrudDao<Product, Long, ProductDao> {
      *     // Methods here
      * }
      * }</pre>
@@ -181,7 +183,7 @@ public @interface Cache {
      *
      * // Usage
      * @Cache(impl = MyCustomDaoCache.class)
-     * public interface UserDao extends NoUpdateCrudDao<User, Long, UserDao> {
+     * public interface UserDao extends NonUpdateCrudDao<User, Long, UserDao> {
      *     // Methods here
      * }
      * }</pre>

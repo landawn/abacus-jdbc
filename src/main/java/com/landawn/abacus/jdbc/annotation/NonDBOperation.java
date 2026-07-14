@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -33,7 +34,7 @@ import java.lang.annotation.Target;
  * </ul>
  *
  * <p>The framework's built-in DAO base interfaces ({@code Dao}, {@code CrudDao},
- * {@code NoUpdateDao}, etc.) already carry {@code @NonDBOperation} on the utility/accessor
+ * {@code NonUpdateDao}, etc.) already carry {@code @NonDBOperation} on the utility/accessor
  * methods they declare, including (non-exhaustive):</p>
  * <ul>
  *   <li>{@code targetEntityClass()} - Returns the entity class associated with the DAO</li>
@@ -45,9 +46,10 @@ import java.lang.annotation.Target;
  *   <li>{@code prepareCallableQuery(...)} - Creates a callable query builder</li>
  * </ul>
  *
- * <p>Apply {@code @NonDBOperation} to your own {@code default} or {@code static} DAO methods
- * whenever they should be excluded from the DAO proxy's database-related processing (handlers,
- * SQL/perf logging, transactional weaving).</p>
+ * <p>Apply {@code @NonDBOperation} to your own {@code default} DAO methods whenever they should be
+ * excluded from the DAO proxy's database-related processing (handlers, SQL/perf logging,
+ * transactional weaving). Interface {@code static} methods are invoked on the interface itself and
+ * never pass through a DAO proxy, so annotating them has no proxy effect.</p>
  *
  * <p>This is a marker annotation: it declares no elements and carries no configuration. Its mere
  * presence on a method (per {@code @Target(METHOD)}, retained at runtime) is what signals the DAO
@@ -77,6 +79,7 @@ import java.lang.annotation.Target;
  * @see Handler
  * @see Transactional
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
 public @interface NonDBOperation {

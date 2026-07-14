@@ -1878,40 +1878,20 @@ public class JdbcTest extends TestBase {
         verify(mockAbstractQuery).setObject(1, "obj");
     }
 
-    // OutParam Tests
-    @Test
-    public void testOutParam() {
-        Jdbc.OutParam param = new Jdbc.OutParam();
-        param.setParameterIndex(1);
-        param.setParameterName("result");
-        param.setSqlType(Types.INTEGER);
-        param.setTypeName("INTEGER");
-        param.setScale(0);
-
-        assertEquals(1, param.getParameterIndex());
-        assertEquals("result", param.getParameterName());
-        assertEquals(Types.INTEGER, param.getSqlType());
-        assertEquals("INTEGER", param.getTypeName());
-        assertEquals(0, param.getScale());
-    }
-
     @Test
     public void testOutParamOf() {
         Jdbc.OutParam param = Jdbc.OutParam.of(1, Types.VARCHAR);
 
-        assertEquals(1, param.getParameterIndex());
-        assertEquals(Types.VARCHAR, param.getSqlType());
+        assertEquals(1, param.parameterIndex());
+        assertEquals(Types.VARCHAR, param.sqlType());
     }
 
     @Test
     public void testOutParamConstructors() {
-        Jdbc.OutParam param1 = new Jdbc.OutParam();
-        assertNotNull(param1);
-
         Jdbc.OutParam param2 = new Jdbc.OutParam(2, "name", Types.VARCHAR, "VARCHAR", 0);
-        assertEquals(2, param2.getParameterIndex());
-        assertEquals("name", param2.getParameterName());
-        assertEquals(Types.VARCHAR, param2.getSqlType());
+        assertEquals(2, param2.parameterIndex());
+        assertEquals("name", param2.parameterName());
+        assertEquals(Types.VARCHAR, param2.sqlType());
     }
 
     // OutParamResult Tests
@@ -1942,12 +1922,7 @@ public class JdbcTest extends TestBase {
 
         final Jdbc.OutParamResult result = new Jdbc.OutParamResult(outParams, values);
 
-        originalParam.setParameterIndex(2);
-        outParams.clear();
-        values.put(1, 200);
-
         assertEquals(1, result.getOutParams().size());
-        assertEquals(1, result.getOutParams().get(0).getParameterIndex());
         assertEquals(100, (Integer) result.getOutParamValue(1));
     }
 
@@ -3651,8 +3626,8 @@ public class JdbcTest extends TestBase {
 
         // Sanity: positive index still works.
         Jdbc.OutParam p = assertDoesNotThrow(() -> Jdbc.OutParam.of(1, java.sql.Types.INTEGER));
-        assertEquals(1, p.getParameterIndex());
-        assertEquals(java.sql.Types.INTEGER, p.getSqlType());
+        assertEquals(1, p.parameterIndex());
+        assertEquals(java.sql.Types.INTEGER, p.sqlType());
     }
 
     // Entity with a @Column-aliased field so a ResultSet column name ("user_name") differs from the

@@ -25,6 +25,7 @@ import javax.sql.DataSource;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
@@ -364,13 +365,16 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      */
     @Deprecated
     @Beta
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(joinEntityPropNames)) {
             return 0;
         }
@@ -486,13 +490,16 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      */
     @Deprecated
     @Beta
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return 0;
         }
@@ -571,12 +578,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
      */
     @Deprecated
     @Beta
     default int deleteAllJoinEntities(final T entity, final Executor executor) throws SQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
     }
 
@@ -653,12 +663,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code executor} is {@code null}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
      */
     @Deprecated
     @Beta
     default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
+        N.checkArgNotNull(executor, cs.executor);
+
         if (N.isEmpty(entities)) {
             return 0;
         }

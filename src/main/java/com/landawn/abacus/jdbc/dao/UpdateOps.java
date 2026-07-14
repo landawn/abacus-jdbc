@@ -25,7 +25,7 @@ import com.landawn.abacus.query.condition.Condition;
 
 /**
  * Update capability of {@link Dao}: condition-based {@code update} operations. Extends {@link DaoBase}.
- * 
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
  * @see Dao
@@ -95,7 +95,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      */
     default int update(final T entity, final Condition cond) throws SQLException {
         @SuppressWarnings("deprecation")
-        final Collection<String> propNamesToUpdate = QueryUtil.getUpdatePropNames(targetEntityClass(), null);
+        final Collection<String> propNamesToUpdate = QueryUtil.updatePropNames(targetEntityClass(), null);
 
         return update(entity, propNamesToUpdate, cond);
     }

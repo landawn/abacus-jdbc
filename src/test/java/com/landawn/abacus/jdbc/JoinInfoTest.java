@@ -665,6 +665,20 @@ public class JoinInfoTest extends TestBase {
         assertEquals(child, parent.getOrder());
     }
 
+    @Test
+    public void testSetJoinPropEntities_ExplicitEmptyGroupClearsSingleEntityProp() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(SingleJoinDao.class, SingleJoinEntity.class, "single_join_entity_empty", "order");
+        final SingleJoinEntity parent = new SingleJoinEntity();
+        parent.setUserId(10L);
+        parent.setOrder(new OrderEntity());
+        final Map<Object, List<Object>> grouped = new java.util.HashMap<>();
+        grouped.put(10L, List.of());
+
+        joinInfo.setJoinPropEntities(List.of(parent), grouped);
+
+        assertNull(parent.getOrder());
+    }
+
     // M2M: first pair has no '=' separator → L268-271
     @Test
     public void testConstructor_ManyToManyJoin_NoEqInFirstPair() {
@@ -794,6 +808,37 @@ public class JoinInfoTest extends TestBase {
     interface CollectionUserDao extends Dao<CollectionUserEntity, CollectionUserDao> {
     }
 
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface ConcreteListUserDao extends Dao<ConcreteListUserEntity, ConcreteListUserDao> {
+    }
+
+    public static final class OrderList<E> extends java.util.ArrayList<E> {
+        private static final long serialVersionUID = 1L;
+    }
+
+    public static final class ConcreteListUserEntity {
+        private long userId;
+
+        @JoinedBy("userId")
+        private OrderList<OrderEntity> orders;
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(final long userId) {
+            this.userId = userId;
+        }
+
+        public OrderList<OrderEntity> getOrders() {
+            return orders;
+        }
+
+        public void setOrders(final OrderList<OrderEntity> orders) {
+            this.orders = orders;
+        }
+    }
+
     public static final class CollectionUserEntity {
         private long userId;
         @JoinedBy("userId")
@@ -852,6 +897,21 @@ public class JoinInfoTest extends TestBase {
         assertEquals(1, user.getOrders().size());
     }
 
+    @Test
+    public void testSetJoinPropEntities_ConcreteListTypeReceivesCompatibleCollection() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(ConcreteListUserDao.class, ConcreteListUserEntity.class, "concrete_list_user_entity", "orders");
+        final ConcreteListUserEntity user = new ConcreteListUserEntity();
+        user.setUserId(1L);
+        final OrderEntity order = new OrderEntity();
+        order.setUserId(1L);
+
+        joinInfo.setJoinPropEntities(List.of(user), List.of(order));
+
+        assertNotNull(user.getOrders());
+        assertEquals(OrderList.class, user.getOrders().getClass());
+        assertEquals(List.of(order), user.getOrders());
+    }
+
     // setJoinPropEntities for Map property (L988-991)
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
     interface MapUserDao extends Dao<MapUserEntity, MapUserDao> {
@@ -891,6 +951,21 @@ public class JoinInfoTest extends TestBase {
 
         assertNotNull(user.getOrderByKey());
         assertEquals(1, user.getOrderByKey().size());
+    }
+
+    @Test
+    public void testSetJoinPropEntities_ExplicitEmptyGroupAssignsEmptyMap() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(MapUserDao.class, MapUserEntity.class, "map_user_entity_empty", "orderByKey");
+        final MapUserEntity user = new MapUserEntity();
+        user.setUserId(1L);
+        user.setOrderByKey(Map.of("old", new OrderEntity()));
+        final Map<Object, List<Object>> grouped = new java.util.HashMap<>();
+        grouped.put(1L, List.of());
+
+        joinInfo.setJoinPropEntities(List.of(user), grouped);
+
+        assertNotNull(user.getOrderByKey());
+        assertTrue(user.getOrderByKey().isEmpty());
     }
 
     // setJoinPropEntities for Map prop with multiple matched entities (L984-985)

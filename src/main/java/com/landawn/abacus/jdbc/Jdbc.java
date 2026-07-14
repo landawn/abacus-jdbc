@@ -21,6 +21,7 @@ import java.io.Reader;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.sql.Blob;
+import java.sql.CallableStatement;
 import java.sql.Clob;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -28,6 +29,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -83,10 +85,7 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
@@ -5940,7 +5939,7 @@ public final class Jdbc {
          * RowMapper<LocalDate> mapper = ColumnOne.get(LocalDate.class);
          *
          * // Set a single parameter by type
-         * preparedQuery.settParameters(userId, ColumnOne.SET_INT);
+         * preparedQuery.setParameters(userId, ColumnOne.SET_INT);
          * }</pre>
          *
          * @see ColumnGetter
@@ -6347,92 +6346,117 @@ public final class Jdbc {
     }
 
     /**
-     * Represents an output parameter for a stored procedure call. This class encapsulates all
-     * information needed to register an output parameter with a {@code java.sql.CallableStatement}
-     * via {@code registerOutParameter}.
+     * Immutable descriptor of a JDBC {@code OUT} parameter for a stored procedure or function call.
+     * It records how the parameter is addressed and the SQL metadata used to register and retrieve it.
      *
-     * <p>Lombok generates a no-argument constructor, an all-arguments constructor, and standard
-     * getter/setter/equals/hashCode/toString methods for the fields below.</p>
+     * <p>An {@code OutParam} does not register itself with a {@link CallableStatement}.
+     * {@link CallableQuery#registerOutParameter(int, int)} and its overloads register the parameter and
+     * create the corresponding descriptor automatically. Construct descriptors directly when calling
+     * {@link JdbcUtil#getOutParameters(CallableStatement, List)} for a statement whose output parameters
+     * were registered through the JDBC API.</p>
      *
-     * <p><b>Invariant:</b> {@code parameterIndex} is 1-based and must be {@code > 0} when an OUT parameter is
-     * registered by index. This invariant is enforced only by the {@link #of(int, int)} factory; the
-     * Lombok-generated all-args constructor and {@code setParameterIndex(int)} accept any value (e.g. a
-     * placeholder {@code 0} to be set later). Prefer {@link #of(int, int)} for index-based registration.</p>
+     * <p><b>Addressing:</b> a positive {@link #parameterIndex()} identifies an index-based parameter;
+     * otherwise {@link #parameterName()} identifies a name-based parameter. JDBC indexes are 1-based.
+     * Exactly one form should identify a usable descriptor. The canonical constructor intentionally
+     * performs no validation, so prefer {@link #of(int, int)} or {@link #of(String, int)} for descriptors
+     * that do not require a scale or database-specific type name.</p>
+     *
+     * <p><b>SQL metadata:</b> {@link #sqlType()} is a constant from {@link Types} and must match the type
+     * used during registration. {@link #scale()} corresponds to the scale-bearing
+     * {@code registerOutParameter} overloads for numeric values. {@link #typeName()} corresponds to the
+     * type-name overloads used for user-defined or database-specific SQL types.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Using no-args constructor and setters
-     * OutParam outParam = new OutParam();
-     * outParam.setParameterIndex(1);
-     * outParam.setSqlType(Types.VARCHAR);
+     * OutParam count = OutParam.of(2, Types.INTEGER);
+     * stmt.registerOutParameter(count.parameterIndex(), count.sqlType());
      *
-     * // Using all-args constructor (parameterIndex, parameterName, sqlType, typeName, scale)
-     * OutParam outParam = new OutParam(1, "result", Types.INTEGER, null, 0);
+     * OutParam status = OutParam.of("status", Types.VARCHAR);
+     * stmt.registerOutParameter(status.parameterName(), status.sqlType());
      *
-     * // Shortcut factory
-     * OutParam idOut = OutParam.of(1, Types.INTEGER);
+     * OutParamResult values = JdbcUtil.getOutParameters(stmt, List.of(count, status));
+     * Integer rowCount = values.getOutParamValue(2);
+     * String resultStatus = values.getOutParamValue("status");
+     *
+     * // Descriptor matching registerOutParameter(3, Types.DECIMAL, 2)
+     * OutParam amount = new OutParam(3, null, Types.DECIMAL, null, 2);
      * }</pre>
      *
+     * @param parameterIndex the 1-based parameter index for index-based access; non-positive for name-based access
+     * @param parameterName the parameter name for name-based access; normally {@code null} for index-based access
+     * @param sqlType the JDBC SQL type code, normally a constant from {@link Types}
+     * @param typeName the database-specific SQL type name, or {@code null} when the type-name overload was not used
+     * @param scale the numeric scale supplied during registration, or a sentinel/default value when no scale was supplied
+     * @see CallableStatement#registerOutParameter(int, int)
+     * @see CallableStatement#registerOutParameter(String, int)
      * @see OutParamResult
      */
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Data
-    @SuppressWarnings("missing-explicit-ctor")
-    public static final class OutParam {
-        /**
-         * The 1-based index of the parameter in the stored procedure call.
-         */
-        private int parameterIndex;
+    public static final record OutParam(int parameterIndex, String parameterName, int sqlType, String typeName, int scale) {
 
         /**
-         * The name of the parameter. This is optional and used for named parameter calls.
+         * Creates an output-parameter descriptor without validating the addressing or SQL metadata.
+         * Prefer {@link #of(int, int)} or {@link #of(String, int)} for simple index- or name-based descriptors.
+         *
+         * @param parameterIndex the 1-based parameter index, or a non-positive value for name-based access
+         * @param parameterName the parameter name for name-based access, or {@code null} for index-based access
+         * @param sqlType the JDBC SQL type code
+         * @param typeName the database-specific SQL type name, or {@code null} if it was not supplied
+         * @param scale the registered numeric scale or a sentinel/default value if it was not supplied
          */
-        private String parameterName;
+        public OutParam(int parameterIndex, String parameterName, int sqlType, String typeName, int scale) {
+            this.parameterIndex = parameterIndex;
+            this.parameterName = parameterName;
+            this.sqlType = sqlType;
+            this.typeName = typeName;
+            this.scale = scale;
+        }
 
         /**
-         * The SQL type of the parameter, as defined in {@code java.sql.Types}.
-         */
-        private int sqlType;
-
-        /**
-         * The database-specific type name. This is generally used for user-defined or complex types.
-         */
-        private String typeName;
-
-        /**
-         * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types.
-         */
-        private int scale;
-
-        /**
-         * A factory method to create an {@code OutParam} with the specified index and SQL type.
+         * Creates a validated index-based output-parameter descriptor with no type name and a scale of zero.
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * OutParam idOut = OutParam.of(1, Types.INTEGER);
-         * int idx = idOut.getParameterIndex();    // returns 1
-         * int type = idOut.getSqlType();          // returns Types.INTEGER
-         * String name = idOut.getParameterName(); // returns null (index-based registration)
+         * int index = idOut.parameterIndex();  // 1
+         * int type = idOut.sqlType();          // Types.INTEGER
+         * String name = idOut.parameterName(); // null
          *
          * // parameterIndex is 1-based and must be greater than 0.
          * OutParam bad = OutParam.of(0, Types.INTEGER); // throws IllegalArgumentException
          * }</pre>
          *
-         * @param parameterIndex the 1-based index of the parameter (must be {@code > 0}).
-         * @param sqlType the SQL type from {@code java.sql.Types}.
-         * @return a new {@code OutParam} instance.
-         * @throws IllegalArgumentException if {@code parameterIndex <= 0} — index is 1-based,
-         *         and passing 0 here would cause the downstream consumer to fall through to the
-         *         name-based path with a null name, producing an opaque driver error.
+         * @param parameterIndex the 1-based parameter index; must be greater than zero
+         * @param sqlType the JDBC SQL type code, normally a constant from {@link Types}
+         * @return a new index-based descriptor
+         * @throws IllegalArgumentException if {@code parameterIndex} is not positive
+         * @see CallableStatement#registerOutParameter(int, int)
          */
         public static OutParam of(int parameterIndex, int sqlType) {
             N.checkArgument(parameterIndex > 0, "'parameterIndex' must be greater than 0 (1-based), but was: %s", parameterIndex);
+            return new OutParam(parameterIndex, null, sqlType, null, 0);
+        }
 
-            final OutParam outParam = new OutParam();
-            outParam.setParameterIndex(parameterIndex);
-            outParam.setSqlType(sqlType);
-            return outParam;
+        /**
+         * Creates a validated name-based output-parameter descriptor with no type name and a scale of zero.
+         * Named parameters require support from the JDBC driver and stored procedure.
+         *
+         * <p><b>Usage Example:</b></p>
+         * <pre>{@code
+         * OutParam status = OutParam.of("status", Types.VARCHAR);
+         * String name = status.parameterName(); // "status"
+         * int index = status.parameterIndex();  // 0: name-based access
+         * }</pre>
+         *
+         * @param parameterName the parameter name; must not be {@code null} or empty
+         * @param sqlType the JDBC SQL type code, normally a constant from {@link Types}
+         * @return a new name-based descriptor
+         * @throws IllegalArgumentException if {@code parameterName} is {@code null} or empty
+         * @see CallableStatement#registerOutParameter(String, int)
+         */
+        public static OutParam of(String parameterName, int sqlType) {
+            N.checkArgNotEmpty(parameterName, "parameterName");
+
+            return new OutParam(0, parameterName, sqlType, null, 0);
         }
     }
 
@@ -6478,8 +6502,7 @@ public final class Jdbc {
 
                 for (final OutParam outParam : outParams) {
                     this.outParams.add(outParam == null ? null
-                            : new OutParam(outParam.getParameterIndex(), outParam.getParameterName(), outParam.getSqlType(), outParam.getTypeName(),
-                                    outParam.getScale()));
+                            : new OutParam(outParam.parameterIndex(), outParam.parameterName(), outParam.sqlType(), outParam.typeName(), outParam.scale()));
                 }
             }
 
@@ -6548,7 +6571,7 @@ public final class Jdbc {
          * OutParamResult result = callableQuery.executeAndGetOutParameters();
          * List<OutParam> defs = result.getOutParams();
          * int size = defs.size();                           // number of registered out-parameters
-         * int firstIndex = defs.get(0).getParameterIndex(); // 1-based index of the first out-param
+         * int firstIndex = defs.get(0).parameterIndex(); // 1-based index of the first out-param
          * }</pre>
          *
          * @return an unmodifiable snapshot of the list of {@code OutParam} objects. The definitions
@@ -7452,6 +7475,7 @@ public final class Jdbc {
                 cache.entrySet().removeIf(e -> cacheKeyMatchesTable(e.getKey(), updatedTableName));
             }
         }
+
     }
 
     private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) {

@@ -33,7 +33,7 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
 
-@PerfLog(sqlLogThresholdMillis = 101, daoMethodLogThresholdMillis = 100)
+@PerfLog(sqlPerfLogThresholdMillis = 101, daoMethodPerfLogThresholdMillis = 100)
 public interface UncheckedUserDao extends UncheckedCrudDao<User, Long, UncheckedUserDao>, UncheckedJoinEntityHelper<User, UncheckedUserDao> {
 
     @Query("INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")

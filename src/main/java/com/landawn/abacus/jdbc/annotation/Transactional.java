@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -49,6 +50,19 @@ import com.landawn.abacus.jdbc.Propagation;
  * transactional, mix in a base interface or apply {@code @Transactional} to each method
  * explicitly.</p>
  *
+ * <p><b>Lazy stream limitation:</b> {@link Propagation#REQUIRED},
+ * {@link Propagation#REQUIRES_NEW}, {@link Propagation#NOT_SUPPORTED}, and
+ * {@link Propagation#NEVER} cannot be used on a method returning a
+ * Abacus {@link com.landawn.abacus.util.stream.BaseStream} (including
+ * {@link com.landawn.abacus.util.stream.Stream}) or a {@link java.util.stream.BaseStream}. Such a
+ * stream performs work after the method returns: an invocation-owned transaction may already have
+ * completed, while a temporarily suspended or prohibited transaction context may have changed.
+ * The DAO rejects those combinations at initialization. Consume the stream inside a transactional,
+ * non-stream-returning {@code default} method instead. {@link Propagation#SUPPORTS} and
+ * {@link Propagation#MANDATORY} remain valid because the proxy neither owns nor suspends their
+ * context; the caller must consume and close the stream before changing or completing that context.
+ * {@code MANDATORY} still requires a caller-owned active transaction.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
@@ -80,6 +94,7 @@ import com.landawn.abacus.jdbc.Propagation;
  * @see com.landawn.abacus.jdbc.Transaction
  * @see org.springframework.transaction.annotation.Transactional
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD) // Should be used on method only, not for ElementType.TYPE/CLASS
 public @interface Transactional {

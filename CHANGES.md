@@ -1,3 +1,14 @@
+## 4.8.2
+* Naming convention improvements
+* Improvements and bug fixes
+
+## 4.8.1
+
+* Prefer `callAsync`/`runAsync`; retain `callAsync`/`runAsync` as deprecated compatibility aliases.
+* Prefer `setSqlPerfLogThresholdMillis`/`getSqlPerfLogThresholdMillis`; retain `sqlPerfLogThresholdMillis` as deprecated compatibility aliases.
+* Prefer `openDaoCacheScope()` with try-with-resources; deprecate the manual thread-local DAO-cache lifecycle pair.
+* Improve Javadocs and unit tests; fix transaction, query lifecycle, DAO validation, and SQL conversion edge cases.
+
 ## 4.8.0
 * Naming convention improvements
 * Improvements and bug fixes
@@ -1183,7 +1194,7 @@
 
 ### 1.10.9
 
-* Rename `asyncApply/Accept` to `asyncCall/Run`.
+* Rename `asyncApply/Accept` to `callAsync/Run`.
 * Support Dao cache.
 * Improvements and bug fix.
 

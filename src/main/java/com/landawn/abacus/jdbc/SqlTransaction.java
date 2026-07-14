@@ -147,12 +147,17 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param creator the originator type (see {@link CreatedBy}) used to compute the transaction ID
      * @param closeConnection if {@code true}, the connection will be released back to {@code ds} when the transaction completes
      * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails
-     * @throws IllegalArgumentException if {@code conn} or {@code isolationLevel} is {@code null}, or if {@code ds} is {@code null} while {@code closeConnection} is {@code true}
+     * @throws IllegalArgumentException if {@code conn} or {@code isolationLevel} is {@code null}, if
+     *         {@code isolationLevel} is {@link IsolationLevel#NONE}, or if {@code ds} is {@code null}
+     *         while {@code closeConnection} is {@code true}
      */
+    @SuppressWarnings("deprecation")
     SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
+        N.checkArgument(isolationLevel != IsolationLevel.NONE,
+                "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
         N.checkArgument(ds != null || !closeConnection, "'dataSource' must not be null when 'closeConnection' is true");
 
         _id = getTransactionId(ds, creator);
@@ -420,6 +425,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         _status = Status.FAILED_COMMIT;
         SQLException commitException = null;
+        UncheckedSQLException commitFailure = null;
 
         try {
             _conn.commit();
@@ -427,7 +433,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             _status = Status.COMMITTED;
         } catch (final SQLException e) {
             commitException = e;
-            throw new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
+            commitFailure = new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
+            throw commitFailure;
         } finally {
             if (_status == Status.COMMITTED) {
                 logger.info("Transaction(id={}) has been committed successfully", _timedId);
@@ -444,7 +451,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
                 try {
                     executeRollback();
-                } catch (final Exception rollbackEx) {
+                } catch (final RuntimeException | Error rollbackEx) {
+                    if (commitFailure != null) {
+                        commitFailure.addSuppressed(rollbackEx);
+                    }
+
                     logger.warn(rollbackEx,
                             "Failed to roll back transaction(id={}) after failed commit. Rollback error suppressed to preserve original commit exception.",
                             _timedId);
@@ -624,6 +635,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         _status = Status.FAILED_ROLLBACK;
         SQLException rollbackException = null;
+        Throwable rollbackFailure = null;
 
         try {
             _conn.rollback();
@@ -631,7 +643,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             _status = Status.ROLLED_BACK;
         } catch (final SQLException e) {
             rollbackException = e;
-            throw new UncheckedSQLException("Failed to roll back transaction(id=" + _timedId + ")", e);
+            final UncheckedSQLException sqlFailure = new UncheckedSQLException("Failed to roll back transaction(id=" + _timedId + ")", e);
+            rollbackFailure = sqlFailure;
+            throw sqlFailure;
+        } catch (final RuntimeException | Error e) {
+            rollbackFailure = e;
+            throw e;
         } finally {
             if (_status == Status.ROLLED_BACK) {
                 logger.info("Transaction(id={}) has been rolled back successfully", _timedId);
@@ -641,18 +658,28 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 logger.warn(rollbackException, "Failed to roll back transaction(id={})", _timedId);
             }
 
-            resetAndCloseConnection();
+            try {
+                resetAndCloseConnection();
+            } catch (final RuntimeException | Error cleanupEx) {
+                if (rollbackFailure != null) {
+                    rollbackFailure.addSuppressed(cleanupEx);
+                    logger.warn(cleanupEx, "Connection cleanup failed after rollback failure; attached as suppressed (transaction id={})", _timedId);
+                } else {
+                    throw cleanupEx;
+                }
+            }
 
             // Guard against the post-rollback action masking a primary rollback failure. When
-            // rollback itself failed (rollbackException != null), an UncheckedSQLException is
-            // propagating from the try block — letting an unchecked exception escape the finally
-            // would replace it and hide the more important SQL error from the caller.
+            // rollbackFailure is non-null, an UncheckedSQLException, RuntimeException, or Error is
+            // propagating from the try block; letting another unchecked failure escape the finally
+            // would replace it and hide the primary rollback failure from the caller.
             try {
                 actionAfterRollback.run();
-            } catch (final RuntimeException actionEx) {
-                if (rollbackException != null) {
+            } catch (final RuntimeException | Error actionEx) {
+                if (rollbackFailure != null) {
+                    rollbackFailure.addSuppressed(actionEx);
                     logger.warn(actionEx,
-                            "actionAfterRollback threw after a rollback failure; suppressed to preserve the primary rollback exception (transaction id={})",
+                            "actionAfterRollback threw after a rollback failure; attached as suppressed to preserve the primary rollback exception (transaction id={})",
                             _timedId);
                 } else {
                     throw actionEx;
@@ -676,21 +703,46 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * polluted connection is restored before being released back to the pool.</p>
      */
     void resetAndCloseConnection() {
+        Throwable cleanupFailure = null;
+
         try {
             _conn.setAutoCommit(_originalAutoCommit);
         } catch (final SQLException e) {
             logger.warn(e, "Failed to reset autoCommit for transaction(id={}) to {}", _timedId, _originalAutoCommit);
+        } catch (final RuntimeException | Error e) {
+            cleanupFailure = e;
         }
 
         try {
             _conn.setTransactionIsolation(_originalIsolationLevel);
         } catch (final SQLException e) {
             logger.warn(e, "Failed to reset transaction isolation for transaction(id={}) to {}", _timedId, _originalIsolationLevel);
+        } catch (final RuntimeException | Error e) {
+            if (cleanupFailure == null) {
+                cleanupFailure = e;
+            } else {
+                cleanupFailure.addSuppressed(e);
+            }
         }
 
         if (_closeConnection) {
             logger.debug("Releasing connection for transaction(id={})", _timedId);
-            JdbcUtil.releaseConnection(_conn, _ds);
+
+            try {
+                JdbcUtil.releaseConnection(_conn, _ds);
+            } catch (final RuntimeException | Error e) {
+                if (cleanupFailure == null) {
+                    cleanupFailure = e;
+                } else {
+                    cleanupFailure.addSuppressed(e);
+                }
+            }
+        }
+
+        if (cleanupFailure instanceof RuntimeException runtimeException) {
+            throw runtimeException;
+        } else if (cleanupFailure instanceof Error error) {
+            throw error;
         }
     }
 
@@ -706,10 +758,16 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param isolationLevel the isolation level for the nested transaction, must not be {@code null}
      * @param forUpdateOnly whether this transaction level is for update operations only
      * @return the new reference count after incrementing
+     * @throws IllegalArgumentException if {@code isolationLevel} is {@code null} or {@link IsolationLevel#NONE}
      * @throws IllegalStateException if the transaction is not active
      * @throws UncheckedSQLException if a database error occurs while setting the isolation level
      */
+    @SuppressWarnings("deprecation")
     synchronized int incrementAndGetRef(final IsolationLevel isolationLevel, final boolean forUpdateOnly) {
+        N.checkArgNotNull(isolationLevel, cs.isolationLevel);
+        N.checkArgument(isolationLevel != IsolationLevel.NONE,
+                "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
+
         if (_status != Status.ACTIVE) {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
         }
@@ -879,7 +937,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * Executes the specified {@code Runnable} outside of this transaction context.
      * This method temporarily removes the transaction from the current thread,
      * executes the runnable, and then restores the transaction (only if it was registered
-     * on this thread and is still active when {@code cmd} completes).
+     * on this thread and is still active or marked rollback-only when {@code cmd} completes).
      *
      * <p>This is useful when you need to perform operations that should not be
      * part of the current transaction, such as logging or audit operations that
@@ -926,7 +984,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 throwable = e;
                 throw e;
             } finally {
-                if (wasRegistered && _status == Status.ACTIVE && threadTransactionMap.putIfAbsent(_id, this) != null) {
+                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_id, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
                             "Another transaction is opened but not closed in 'SqlTransaction.runOutsideTransaction'."); //NOSONAR
 
@@ -944,7 +1002,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * Executes the specified {@code Callable} outside of this transaction context.
      * This method temporarily removes the transaction from the current thread,
      * executes the callable, and then restores the transaction (only if it was registered
-     * on this thread and is still active when {@code cmd} completes).
+     * on this thread and is still active or marked rollback-only when {@code cmd} completes).
      *
      * <p>This is useful when you need to perform operations that should not be
      * part of the current transaction and return a result, such as querying
@@ -995,7 +1053,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 throwable = e;
                 throw e;
             } finally {
-                if (wasRegistered && _status == Status.ACTIVE && threadTransactionMap.putIfAbsent(_id, this) != null) {
+                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_id, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
                             "Another transaction is opened but not closed in 'SqlTransaction.callOutsideTransaction'."); //NOSONAR
 

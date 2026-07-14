@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -95,13 +96,14 @@ import com.landawn.abacus.annotation.JoinedBy;
  * <p>Important notes:</p>
  * <ul>
  *   <li>The query must include the ID field(s) in the SELECT clause</li>
- *   <li>Results must be ordered properly for efficient merging</li>
+ *   <li>Input row order determines the encounter order of the merged entities and their nested values</li>
  *   <li>Collection properties in entities should be initialized</li>
  * </ul>
  *
  * @see MappedByKey
  * @see JoinedBy
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
 public @interface MergedById {

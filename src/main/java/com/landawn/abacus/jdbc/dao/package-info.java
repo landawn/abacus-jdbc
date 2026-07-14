@@ -22,8 +22,8 @@
  * adds primary-key-based CRUD and upsert operations. Restricted variants such as
  * {@link com.landawn.abacus.jdbc.dao.ReadOnlyDao},
  * {@link com.landawn.abacus.jdbc.dao.ReadOnlyCrudDao},
- * {@link com.landawn.abacus.jdbc.dao.NoUpdateDao}, and
- * {@link com.landawn.abacus.jdbc.dao.NoUpdateCrudDao} expose narrower mutation policies.
+ * {@link com.landawn.abacus.jdbc.dao.NonUpdateDao}, and
+ * {@link com.landawn.abacus.jdbc.dao.NonUpdateCrudDao} expose narrower mutation policies.
  * Corresponding {@code Unchecked*} interfaces report database failures as unchecked SQL
  * exceptions.</p>
  *

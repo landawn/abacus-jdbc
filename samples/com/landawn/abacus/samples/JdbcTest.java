@@ -44,7 +44,7 @@ import com.landawn.abacus.samples.dao.EmployeeDao;
 import com.landawn.abacus.samples.dao.EmployeeProjectDao;
 import com.landawn.abacus.samples.dao.EmployeeProjectDao2;
 import com.landawn.abacus.samples.dao.MyUserDaoA;
-import com.landawn.abacus.samples.dao.NoUpdateUserDao;
+import com.landawn.abacus.samples.dao.NonUpdateUserDao;
 import com.landawn.abacus.samples.dao.ProjectDao;
 import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
 import com.landawn.abacus.samples.dao.UncheckedUserDao;
@@ -79,7 +79,7 @@ public class JdbcTest {
     static final UserDao userDao12 = JdbcUtil.createDao(UserDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().targetTableName("user2").build());
     static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource);
     static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
-    static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
+    static final NonUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NonUpdateUserDao.class, dataSource);
     static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
 
     static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource);
@@ -96,7 +96,7 @@ public class JdbcTest {
     static {
         try {
             //    JdbcUtil.enableSqlLog();
-            //    JdbcUtil.sqlLogThresholdMillis(10);
+            //    JdbcUtil.setSqlPerfLogThresholdMillis(10);
 
             final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
             final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
@@ -199,7 +199,7 @@ public class JdbcTest {
 
     @Test
     public void test_iterateAllResultSets() throws SQLException {
-        // JdbcUtil.sqlLogThresholdMillis(1);
+        // JdbcUtil.setSqlPerfLogThresholdMillis(1);
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
@@ -240,7 +240,7 @@ public class JdbcTest {
 
     @Test
     public void test_perf_log() throws SQLException {
-        // JdbcUtil.sqlLogThresholdMillis(1);
+        // JdbcUtil.setSqlPerfLogThresholdMillis(1);
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())

@@ -17,13 +17,14 @@ package com.landawn.abacus.jdbc;
 import java.sql.ResultSet;
 
 /**
- * Enumeration representing the direction in which rows of a {@link ResultSet} will be processed.
+ * Enumeration representing the direction in which an application expects to traverse a {@link ResultSet}.
  * This enum provides a type-safe and more readable alternative to using the raw integer constants
  * defined in {@link ResultSet} for specifying fetch directions.
  *
  * <p>The fetch direction is a hint provided to the JDBC driver, suggesting the expected
- * pattern of row access. This hint allows the driver to optimize data retrieval from the
- * database, potentially improving performance for certain access patterns.</p>
+ * pattern of row access. It does not reorder rows or move the cursor; the application still uses
+ * methods such as {@link ResultSet#next()} or {@link ResultSet#previous()} to navigate. This hint
+ * allows the driver to optimize data retrieval for the declared access pattern.</p>
  *
  * <p><b>Important Considerations:</b></p>
  * <ul>
@@ -46,12 +47,12 @@ import java.sql.ResultSet;
  *         ResultSet.CONCUR_READ_ONLY
  *     );
  *
- *     // Hint to the driver to process rows in reverse order
+ *     // Hint that the application will traverse this result set backwards
  *     stmt.setFetchDirection(FetchDirection.REVERSE.intValue());
  *
- *     try (ResultSet rs = stmt.executeQuery("SELECT id, name FROM users ORDER BY id DESC")) {
- *         // Process results, potentially benefiting from the reverse hint
- *         while (rs.next()) {
+ *     try (ResultSet rs = stmt.executeQuery("SELECT id, name FROM users ORDER BY id")) {
+ *         rs.afterLast();
+ *         while (rs.previous()) {
  *             System.out.println("User: " + rs.getString("name"));
  *         }
  *     }
@@ -69,8 +70,8 @@ import java.sql.ResultSet;
 public enum FetchDirection {
 
     /**
-     * Indicates that rows in a {@link ResultSet} will be processed in a forward direction,
-     * from the first row to the last. This is the default fetch direction for most
+     * Indicates that the application expects to traverse a {@link ResultSet} in a forward direction,
+     * from the first row toward the last. This is the default fetch-direction hint for most
      * {@link ResultSet} types and is generally the most efficient for sequential access.
      *
      * <p>Corresponds to the JDBC constant {@link ResultSet#FETCH_FORWARD}.</p>
@@ -78,8 +79,8 @@ public enum FetchDirection {
     FORWARD(ResultSet.FETCH_FORWARD),
 
     /**
-     * Indicates that rows in a {@link ResultSet} will be processed in a reverse direction,
-     * from the last row to the first.
+     * Indicates that the application expects to traverse a {@link ResultSet} in reverse,
+     * from the last row toward the first. This hint does not itself reposition the cursor.
      *
      * <p>This fetch direction typically requires a scrollable {@link ResultSet} type
      * (e.g., {@code ResultSet.TYPE_SCROLL_INSENSITIVE}). Not all JDBC drivers or database
@@ -90,11 +91,11 @@ public enum FetchDirection {
     REVERSE(ResultSet.FETCH_REVERSE),
 
     /**
-     * Indicates that the order in which rows in a {@link ResultSet} will be processed is unknown.
+     * Indicates that the expected traversal direction of a {@link ResultSet} is unknown.
      *
      * <p>This constant is typically used when the fetch direction has not been explicitly set,
      * or when the JDBC driver does not provide specific fetch direction hints. In such scenarios,
-     * the driver will revert to its default behavior for processing result set rows.</p>
+     * the driver uses its default fetching behavior.</p>
      *
      * <p>Corresponds to the JDBC constant {@link ResultSet#FETCH_UNKNOWN}.</p>
      */

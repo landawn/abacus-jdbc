@@ -33,7 +33,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 @Beta
 sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> extends InsertOps<T, TD>, UncheckedDaoBase<T, TD>
-        permits UncheckedDao, UncheckedNoUpdateDao, UncheckedCrudInsertOps {
+        permits UncheckedDao, UncheckedNonUpdateDao, UncheckedCrudInsertOps {
     /**
      * Saves (inserts) the specified entity to the database.
      * All insertable properties of the entity (i.e., excluding {@code @ReadOnly}, {@code @Transient}, etc.)

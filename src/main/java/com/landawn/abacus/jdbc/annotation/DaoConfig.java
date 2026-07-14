@@ -15,6 +15,7 @@
  */
 package com.landawn.abacus.jdbc.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -58,12 +59,13 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
  * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
  *     // Framework-managed @JoinedBy joins are allowed even when the join key is null:
- *     // use the inherited JoinEntityHelper methods (e.g. loadJoinEntities, listAllJoinEntities).
+ *     // use inherited JoinEntityHelper methods (for example, loadJoinEntities or loadAllJoinEntities).
  * }
  * }</pre>
  *
  * @see CrudDao
  */
+@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
 public @interface DaoConfig {
@@ -156,7 +158,8 @@ public @interface DaoConfig {
      * null/default key (typically loading no join entities) instead of raising an error.
      *
      * <p>This applies to the built-in join methods provided by {@code JoinEntityHelper}
-     * (e.g., {@code listAllJoinEntities}, {@code findFirstWithJoinEntities}).
+     * (for example, {@code loadJoinEntities}, {@code loadAllJoinEntities}, and the
+     * {@code findFirst(...)} overloads that accept join-entity arguments).
      * It does not affect user-written SQL in {@link Query @Query} methods.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -164,7 +167,7 @@ public @interface DaoConfig {
      * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
      * public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> {
      *     // @JoinedBy-driven joins are allowed even if the join key is null or zero:
-     *     // use the inherited JoinEntityHelper methods (e.g. loadJoinEntities, listAllJoinEntities).
+     *     // use inherited JoinEntityHelper methods (for example, loadJoinEntities or loadAllJoinEntities).
      * }
      * }</pre>
      *

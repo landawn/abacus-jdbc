@@ -26,6 +26,7 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -39,6 +40,7 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.OutParameter;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
+import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
@@ -47,9 +49,10 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
-import com.landawn.abacus.query.condition.Expression;
 import com.landawn.abacus.query.condition.Limit;
+import com.landawn.abacus.query.condition.SqlExpression;
 import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
 import com.landawn.abacus.util.Throwables;
@@ -134,6 +137,50 @@ public class DaoImplTest extends TestBase {
         @Query(value = "{call test_proc(?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
         @OutParameter(position = 0, sqlType = Types.INTEGER)
         Jdbc.OutParamResult call() throws SQLException;
+    }
+
+    interface DuplicateOutParameterNameDao extends Dao<TestEntity, DuplicateOutParameterNameDao> {
+        @Query(value = "{call test_proc(?, ?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
+        @OutParameter(name = "result", sqlType = Types.INTEGER)
+        @OutParameter(name = "result", sqlType = Types.VARCHAR)
+        Jdbc.OutParamResult call() throws SQLException;
+    }
+
+    interface DuplicateOutParameterPositionDao extends Dao<TestEntity, DuplicateOutParameterPositionDao> {
+        @Query(value = "{call test_proc(?, ?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
+        @OutParameter(position = 1, sqlType = Types.INTEGER)
+        @OutParameter(position = 1, sqlType = Types.VARCHAR)
+        Jdbc.OutParamResult call() throws SQLException;
+    }
+
+    interface ExtraNamedBindingDao extends Dao<TestEntity, ExtraNamedBindingDao> {
+        @Query("UPDATE test SET name = :name WHERE id = :id")
+        int update(@Bind("name") String name, @Bind("id") long id, @Bind("unused") String unused) throws SQLException;
+    }
+
+    interface DuplicateNamedBindingDao extends Dao<TestEntity, DuplicateNamedBindingDao> {
+        @Query("UPDATE test SET name = :name WHERE id = :id")
+        int update(@Bind("name") String name, @Bind("name") String duplicate, @Bind("id") long id) throws SQLException;
+    }
+
+    interface MissingInjectedTimeOptInDao extends Dao<TestEntity, MissingInjectedTimeOptInDao> {
+        @Query("UPDATE test SET name = :name, update_time = :now")
+        int update(@Bind("name") String name) throws SQLException;
+    }
+
+    interface ZeroArgMissingInjectedTimeOptInDao extends Dao<TestEntity, ZeroArgMissingInjectedTimeOptInDao> {
+        @Query("UPDATE test SET update_time = :now")
+        int update() throws SQLException;
+    }
+
+    interface DuplicateFragmentPlaceholderDao extends Dao<TestEntity, DuplicateFragmentPlaceholderDao> {
+        @Query("SELECT * FROM test ORDER BY {fragment}")
+        List<TestEntity> list(@SqlFragment("fragment") String first, @SqlFragment("fragment") String second) throws SQLException;
+    }
+
+    interface CurrentTimeInjectionDao extends Dao<TestEntity, CurrentTimeInjectionDao> {
+        @Query(value = "UPDATE test SET update_time = :now, system_time = :sysTime, system_date = :sysDate", injectCurrentTimeParameters = true)
+        int updateCurrentTime() throws SQLException;
     }
 
     interface IncompatibleRowMapperListDao {
@@ -233,6 +280,68 @@ public class DaoImplTest extends TestBase {
     interface MappedByKeyDao {
         @MappedByKey("id")
         java.util.Map<Long, TestEntity> findMapped();
+    }
+
+    interface IncompatibleMappedByKeyMapDao extends Dao<TestEntity, IncompatibleMappedByKeyMapDao> {
+        @Query("select * from test")
+        @MappedByKey("id")
+        java.util.LinkedHashMap<Long, TestEntity> findMapped() throws SQLException;
+    }
+
+    interface AbstractMappedByKeyMapDao extends Dao<TestEntity, AbstractMappedByKeyMapDao> {
+        @Query("select * from test")
+        @MappedByKey(value = "id", mapClass = java.util.Map.class)
+        java.util.Map<Long, TestEntity> findMapped() throws SQLException;
+    }
+
+    public static final class MapWithoutNoArgConstructor<K, V> extends java.util.HashMap<K, V> {
+        private static final long serialVersionUID = 1L;
+
+        public MapWithoutNoArgConstructor(final int initialCapacity) {
+            super(initialCapacity);
+        }
+    }
+
+    interface NoArgConstructorMappedByKeyMapDao extends Dao<TestEntity, NoArgConstructorMappedByKeyMapDao> {
+        @Query("select * from test")
+        @MappedByKey(value = "id", mapClass = MapWithoutNoArgConstructor.class)
+        java.util.Map<Long, TestEntity> findMapped() throws SQLException;
+    }
+
+    interface TransactionalStreamDao extends Dao<TestEntity, TransactionalStreamDao> {
+        @Transactional
+        @Query(value = "select * from test", op = QueryOperation.stream)
+        com.landawn.abacus.util.stream.Stream<TestEntity> streamAll();
+    }
+
+    interface MandatoryTransactionalStreamDao extends Dao<TestEntity, MandatoryTransactionalStreamDao> {
+        @Transactional(propagation = Propagation.MANDATORY)
+        @Query(value = "select * from test", op = QueryOperation.stream)
+        com.landawn.abacus.util.stream.Stream<TestEntity> streamAll();
+    }
+
+    interface RequiresNewTransactionalStreamDao extends Dao<TestEntity, RequiresNewTransactionalStreamDao> {
+        @Transactional(propagation = Propagation.REQUIRES_NEW)
+        @Query(value = "select * from test", op = QueryOperation.stream)
+        com.landawn.abacus.util.stream.Stream<TestEntity> streamAll();
+    }
+
+    interface NotSupportedTransactionalStreamDao extends Dao<TestEntity, NotSupportedTransactionalStreamDao> {
+        @Transactional(propagation = Propagation.NOT_SUPPORTED)
+        @Query(value = "select * from test", op = QueryOperation.stream)
+        com.landawn.abacus.util.stream.Stream<TestEntity> streamAll();
+    }
+
+    interface NeverTransactionalStreamDao extends Dao<TestEntity, NeverTransactionalStreamDao> {
+        @Transactional(propagation = Propagation.NEVER)
+        @Query(value = "select * from test", op = QueryOperation.stream)
+        com.landawn.abacus.util.stream.Stream<TestEntity> streamAll();
+    }
+
+    interface JavaTransactionalStreamDao extends Dao<TestEntity, JavaTransactionalStreamDao> {
+        @Transactional
+        @Query(value = "select * from test", op = QueryOperation.stream)
+        java.util.stream.Stream<TestEntity> streamAll();
     }
 
     interface UpdateOpDao {
@@ -625,7 +734,7 @@ public class DaoImplTest extends TestBase {
 
     @CacheResult(enabled = true)
     @RefreshCache
-    interface CacheDisabledOverrideDao extends com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao<TestEntity, CacheDisabledOverrideDao> {
+    interface CacheDisabledOverrideDao extends com.landawn.abacus.jdbc.dao.UncheckedNonUpdateDao<TestEntity, CacheDisabledOverrideDao> {
         // No @NonDBOperation: must reach the proxy's cache wrapper so the resolution logic actually runs.
         @CacheResult(enabled = false)
         default String findCached() {
@@ -638,6 +747,11 @@ public class DaoImplTest extends TestBase {
 
         @RefreshCache(enabled = false)
         default String updateData() {
+            return "refresh-result";
+        }
+
+        @RefreshCache
+        default String updateWithUnkeyableArgument(final Object argument) {
             return "refresh-result";
         }
     }
@@ -728,6 +842,49 @@ public class DaoImplTest extends TestBase {
         assertEquals(0, updateCount.get(), "@RefreshCache(enabled=false) method must not invalidate the cache");
     }
 
+    @Test
+    void testRefreshCacheStillInvalidatesWhenDefaultCacheKeyCannotBeCreated() throws Exception {
+        final java.util.concurrent.atomic.AtomicReference<String> updatedKey = new java.util.concurrent.atomic.AtomicReference<>();
+        final Jdbc.DaoCache recordingCache = new Jdbc.DaoCache() {
+            @Override
+            public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                return null;
+            }
+
+            @Override
+            public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                return true;
+            }
+
+            @Override
+            public boolean put(final String defaultCacheKey, final Object result, final long liveTime, final long maxIdleTime, final Object daoProxy,
+                    final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                return true;
+            }
+
+            @Override
+            public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                updatedKey.set(defaultCacheKey);
+            }
+        };
+
+        final CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, recordingCache,
+                null);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class, Mockito.CALLS_REAL_METHODS)) {
+            jdbcUtil.when(() -> JdbcUtil.createCacheKey(Mockito.anyString(), Mockito.anyString(), Mockito.<Object[]> any(),
+                    Mockito.any(com.landawn.abacus.logging.Logger.class))).thenReturn(null);
+
+            assertEquals("refresh-result", dao.updateWithUnkeyableArgument(new Object()));
+        }
+
+        assertNotNull(updatedKey.get(), "refresh must receive a table-bearing fallback key when argument serialization fails");
+        assertTrue(updatedKey.get().contains(JdbcUtil.CACHE_KEY_SPLITOR));
+    }
+
     // isFindFirst: QueryOperation.findFirst returns true regardless of method name (line 521)
     @Test
     public void testIsFindFirst_OpFindFirst() throws Exception {
@@ -816,6 +973,68 @@ public class DaoImplTest extends TestBase {
         m.setAccessible(true);
 
         assertTrue((boolean) m.invoke(null, method, java.util.Map.class, QueryOperation.DEFAULT, "MappedByKeyDao.findMapped"));
+    }
+
+    @Test
+    void testMappedByKeyRejectsMapClassIncompatibleWithDeclaredReturnTypeAtCreation() throws SQLException {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createDao(IncompatibleMappedByKeyMapDao.class, dataSource));
+
+        assertTrue(thrown.getMessage().contains("java.util.HashMap"));
+        assertTrue(thrown.getMessage().contains("java.util.LinkedHashMap"));
+    }
+
+    @Test
+    void testMappedByKeyRejectsNonConcreteMapClassAtCreation() throws SQLException {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createDao(AbstractMappedByKeyMapDao.class, dataSource));
+
+        assertTrue(thrown.getMessage().contains("concrete Map implementation"));
+    }
+
+    @Test
+    void testMappedByKeyRejectsMapClassWithoutNoArgConstructorAtCreation() throws SQLException {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createDao(NoArgConstructorMappedByKeyMapDao.class, dataSource));
+
+        assertTrue(thrown.getMessage().contains("no-argument constructor"));
+    }
+
+    @Test
+    void testTransactionalStreamRejectedAtCreation() throws SQLException {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> JdbcUtil.createDao(TransactionalStreamDao.class, dataSource));
+
+        assertTrue(thrown.getMessage().contains("stream-returning"));
+        assertTrue(thrown.getMessage().contains("REQUIRED"));
+    }
+
+    @Test
+    void testMandatoryTransactionalStreamAcceptedAtCreation() throws SQLException {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+
+        final MandatoryTransactionalStreamDao dao = JdbcUtil.createDao(MandatoryTransactionalStreamDao.class, dataSource);
+
+        assertNotNull(dao);
+        assertThrows(IllegalStateException.class, dao::streamAll);
+    }
+
+    @Test
+    void testUnsafeTransactionalStreamPropagationModesRejectedAtCreation() throws SQLException {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+
+        assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(RequiresNewTransactionalStreamDao.class, dataSource));
+        assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(NotSupportedTransactionalStreamDao.class, dataSource));
+        assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(NeverTransactionalStreamDao.class, dataSource));
+        assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(JavaTransactionalStreamDao.class, dataSource));
     }
 
     // isListQuery: non-DEFAULT non-list QueryOperation returns false (line 441)
@@ -994,6 +1213,105 @@ public class DaoImplTest extends TestBase {
     }
 
     @Test
+    public void testCreateDao_RejectsDuplicateOutParameterName() throws SQLException {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(DuplicateOutParameterNameDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("Duplicate @OutParameter name"));
+    }
+
+    @Test
+    public void testCreateDao_RejectsDuplicateOutParameterPosition() throws SQLException {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(DuplicateOutParameterPositionDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("Duplicate @OutParameter position"));
+    }
+
+    @Test
+    public void testCreateDao_RejectsExtraNamedBinding() throws SQLException {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao(ExtraNamedBindingDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("not found in the sql"));
+        assertTrue(thrown.getMessage().contains("unused"));
+    }
+
+    @Test
+    public void testCreateDao_RejectsDuplicateNamedBinding() throws SQLException {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(DuplicateNamedBindingDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("same named parameter"));
+        assertTrue(thrown.getMessage().contains("name"));
+    }
+
+    @Test
+    public void testCreateDao_RejectsUnboundCurrentTimeAliasWithoutOptIn() throws SQLException {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(MissingInjectedTimeOptInDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("Missing bindings"));
+        assertTrue(thrown.getMessage().contains(JdbcUtil.PN_NOW));
+    }
+
+    @Test
+    public void testCreateDao_RejectsZeroArgUnboundCurrentTimeAliasWithoutOptIn() throws SQLException {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(ZeroArgMissingInjectedTimeOptInDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("Missing bindings"));
+        assertTrue(thrown.getMessage().contains(JdbcUtil.PN_NOW));
+    }
+
+    @Test
+    public void testCreateDao_RejectsDuplicateSqlFragmentPlaceholder() throws SQLException {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao(DuplicateFragmentPlaceholderDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("same SQL fragment placeholder"));
+        assertTrue(thrown.getMessage().contains("{fragment}"));
+    }
+
+    @Test
+    public void testInjectedCurrentTimeAliasesShareOneClockReading() throws SQLException {
+        final DataSource ds = mock(DataSource.class);
+        final Connection conn = mock(Connection.class);
+        final DatabaseMetaData meta = mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+
+        Mockito.when(ds.getConnection()).thenReturn(conn);
+        Mockito.when(conn.getMetaData()).thenReturn(meta);
+        Mockito.when(meta.getDatabaseProductName()).thenReturn("MySQL");
+        Mockito.when(meta.getDatabaseProductVersion()).thenReturn("8.0");
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(stmt.executeUpdate()).thenReturn(1);
+
+        final CurrentTimeInjectionDao dao = DaoImpl.createDao(CurrentTimeInjectionDao.class, null, ds, PSC, null, null, null);
+        final java.sql.Timestamp firstClockReading = new java.sql.Timestamp(1_234_567L);
+        final java.sql.Timestamp secondClockReading = new java.sql.Timestamp(9_876_543L);
+
+        try (MockedStatic<Dates> dates = Mockito.mockStatic(Dates.class, Mockito.CALLS_REAL_METHODS)) {
+            dates.when(Dates::currentTimestamp).thenReturn(firstClockReading, secondClockReading);
+            dates.when(Dates::currentDate).thenReturn(new java.sql.Date(secondClockReading.getTime()));
+
+            assertEquals(1, dao.updateCurrentTime());
+
+            dates.verify(Dates::currentTimestamp, Mockito.times(1));
+            dates.verify(Dates::currentDate, Mockito.never());
+        }
+
+        final ArgumentCaptor<java.sql.Timestamp> timestamps = ArgumentCaptor.forClass(java.sql.Timestamp.class);
+        Mockito.verify(stmt, Mockito.times(2)).setTimestamp(Mockito.anyInt(), timestamps.capture());
+        assertEquals(firstClockReading, timestamps.getAllValues().get(0));
+        assertEquals(firstClockReading, timestamps.getAllValues().get(1));
+
+        final ArgumentCaptor<java.sql.Date> dates = ArgumentCaptor.forClass(java.sql.Date.class);
+        Mockito.verify(stmt).setDate(Mockito.anyInt(), dates.capture());
+        assertEquals(firstClockReading.getTime(), dates.getValue().getTime());
+    }
+
+    @Test
     public void testPrepareQueryWithConditionDoesNotConfigureLargeResultStatement() throws SQLException {
         DataSource ds = mockDataSourceForDaoCreation();
         IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds, PSC, null, null, null);
@@ -1085,25 +1403,25 @@ public class DaoImplTest extends TestBase {
         assertTrue(thrown.getCause() instanceof ArithmeticException);
     }
 
-    // Regression: handleLimit's Expression-already-has-limit check used to omit " FETCH FIRST ", so an
-    // Expression containing FETCH FIRST (which DaoImpl itself emits for Oracle/SQLServer/DB2 and which
+    // Regression: handleLimit's SqlExpression-already-has-limit check used to omit " FETCH FIRST ", so an
+    // SqlExpression containing FETCH FIRST (which DaoImpl itself emits for Oracle/SQLServer/DB2 and which
     // users may write inline) would fall through to the count>0 branch and get wrapped in a Criteria
     // with a second LIMIT/FETCH appended — producing invalid SQL on those databases.
     @Test
-    public void testHandleLimit_FetchFirstExpressionNotDuplicated() throws Exception {
+    public void testHandleLimit_FetchFirstSqlExpressionNotDuplicated() throws Exception {
         Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", com.landawn.abacus.query.condition.Condition.class, int.class);
         handleLimit.setAccessible(true);
 
-        Expression expr = Filters.expr("id > 0 FETCH FIRST 10 ROWS ONLY");
+        SqlExpression expr = Filters.expr("id > 0 FETCH FIRST 10 ROWS ONLY");
 
         // Prior bug → wrapped in Criteria with extra FETCH FIRST appended. After fix, returned as-is.
         Object out = handleLimit.invoke(null, expr, 5);
-        assertSame(expr, out, "Expression already containing FETCH FIRST must not be re-wrapped");
+        assertSame(expr, out, "SqlExpression already containing FETCH FIRST must not be re-wrapped");
 
-        // Sanity: an Expression containing a plain LIMIT is also returned as-is (already covered before fix).
-        Expression limitExpr = Filters.expr("id > 0 LIMIT 10");
+        // Sanity: an SqlExpression containing a plain LIMIT is also returned as-is (already covered before fix).
+        SqlExpression limitExpr = Filters.expr("id > 0 LIMIT 10");
         Object out2 = handleLimit.invoke(null, limitExpr, 5);
-        assertSame(limitExpr, out2, "Expression already containing LIMIT must not be re-wrapped");
+        assertSame(limitExpr, out2, "SqlExpression already containing LIMIT must not be re-wrapped");
     }
 
     @Test
@@ -1118,34 +1436,34 @@ public class DaoImplTest extends TestBase {
         final Criteria withLimit = Criteria.builder().where(Filters.eq("id", 1)).limit(20, 5).build();
         final Criteria retained = (Criteria) invokeHandleLimit(withLimit, -1);
 
-        assertEquals(20, retained.getLimit().getCount());
-        assertEquals(5, retained.getLimit().getOffset());
-        assertNotNull(retained.getWhere());
+        assertEquals(20, retained.limit().count());
+        assertEquals(5, retained.limit().offset());
+        assertNotNull(retained.where());
 
         final Criteria withoutLimit = Criteria.builder().where(Filters.eq("id", 1)).build();
         final Criteria mysqlLimited = (Criteria) invokeHandleLimit(withoutLimit, 3);
-        assertEquals(3, mysqlLimited.getLimit().getCount());
-        assertEquals(0, mysqlLimited.getLimit().getOffset());
+        assertEquals(3, mysqlLimited.limit().count());
+        assertEquals(0, mysqlLimited.limit().offset());
     }
 
     @Test
     public void testHandleLimit_BuildsCriteriaForBareConditions() throws Exception {
         final Criteria whereLimited = (Criteria) invokeHandleLimit(Filters.eq("id", 1), 2);
-        assertNotNull(whereLimited.getWhere());
-        assertEquals(2, whereLimited.getLimit().getCount());
+        assertNotNull(whereLimited.where());
+        assertEquals(2, whereLimited.limit().count());
 
         final Criteria orderLimited = (Criteria) invokeHandleLimit(Filters.orderBy("id"), 2);
-        assertNotNull(orderLimited.getOrderBy());
-        assertEquals(2, orderLimited.getLimit().getCount());
+        assertNotNull(orderLimited.orderBy());
+        assertEquals(2, orderLimited.limit().count());
 
         final Criteria groupLimited = (Criteria) invokeHandleLimit(Filters.groupBy("status"), 2);
-        assertNotNull(groupLimited.getGroupBy());
-        assertEquals(2, groupLimited.getLimit().getCount());
+        assertNotNull(groupLimited.groupBy());
+        assertEquals(2, groupLimited.limit().count());
 
         // A null condition with a positive count yields a standalone Limit (no wrapping Criteria).
         final Limit noConditionLimited = (Limit) invokeHandleLimit(null, 2);
-        assertEquals(2, noConditionLimited.getCount());
-        assertEquals(0, noConditionLimited.getOffset());
+        assertEquals(2, noConditionLimited.count());
+        assertEquals(0, noConditionLimited.offset());
     }
 
     // Regression: getApplicableDaoForJoinEntity used to return a cache hit blindly. Because the cache key
@@ -1192,8 +1510,8 @@ public class DaoImplTest extends TestBase {
 
         final Criteria limited = (Criteria) invokeHandleLimit(union, 2);
 
-        assertEquals(1, limited.getSetOperations().size());
-        assertEquals(2, limited.getLimit().getCount());
+        assertEquals(1, limited.setOperations().size());
+        assertEquals(2, limited.limit().count());
     }
 
     @Test

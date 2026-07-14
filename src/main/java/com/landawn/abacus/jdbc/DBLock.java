@@ -533,21 +533,27 @@ public final class DBLock {
 
             try {
                 if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0) {
-                    targetCodePool.put(target, new LockInfo(code, liveTime));
+                    // Linearize successful acquisition with close(), which synchronizes on the same
+                    // monitor. A plain post-insert volatile check still allowed close() to run after
+                    // that check but before this method returned, so lock() could report success for
+                    // a row close() had already deleted.
+                    synchronized (this) {
+                        if (isClosed) {
+                            try {
+                                JdbcUtil.executeUpdate(ds, unlockSQL, target, code);
+                            } catch (final Exception cleanupFailure) {
+                                logger.warn(cleanupFailure, "Failed to remove DB lock acquired concurrently with close(target={})", target);
+                            }
 
-                    // close() may have completed between the entry assertNotClosed() and the INSERT above;
-                    // an orphaned row would never be refreshed or releasable through this instance, blocking
-                    // the target for other contenders until the idle-expiry cleanup reaps it.
-                    if (isClosed) {
-                        targetCodePool.remove(target);
-                        JdbcUtil.executeUpdate(ds, unlockSQL, target, code);
+                            throw new IllegalStateException("This DBLock has been closed");
+                        }
 
-                        throw new IllegalStateException("This DBLock has been closed");
+                        targetCodePool.put(target, new LockInfo(code, liveTime));
+
+                        logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
+
+                        return code;
                     }
-
-                    logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
-
-                    return code;
                 }
             } catch (final IllegalStateException e) {
                 // The closed-instance check above must not be swallowed by the retry loop.

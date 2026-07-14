@@ -99,7 +99,7 @@ import com.landawn.abacus.util.stream.CharStream;
  *   </tr>
  *   <tr>
  *     <td>Utility</td>
-     *     <td>{@code resultSetParameterSetter()}</td>
+ *     <td>{@code resultSetParameterSetter()}</td>
  *     <td>Factory method to create a parameter setter from a {@link Jdbc.ColumnGetter}</td>
  *   </tr>
  *   <tr>
@@ -2392,7 +2392,7 @@ public final class DataTransferUtil {
             }
         }
 
-        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
+        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetDataSource, insertSql, batchSize);
     }
 
     /**
@@ -2475,7 +2475,7 @@ public final class DataTransferUtil {
             }
         }
 
-        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
+        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetDataSource, insertSql, batchSize);
     }
 
     /**
@@ -2503,7 +2503,7 @@ public final class DataTransferUtil {
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql) throws SQLException {
-        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -2573,7 +2573,7 @@ public final class DataTransferUtil {
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
-        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0,
+        return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0,
                 parameterSetter);
     }
 
@@ -2740,7 +2740,7 @@ public final class DataTransferUtil {
         final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
         final String insertSql = generateInsertSqlFromSelectColumns(sourceConn, selectSql, targetConn, targetTableName);
 
-        return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
+        return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetConn, insertSql, batchSize);
     }
 
     /**
@@ -2833,7 +2833,7 @@ public final class DataTransferUtil {
         final String selectSql = generateSelectSql(sourceConn, sourceTableName, columnNames);
         final String insertSql = generateInsertSql(targetConn, targetTableName, columnNames);
 
-        return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
+        return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetConn, insertSql, batchSize);
     }
 
     private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> columnNames) {
@@ -2972,7 +2972,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql) throws SQLException {
-        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -3048,7 +3048,8 @@ public final class DataTransferUtil {
     @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
-        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
+        return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0,
+                parameterSetter);
     }
 
     /**
@@ -3213,7 +3214,7 @@ public final class DataTransferUtil {
     }
 
     private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt) throws SQLException {
-        setFetchForLargeResult(conn, stmt, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+        setFetchForLargeResult(conn, stmt, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
     }
 
     private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
@@ -4156,7 +4157,7 @@ public final class DataTransferUtil {
     public static final class CopyFromDataSource {
         private final javax.sql.DataSource sourceDataSource;
         private final String selectSql;
-        private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT;
+        private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
@@ -4246,7 +4247,7 @@ public final class DataTransferUtil {
     public static final class CopyFromConnection {
         private final Connection sourceConn;
         private final String selectSql;
-        private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT;
+        private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         private long batchIntervalInMillis = 0;
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;

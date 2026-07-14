@@ -1,7 +1,7 @@
 # abacus-jdbc
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.8.0)
-[![Javadocs](https://img.shields.io/badge/javadoc-4.8.0-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/4.8.0/index.html)
+[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.8.2)
+[![Javadocs](https://img.shields.io/badge/javadoc-4.8.2-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/4.8.2/index.html)
 
 Work with SQL and databases as naturally as you work with Collections.
 
@@ -173,7 +173,7 @@ Requires **JDK 17 or above**. See the [change log](https://github.com/landawn/ab
 <dependency>
     <groupId>com.landawn.abacus</groupId>
     <artifactId>abacus-jdbc</artifactId>
-    <version>4.8.0</version>
+    <version>4.8.2</version>
 </dependency>
 <dependency>
     <groupId>com.landawn.abacus</groupId>
@@ -190,7 +190,7 @@ Requires **JDK 17 or above**. See the [change log](https://github.com/landawn/ab
 ### Gradle
 
 ```gradle
-implementation 'com.landawn.abacus:abacus-jdbc:4.8.0'
+implementation 'com.landawn.abacus:abacus-jdbc:4.8.2'
 implementation 'com.landawn.abacus:abacus-common:7.8.5'
 implementation 'com.landawn.abacus:abacus-query:4.8.7'
 ```

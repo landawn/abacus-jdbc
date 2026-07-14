@@ -28,7 +28,7 @@ public class ReadOnlyCrudDaoTest extends TestBase {
     }
 
     @Test
-    public void testExtendsNoUpdateCrudDao() {
+    public void testExtendsNonUpdateCrudDao() {
         assertTrue(CrudReadOps.class.isAssignableFrom(ReadOnlyCrudDao.class));
     }
 

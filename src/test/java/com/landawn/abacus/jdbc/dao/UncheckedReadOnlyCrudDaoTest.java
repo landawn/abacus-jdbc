@@ -28,7 +28,7 @@ public class UncheckedReadOnlyCrudDaoTest extends TestBase {
     }
 
     @Test
-    public void testExtendsUncheckedNoUpdateCrudDao() {
+    public void testExtendsUncheckedNonUpdateCrudDao() {
         assertTrue(UncheckedCrudReadOps.class.isAssignableFrom(UncheckedReadOnlyCrudDao.class));
     }
 
