@@ -175,24 +175,12 @@ Requires **JDK 17 or above**. See the [change log](https://github.com/landawn/ab
     <artifactId>abacus-jdbc</artifactId>
     <version>4.8.3</version>
 </dependency>
-<dependency>
-    <groupId>com.landawn.abacus</groupId>
-    <artifactId>abacus-common</artifactId>
-    <version>7.8.5</version>
-</dependency>
-<dependency>
-    <groupId>com.landawn.abacus</groupId>
-    <artifactId>abacus-query</artifactId>
-    <version>4.8.7</version>
-</dependency>
 ```
 
 ### Gradle
 
 ```gradle
 implementation 'com.landawn.abacus:abacus-jdbc:4.8.3'
-implementation 'com.landawn.abacus:abacus-common:7.8.5'
-implementation 'com.landawn.abacus:abacus-query:4.8.7'
 ```
 
 ## User guide
