@@ -7209,7 +7209,12 @@ public final class Jdbc {
          */
         void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
-        void clear();
+        /**
+         * clear remove all key/value
+         */
+        default void clear() {
+
+        }
 
     }
 

@@ -791,6 +791,10 @@ public class DaoImplTest extends TestBase {
             public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
                     Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             }
+
+            @Override
+            public void clear() {
+            }
         };
 
         CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, recordingCache, null);
@@ -835,6 +839,10 @@ public class DaoImplTest extends TestBase {
                     Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
                 updateCount.incrementAndGet();
             }
+
+            @Override
+            public void clear() {
+            }
         };
 
         CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, recordingCache, null);
@@ -868,6 +876,10 @@ public class DaoImplTest extends TestBase {
             public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                     final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
                 updatedKey.set(defaultCacheKey);
+            }
+
+            @Override
+            public void clear() {
             }
         };
 
