@@ -18,6 +18,7 @@ package com.landawn.abacus.jdbc.dao;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -61,8 +62,9 @@ import com.landawn.abacus.util.function.Function;
  *       included (see {@link #getRefreshSelectPropNames(Collection, List)})</li>
  *   <li>DAO type casting and validation — narrowing join-entity helpers to their backing
  *       {@link ReadOps}/{@link CrudReadOps} (and unchecked) views</li>
- *   <li>Asynchronous operation completion and result aggregation — joining batches of futures and
- *       surfacing the first failure as a checked or unchecked SQL exception</li>
+ *   <li>Asynchronous operation completion and result aggregation — joining batches of futures,
+ *       surfacing the first failure as a checked or unchecked SQL exception, and attaching later
+ *       failures as suppressed exceptions</li>
  *   <li>Join metadata retrieval — looking up {@link JoinInfo} for an entity's join properties</li>
  * </ul>
  *
@@ -320,7 +322,8 @@ public final class DaoUtil {
     /**
      * Builds the {@code WHERE} condition selecting the rows whose IDs are contained in the given (sub-)collection,
      * dispatching on the shape of the IDs: {@link EntityId}s, {@link Map}s, a single-column id (rendered as an
-     * {@code IN} clause), or multi-column ids. Shared by {@link CrudReadOps#batchGet(Collection, Collection, int)} and
+     * {@code IN} clause with an {@code IS NULL} branch when needed), or multi-column ids. Shared by
+     * {@link CrudReadOps#batchGet(Collection, Collection, int)} and
      * {@link CrudReadOps#count(Collection)}; declared {@code static} so it is not treated as a DAO operation by the proxy.
      *
      * @param ids the (batch of) IDs to match
@@ -336,9 +339,35 @@ public final class DaoUtil {
         } else if (isMap) {
             return Filters.anyOfAllEqual(ids);
         } else if (idPropNameList.size() == 1) {
-            return Filters.in(idPropNameList.get(0), ids);
+            return singlePropValuesToCondition(idPropNameList.get(0), ids);
         } else {
             return Filters.anyOfAllEqual(ids, idPropNameList);
+        }
+    }
+
+    /**
+     * Builds a condition matching any supplied value for one property while preserving SQL
+     * {@code NULL} equality semantics. A plain {@code IN (..., NULL)} predicate never matches a
+     * null column, so a null value is expressed as a separate {@link Filters#isNull(String)} branch.
+     *
+     * @param propName the property to match
+     * @param values the non-empty values to match
+     * @return an {@code IN}, {@code IS NULL}, or combined {@code OR} condition as appropriate
+     * @throws IllegalArgumentException if {@code propName} or {@code values} is null or empty
+     */
+    static Condition singlePropValuesToCondition(final String propName, final Collection<?> values) {
+        N.checkArgNotEmpty(propName, "propName");
+        N.checkArgNotEmpty(values, "values");
+
+        final List<Object> nonNullValues = new ArrayList<>(values);
+        final boolean containsNull = nonNullValues.removeIf(value -> value == null);
+
+        if (!containsNull) {
+            return Filters.in(propName, nonNullValues);
+        } else if (nonNullValues.isEmpty()) {
+            return Filters.isNull(propName);
+        } else {
+            return Filters.in(propName, nonNullValues).or(Filters.isNull(propName));
         }
     }
 
@@ -618,17 +647,20 @@ public final class DaoUtil {
      * A consumer that converts an exception to {@link UncheckedSQLException} (or another runtime exception) and throws it.
      * <p>
      * Used by {@link #uncheckedComplete(List)} and {@link #uncheckedCompleteSum(List)} to surface
-     * failures from completed futures. If the exception is a {@link SQLException} or has a
-     * SQLException as its cause, it is wrapped in an {@link UncheckedSQLException}. Otherwise, the
-     * exception is converted to a runtime exception via {@link ExceptionUtil#toRuntimeException}.
+     * failures from completed futures. An existing {@link UncheckedSQLException} is rethrown
+     * unchanged. A {@link SQLException}, or an exception whose cause is one, is wrapped in an
+     * {@code UncheckedSQLException}; otherwise the exception is converted to a runtime exception
+     * via {@link ExceptionUtil#toRuntimeException}. Later collected failures remain suppressed.
      * This consumer never returns normally when invoked — it always throws.
      * </p>
      */
     static final Throwables.Consumer<? super Exception, UncheckedSQLException> throwUncheckedSQLException = e -> {
-        if (e instanceof SQLException) {
+        if (e instanceof UncheckedSQLException) {
+            throw (UncheckedSQLException) e;
+        } else if (e instanceof SQLException) {
             throw new UncheckedSQLException((SQLException) e);
         } else if (e.getCause() instanceof SQLException) {
-            throw new UncheckedSQLException((SQLException) e.getCause());
+            throw new UncheckedSQLException(transferSuppressed(e, (SQLException) e.getCause()));
         } else {
             throw ExceptionUtil.toRuntimeException(e, true);
         }
@@ -639,7 +671,8 @@ public final class DaoUtil {
      * <p>
      * Used by {@link #complete(List)} and {@link #completeSum(List)} to surface failures from
      * completed futures. If the exception is a {@link SQLException} or has a SQLException as its
-     * cause, the SQLException is re-thrown. Otherwise, the exception is converted to a runtime
+     * cause, the SQLException is re-thrown. Suppressed failures collected on an enclosing exception
+     * are transferred to that SQLException. Otherwise, the exception is converted to a runtime
      * exception via {@link ExceptionUtil#toRuntimeException}. This consumer never returns normally
      * when invoked — it always throws.
      * </p>
@@ -648,7 +681,7 @@ public final class DaoUtil {
         if (e instanceof SQLException) {
             throw (SQLException) e;
         } else if (e.getCause() instanceof SQLException) {
-            throw (SQLException) e.getCause();
+            throw transferSuppressed(e, (SQLException) e.getCause());
         } else {
             throw ExceptionUtil.toRuntimeException(e, true);
         }
@@ -666,9 +699,9 @@ public final class DaoUtil {
      * <pre>{@code
      * // Execute multiple async operations and wait for completion
      * List<ContinuableFuture<Void>> futures = new ArrayList<>();
-     * futures.add(asyncExecutor.execute(() -> dao.save(entity1)));
-     * futures.add(asyncExecutor.execute(() -> dao.save(entity2)));
-     * futures.add(asyncExecutor.execute(() -> dao.save(entity3)));
+     * futures.add(ContinuableFuture.run(() -> dao.save(entity1)));
+     * futures.add(ContinuableFuture.run(() -> dao.save(entity2)));
+     * futures.add(ContinuableFuture.run(() -> dao.save(entity3)));
      *
      * // Wait for all operations to complete
      * DaoUtil.uncheckedComplete(futures);
@@ -707,9 +740,9 @@ public final class DaoUtil {
      * <pre>{@code
      * // Execute multiple async update operations and sum affected rows
      * List<ContinuableFuture<Integer>> futures = new ArrayList<>();
-     * futures.add(asyncExecutor.execute(() -> dao.update(entity1)));
-     * futures.add(asyncExecutor.execute(() -> dao.update(entity2)));
-     * futures.add(asyncExecutor.execute(() -> dao.update(entity3)));
+     * futures.add(ContinuableFuture.call(() -> dao.update(entity1)));
+     * futures.add(ContinuableFuture.call(() -> dao.update(entity2)));
+     * futures.add(ContinuableFuture.call(() -> dao.update(entity3)));
      *
      * // Wait for all operations and get total affected rows
      * int totalAffectedRows = DaoUtil.uncheckedCompleteSum(futures);
@@ -756,9 +789,9 @@ public final class DaoUtil {
      * <pre>{@code
      * // Execute multiple async operations and wait for completion (checked exception)
      * List<ContinuableFuture<Void>> futures = new ArrayList<>();
-     * futures.add(asyncExecutor.execute(() -> dao.save(entity1)));
-     * futures.add(asyncExecutor.execute(() -> dao.save(entity2)));
-     * futures.add(asyncExecutor.execute(() -> dao.save(entity3)));
+     * futures.add(ContinuableFuture.run(() -> dao.save(entity1)));
+     * futures.add(ContinuableFuture.run(() -> dao.save(entity2)));
+     * futures.add(ContinuableFuture.run(() -> dao.save(entity3)));
      *
      * // Wait for all operations to complete
      * DaoUtil.complete(futures);
@@ -797,9 +830,9 @@ public final class DaoUtil {
      * <pre>{@code
      * // Execute multiple async update operations and sum affected rows (checked exception)
      * List<ContinuableFuture<Integer>> futures = new ArrayList<>();
-     * futures.add(asyncExecutor.execute(() -> dao.update(entity1)));
-     * futures.add(asyncExecutor.execute(() -> dao.update(entity2)));
-     * futures.add(asyncExecutor.execute(() -> dao.update(entity3)));
+     * futures.add(ContinuableFuture.call(() -> dao.update(entity1)));
+     * futures.add(ContinuableFuture.call(() -> dao.update(entity2)));
+     * futures.add(ContinuableFuture.call(() -> dao.update(entity3)));
      *
      * // Wait for all operations and get total affected rows
      * int totalAffectedRows = DaoUtil.completeSum(futures);
@@ -840,9 +873,33 @@ public final class DaoUtil {
         }
 
         if (firstException != nextException) {
-            firstException.addSuppressed(nextException);
+            addSuppressedIfDifferent(firstException, nextException);
         }
 
         return firstException;
+    }
+
+    private static <E extends Exception> E transferSuppressed(final Exception source, final E target) {
+        for (final Throwable suppressed : source.getSuppressed()) {
+            if (suppressed != target) {
+                addSuppressedIfDifferent(target, suppressed);
+            }
+        }
+
+        return target;
+    }
+
+    /**
+     * Attaches {@code secondary} to {@code primary} unless both references identify the same
+     * throwable. This identity check is required because {@link Throwable#addSuppressed(Throwable)}
+     * rejects self-suppression and would otherwise replace the failure being preserved.
+     *
+     * @param primary the failure that will be propagated
+     * @param secondary the additional failure to retain
+     */
+    static void addSuppressedIfDifferent(final Throwable primary, final Throwable secondary) {
+        if (primary != secondary) {
+            primary.addSuppressed(secondary);
+        }
     }
 }

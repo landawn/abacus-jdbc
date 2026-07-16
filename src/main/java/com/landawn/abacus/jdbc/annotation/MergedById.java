@@ -40,7 +40,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  * one-to-many join &mdash; a bare entity return type is rejected &mdash; and whose {@code QueryOperation} is
  * {@code DEFAULT}, {@code list}, {@code findFirst}, or {@code findOnlyOne}; anything else fails DAO
  * initialization with {@code IllegalArgumentException}. Contrast with
- * {@link MappedByKey}, which keys each row into a {@code Map} rather than merging rows.</p>
+ * {@link MappedByKey}, which returns the merged entities keyed in a {@code Map}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

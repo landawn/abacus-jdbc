@@ -38,6 +38,11 @@ import java.sql.Types;
  * is always mandatory. The accompanying {@link Query @Query} should declare {@code procedure = true}
  * and a {@code QueryOperation} that retrieves the OUT values (for example {@code QueryOperation.executeAndGetOutParameters}).</p>
  *
+ * <p>OUT-parameter names and positive positions must be unique within a method. Declaring an
+ * {@code @OutParameter} on a non-procedure query, repeating a name or position, or specifying
+ * an invalid name/position combination fails DAO initialization with
+ * {@code UnsupportedOperationException}.</p>
+ *
  * <p><b>Usage Example:</b></p>
  * <pre>{@code
  * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",

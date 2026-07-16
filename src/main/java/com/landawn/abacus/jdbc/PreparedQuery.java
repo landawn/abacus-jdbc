@@ -48,6 +48,7 @@ public final class PreparedQuery extends AbstractQuery<PreparedStatement, Prepar
      * {@code closeAfterExecution} flag.</p>
      *
      * @param stmt the {@link PreparedStatement} to be wrapped by this query. Must not be {@code null}.
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}
      */
     PreparedQuery(final PreparedStatement stmt) {
         super(stmt);

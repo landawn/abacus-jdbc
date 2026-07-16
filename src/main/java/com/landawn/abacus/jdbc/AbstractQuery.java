@@ -208,8 +208,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     volatile Runnable closeHandler;
 
+    /**
+     * Creates a query that owns the supplied JDBC statement.
+     *
+     * @param stmt the statement to wrap; must not be {@code null}
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}
+     */
     AbstractQuery(final Stmt stmt) {
-        this.stmt = stmt;
+        this.stmt = N.checkArgNotNull(stmt, cs.stmt);
     }
 
     //        /**
@@ -843,15 +849,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         if (value == null) {
             stmt.setNull(parameterIndex, java.sql.Types.BIGINT);
         } else {
-            boolean noException = false;
-
             try {
                 stmt.setLong(parameterIndex, value.longValueExact());
-                noException = true;
-            } finally {
-                if (!noException) {
-                    close();
-                }
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
+                throw e;
             }
         }
 
@@ -2728,7 +2730,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param parameters the array of int values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is null
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public This setParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
@@ -2746,7 +2748,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param parameters the array of long values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is null
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public This setParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
@@ -2857,16 +2859,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setParameters(final Jdbc.ParametersSetter<? super Stmt> parametersSetter) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
-        boolean noException = false;
-
         try {
             parametersSetter.accept(stmt);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -2897,16 +2894,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
-        boolean noException = false;
-
         try {
             parametersSetter.accept(stmt, parameters);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -2925,10 +2917,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the array of int values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public This setParametersFrom(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
+        checkArgPositive(startParameterIndex, "startParameterIndex");
         checkArgNotNull(parameters, cs.parameters);
 
         for (final int param : parameters) {
@@ -2951,10 +2944,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the array of long values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
      * @throws SQLException if a database access error occurs
      */
     public This setParametersFrom(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
+        checkArgPositive(startParameterIndex, "startParameterIndex");
         checkArgNotNull(parameters, cs.parameters);
 
         for (final long param : parameters) {
@@ -2977,10 +2971,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the array of String values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
      * @throws SQLException if a database access error occurs
      */
     public This setParametersFrom(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
+        checkArgPositive(startParameterIndex, "startParameterIndex");
         checkArgNotNull(parameters, cs.parameters);
 
         for (final String param : parameters) {
@@ -3005,10 +3000,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the array of values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
      * @throws SQLException if a database access error occurs
      */
     public <T> This setParametersFrom(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
+        checkArgPositive(startParameterIndex, "startParameterIndex");
         checkArgNotNull(parameters, cs.parameters);
 
         final Class<?> componentType = parameters.getClass().getComponentType();
@@ -3042,10 +3038,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the collection of values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
      * @throws SQLException if a database access error occurs
      */
     public This setParametersFrom(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
+        checkArgPositive(startParameterIndex, "startParameterIndex");
         checkArgNotNull(parameters, cs.parameters);
 
         // Resolve the Abacus Type once per distinct element class instead of once per element.
@@ -3092,11 +3089,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameters the collection of values to set
      * @param type the class type of the parameters
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if parameters or type is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive, or if {@code parameters} or {@code type} is null
      * @throws SQLException if a database access error occurs
      */
     public <T> This setParametersFrom(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
             throws IllegalArgumentException, SQLException {
+        checkArgPositive(startParameterIndex, "startParameterIndex");
         checkArgNotNull(parameters, cs.parameters);
         checkArgNotNull(type, cs.type);
 
@@ -3136,16 +3134,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This settParameters(final Jdbc.ParametersSetter<? super This> parametersSetter) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
-        boolean noException = false;
-
         try {
             parametersSetter.accept((This) this);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -3184,16 +3177,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
-        boolean noException = false;
-
         try {
             parametersSetter.accept((This) this, parameters);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -3721,11 +3709,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         @SuppressWarnings("UnnecessaryLocalVariable")
         final Iterator<?> iter = batchParameters;
-        boolean noException = false;
-
         try {
             if (!iter.hasNext()) {
-                noException = true;
                 return (This) this;
             }
 
@@ -3766,11 +3751,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -3801,11 +3784,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         @SuppressWarnings("UnnecessaryLocalVariable")
         final Iterator<? extends T> iter = batchParameters;
         final Type<T> setter = N.typeOf(type);
-        boolean noException = false;
-
         try {
             if (!iter.hasNext()) {
-                noException = true;
                 return (This) this;
             }
 
@@ -3814,11 +3794,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
             }
 
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -3926,8 +3904,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
         final This it = (This) this;
-        boolean noException = false;
-
         try {
             @SuppressWarnings("UnnecessaryLocalVariable")
             final Iterator<? extends T> iter = batchParameters;
@@ -3937,11 +3913,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
             }
 
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return it;
@@ -4057,8 +4031,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
         final This it = (This) this;
-        boolean noException = false;
-
         try {
             @SuppressWarnings("UnnecessaryLocalVariable")
             final Iterator<? extends T> iter = batchParameters;
@@ -4068,11 +4040,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
             }
 
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return it;
@@ -4127,16 +4097,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This addBatch() throws IllegalStateException, SQLException {
         assertNotClosed();
 
-        boolean noException = false;
-
         try {
             addBatchAction.accept((This) this, stmt);
             isBatch = true;
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -4389,16 +4355,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(stmtSetter, cs.stmtSetter);
 
-        boolean noException = false;
-
         try {
             stmtSetter.accept(stmt);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -4430,16 +4391,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(stmtSetter, cs.stmtSetter);
 
-        boolean noException = false;
-
         try {
             stmtSetter.accept((This) this, stmt);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return (This) this;
@@ -10143,10 +10099,28 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     private void closeAfterFailedAsyncSubmission(final Throwable submissionFailure) {
+        if (isCloseAfterExecution) {
+            closeSuppressingFailure(submissionFailure);
+        }
+    }
+
+    /**
+     * Closes this query after an operation has already failed without allowing cleanup to replace
+     * the primary failure. A failure raised by a user-supplied close handler is attached as a
+     * suppressed exception instead. If cleanup rethrows the primary failure instance itself, no
+     * self-suppression is attempted.
+     *
+     * @param primaryFailure the failure that must remain primary
+     */
+    final void closeSuppressingFailure(final Throwable primaryFailure) {
         try {
-            closeAfterExecutionIfAllowed();
+            close();
         } catch (final RuntimeException | Error closeFailure) {
-            submissionFailure.addSuppressed(closeFailure);
+            logger.error(closeFailure, "Failed to close Query");
+
+            if (closeFailure != primaryFailure) {
+                primaryFailure.addSuppressed(closeFailure);
+            }
         }
     }
 
@@ -10340,12 +10314,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         if (arg == null) {
             final IllegalArgumentException iae = new IllegalArgumentException("'" + argName + "' can't be null");
 
-            try {
-                close();
-            } catch (final RuntimeException | Error e) {
-                logger.error(e, "Failed to close Query");
-                iae.addSuppressed(e);
-            }
+            closeSuppressingFailure(iae);
 
             throw iae;
         }
@@ -10365,12 +10334,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         if (arg <= 0) {
             final IllegalArgumentException iae = new IllegalArgumentException("'" + argName + "' can't be negative or zero: " + arg);
 
-            try {
-                close();
-            } catch (final RuntimeException | Error e) {
-                logger.error(e, "Failed to close Query");
-                iae.addSuppressed(e);
-            }
+            closeSuppressingFailure(iae);
 
             throw iae;
         }
@@ -10390,12 +10354,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         if (!b) {
             final IllegalArgumentException iae = new IllegalArgumentException(errorMsg);
 
-            try {
-                close();
-            } catch (final RuntimeException | Error e) {
-                logger.error(e, "Failed to close Query");
-                iae.addSuppressed(e);
-            }
+            closeSuppressingFailure(iae);
 
             throw iae;
         }
@@ -10419,12 +10378,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final IllegalArgumentException iae = new IllegalArgumentException(
                     "Invalid SQL type " + sqlType + "; must be one of the standard java.sql.Types constants");
 
-            try {
-                close();
-            } catch (final RuntimeException | Error e) {
-                logger.error(e, "Failed to close Query");
-                iae.addSuppressed(e);
-            }
+            closeSuppressingFailure(iae);
 
             throw iae;
         }

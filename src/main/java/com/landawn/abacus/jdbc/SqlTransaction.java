@@ -88,7 +88,39 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SqlTransaction.class);
 
-    private static final Map<String, SqlTransaction> threadTransactionMap = new ConcurrentHashMap<>();
+    private static final Map<TransactionKey, SqlTransaction> threadTransactionMap = new ConcurrentHashMap<>();
+
+    /**
+     * Collision-safe registry key. The diagnostic transaction id contains identity hash codes,
+     * but registry correctness must not depend on those non-unique integer values.
+     */
+    private static final class TransactionKey {
+        private final javax.sql.DataSource dataSource;
+        private final Thread thread;
+        private final CreatedBy creator;
+
+        TransactionKey(final javax.sql.DataSource dataSource, final Thread thread, final CreatedBy creator) {
+            this.dataSource = dataSource;
+            this.thread = thread;
+            this.creator = creator;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = System.identityHashCode(dataSource);
+            result = 31 * result + System.identityHashCode(thread);
+            return 31 * result + creator.hashCode();
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            if (this == obj) {
+                return true;
+            }
+
+            return obj instanceof TransactionKey other && dataSource == other.dataSource && thread == other.thread && creator == other.creator;
+        }
+    }
 
     // Millisecond timestamps alone are not unique: a fast transaction loop can create multiple
     // transactions on the same thread and data source during one clock tick. Keep the timestamp
@@ -97,6 +129,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     private static final AtomicLong transactionIdSequence = new AtomicLong();
 
     private final String _id; //NOSONAR
+
+    private final TransactionKey _key; //NOSONAR
 
     // Dedicated per-instance monitor for runOutsideTransaction/callOutsideTransaction. Replaces
     // synchronized(_id): locking on a String is an anti-pattern (lock identity depends on String
@@ -144,10 +178,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param ds the data source the connection came from; used to release the connection on completion when {@code closeConnection} is {@code true}. May be {@code null} if {@code closeConnection} is {@code false}
      * @param conn the JDBC connection that backs this transaction, must not be {@code null}
      * @param isolationLevel the isolation level for this transaction, must not be {@code null}
-     * @param creator the originator type (see {@link CreatedBy}) used to compute the transaction ID
+     * @param creator the originator type (see {@link CreatedBy}) used to identify the registry slot and diagnostic ID; must not be {@code null}
      * @param closeConnection if {@code true}, the connection will be released back to {@code ds} when the transaction completes
      * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails
-     * @throws IllegalArgumentException if {@code conn} or {@code isolationLevel} is {@code null}, if
+     * @throws IllegalArgumentException if {@code conn}, {@code isolationLevel}, or {@code creator} is {@code null}, if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, or if {@code ds} is {@code null}
      *         while {@code closeConnection} is {@code true}
      */
@@ -156,10 +190,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             final boolean closeConnection) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
+        N.checkArgNotNull(creator, "creator");
         N.checkArgument(isolationLevel != IsolationLevel.NONE,
                 "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
         N.checkArgument(ds != null || !closeConnection, "'dataSource' must not be null when 'closeConnection' is true");
 
+        _key = new TransactionKey(ds, Thread.currentThread(), creator);
         _id = getTransactionId(ds, creator);
         _timedId = _id + "_" + System.currentTimeMillis() + "_" + transactionIdSequence.incrementAndGet();
         _ds = ds;
@@ -179,16 +215,20 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             if (isolationLevel != IsolationLevel.DEFAULT) {
                 conn.setTransactionIsolation(isolationLevel.intValue());
             }
-        } catch (final SQLException e) {
+        } catch (final SQLException | RuntimeException | Error e) {
             try {
                 conn.setAutoCommit(_originalAutoCommit);
-            } catch (final SQLException ignore) {
-                // best-effort restore — preserve the original (more meaningful) exception
+            } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
+                if (restoreException != e) {
+                    e.addSuppressed(restoreException);
+                }
             }
             try {
                 conn.setTransactionIsolation(_originalIsolationLevel);
-            } catch (final SQLException ignore) {
-                // best-effort restore
+            } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
+                if (restoreException != e) {
+                    e.addSuppressed(restoreException);
+                }
             }
 
             throw e;
@@ -425,7 +465,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         _status = Status.FAILED_COMMIT;
         SQLException commitException = null;
-        UncheckedSQLException commitFailure = null;
+        Throwable commitFailure = null;
 
         try {
             _conn.commit();
@@ -433,8 +473,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             _status = Status.COMMITTED;
         } catch (final SQLException e) {
             commitException = e;
-            commitFailure = new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
-            throw commitFailure;
+            final UncheckedSQLException failure = new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
+            commitFailure = failure;
+            throw failure;
+        } catch (final RuntimeException | Error e) {
+            commitFailure = e;
+            throw e;
         } finally {
             if (_status == Status.COMMITTED) {
                 logger.info("Transaction(id={}) has been committed successfully", _timedId);
@@ -452,7 +496,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 try {
                     executeRollback();
                 } catch (final RuntimeException | Error rollbackEx) {
-                    if (commitFailure != null) {
+                    if (commitFailure != null && commitFailure != rollbackEx) {
                         commitFailure.addSuppressed(rollbackEx);
                     }
 
@@ -662,7 +706,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 resetAndCloseConnection();
             } catch (final RuntimeException | Error cleanupEx) {
                 if (rollbackFailure != null) {
-                    rollbackFailure.addSuppressed(cleanupEx);
+                    if (rollbackFailure != cleanupEx) {
+                        rollbackFailure.addSuppressed(cleanupEx);
+                    }
                     logger.warn(cleanupEx, "Connection cleanup failed after rollback failure; attached as suppressed (transaction id={})", _timedId);
                 } else {
                     throw cleanupEx;
@@ -677,7 +723,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 actionAfterRollback.run();
             } catch (final RuntimeException | Error actionEx) {
                 if (rollbackFailure != null) {
-                    rollbackFailure.addSuppressed(actionEx);
+                    if (rollbackFailure != actionEx) {
+                        rollbackFailure.addSuppressed(actionEx);
+                    }
                     logger.warn(actionEx,
                             "actionAfterRollback threw after a rollback failure; attached as suppressed to preserve the primary rollback exception (transaction id={})",
                             _timedId);
@@ -721,7 +769,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             if (cleanupFailure == null) {
                 cleanupFailure = e;
             } else {
-                cleanupFailure.addSuppressed(e);
+                if (cleanupFailure != e) {
+                    cleanupFailure.addSuppressed(e);
+                }
             }
         }
 
@@ -734,7 +784,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 if (cleanupFailure == null) {
                     cleanupFailure = e;
                 } else {
-                    cleanupFailure.addSuppressed(e);
+                    if (cleanupFailure != e) {
+                        cleanupFailure.addSuppressed(e);
+                    }
                 }
             }
         }
@@ -789,13 +841,42 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             try {
                 _conn.setTransactionIsolation(isolationLevel.intValue());
             } catch (final SQLException e) {
-                // Connection mutation failed — pop back what we just pushed so the outer scope's
-                // recovery state remains intact.
+                final UncheckedSQLException failure = new UncheckedSQLException(e);
+
+                // A JDBC driver is allowed to report a failure after changing connection state.
+                // Best-effort restore the isolation that belongs to the still-active outer scope.
+                try {
+                    _conn.setTransactionIsolation(_isolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : _isolationLevel.intValue());
+                } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary SQL failure
+                    if (restoreException != e) {
+                        failure.addSuppressed(restoreException);
+                    }
+                }
+
+                // Pop back what we just pushed so the in-memory scope state remains intact.
                 if (shouldPushStacks) {
                     _isolationLevelStack.pop();
                     _isForUpdateOnlyStack.pop();
                 }
-                throw new UncheckedSQLException(e);
+                throw failure;
+            } catch (final RuntimeException | Error e) {
+                // JDBC implementations can throw unchecked failures after mutating their state. Restore
+                // both the physical connection and the just-pushed in-memory nesting state before the
+                // original failure escapes; any restoration failure is secondary.
+                try {
+                    _conn.setTransactionIsolation(_isolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : _isolationLevel.intValue());
+                } catch (final Throwable restoreException) { //NOSONAR
+                    if (restoreException != e) {
+                        e.addSuppressed(restoreException);
+                    }
+                }
+
+                if (shouldPushStacks) {
+                    _isolationLevelStack.pop();
+                    _isForUpdateOnlyStack.pop();
+                }
+
+                throw e;
             }
         }
 
@@ -825,7 +906,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         final int res = _refCount.decrementAndGet();
 
         if (res == 0) {
-            threadTransactionMap.computeIfPresent(_id, (k, v) -> v == this ? null : v);
+            threadTransactionMap.computeIfPresent(_key, (k, v) -> v == this ? null : v);
 
             logger.info("Finishing transaction scope(id={}, status={})", _timedId, _status);
 
@@ -876,6 +957,20 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     _refCount.incrementAndGet();
                     logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, failedTargetIsolationLevel);
                     throw new UncheckedSQLException(e);
+                } catch (final RuntimeException | Error e) {
+                    final IsolationLevel failedTargetIsolationLevel = _isolationLevel;
+
+                    if (isolationPoppedFromStack) {
+                        _isolationLevelStack.push(_isolationLevel);
+                    }
+                    if (forUpdateOnlyPoppedFromStack) {
+                        _isForUpdateOnlyStack.push(_isForUpdateOnly);
+                    }
+                    _isolationLevel = preIsolationLevel;
+                    _isForUpdateOnly = preIsForUpdateOnly;
+                    _refCount.incrementAndGet();
+                    logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, failedTargetIsolationLevel);
+                    throw e;
                 }
             }
 
@@ -898,15 +993,19 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Generates a unique transaction ID for the given data source and creator.
-     * This is an internal method that creates a transaction identifier composed of the data source's
-     * identity hash code, the current thread ID, and the creator's ordinal value, joined by underscores.
+     * Generates the diagnostic base ID for a transaction created by the current thread.
+     * The value is composed of the data source's identity hash code, the current thread ID, and the
+     * creator's ordinal value. It is intended for readable diagnostics; the active-transaction registry
+     * uses a collision-safe key containing the actual object references.
      *
      * @param ds the data source; may be {@code null} (as permitted by the constructor when {@code closeConnection} is {@code false}), in which case the identity hash code is {@code 0}
      * @param creator the transaction creator type, must not be {@code null}
-     * @return a unique transaction identifier string, never {@code null}
+     * @return the diagnostic transaction identifier string, never {@code null}
+     * @throws IllegalArgumentException if {@code creator} is {@code null}
      */
     static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
+        N.checkArgNotNull(creator, "creator");
+
         return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", creator.ordinal());
     }
 
@@ -914,12 +1013,15 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * Retrieves the active transaction for the given data source and creator from the thread-local map.
      * This is an internal method used to check if a transaction already exists for the current thread.
      *
-     * @param ds the data source, must not be {@code null}
+     * @param ds the data source; may be {@code null} for a connection-owned transaction
      * @param creator the transaction creator type, must not be {@code null}
      * @return the active transaction for this thread, or {@code null} if none exists
+     * @throws IllegalArgumentException if {@code creator} is {@code null}
      */
     static SqlTransaction getTransaction(final javax.sql.DataSource ds, final CreatedBy creator) {
-        return threadTransactionMap.get(getTransactionId(ds, creator));
+        N.checkArgNotNull(creator, "creator");
+
+        return threadTransactionMap.get(new TransactionKey(ds, Thread.currentThread(), creator));
     }
 
     /**
@@ -930,7 +1032,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @return the previously registered transaction for this thread and data source, or {@code null} if none existed
      */
     static SqlTransaction putTransaction(final SqlTransaction tran) {
-        return threadTransactionMap.put(tran._id, tran);
+        return threadTransactionMap.put(tran._key, tran);
     }
 
     /**
@@ -967,14 +1069,14 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Runnable} throws an exception
      * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
-     *         been opened on this thread for the same id and was not closed. If {@code cmd} itself
+     *         been opened on this thread for the same data source and creator and was not closed. If {@code cmd} itself
      *         throws, this condition is instead attached as a suppressed exception.
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
         N.checkArgNotNull(cmd, cs.cmd);
 
         synchronized (_outsideTxLock) { //NOSONAR
-            final boolean wasRegistered = threadTransactionMap.remove(_id, this);
+            final boolean wasRegistered = threadTransactionMap.remove(_key, this);
 
             Throwable throwable = null;
 
@@ -984,7 +1086,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 throwable = e;
                 throw e;
             } finally {
-                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_id, this) != null) {
+                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_key, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
                             "Another transaction is opened but not closed in 'SqlTransaction.runOutsideTransaction'."); //NOSONAR
 
@@ -1036,14 +1138,14 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Callable} throws an exception
      * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
-     *         been opened on this thread for the same id and was not closed. If {@code cmd} itself
+     *         been opened on this thread for the same data source and creator and was not closed. If {@code cmd} itself
      *         throws, this condition is instead attached as a suppressed exception.
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd) throws E {
         N.checkArgNotNull(cmd, cs.cmd);
 
         synchronized (_outsideTxLock) { //NOSONAR
-            final boolean wasRegistered = threadTransactionMap.remove(_id, this);
+            final boolean wasRegistered = threadTransactionMap.remove(_key, this);
 
             Throwable throwable = null;
 
@@ -1053,7 +1155,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 throwable = e;
                 throw e;
             } finally {
-                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_id, this) != null) {
+                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_key, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
                             "Another transaction is opened but not closed in 'SqlTransaction.callOutsideTransaction'."); //NOSONAR
 

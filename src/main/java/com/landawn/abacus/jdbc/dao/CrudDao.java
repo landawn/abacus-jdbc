@@ -252,6 +252,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed
      * (or either set is large), the operation is wrapped in a transaction.</p>
      *
+     * <p>For a single match property, a {@code null} key is matched with {@code IS NULL}; it is not
+     * placed in an {@code IN} predicate, whose SQL semantics would never match a null column.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = importUsers();   // 25000 users from external system
@@ -315,7 +318,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         final List<T> dbEntities = uniquePropNameList.size() == 1
                 ? Seq.of(N.distinct(N.map(entities, singleKeyExtractor)), SQLException.class)
                         .split(batchSize)
-                        .flatmap(it -> list(Filters.in(uniquePropNameList.get(0), it)))
+                        .flatmap(it -> list(DaoUtil.singlePropValuesToCondition(uniquePropNameList.get(0), it)))
                         .toList()
                 : Seq.of(N.distinct(N.map(entities, entityIdExtractor)), SQLException.class) //
                         .split(batchSize)
@@ -369,7 +372,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
         }

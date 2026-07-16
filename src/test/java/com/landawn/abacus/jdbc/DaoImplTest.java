@@ -100,6 +100,65 @@ public class DaoImplTest extends TestBase {
     interface IdOnlyCrudDao extends CrudDao<IdOnlyEntity, Long, IdOnlyCrudDao> {
     }
 
+    interface IdOnlyCrudDaoBase<TD extends IdOnlyCrudDaoBase<TD>> extends CrudDao<IdOnlyEntity, Long, TD> {
+    }
+
+    interface SpecializedIdOnlyCrudDao extends IdOnlyCrudDaoBase<SpecializedIdOnlyCrudDao> {
+    }
+
+    interface TestEntityDaoBase<TD extends TestEntityDaoBase<TD>> extends Dao<TestEntity, TD> {
+    }
+
+    interface SpecializedTestEntityDao extends TestEntityDaoBase<SpecializedTestEntityDao> {
+    }
+
+    interface SupertypeInsertReturnDao extends CrudDao<IdOnlyEntity, Long, SupertypeInsertReturnDao> {
+        @Query("INSERT INTO id_only_entity (id) VALUES (:id)")
+        Number insertReturningNumber(IdOnlyEntity entity) throws SQLException;
+
+        @Query("INSERT INTO id_only_entity (id) VALUES (:id)")
+        Optional<Number> insertReturningOptionalNumber(IdOnlyEntity entity) throws SQLException;
+
+        @Query(value = "INSERT INTO id_only_entity (id) VALUES (:id)", batch = true)
+        List<Number> batchInsertReturningNumbers(Collection<IdOnlyEntity> entities) throws SQLException;
+
+        @Query(value = "INSERT INTO id_only_entity (id) VALUES (:id)", batch = true)
+        java.util.ArrayList<Number> batchInsertReturningArrayList(Collection<IdOnlyEntity> entities) throws SQLException;
+    }
+
+    static class NumberIdEntity {
+        @Id
+        private Number id;
+
+        public Number getId() {
+            return id;
+        }
+
+        public void setId(final Number id) {
+            this.id = id;
+        }
+    }
+
+    interface NarrowInsertReturnDao extends CrudDao<NumberIdEntity, Number, NarrowInsertReturnDao> {
+        @Query("INSERT INTO number_id_entity (id) VALUES (:id)")
+        Integer insertReturningInteger(NumberIdEntity entity) throws SQLException;
+    }
+
+    interface NarrowOptionalInsertReturnDao extends CrudDao<NumberIdEntity, Number, NarrowOptionalInsertReturnDao> {
+        @Query("INSERT INTO number_id_entity (id) VALUES (:id)")
+        Optional<Integer> insertReturningOptionalInteger(NumberIdEntity entity) throws SQLException;
+    }
+
+    interface NarrowBatchInsertReturnDao extends CrudDao<NumberIdEntity, Number, NarrowBatchInsertReturnDao> {
+        @Query(value = "INSERT INTO number_id_entity (id) VALUES (:id)", batch = true)
+        List<Integer> batchInsertReturningIntegers(Collection<NumberIdEntity> entities) throws SQLException;
+    }
+
+    interface IncompatibleBatchContainerDao extends CrudDao<IdOnlyEntity, Long, IncompatibleBatchContainerDao> {
+        @Query(value = "INSERT INTO id_only_entity (id) VALUES (:id)", batch = true)
+        java.util.LinkedList<Long> batchInsertReturningLinkedList(Collection<IdOnlyEntity> entities) throws SQLException;
+    }
+
     interface MergedDao {
         @Query("select * from test")
         @MergedById("id")
@@ -114,6 +173,16 @@ public class DaoImplTest extends TestBase {
     interface EmptyBindProcedureDao {
         @Query(value = "call test_proc(?, ?)", procedure = true)
         void callProc(@Bind("p1") String first, @Bind String second);
+    }
+
+    interface InvalidProcedureOutResultDao extends Dao<TestEntity, InvalidProcedureOutResultDao> {
+        @Query(value = "call test_proc()", procedure = true)
+        com.landawn.abacus.util.Tuple.Tuple2<List<TestEntity>, String> callProc() throws SQLException;
+    }
+
+    interface InvalidProcedureListContainerDao extends Dao<TestEntity, InvalidProcedureListContainerDao> {
+        @Query(value = "call test_proc()", procedure = true)
+        com.landawn.abacus.util.Tuple.Tuple2<java.util.Set<TestEntity>, Jdbc.OutParamResult> callProc() throws SQLException;
     }
 
     interface BatchBindListDao extends Dao<TestEntity, BatchBindListDao> {
@@ -262,6 +331,10 @@ public class DaoImplTest extends TestBase {
 
     interface FindOnlyOneMethodDao {
         List<TestEntity> findOnlyOneById(long id);
+    }
+
+    interface SelectOnlyOneMethodDao {
+        Optional<TestEntity> selectOnlyOneById(long id);
     }
 
     interface QueryForUniqueMethodDao {
@@ -567,6 +640,60 @@ public class DaoImplTest extends TestBase {
     }
 
     @Test
+    void testInsertReturnTypeAcceptsIdSupertype() throws Exception {
+        final SupertypeInsertReturnDao dao = assertDoesNotThrow(
+                () -> DaoImpl.createDao(SupertypeInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertNotNull(dao);
+        assertTrue(dao.batchInsertReturningArrayList(List.of()).isEmpty());
+    }
+
+    @Test
+    void testInsertReturnTypeRejectsNarrowerIdSubtype() throws Exception {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NarrowInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("return type of insert operations"));
+    }
+
+    @Test
+    void testInsertReturnTypeRejectsNarrowerOptionalIdSubtype() throws Exception {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NarrowOptionalInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("Optional"));
+    }
+
+    @Test
+    void testBatchInsertReturnTypeRejectsNarrowerIdSubtype() throws Exception {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NarrowBatchInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("batch insert operations"));
+    }
+
+    @Test
+    void testBatchInsertReturnTypeRejectsIncompatibleListImplementation() throws Exception {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(IncompatibleBatchContainerDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("batch insert operations"));
+    }
+
+    @Test
+    void testDaoPoolUsesCollisionSafeCompositeKeys() throws Exception {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+        final IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, dataSource, PSC, null, null, null);
+        final java.lang.reflect.Field poolField = DaoImpl.class.getDeclaredField("daoPool");
+        poolField.setAccessible(true);
+        final Map<?, ?> pool = (Map<?, ?>) poolField.get(null);
+        final Object key = pool.entrySet().stream().filter(entry -> entry.getValue() == dao).map(Map.Entry::getKey).findFirst().orElse(null);
+
+        assertNotNull(key);
+        assertFalse(key instanceof String, "DAO pool correctness must not depend on a concatenated identity-hash string");
+    }
+
+    @Test
     void testCreateDaoRejectsRowFilterInUnsupportedPosition() throws Exception {
         assertThrows(UnsupportedOperationException.class,
                 () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
@@ -581,6 +708,18 @@ public class DaoImplTest extends TestBase {
         StreamAllProcedureDao dao = assertDoesNotThrow(
                 () -> DaoImpl.createDao(StreamAllProcedureDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
         assertNotNull(dao);
+    }
+
+    @Test
+    void testCreateDaoResolvesTypesThroughSpecializedGenericBaseInterfaces() throws Exception {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+        final SpecializedTestEntityDao dao = assertDoesNotThrow(
+                () -> DaoImpl.createDao(SpecializedTestEntityDao.class, null, dataSource, PSC, null, null, null));
+        final SpecializedIdOnlyCrudDao crudDao = assertDoesNotThrow(
+                () -> DaoImpl.createDao(SpecializedIdOnlyCrudDao.class, null, dataSource, PSC, null, null, null));
+
+        assertSame(TestEntity.class, dao.targetEntityClass());
+        assertSame(IdOnlyEntity.class, crudDao.targetEntityClass());
     }
 
     // DAO query classifier branches are private factory inputs exercised through reflection.
@@ -735,6 +874,8 @@ public class DaoImplTest extends TestBase {
     @CacheResult(enabled = true)
     @RefreshCache
     interface CacheDisabledOverrideDao extends com.landawn.abacus.jdbc.dao.UncheckedNonUpdateDao<TestEntity, CacheDisabledOverrideDao> {
+        IllegalStateException INVOCATION_FAILURE = new IllegalStateException("DAO invocation failed");
+
         // No @NonDBOperation: must reach the proxy's cache wrapper so the resolution logic actually runs.
         @CacheResult(enabled = false)
         default String findCached() {
@@ -753,6 +894,11 @@ public class DaoImplTest extends TestBase {
         @RefreshCache
         default String updateWithUnkeyableArgument(final Object argument) {
             return "refresh-result";
+        }
+
+        @RefreshCache
+        default String updateAndFail() {
+            throw INVOCATION_FAILURE;
         }
     }
 
@@ -897,6 +1043,21 @@ public class DaoImplTest extends TestBase {
         assertTrue(updatedKey.get().contains(JdbcUtil.CACHE_KEY_SPLITOR));
     }
 
+    @Test
+    void testRefreshCacheFailureIsSuppressedByInvocationFailure() throws Exception {
+        final Jdbc.DaoCache failingCache = mock(Jdbc.DaoCache.class);
+        final IllegalArgumentException refreshFailure = new IllegalArgumentException("cache refresh failed");
+        Mockito.doThrow(refreshFailure).when(failingCache).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.<Object[]> any(), Mockito.any());
+        final CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, failingCache,
+                null);
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, dao::updateAndFail);
+
+        assertSame(CacheDisabledOverrideDao.INVOCATION_FAILURE, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(refreshFailure, thrown.getSuppressed()[0]);
+    }
+
     // isFindFirst: QueryOperation.findFirst returns true regardless of method name (line 521)
     @Test
     public void testIsFindFirst_OpFindFirst() throws Exception {
@@ -925,6 +1086,15 @@ public class DaoImplTest extends TestBase {
         m.setAccessible(true);
 
         assertFalse((boolean) m.invoke(null, method, QueryOperation.DEFAULT));
+    }
+
+    @Test
+    public void testIsFindFirst_DefaultSelectOnlyOneReturnsFalse() throws Exception {
+        final Method method = SelectOnlyOneMethodDao.class.getMethod("selectOnlyOneById", long.class);
+        final Method classifier = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, QueryOperation.class);
+        classifier.setAccessible(true);
+
+        assertFalse((boolean) classifier.invoke(null, method, QueryOperation.DEFAULT));
     }
 
     // isFindOnlyOne: QueryOperation.findOnlyOne returns true (line 530)
@@ -1478,42 +1648,41 @@ public class DaoImplTest extends TestBase {
         assertEquals(0, noConditionLimited.offset());
     }
 
-    // Regression: getApplicableDaoForJoinEntity used to return a cache hit blindly. Because the cache key
-    // mixes System.identityHashCode(ds) — which is not guaranteed unique across live objects — a hit
-    // for a DAO bound to DataSource A could be served for an unrelated lookup against DataSource B.
-    // After the fix, a cache hit is only returned when the cached DAO's dataSource() also matches.
+    // Regression: join-DAO lookup keys must retain the actual entity/DataSource identities instead of
+    // concatenating their non-unique identity hash codes into a String.
     @Test
-    public void testGetApplicableDaoForJoinEntity_HitVerifiesDataSourceMatch() throws Exception {
-        DataSource ds1 = mockDataSourceForDaoCreation();
-        DataSource ds2 = mockDataSourceForDaoCreation();
+    public void testGetApplicableDaoForJoinEntity_UsesIdentitySafeKey() throws Exception {
+        final DataSource ds1 = mockDataSourceForDaoCreation();
+        final DataSource ds2 = mockDataSourceForDaoCreation();
+        final IdOnlyCrudDao daoForDs1 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds1, PSC, null, null, null);
+        final IdOnlyCrudDao daoForDs2 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds2, PSC, null, null, null);
+        final Method method = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, DaoBase.class);
+        method.setAccessible(true);
 
-        // Create a real DAO bound to ds1 — registers it in DaoImpl.daoPool keyed on ds1's identity.
-        IdOnlyCrudDao daoForDs1 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds1, PSC, null, null, null);
+        assertSame(daoForDs1, method.invoke(null, IdOnlyEntity.class, ds1, daoForDs2));
+        assertSame(daoForDs2, method.invoke(null, IdOnlyEntity.class, ds2, daoForDs1));
 
-        // Poison joinEntityDaoPool with daoForDs1 under the key that would be computed for ds2 + IdOnlyEntity.
-        // The cache-hit path used to return daoForDs1; the fix forces fall-through when ds doesn't match.
-        java.lang.reflect.Field poolField = DaoImpl.class.getDeclaredField("joinEntityDaoPool");
+        final java.lang.reflect.Field poolField = DaoImpl.class.getDeclaredField("joinEntityDaoPool");
         poolField.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        Map<String, Dao<?, ?>> pool = (Map<String, Dao<?, ?>>) poolField.get(null);
+        final Map<?, ?> pool = (Map<?, ?>) poolField.get(null);
+        final Object key = pool.entrySet().stream().filter(entry -> entry.getValue() == daoForDs2).map(Map.Entry::getKey).findFirst().orElse(null);
 
-        String poisonedKey = com.landawn.abacus.util.ClassUtil.getCanonicalClassName(IdOnlyEntity.class) + "_" + System.identityHashCode(ds2);
-        pool.put(poisonedKey, daoForDs1);
+        assertNotNull(key);
+        assertFalse(key instanceof String, "Join-DAO pool correctness must not depend on a concatenated identity-hash string");
+    }
 
-        try {
-            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, DaoBase.class);
-            m.setAccessible(true);
+    @Test
+    public void testCreateDaoRejectsIncompatibleProcedureOutResultType() throws SQLException {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(InvalidProcedureOutResultDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
 
-            // Create a real DAO bound to ds2 so the fall-through scan can find it.
-            IdOnlyCrudDao daoForDs2 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds2, PSC, null, null, null);
+        assertTrue(thrown.getMessage().contains("Jdbc.OutParamResult"));
+    }
 
-            Object resolved = m.invoke(null, IdOnlyEntity.class, ds2, daoForDs2);
-
-            assertSame(daoForDs2, resolved, "DAO bound to ds2 must be returned, not the poisoned ds1 entry");
-            assertFalse(resolved == daoForDs1, "Must not return the cached DAO bound to a different DataSource");
-        } finally {
-            pool.remove(poisonedKey);
-        }
+    @Test
+    public void testCreateDaoRejectsIncompatibleProcedureListContainerType() throws SQLException {
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(InvalidProcedureListContainerDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
     }
 
     @Test

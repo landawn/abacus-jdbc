@@ -450,6 +450,8 @@ public final class JoinInfo {
                         + batchSelectFromToJoinOn;
 
                 final BiFunction<Collection<String>, Integer, String> batchSqlBuilder = (selectPropNames, size) -> {
+                    N.checkArgPositive(size, "batchSize");
+
                     if (N.isEmpty(selectPropNames)) {
                         return Strings.repeat("?", size, ", ", batchSelectAllLeftSql, ")");
                     } else {
@@ -495,6 +497,8 @@ public final class JoinInfo {
                         .replace(" = ?)", " IN (");
 
                 final IntFunction<String> batchDeleteSqlBuilder = size -> {
+                    N.checkArgPositive(size, "batchSize");
+
                     if (size == 1) {
                         return deleteSql;
                     } else {
@@ -509,6 +513,8 @@ public final class JoinInfo {
                         .replace(" = ?", " IN (");
 
                 final IntFunction<String> batchMiddleDeleteSqlBuilder = size -> {
+                    N.checkArgPositive(size, "batchSize");
+
                     if (size == 1) {
                         return middleDeleteSql;
                     } else {
@@ -633,6 +639,8 @@ public final class JoinInfo {
                         : (sb, batchSize) -> sb.where(Filters.or(N.repeat(cond, batchSize)));
 
                 final BiFunction<Collection<String>, Integer, String> batchSelectSqlBuilder = (selectPropNames, size) -> {
+                    N.checkArgPositive(size, "batchSize");
+
                     if (size == 1) {
                         // The batch consumer matches fetched rows back to their source entities by the
                         // referenced join-key props, so they must be selected even for a 1-element chunk
@@ -681,6 +689,8 @@ public final class JoinInfo {
                 deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, null, paramSetter));
 
                 final IntFunction<String> batchDeleteSqlBuilder = size -> {
+                    N.checkArgPositive(size, "batchSize");
+
                     if (size == 1) {
                         return deleteSql;
                     } else {
@@ -804,7 +814,8 @@ public final class JoinInfo {
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
      *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
-     *         in the batch onto a {@link PreparedStatement}
+     *         in the batch onto a {@link PreparedStatement}. The SQL-builder function requires a positive batch size
+     *         and throws {@link IllegalArgumentException} for zero or a negative value.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
@@ -881,7 +892,8 @@ public final class JoinInfo {
      * @return a non-{@code null} tuple of (main delete SQL builder ({@code _1}), middle/join table delete SQL builder
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future use when per-entity
      *         cascade-delete control is supported), and parameter setter ({@code _3}) that binds the join key(s) of every
-     *         entity in the batch onto a {@link PreparedStatement})
+     *         entity in the batch onto a {@link PreparedStatement}). Each SQL-builder function requires a positive batch
+     *         size and throws {@link IllegalArgumentException} for zero or a negative value.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
      *
      * @see Dsl#PSC
@@ -911,7 +923,8 @@ public final class JoinInfo {
      * populated. For a single-entity (non-collection,
      * non-map) join property, only the first matching entity is used; for a map-valued join property,
      * exactly one matching entity per key is expected and more than one match throws
-     * {@link IllegalArgumentException}. A source entity with no matching joined entity is left untouched.</p>
+     * {@link IllegalArgumentException}. A source entity with no matching joined entity receives an
+     * empty collection/map or {@code null} for a single-valued property, replacing any stale value.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -960,9 +973,9 @@ public final class JoinInfo {
      * {@link IllegalArgumentException}.</p>
      *
      * <p>A source entity whose extracted join key has no corresponding entry in {@code groupedPropEntities}
-     * is left untouched (its join property is not assigned, cleared, or reset). An explicitly mapped empty list
-     * assigns an empty collection or map, or {@code null} for a single-entity property. The {@code entities}
-     * collection is iterated in its natural order and is not modified by this method.</p>
+     * is treated like an explicitly mapped empty list: the method assigns an empty collection or map,
+     * or {@code null} for a single-entity property. Thus each invocation replaces stale association
+     * values. The {@code entities} collection is iterated in its natural order and is not modified.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -988,34 +1001,33 @@ public final class JoinInfo {
 
         for (final Object entity : entities) {
             final Object joinKey = srcEntityKeyExtractor.apply(entity);
-            final List<Object> propEntities = groupedPropEntities.get(joinKey);
+            final List<Object> matchedPropEntities = groupedPropEntities.get(joinKey);
+            final List<Object> propEntities = matchedPropEntities == null ? N.emptyList() : matchedPropEntities;
 
-            if (propEntities != null) {
-                if (isCollectionProp) {
-                    if (joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
-                        joinPropInfo.setPropValue(entity, propEntities);
-                    } else {
-                        @SuppressWarnings("rawtypes")
-                        final Collection<Object> c = N.newCollection((Class) joinPropInfo.clazz);
-                        c.addAll(propEntities);
-                        joinPropInfo.setPropValue(entity, c);
-                    }
-                } else if (isMapProp) {
-                    if (propEntities.size() > 1) {
-                        throw new IllegalArgumentException("Multiple join entities found for map property: " + joinPropInfo.name);
-                    }
-
-                    @SuppressWarnings("rawtypes")
-                    final Map<Object, Object> m = N.newMap((Class) joinPropInfo.clazz, 1);
-
-                    if (!propEntities.isEmpty()) {
-                        m.put(joinKey, propEntities.get(0));
-                    }
-
-                    joinPropInfo.setPropValue(entity, m);
+            if (isCollectionProp) {
+                if (joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                    joinPropInfo.setPropValue(entity, propEntities);
                 } else {
-                    joinPropInfo.setPropValue(entity, propEntities.isEmpty() ? null : propEntities.get(0));
+                    @SuppressWarnings("rawtypes")
+                    final Collection<Object> c = N.newCollection((Class) joinPropInfo.clazz);
+                    c.addAll(propEntities);
+                    joinPropInfo.setPropValue(entity, c);
                 }
+            } else if (isMapProp) {
+                if (propEntities.size() > 1) {
+                    throw new IllegalArgumentException("Multiple join entities found for map property: " + joinPropInfo.name);
+                }
+
+                @SuppressWarnings("rawtypes")
+                final Map<Object, Object> m = N.newMap((Class) joinPropInfo.clazz, 1);
+
+                if (!propEntities.isEmpty()) {
+                    m.put(joinKey, propEntities.get(0));
+                }
+
+                joinPropInfo.setPropValue(entity, m);
+            } else {
+                joinPropInfo.setPropValue(entity, propEntities.isEmpty() ? null : propEntities.get(0));
             }
         }
     }

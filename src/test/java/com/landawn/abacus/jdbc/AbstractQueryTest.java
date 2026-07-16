@@ -106,6 +106,13 @@ public class AbstractQueryTest extends TestBase {
     }
 
     @Test
+    public void testConstructorRejectsNullStatement() {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> new TestQuery(null));
+
+        assertTrue(thrown.getMessage().contains("stmt"));
+    }
+
+    @Test
     public void testSetParameters_IntArray() throws SQLException {
         TestQuery result = query.setParameters(new int[] { 1, 2, 3 });
 
@@ -134,6 +141,15 @@ public class AbstractQueryTest extends TestBase {
         verify(preparedStatement).setString(1, "a");
         verify(preparedStatement).setObject(2, null);
         verify(preparedStatement).setString(3, "b");
+    }
+
+    @Test
+    public void testSetParametersFromRejectsNonPositiveStartIndexForEmptyInput() throws SQLException {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> query.setParametersFrom(0, new int[0]));
+
+        assertTrue(thrown.getMessage().contains("startParameterIndex"));
+        assertTrue(query.isClosed);
+        verify(preparedStatement, never()).setInt(anyInt(), anyInt());
     }
 
     @Test
@@ -609,6 +625,21 @@ public class AbstractQueryTest extends TestBase {
         }));
     }
 
+    @Test
+    public void testSetParametersPreservesPrimaryFailureWhenCloseHandlerThrowsSameInstance() {
+        final RuntimeException primaryFailure = new RuntimeException("setter and close failed");
+        query.onClose(() -> {
+            throw primaryFailure;
+        });
+
+        final RuntimeException thrown = assertThrows(RuntimeException.class, () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) stmt -> {
+            throw primaryFailure;
+        }));
+
+        assertSame(primaryFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+    }
+
     // setParameters(T, BiParametersSetter<Stmt,T>) — exception path closes (line 2855)
     @Test
     public void testSetParameters_BiParametersSetter_ThrowsClosesQuery() {
@@ -761,6 +792,20 @@ public class AbstractQueryTest extends TestBase {
         assertThrows(SQLException.class, () -> query.setLong(1, BigInteger.valueOf(42L)));
         // after exception, query should be closed
         verify(preparedStatement).close();
+    }
+
+    @Test
+    public void testSetLongBigIntegerPreservesConversionFailureWhenCloseHandlerThrows() {
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        query.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final ArithmeticException thrown = assertThrows(ArithmeticException.class,
+                () -> query.setLong(1, BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)));
+
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
     }
 
     // findFirst(RowFilter, RowMapper) returns empty Optional when no row matches filter (L5962 / L6240)

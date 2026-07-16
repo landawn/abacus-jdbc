@@ -1080,6 +1080,29 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
     }
 
     @Test
+    public void testDeleteJoinEntities_MultiProp_IgnoresSelfSuppressionFromRollback() {
+        final TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        final TestEntity entity = new TestEntity();
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        final IllegalStateException primary = new IllegalStateException("same delete and rollback failure");
+
+        when(dao.dataSource()).thenReturn(dataSource);
+        Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
+        Mockito.doThrow(primary).when(tran).rollbackIfNotCommitted();
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
+
+            assertSame(primary, thrown);
+            assertEquals(0, thrown.getSuppressed().length);
+        }
+    }
+
+    @Test
     public void testDeleteJoinEntities_EntitiesByClass_EmptyShortCircuitsBeforePropLookup() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
 

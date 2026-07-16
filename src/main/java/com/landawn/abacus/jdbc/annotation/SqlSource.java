@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  * {@link Query#id() @Query(id = ...)}.
  *
  * <p>The DAO proxy loads the mapper at proxy-build time ({@code DaoImpl} uses
- * {@code SqlMapper.load(...)} to parse the resource). Resolved entries become the SQL text used
+ * {@code SqlMapper.loadFrom(...)} to parse the resource). Resolved entries become the SQL text used
  * by every {@code @Query(id = "...")} on the same DAO. Use this when:</p>
  * <ul>
  *   <li>Inline SQL strings would crowd the Java source.</li>
@@ -74,8 +74,9 @@ public @interface SqlSource {
 
     /**
      * Specifies the path to the SQL mapper XML file.
-     * The path is loaded by {@code SqlMapper.load(...)} at DAO initialization time and is
-     * typically interpreted as classpath-relative; the value should include the file extension.
+     * After surrounding whitespace is trimmed, the location is passed to
+     * {@code SqlMapper.loadFrom(...)} at DAO initialization time and should include the file
+     * extension.
      *
      * <p>Common conventions:</p>
      * <ul>
@@ -95,7 +96,8 @@ public @interface SqlSource {
      * {@link SqlScript} fields declared on the same DAO; a collision fails DAO initialization with
      * {@code IllegalArgumentException}.</p>
      *
-     * @return the path to the SQL mapper XML file passed to {@code SqlMapper.load}; empty (default) means no external mapper is associated with this DAO
+     * @return the SQL-mapper location passed to {@code SqlMapper.loadFrom}; empty (default) means
+     *         no external mapper is associated with this DAO
      */
     String value() default "";
 }

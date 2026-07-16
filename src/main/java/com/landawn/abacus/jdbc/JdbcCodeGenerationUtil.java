@@ -18,6 +18,10 @@ package com.landawn.abacus.jdbc;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Connection;
@@ -132,7 +136,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Pre-defined function for generating a MIN SQL aggregate expression.
      * The function takes (entityClass, propClass, propName) and returns {@code "min(propName)"}
-     * when {@code propClass} implements {@link Comparable}; otherwise it returns {@code null}.
+     * when {@code propClass}, after primitive boxing, implements {@link Comparable}; otherwise it
+     * returns {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -142,7 +147,7 @@ public final class JdbcCodeGenerationUtil {
      *
      */
     public static final TriFunction<Class<?>, Class<?>, String, String> MIN_FUNC = (entityClass, propClass, propName) -> {
-        if (Comparable.class.isAssignableFrom(propClass)) {
+        if (Comparable.class.isAssignableFrom(ClassUtil.wrap(propClass))) {
             return "min(" + propName + ")";
         }
 
@@ -152,7 +157,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Pre-defined function for generating a MAX SQL aggregate expression.
      * The function takes (entityClass, propClass, propName) and returns {@code "max(propName)"}
-     * when {@code propClass} implements {@link Comparable}; otherwise it returns {@code null}.
+     * when {@code propClass}, after primitive boxing, implements {@link Comparable}; otherwise it
+     * returns {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -162,7 +168,7 @@ public final class JdbcCodeGenerationUtil {
      *
      */
     public static final TriFunction<Class<?>, Class<?>, String, String> MAX_FUNC = (entityClass, propClass, propName) -> {
-        if (Comparable.class.isAssignableFrom(propClass)) {
+        if (Comparable.class.isAssignableFrom(ClassUtil.wrap(propClass))) {
             return "max(" + propName + ")";
         }
 
@@ -256,8 +262,9 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
-     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the configuration
+     *             cannot produce valid Java source (for example, names collide, an annotation is unusable,
+     *             or a field is both read-only and non-updatable)
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
@@ -307,8 +314,8 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
-     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the configuration
+     *             cannot produce valid Java source
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         return generateEntityClassByQuery(conn, tableName, createQueryByTableName(conn, tableName), config);
@@ -355,7 +362,9 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
-     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
+     * @throws IllegalArgumentException if the configuration cannot produce valid Java source (for example,
+     *             generated names are invalid or collide, an annotation is unusable, or a field is both
+     *             read-only and non-updatable)
      */
     public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
@@ -407,7 +416,9 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
-     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
+     * @throws IllegalArgumentException if the configuration cannot produce valid Java source (for example,
+     *             generated names are invalid or collide, an annotation is unusable, or a field is both
+     *             read-only and non-updatable)
      */
     public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config)
             throws UncheckedSQLException {
@@ -457,16 +468,39 @@ public final class JdbcCodeGenerationUtil {
         final String columnAnnotationClassName = ClassUtil.getCanonicalClassName(columnAnnotationClass);
         final String idAnnotationClassName = ClassUtil.getCanonicalClassName(idAnnotationClass);
 
+        checkGeneratedAnnotationClass(tableAnnotationClass, "name", ElementType.TYPE, "tableAnnotationClass");
+        checkGeneratedAnnotationClass(columnAnnotationClass, "name", ElementType.FIELD, "columnAnnotationClass");
+        checkGeneratedAnnotationClass(idAnnotationClass, null, ElementType.FIELD, "idAnnotationClass");
+
         final boolean isJavaPersistenceTable = "javax.persistence.Table".equals(tableAnnotationClassName)
                 || "jakarta.persistence.Table".equals(tableAnnotationClassName);
         final boolean isJavaPersistenceColumn = "javax.persistence.Column".equals(columnAnnotationClassName)
                 || "jakarta.persistence.Column".equals(columnAnnotationClassName);
         final boolean isJavaPersistenceId = "javax.persistence.Id".equals(idAnnotationClassName) || "jakarta.persistence.Id".equals(idAnnotationClassName);
+        final boolean isAbacusTable = Table.class.getCanonicalName().equals(tableAnnotationClassName);
+        final boolean isAbacusColumn = Column.class.getCanonicalName().equals(columnAnnotationClassName);
+        final boolean isAbacusId = Id.class.getCanonicalName().equals(idAnnotationClassName);
+        final String tableAnnotationName = isJavaPersistenceTable || isAbacusTable ? "Table" : tableAnnotationClassName;
+        final String columnAnnotationName = isJavaPersistenceColumn || isAbacusColumn ? "Column" : columnAnnotationClassName;
+        final String idAnnotationName = isJavaPersistenceId || isAbacusId ? "Id" : idAnnotationClassName;
 
-        final String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
+        final String finalClassName = Strings.isEmpty(className) ? deriveClassName(entityName) : className;
+
+        if (!isValidJavaIdentifier(finalClassName)) {
+            throw new IllegalArgumentException(
+                    "Generated class name '" + finalClassName + "' is not a valid Java identifier. Configure EntityCodeConfig.className with a valid name");
+        }
+
+        if (Strings.isNotEmpty(packageName)) {
+            for (final String packagePart : packageName.split("\\.", -1)) {
+                if (!isValidJavaIdentifier(packagePart)) {
+                    throw new IllegalArgumentException("Package name '" + packageName + "' is not a valid Java package name");
+                }
+            }
+        }
 
         if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
-            throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
+            throw new IllegalArgumentException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
                     + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
         }
 
@@ -564,10 +598,9 @@ public final class JdbcCodeGenerationUtil {
                                 : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
                         : mapColumnClassName(ClassUtil.getCanonicalClassName(customFieldMapping.fieldType()), true, configToUse);
 
-                if (!Strings.isValidJavaIdentifier(fieldName)) {
-                    logger.warn(
-                            "Generated field name '{}' for column '{}' is not a valid Java identifier (e.g., a Java keyword, starts with a digit, or contains unsupported characters) — the generated entity class will not compile. Override via EntityCodeConfig.fieldNameConverter or customFieldMappings.",
-                            fieldName, columnName);
+                if (!isValidJavaIdentifier(fieldName)) {
+                    throw new IllegalArgumentException("Generated field name '" + fieldName + "' for column '" + columnName
+                            + "' is not a valid Java identifier. Override EntityCodeConfig.fieldNameConverter or customFieldMappings");
                 }
 
                 columnNameList.add(columnName);
@@ -664,6 +697,10 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("jakarta.persistence.Table", tableAnnotationClassName);
             } else {
                 headPart = headPart.replace("import jakarta.persistence.Table;\n", "");
+
+                if (!isAbacusTable) {
+                    headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
+                }
             }
 
             if (isJavaPersistenceColumn) {
@@ -671,6 +708,10 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("jakarta.persistence.Column", columnAnnotationClassName);
             } else {
                 headPart = headPart.replace("import jakarta.persistence.Column;\n", "");
+
+                if (!isAbacusColumn) {
+                    headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
+                }
             }
 
             // Id fields may be specified using either Java field names (camelCase) or raw DB column names (often snake_case),
@@ -684,6 +725,10 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("jakarta.persistence.Id", idAnnotationClassName);
             } else {
                 headPart = headPart.replace("import jakarta.persistence.Id;\n", "");
+
+                if (!isAbacusId) {
+                    headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
+                }
             }
 
             if (N.isEmpty(nonUpdatableFields)
@@ -745,7 +790,9 @@ public final class JdbcCodeGenerationUtil {
                 sb.append("@JsonXmlConfig").append(Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPARATOR);
             }
 
-            sb.append("@Table(name = \"")
+            sb.append('@')
+                    .append(tableAnnotationName)
+                    .append("(name = \"")
                     .append(EscapeUtil.escapeJava(entityName))
                     .append("\")")
                     .append(LINE_SEPARATOR)
@@ -762,7 +809,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append(LINE_SEPARATOR);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append("    @Id").append(LINE_SEPARATOR); //NOSONAR
+                    sb.append("    @").append(idAnnotationName).append(LINE_SEPARATOR); //NOSONAR
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
@@ -771,7 +818,12 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
-                sb.append("    @Column(name = \"").append(EscapeUtil.escapeJava(columnName)).append("\")").append(LINE_SEPARATOR);
+                sb.append("    @")
+                        .append(columnAnnotationName)
+                        .append("(name = \"")
+                        .append(EscapeUtil.escapeJava(columnName))
+                        .append("\")")
+                        .append(LINE_SEPARATOR);
 
                 final Tuple2<String, String> dbType = fieldTypeAnnotationArgumentMap.getOrDefault(fieldName, fieldTypeAnnotationArgumentMap.get(columnName));
 
@@ -1284,7 +1336,8 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, the table has no columns,
+     *             or two column names map to the same (or an invalid) named parameter
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException {
@@ -1311,7 +1364,8 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, the table has no columns,
+     *             or two column names map to the same (or an invalid) named parameter
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) throws UncheckedSQLException {
@@ -1326,6 +1380,7 @@ public final class JdbcCodeGenerationUtil {
 
             // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
             checkColumnLabels(columnLabelList, tableName);
+            checkNamedParameterColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
@@ -1351,7 +1406,8 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, all columns are excluded,
+     *             or two included column names map to the same (or an invalid) named parameter
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames)
@@ -1380,7 +1436,8 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, all columns are excluded,
+     *             or two included column names map to the same (or an invalid) named parameter
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateNamedInsertSql(Connection, String)
      * @see #generateNamedInsertSql(DataSource, String, Collection)
@@ -1402,6 +1459,7 @@ public final class JdbcCodeGenerationUtil {
                     .toList();
 
             checkColumnLabels(columnLabelList, tableName);
+            checkNamedParameterColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
@@ -1488,10 +1546,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
-     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
+     * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
+     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
-     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
+     * @throws IllegalArgumentException if either name is {@code null} or blank, the key column is missing or ambiguous,
+     *             or no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException {
@@ -1516,10 +1575,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
-     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
-     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
+     * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
+     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
-     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
+     * @throws IllegalArgumentException if either name is {@code null} or blank, the key column is missing or ambiguous,
+     *             or no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws UncheckedSQLException {
@@ -1531,15 +1591,14 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
-            final List<String> updateColumnLabelList = Stream.of(columnLabelList)
-                    .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
-                    .toList();
+            final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
+            final List<String> updateColumnLabelList = Stream.of(columnLabelList).filter(columnLabel -> !columnLabel.equals(resolvedKeyColumnName)).toList();
 
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(updateColumnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ") + " WHERE "
-                    + checkColumnName(keyColumnName, dbProductInfo) + " = ?";
+                    + checkColumnName(resolvedKeyColumnName, dbProductInfo) + " = ?";
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1567,10 +1626,11 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
-     * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, a key column is blank, missing,
+     *             or ambiguous, or no columns remain for the SET clause after exclusions
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(Connection, String, Collection, Collection, String)
@@ -1608,10 +1668,11 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
-     * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, a key column is blank, missing,
+     *             or ambiguous, or no columns remain for the SET clause after exclusions
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
@@ -1626,12 +1687,14 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
+            final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
-                    .append(keyColumnNames)
+                    .append(resolvedKeyColumnNames)
                     .map(Strings::toCamelCase)
                     .collect(Collectors.toSet());
 
-            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
+            final List<String> columnLabelList = Stream.of(allColumnLabels)
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
@@ -1639,11 +1702,11 @@ public final class JdbcCodeGenerationUtil {
 
             String whereSection = "";
 
-            if (N.notEmpty(keyColumnNames) || Strings.isNotEmpty(whereClause)) {
+            if (N.notEmpty(resolvedKeyColumnNames) || Strings.isNotEmpty(whereClause)) {
                 whereSection = " WHERE ";
 
-                if (N.notEmpty(keyColumnNames)) {
-                    whereSection += Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = ?").join(" AND ");
+                if (N.notEmpty(resolvedKeyColumnNames)) {
+                    whereSection += Stream.of(resolvedKeyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = ?").join(" AND ");
 
                     if (Strings.isNotEmpty(whereClause)) {
                         whereSection += " AND " + whereClause;
@@ -1678,7 +1741,8 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, the table has no columns,
+     *             or two column names map to the same (or an invalid) named parameter
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException {
@@ -1708,7 +1772,8 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, the table has no columns,
+     *             or two column names map to the same (or an invalid) named parameter
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) throws UncheckedSQLException {
@@ -1721,6 +1786,7 @@ public final class JdbcCodeGenerationUtil {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
+            checkNamedParameterColumnLabels(columnLabelList, tableName);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList)
@@ -1744,10 +1810,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
-     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
+     * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
+     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
-     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
+     * @throws IllegalArgumentException if either name is {@code null} or blank, the key column is missing or ambiguous,
+     *             no columns remain for the SET clause, or generated named parameters are invalid or collide
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException {
@@ -1772,10 +1839,11 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
-     * @param keyColumnName the actual database column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching and
-     *            is validated and dialect-quoted when necessary (for example, supply {@code user_id}, not {@code userId})
+     * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
+     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
-     * @throws IllegalArgumentException if {@code tableName} or {@code keyColumnName} is {@code null} or blank, or if no columns remain for the SET clause
+     * @throws IllegalArgumentException if either name is {@code null} or blank, the key column is missing or ambiguous,
+     *             no columns remain for the SET clause, or generated named parameters are invalid or collide
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws UncheckedSQLException {
@@ -1787,17 +1855,17 @@ public final class JdbcCodeGenerationUtil {
              final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
-            final List<String> updateColumnLabelList = Stream.of(columnLabelList)
-                    .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
-                    .toList();
+            final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
+            final List<String> updateColumnLabelList = Stream.of(columnLabelList).filter(columnLabel -> !columnLabel.equals(resolvedKeyColumnName)).toList();
 
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
+            checkNamedParameterColumnLabels(Stream.of(updateColumnLabelList).append(resolvedKeyColumnName).toList(), tableName);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(updateColumnLabelList)
                             .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
                             .join(", ")
-                    + " WHERE " + checkColumnName(keyColumnName, dbProductInfo) + " = :" + Strings.toCamelCase(keyColumnName);
+                    + " WHERE " + checkColumnName(resolvedKeyColumnName, dbProductInfo) + " = :" + Strings.toCamelCase(resolvedKeyColumnName);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1823,10 +1891,11 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
-     * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, a key column is blank, missing,
+     *             or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateNamedUpdateSql(Connection, String, String)
      * @see #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
@@ -1864,10 +1933,11 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
-     * @param keyColumnNames a collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, or if no columns remain for the SET clause after exclusions
+     * @throws IllegalArgumentException if {@code tableName} is {@code null} or blank, a key column is blank, missing,
+     *             or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      * @see #generateNamedUpdateSql(Connection, String, String)
      * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
@@ -1882,24 +1952,29 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
+            final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
-                    .append(keyColumnNames)
+                    .append(resolvedKeyColumnNames)
                     .map(Strings::toCamelCase)
                     .collect(Collectors.toSet());
 
-            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
+            final List<String> columnLabelList = Stream.of(allColumnLabels)
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
             checkUpdateSetColumnLabels(columnLabelList, tableName);
+            checkNamedParameterColumnLabels(Stream.of(columnLabelList).append(resolvedKeyColumnNames).toList(), tableName);
 
             String whereSection = "";
 
-            if (N.notEmpty(keyColumnNames) || Strings.isNotEmpty(whereClause)) {
+            if (N.notEmpty(resolvedKeyColumnNames) || Strings.isNotEmpty(whereClause)) {
                 whereSection = " WHERE ";
 
-                if (N.notEmpty(keyColumnNames)) {
-                    whereSection += Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = :" + Strings.toCamelCase(c)).join(" AND ");
+                if (N.notEmpty(resolvedKeyColumnNames)) {
+                    whereSection += Stream.of(resolvedKeyColumnNames)
+                            .map(c -> checkColumnName(c, dbProductInfo) + " = :" + Strings.toCamelCase(c))
+                            .join(" AND ");
 
                     if (Strings.isNotEmpty(whereClause)) {
                         whereSection += " AND " + whereClause;
@@ -2440,6 +2515,170 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
+    private static void checkNamedParameterColumnLabels(final Collection<String> columnLabelList, final String tableName) {
+        final Map<String, String> parameterNameToColumnName = new HashMap<>();
+
+        for (final String columnLabel : columnLabelList) {
+            final String parameterName = Strings.toCamelCase(columnLabel);
+
+            if (!isValidJavaIdentifier(parameterName)) {
+                throw new IllegalArgumentException(
+                        "Column '" + columnLabel + "' in table '" + tableName + "' does not map to a valid named parameter: " + parameterName);
+            }
+
+            final String previousColumnName = parameterNameToColumnName.putIfAbsent(parameterName, columnLabel);
+
+            if (previousColumnName != null && !previousColumnName.equals(columnLabel)) {
+                throw new IllegalArgumentException("Columns '" + previousColumnName + "' and '" + columnLabel + "' in table '" + tableName
+                        + "' both map to named parameter ':" + parameterName + "'");
+            }
+        }
+    }
+
+    private static List<String> resolveKeyColumnNames(final Collection<String> keyColumnNames, final List<String> actualColumnNames, final String tableName) {
+        if (N.isEmpty(keyColumnNames)) {
+            return N.emptyList();
+        }
+
+        final List<String> result = new ArrayList<>(keyColumnNames.size());
+
+        for (final String requestedColumnName : keyColumnNames) {
+            N.checkArgNotBlank(requestedColumnName, "keyColumnName");
+
+            String resolvedColumnName = null;
+
+            for (final String actualColumnName : actualColumnNames) {
+                if (actualColumnName.equalsIgnoreCase(requestedColumnName)) {
+                    if (resolvedColumnName != null && !resolvedColumnName.equals(actualColumnName)) {
+                        throw new IllegalArgumentException("Ambiguous key column '" + requestedColumnName + "' for table: " + tableName);
+                    }
+
+                    resolvedColumnName = actualColumnName;
+                }
+            }
+
+            if (resolvedColumnName == null) {
+                final String normalizedRequestedColumnName = Strings.toCamelCase(requestedColumnName);
+
+                for (final String actualColumnName : actualColumnNames) {
+                    if (normalizedRequestedColumnName.equalsIgnoreCase(Strings.toCamelCase(actualColumnName))) {
+                        if (resolvedColumnName != null && !resolvedColumnName.equals(actualColumnName)) {
+                            throw new IllegalArgumentException("Ambiguous key column '" + requestedColumnName + "' for table '" + tableName
+                                    + "': it matches both '" + resolvedColumnName + "' and '" + actualColumnName + "'");
+                        }
+
+                        resolvedColumnName = actualColumnName;
+                    }
+                }
+            }
+
+            if (resolvedColumnName == null) {
+                throw new IllegalArgumentException("Key column '" + requestedColumnName + "' does not exist in table: " + tableName);
+            }
+
+            if (!result.contains(resolvedColumnName)) {
+                result.add(resolvedColumnName);
+            }
+        }
+
+        return result;
+    }
+
+    private static void checkGeneratedAnnotationClass(final Class<? extends Annotation> annotationClass, final String suppliedStringMember,
+            final ElementType requiredTarget, final String configName) {
+        if (annotationClass.getCanonicalName() == null) {
+            throw new IllegalArgumentException(configName + " annotation must have a canonical name: " + annotationClass);
+        }
+
+        for (Class<?> enclosingType = annotationClass; enclosingType != null; enclosingType = enclosingType.getEnclosingClass()) {
+            if (!Modifier.isPublic(enclosingType.getModifiers())) {
+                throw new IllegalArgumentException(
+                        configName + " annotation must be publicly accessible from generated source: " + annotationClass.getCanonicalName());
+            }
+        }
+
+        boolean suppliedMemberFound = suppliedStringMember == null;
+
+        for (final Method member : annotationClass.getDeclaredMethods()) {
+            if (member.getName().equals(suppliedStringMember)) {
+                if (member.getParameterCount() != 0 || member.getReturnType() != String.class) {
+                    throw new IllegalArgumentException(
+                            configName + " annotation " + annotationClass.getCanonicalName() + " must declare String " + suppliedStringMember + "()");
+                }
+
+                suppliedMemberFound = true;
+            } else if (member.getDefaultValue() == null) {
+                throw new IllegalArgumentException(configName + " annotation " + annotationClass.getCanonicalName() + " has required member '"
+                        + member.getName() + "', but generated annotations only supply "
+                        + (suppliedStringMember == null ? "no arguments" : "'" + suppliedStringMember + "'"));
+            }
+        }
+
+        if (!suppliedMemberFound) {
+            throw new IllegalArgumentException(
+                    configName + " annotation " + annotationClass.getCanonicalName() + " must declare String " + suppliedStringMember + "()");
+        }
+
+        final Target target = annotationClass.getAnnotation(Target.class);
+
+        if (target != null) {
+            boolean supportedTarget = false;
+
+            for (final ElementType elementType : target.value()) {
+                if (elementType == requiredTarget) {
+                    supportedTarget = true;
+                    break;
+                }
+            }
+
+            if (!supportedTarget) {
+                throw new IllegalArgumentException(configName + " annotation " + annotationClass.getCanonicalName() + " cannot target " + requiredTarget);
+            }
+        }
+    }
+
+    private static String deriveClassName(final String entityName) {
+        String simpleEntityName = entityName;
+
+        try {
+            final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(entityName, "entityName");
+            simpleEntityName = parts[parts.length - 1];
+        } catch (final RuntimeException ignore) {
+            // Query-based generation also accepts descriptive entity names that are not SQL identifiers.
+            // Preserve the historical conversion for those names and let identifier validation report a
+            // clear error when the result cannot be emitted as Java source.
+        }
+
+        return Strings.capitalize(Strings.toCamelCase(simpleEntityName));
+    }
+
+    private static boolean isValidJavaIdentifier(final String identifier) {
+        if (Strings.isEmpty(identifier) || Strings.isJavaKeyword(identifier)) {
+            return false;
+        }
+
+        int offset = 0;
+        int codePoint = identifier.codePointAt(offset);
+
+        if (!Character.isJavaIdentifierStart(codePoint)) {
+            return false;
+        }
+
+        offset += Character.charCount(codePoint);
+
+        while (offset < identifier.length()) {
+            codePoint = identifier.codePointAt(offset);
+
+            if (!Character.isJavaIdentifierPart(codePoint)) {
+                return false;
+            }
+
+            offset += Character.charCount(codePoint);
+        }
+
+        return true;
+    }
+
     private static String getTableColumnNameQuoteChar(final ProductInfo dbProductInfo) {
         return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.name(), "MySQL", "MariaDB") ? "`" : "\"";
     }
@@ -2514,7 +2753,8 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * The class name for the generated entity.
-         * If not specified, it will be derived from the table name using camelCase conversion.
+         * If not specified, it is derived by camel-case conversion from the final component of the
+         * entity/table name (for example, {@code catalog.schema.user_account} becomes {@code UserAccount}).
          */
         private String className;
 
@@ -2610,21 +2850,24 @@ public final class JdbcCodeGenerationUtil {
         /**
          * The annotation class to use for the {@code @Table} annotation on the generated entity.
          * Default is {@link com.landawn.abacus.annotation.Table}.
-         * Can be set to {@code jakarta.persistence.Table} or {@code javax.persistence.Table} for JPA compatibility.
+         * It can be set to {@code jakarta.persistence.Table}, {@code javax.persistence.Table}, or a publicly accessible custom
+         * type-targeted annotation whose only required argument is {@code String name()}.
          */
         private Class<? extends Annotation> tableAnnotationClass;
 
         /**
          * The annotation class to use for the {@code @Column} annotation on generated fields.
          * Default is {@link com.landawn.abacus.annotation.Column}.
-         * Can be set to {@code jakarta.persistence.Column} or {@code javax.persistence.Column} for JPA compatibility.
+         * It can be set to {@code jakarta.persistence.Column}, {@code javax.persistence.Column}, or a publicly accessible custom
+         * field-targeted annotation whose only required argument is {@code String name()}.
          */
         private Class<? extends Annotation> columnAnnotationClass;
 
         /**
          * The annotation class to use for the {@code @Id} annotation on primary key fields.
          * Default is {@link com.landawn.abacus.annotation.Id}.
-         * Can be set to {@code jakarta.persistence.Id} or {@code javax.persistence.Id} for JPA compatibility.
+         * It can be set to {@code jakarta.persistence.Id}, {@code javax.persistence.Id}, or a publicly accessible custom
+         * field-targeted marker annotation with no required arguments.
          */
         private Class<? extends Annotation> idAnnotationClass;
 

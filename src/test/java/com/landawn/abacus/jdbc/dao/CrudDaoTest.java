@@ -20,11 +20,13 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
@@ -513,6 +515,39 @@ public class CrudDaoTest extends TestBase {
 
         assertSame(primary, thrown, "the primary batch failure must propagate, not the rollback failure");
         assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
+    }
+
+    @Test
+    public void testBatchUpsert_FullSig_IgnoresSelfSuppressionFromRollback() throws SQLException {
+        final IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final IdAnnotatedEntity toUpdate = new IdAnnotatedEntity();
+        toUpdate.setId(1L);
+        toUpdate.setName("existing");
+        final IdAnnotatedEntity toInsert = new IdAnnotatedEntity();
+        toInsert.setId(2L);
+        toInsert.setName("new");
+        final IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("existing");
+
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.any(Condition.class));
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        Mockito.doReturn(dataSource).when(dao).dataSource();
+
+        final IllegalStateException primary = new IllegalStateException("same operation and rollback failure");
+        Mockito.doThrow(primary).when(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+        Mockito.doThrow(primary).when(tran).rollbackIfNotCommitted();
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> dao.batchUpsert(List.of(toUpdate, toInsert), List.of("name"), 10));
+
+            assertSame(primary, thrown);
+            assertEquals(0, thrown.getSuppressed().length);
+        }
     }
 
     // refresh variants validate input and short-circuit empty collections.

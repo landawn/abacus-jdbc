@@ -57,12 +57,12 @@ import java.util.function.Supplier;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
+import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
-import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.Jdbc.OutParam;
 import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
@@ -1154,6 +1154,17 @@ public final class JdbcUtil {
     }
 
     /**
+     * Attaches a secondary failure without allowing {@link Throwable#addSuppressed(Throwable)} to
+     * replace the primary failure with an {@link IllegalArgumentException} when a driver or test
+     * double throws the same {@code Throwable} instance from more than one cleanup operation.
+     */
+    private static void addSuppressedIfDistinct(final Throwable primaryFailure, final Throwable secondaryFailure) {
+        if (primaryFailure != secondaryFailure) {
+            primaryFailure.addSuppressed(secondaryFailure);
+        }
+    }
+
+    /**
      * Closes the specified {@link ResultSet} and {@link Statement}.
      * Resources are closed in the correct order: {@code ResultSet} first, then {@code Statement}.
      * Using try-with-resources is generally preferred for managing these resources.
@@ -1201,7 +1212,7 @@ public final class JdbcUtil {
                 if (exception == null) {
                     exception = e;
                 } else {
-                    exception.addSuppressed(e);
+                    addSuppressedIfDistinct(exception, e);
                 }
             }
         }
@@ -1255,7 +1266,7 @@ public final class JdbcUtil {
                 if (exception == null) {
                     exception = e;
                 } else {
-                    exception.addSuppressed(e);
+                    addSuppressedIfDistinct(exception, e);
                 }
             }
         }
@@ -1311,7 +1322,7 @@ public final class JdbcUtil {
                 if (exception == null) {
                     exception = e;
                 } else {
-                    exception.addSuppressed(e);
+                    addSuppressedIfDistinct(exception, e);
                 }
             }
         }
@@ -1323,7 +1334,7 @@ public final class JdbcUtil {
                 if (exception == null) {
                     exception = e;
                 } else {
-                    exception.addSuppressed(e);
+                    addSuppressedIfDistinct(exception, e);
                 }
             }
         }
@@ -2620,10 +2631,10 @@ public final class JdbcUtil {
 
     /**
      * Determines the {@link SqlOperation} type from a given SQL string by analyzing its leading keyword.
-     * This method trims the SQL string and performs a case-insensitive check for the keywords
-     * {@code SELECT}, {@code UPDATE}, {@code INSERT}, {@code DELETE}, and {@code MERGE}. If none of
-     * these match, it falls back to matching the leading word (on a word boundary) against the
-     * {@link SqlOperation#sqlToken() SQL token} of every {@link SqlOperation} constant.
+     * Leading parentheses and comments are ignored. For a common-table expression introduced by
+     * {@code WITH} (optionally {@code RECURSIVE}), the operation following the CTE definitions is used;
+     * this distinguishes, for example, a {@code WITH ... SELECT} from a {@code WITH ... UPDATE}.
+     * Matching is case-insensitive and requires a token boundary.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2653,23 +2664,19 @@ public final class JdbcUtil {
             if (trimmedSql.charAt(0) == '(') {
                 trimmedSql = trimmedSql.substring(1).trim();
             } else if (trimmedSql.startsWith("/*")) {
-                final int end = trimmedSql.indexOf("*/", 2);
-
-                if (end < 0) {
-                    break;
-                }
-
-                trimmedSql = trimmedSql.substring(end + 2).trim();
+                trimmedSql = trimmedSql.substring(skipBlockComment(trimmedSql, 2)).trim();
             } else if (trimmedSql.startsWith("--")) {
-                final int end = trimmedSql.indexOf('\n', 2);
-
-                if (end < 0) {
-                    trimmedSql = Strings.EMPTY;
-                } else {
-                    trimmedSql = trimmedSql.substring(end + 1).trim();
-                }
+                trimmedSql = trimmedSql.substring(skipLineComment(trimmedSql, 2)).trim();
             } else {
                 break;
+            }
+        }
+
+        if (startsWithSqlToken(trimmedSql, "with")) {
+            final int operationStart = findOperationAfterWith(trimmedSql);
+
+            if (operationStart >= 0) {
+                trimmedSql = trimmedSql.substring(operationStart);
             }
         }
 
@@ -2695,13 +2702,169 @@ public final class JdbcUtil {
                 final String token = so.sqlToken();
 
                 if (Strings.startsWithIgnoreCase(trimmedSql, token) //
-                        && (trimmedSql.length() == token.length() || !Character.isLetterOrDigit(trimmedSql.charAt(token.length())))) {
+                        && (trimmedSql.length() == token.length() || !isSqlIdentifierPart(trimmedSql.charAt(token.length())))) {
                     return so;
                 }
             }
         }
 
         return SqlOperation.UNKNOWN;
+    }
+
+    private static boolean startsWithSqlToken(final String sql, final String token) {
+        return Strings.startsWithIgnoreCase(sql, token) //
+                && (sql.length() == token.length() || !isSqlIdentifierPart(sql.charAt(token.length())));
+    }
+
+    /**
+     * Finds the top-level operation following one or more CTE definitions. Tokens inside the CTE
+     * query bodies, quoted text/identifiers, and comments are ignored. A completed top-level
+     * parenthesized section is required before an operation is accepted, preventing a CTE whose
+     * name happens to resemble an operation from being misclassified.
+     */
+    private static int findOperationAfterWith(final String sql) {
+        int parenthesisDepth = 0;
+        boolean completedParenthesizedSection = false;
+
+        for (int i = 4, len = sql.length(); i < len;) {
+            final char ch = sql.charAt(i);
+
+            if (Character.isWhitespace(ch)) {
+                i++;
+            } else if (ch == '-' && i + 1 < len && sql.charAt(i + 1) == '-') {
+                i = skipLineComment(sql, i + 2);
+            } else if (ch == '/' && i + 1 < len && sql.charAt(i + 1) == '*') {
+                i = skipBlockComment(sql, i + 2);
+            } else if (ch == '\'' || ch == '"' || ch == '`') {
+                i = skipQuotedSqlText(sql, i, ch);
+            } else if (ch == '[') {
+                i = skipBracketQuotedSqlText(sql, i);
+            } else if (ch == '$') {
+                final int end = skipDollarQuotedSqlText(sql, i);
+                i = end > i ? end : i + 1;
+            } else if (ch == '(') {
+                parenthesisDepth++;
+                i++;
+            } else if (ch == ')') {
+                if (parenthesisDepth > 0 && --parenthesisDepth == 0) {
+                    completedParenthesizedSection = true;
+                }
+
+                i++;
+            } else if (parenthesisDepth == 0 && completedParenthesizedSection && Character.isLetter(ch)) {
+                int end = i + 1;
+
+                while (end < len && isSqlIdentifierPart(sql.charAt(end))) {
+                    end++;
+                }
+
+                final String token = sql.substring(i, end);
+
+                if (token.equalsIgnoreCase("select") || token.equalsIgnoreCase("update") || token.equalsIgnoreCase("insert") || token.equalsIgnoreCase("delete")
+                        || token.equalsIgnoreCase("merge")) {
+                    return i;
+                }
+
+                i = end;
+            } else {
+                i++;
+            }
+        }
+
+        return -1;
+    }
+
+    private static boolean isSqlIdentifierPart(final char ch) {
+        return Character.isLetterOrDigit(ch) || ch == '_' || ch == '$';
+    }
+
+    private static int skipLineComment(final String sql, int index) {
+        final int len = sql.length();
+
+        while (index < len) {
+            final char ch = sql.charAt(index++);
+
+            if (ch == '\n' || ch == '\r') {
+                break;
+            }
+        }
+
+        return index;
+    }
+
+    private static int skipBlockComment(final String sql, int index) {
+        final int len = sql.length();
+        int depth = 1;
+
+        while (index < len && depth > 0) {
+            if (index + 1 < len && sql.charAt(index) == '/' && sql.charAt(index + 1) == '*') {
+                depth++;
+                index += 2;
+            } else if (index + 1 < len && sql.charAt(index) == '*' && sql.charAt(index + 1) == '/') {
+                depth--;
+                index += 2;
+            } else {
+                index++;
+            }
+        }
+
+        return index;
+    }
+
+    private static int skipQuotedSqlText(final String sql, int index, final char quote) {
+        final int len = sql.length();
+        index++;
+
+        while (index < len) {
+            final char ch = sql.charAt(index++);
+
+            if (ch == '\\' && index < len) {
+                index++;
+            } else if (ch == quote) {
+                if (index < len && sql.charAt(index) == quote) {
+                    index++;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return index;
+    }
+
+    private static int skipBracketQuotedSqlText(final String sql, int index) {
+        final int len = sql.length();
+        index++;
+
+        while (index < len) {
+            if (sql.charAt(index++) == ']') {
+                if (index < len && sql.charAt(index) == ']') {
+                    index++;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return index;
+    }
+
+    private static int skipDollarQuotedSqlText(final String sql, final int index) {
+        final int len = sql.length();
+        int tagEnd = index + 1;
+
+        while (tagEnd < len && (Character.isLetterOrDigit(sql.charAt(tagEnd)) || sql.charAt(tagEnd) == '_')) {
+            tagEnd++;
+        }
+
+        if (tagEnd >= len || sql.charAt(tagEnd) != '$') {
+            return index;
+        }
+
+        final String delimiter = sql.substring(index, tagEnd + 1);
+        final int closingDelimiter = sql.indexOf(delimiter, tagEnd + 1);
+
+        return closingDelimiter < 0 ? len : closingDelimiter + delimiter.length();
     }
 
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
@@ -5413,7 +5576,7 @@ public final class JdbcUtil {
                             try {
                                 conn.rollback();
                             } catch (final SQLException | RuntimeException | Error rollbackFailure) {
-                                commitFailure.addSuppressed(rollbackFailure);
+                                addSuppressedIfDistinct(commitFailure, rollbackFailure);
                             }
 
                             throw commitFailure;
@@ -5423,7 +5586,7 @@ public final class JdbcUtil {
                             conn.rollback();
                         } catch (final SQLException | RuntimeException | Error e) {
                             // Don't mask the batch failure that is already propagating.
-                            primaryFailure.addSuppressed(e);
+                            addSuppressedIfDistinct(primaryFailure, e);
                             logger.warn("Failed to roll back after batch failure", e);
                         }
                     }
@@ -5433,7 +5596,7 @@ public final class JdbcUtil {
                     } catch (final SQLException | RuntimeException | Error e) {
                         // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
                         if (completionFailure != null) {
-                            completionFailure.addSuppressed(e);
+                            addSuppressedIfDistinct(completionFailure, e);
                         }
 
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
@@ -5684,7 +5847,7 @@ public final class JdbcUtil {
                             try {
                                 conn.rollback();
                             } catch (final SQLException | RuntimeException | Error rollbackFailure) {
-                                commitFailure.addSuppressed(rollbackFailure);
+                                addSuppressedIfDistinct(commitFailure, rollbackFailure);
                             }
 
                             throw commitFailure;
@@ -5694,7 +5857,7 @@ public final class JdbcUtil {
                             conn.rollback();
                         } catch (final SQLException | RuntimeException | Error e) {
                             // Don't mask the batch failure that is already propagating.
-                            primaryFailure.addSuppressed(e);
+                            addSuppressedIfDistinct(primaryFailure, e);
                             logger.warn("Failed to roll back after batch failure", e);
                         }
                     }
@@ -5704,7 +5867,7 @@ public final class JdbcUtil {
                     } catch (final SQLException | RuntimeException | Error e) {
                         // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
                         if (completionFailure != null) {
-                            completionFailure.addSuppressed(e);
+                            addSuppressedIfDistinct(completionFailure, e);
                         }
 
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
@@ -7235,6 +7398,8 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided ResultExtractor.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
+     * Closing the returned stream closes any result set that the iterator advanced to but did not
+     * deliver because traversal stopped early; it does not close {@code stmt}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7274,6 +7439,8 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided BiResultExtractor which also receives column labels.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
+     * Closing the returned stream closes any result set that the iterator advanced to but did not
+     * deliver because traversal stopped early; it does not close {@code stmt}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7390,7 +7557,20 @@ public final class JdbcUtil {
 
                 if (resultSetHolder.isNotNull()) {
                     JdbcUtil.closeQuietly(resultSetHolder.getAndSet(null));
+                } else if (isNextResultSet && !noMoreResult) {
+                    // next() advances with KEEP_CURRENT_RESULT before returning the prior result set.
+                    // If traversal stops at that point, the newly-current result set has not yet
+                    // been put in resultSetHolder and would otherwise remain open until the caller
+                    // eventually closes the Statement.
+                    try {
+                        JdbcUtil.closeQuietly(stmt.getResultSet());
+                    } catch (final SQLException e) {
+                        logger.warn(e, "Failed to close unconsumed ResultSet while closing result-set iterator");
+                    }
                 }
+
+                isNextResultSet = false;
+                noMoreResult = true;
             }
         };
     }
@@ -8392,6 +8572,11 @@ public final class JdbcUtil {
         return trimmed;
     }
 
+    /**
+     * Splits a one-, two-, or three-part SQL identifier, preserving dots inside delimited parts and
+     * unescaping doubled delimiters. Once a part's opening delimiter ({@code "}, {@code `}, or
+     * {@code [}) is closed, only whitespace or the separating dot may follow it.
+     */
     static String[] splitQualifiedSqlIdentifier(final String qualifiedName, final String argName) {
         N.checkArgNotBlank(qualifiedName, argName);
 
@@ -8399,6 +8584,7 @@ public final class JdbcUtil {
         final List<String> parts = new ArrayList<>(3);
         final StringBuilder sb = new StringBuilder(trimmed.length());
         char closingQuote = 0;
+        boolean quotedPartClosed = false;
 
         for (int i = 0, len = trimmed.length(); i < len; i++) {
             final char ch = trimmed.charAt(i);
@@ -8406,10 +8592,15 @@ public final class JdbcUtil {
             if (closingQuote == 0) {
                 if (ch == '.') {
                     addQualifiedIdentifierPart(parts, sb, qualifiedName, argName);
+                    quotedPartClosed = false;
                     continue;
                 }
 
-                if (Strings.isBlank(sb)) {
+                if (quotedPartClosed && !Character.isWhitespace(ch)) {
+                    throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
+                }
+
+                if (!quotedPartClosed && Strings.isBlank(sb)) {
                     if (ch == '"' || ch == '`') {
                         closingQuote = ch;
                     } else if (ch == '[') {
@@ -8426,6 +8617,7 @@ public final class JdbcUtil {
                         sb.append(trimmed.charAt(++i));
                     } else {
                         closingQuote = 0;
+                        quotedPartClosed = true;
                     }
                 }
             }
@@ -8442,6 +8634,30 @@ public final class JdbcUtil {
         }
 
         return parts.toArray(String[]::new);
+    }
+
+    private static boolean hasDelimitedIdentifierPart(final String qualifiedName) {
+        boolean atPartStart = true;
+
+        for (int i = 0, len = qualifiedName.length(); i < len; i++) {
+            final char ch = qualifiedName.charAt(i);
+
+            if (atPartStart) {
+                if (Character.isWhitespace(ch)) {
+                    continue;
+                }
+
+                if (ch == '"' || ch == '`' || ch == '[') {
+                    return true;
+                }
+
+                atPartStart = false;
+            } else if (ch == '.') {
+                atPartStart = true;
+            }
+        }
+
+        return false;
     }
 
     private static void addQualifiedIdentifierPart(final List<String> parts, final StringBuilder sb, final String qualifiedName, final String argName) {
@@ -8560,7 +8776,9 @@ public final class JdbcUtil {
      * <p>The method first checks for existence via {@link #tableExists(Connection, String)} and only
      * issues a {@code DROP TABLE} if the table is found. If the drop itself fails because the table no
      * longer exists (for example, a concurrent drop), the method returns {@code false}; any other SQL
-     * error is wrapped and rethrown as {@link UncheckedSQLException}.</p>
+     * error is wrapped and rethrown as {@link UncheckedSQLException}. For an unquoted simple name, a
+     * case-folded, unquoted retry may be attempted when a database stores unquoted identifiers in a
+     * canonical case. An explicitly delimited name is never retried unquoted, preserving its exact identity.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8606,7 +8824,8 @@ public final class JdbcUtil {
                 // database applies its own case folding.
                 final String simpleTableName = buildSimpleQualifiedName(tableName);
 
-                if (simpleTableName != null && !simpleTableName.equals(sqlTableName) && tableExists(conn, tableName)) {
+                if (!hasDelimitedIdentifierPart(tableName) && simpleTableName != null && !simpleTableName.equals(sqlTableName)
+                        && tableExists(conn, tableName)) {
                     try {
                         execute(conn, "DROP TABLE " + simpleTableName);
 
@@ -9354,7 +9573,9 @@ public final class JdbcUtil {
     /**
      * Returns the property names suitable for INSERT operations for the given entity class.
      * This method analyzes the class structure to determine which properties should be
-     * included in INSERT statements.
+     * included in INSERT statements. Relationship properties annotated with {@link JoinedBy}
+     * are excluded because they are populated from other tables rather than persisted in the
+     * entity's base table.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9385,13 +9606,13 @@ public final class JdbcUtil {
      * @return a collection of property names suitable for INSERT operations
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return QueryUtil.insertPropNames(entityClass, excludedPropNames);
+        return QueryUtil.insertPropNames(entityClass, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
     }
 
     /**
      * Gets the property names suitable for SELECT operations for the given entity class.
      * This method returns all property names that should be included in a SELECT statement,
-     * excluding properties marked with @Transient or other exclusion annotations.
+     * excluding properties marked with {@code @Transient}, {@link JoinedBy}, or other exclusion annotations.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9443,13 +9664,14 @@ public final class JdbcUtil {
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
-        return QueryUtil.selectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
+        return QueryUtil.selectPropNames(entityClass, includeSubEntityProperties, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
     }
 
     /**
      * Gets the property names suitable for UPDATE operations for the given entity class.
      * This method returns all property names that should be included in an UPDATE statement,
-     * excluding properties marked with @ReadOnly, @NonUpdatable, @Id, etc.
+     * excluding properties marked with {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id},
+     * {@link JoinedBy}, etc.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9480,7 +9702,32 @@ public final class JdbcUtil {
      * @return a collection of property names suitable for UPDATE operations
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
-        return QueryUtil.updatePropNames(entityClass, excludedPropNames);
+        return QueryUtil.updatePropNames(entityClass, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
+    }
+
+    /**
+     * Adds relationship properties to an operation's exclusion set without mutating the caller's set.
+     * A {@code @JoinedBy} property represents data read from a related table, even when its Java type
+     * (notably {@link Map}) would otherwise be considered a persistable scalar by {@link QueryUtil}.
+     */
+    private static Set<String> withJoinedByPropertiesExcluded(final Class<?> entityClass, final Set<String> excludedPropNames) {
+        if (entityClass == null) {
+            return excludedPropNames;
+        }
+
+        Set<String> result = null;
+
+        for (final PropInfo propInfo : ParserUtil.getBeanInfo(entityClass).propInfoList) {
+            if (propInfo.isAnnotationPresent(JoinedBy.class)) {
+                if (result == null) {
+                    result = N.isEmpty(excludedPropNames) ? N.newHashSet() : N.newHashSet(excludedPropNames);
+                }
+
+                result.add(propInfo.name);
+            }
+        }
+
+        return result == null ? excludedPropNames : result;
     }
 
     /**
@@ -9650,11 +9897,12 @@ public final class JdbcUtil {
 
     /**
      * Checks if the given value is {@code null} or equals the default value for its type.
-     * A value is considered "null or default" when it is {@code null}, a {@link Number} whose
-     * {@code doubleValue()} is {@code 0}, the {@link Boolean} {@code false}, or otherwise
-     * {@link N#equals(Object, Object) equals} the {@link N#defaultValueOf default value} of its
-     * runtime class. Reference types (such as {@link String} or any collection) are only considered
-     * default when {@code null}; an empty {@code String} or empty collection is <em>not</em> default.
+     * A value is considered "null or default" when it is {@code null}, a numeric zero, the
+     * {@link Boolean} {@code false}, or otherwise {@link N#equals(Object, Object) equals} the
+     * {@link N#defaultValueOf default value} of its runtime class. {@link BigDecimal} and
+     * {@link BigInteger} values are compared exactly, without converting them to floating point.
+     * Reference types (such as {@link String} or any collection) are only considered default when
+     * {@code null}; an empty {@code String} or empty collection is <em>not</em> default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9670,7 +9918,7 @@ public final class JdbcUtil {
      * @return {@code true} if the value is {@code null} or the default value for its type, {@code false} otherwise
      */
     public static boolean isNullOrDefault(final Object value) {
-        return (value == null) || (value instanceof Number num && num.doubleValue() == 0) || (value instanceof Boolean b && !b)
+        return (value == null) || (value instanceof Number num && isZeroNumber(num)) || (value instanceof Boolean b && !b)
                 || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
@@ -10748,7 +10996,7 @@ public final class JdbcUtil {
                 throw rollbackFailure;
             }
 
-            commandFailure.addSuppressed(rollbackFailure);
+            addSuppressedIfDistinct(commandFailure, rollbackFailure);
         }
     }
 
@@ -11839,8 +12087,8 @@ public final class JdbcUtil {
 
     /**
      * Opens a DAO-cache scope for the current thread using a new map-backed cache.
-     * Closing the returned scope restores the cache that was active before the scope was opened,
-     * making this method safe to nest.
+     * Closing the returned scope clears that internally created cache and restores the cache that
+     * was active before the scope was opened, making this method safe to nest.
      *
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
@@ -11854,14 +12102,15 @@ public final class JdbcUtil {
      * @see Jdbc.DaoCache#createByMap()
      */
     public static DaoCacheScope openDaoCacheScope() {
-        return openDaoCacheScope(Jdbc.DaoCache.createByMap());
+        return openDaoCacheScope(Jdbc.DaoCache.createByMap(), true);
     }
 
     /**
      * Opens a DAO-cache scope for the current thread using the specified cache.
      * Closing the returned scope restores the cache that was active before the scope was opened,
      * or removes the thread-local value if there was no previous cache. The scope controls only
-     * the thread-local binding; it does not otherwise manage the lifetime of the supplied cache.
+     * the thread-local binding; it neither clears nor otherwise manages the lifetime of the supplied
+     * cache.
      *
      * @param localThreadCache the cache to use in the scope, must not be {@code null}
      * @return a scope containing {@code localThreadCache}
@@ -11871,9 +12120,14 @@ public final class JdbcUtil {
     public static DaoCacheScope openDaoCacheScope(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException {
         N.checkArgNotNull(localThreadCache, cs.localThreadCache);
 
+        return openDaoCacheScope(localThreadCache, false);
+    }
+
+    private static DaoCacheScope openDaoCacheScope(final Jdbc.DaoCache localThreadCache, final boolean clearCacheOnClose) {
+
         final Jdbc.DaoCache previousCache = localThreadCache_TL.get();
         final DaoCacheScope previousScope = daoCacheScope_TL.get();
-        final DaoCacheScope scope = new DaoCacheScope(localThreadCache, previousCache, previousScope);
+        final DaoCacheScope scope = new DaoCacheScope(localThreadCache, previousCache, previousScope, clearCacheOnClose);
 
         localThreadCache_TL.set(localThreadCache);
         daoCacheScope_TL.set(scope);
@@ -11886,18 +12140,23 @@ public final class JdbcUtil {
      * Instances are created by {@link JdbcUtil#openDaoCacheScope()} or
      * {@link JdbcUtil#openDaoCacheScope(Jdbc.DaoCache)} and must be closed on the thread that opened them.
      * Nested scopes must be closed in reverse order, as happens naturally with try-with-resources.
+     * A scope created by the no-argument factory owns and clears its cache; a scope created with a
+     * caller-supplied cache only restores the binding.
      */
     public static final class DaoCacheScope implements AutoCloseable {
         private final Jdbc.DaoCache cache;
         private final Jdbc.DaoCache previousCache;
         private final DaoCacheScope previousScope;
         private final Thread ownerThread;
+        private final boolean clearCacheOnClose;
         private boolean closed;
 
-        private DaoCacheScope(final Jdbc.DaoCache cache, final Jdbc.DaoCache previousCache, final DaoCacheScope previousScope) {
+        private DaoCacheScope(final Jdbc.DaoCache cache, final Jdbc.DaoCache previousCache, final DaoCacheScope previousScope,
+                final boolean clearCacheOnClose) {
             this.cache = cache;
             this.previousCache = previousCache;
             this.previousScope = previousScope;
+            this.clearCacheOnClose = clearCacheOnClose;
             ownerThread = Thread.currentThread();
         }
 
@@ -11912,7 +12171,9 @@ public final class JdbcUtil {
 
         /**
          * Restores the DAO-cache binding that preceded this scope. Repeated calls have no effect.
-         * Nested scopes must be closed in reverse order.
+         * Nested scopes must be closed in reverse order. If this scope was created by
+         * {@link JdbcUtil#openDaoCacheScope()}, its internally created cache is cleared first;
+         * caller-supplied caches are not cleared.
          *
          * @throws IllegalStateException if called from a different thread or while a nested scope is still open
          */
@@ -11932,22 +12193,23 @@ public final class JdbcUtil {
 
             closed = true;
 
-            final DaoCache localDaoCache = localThreadCache_TL.get();
+            try {
+                if (clearCacheOnClose) {
+                    cache.clear();
+                }
+            } finally {
+                // Restore both thread-local bindings even if an owned cache fails while clearing.
+                if (previousCache == null) {
+                    localThreadCache_TL.remove();
+                } else {
+                    localThreadCache_TL.set(previousCache);
+                }
 
-            if (localDaoCache != null) {
-                localDaoCache.clear();
-            }
-
-            if (previousCache == null) {
-                localThreadCache_TL.remove();
-            } else {
-                localThreadCache_TL.set(previousCache);
-            }
-
-            if (previousScope == null) {
-                daoCacheScope_TL.remove();
-            } else {
-                daoCacheScope_TL.set(previousScope);
+                if (previousScope == null) {
+                    daoCacheScope_TL.remove();
+                } else {
+                    daoCacheScope_TL.set(previousScope);
+                }
             }
         }
     }

@@ -155,6 +155,15 @@ public class JoinInfoTest extends TestBase {
         assertNotNull(sql);
     }
 
+    @Test
+    public void testBatchSelectSqlPlanRejectsNonPositiveBatchSize() {
+        final JoinInfo directJoin = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        final JoinInfo manyToManyJoin = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+
+        assertThrows(IllegalArgumentException.class, () -> directJoin.batchSelectSqlPlan(PSC)._1.apply(null, 0));
+        assertThrows(IllegalArgumentException.class, () -> manyToManyJoin.batchSelectSqlPlan(PSC)._1.apply(null, -1));
+    }
+
     // Test PAC SqlBuilder also works
     @Test
     public void testGetSelectSqlPlan_PACBuilder() {
@@ -312,6 +321,15 @@ public class JoinInfoTest extends TestBase {
         assertNotNull(plan);
         assertNotNull(plan._1.apply(3));
         assertTrue(plan._1.apply(3).contains("DELETE"));
+    }
+
+    @Test
+    public void testBatchDeleteSqlPlanRejectsNonPositiveBatchSize() {
+        final JoinInfo directJoin = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        final JoinInfo manyToManyJoin = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+
+        assertThrows(IllegalArgumentException.class, () -> directJoin.batchDeleteSqlPlan(PSC)._1.apply(0));
+        assertThrows(IllegalArgumentException.class, () -> manyToManyJoin.batchDeleteSqlPlan(PSC)._1.apply(-1));
     }
 
     // Test that selectSqlPlan throws for unsupported SqlBuilder
@@ -1444,18 +1462,22 @@ public class JoinInfoTest extends TestBase {
         assertFalse(joinInfo.allowJoiningByNullOrDefaultValue);
     }
 
-    // setJoinPropEntities with no matching joined entity (L965 null branch)
+    // A load with no matching joined entity must replace a stale association with an empty value.
     @Test
     public void testSetJoinPropEntities_NoMatchingEntity() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_no_match", "orders");
         final UserEntity user = new UserEntity();
         user.setUserId(99L);
+        final OrderEntity staleOrder = new OrderEntity();
+        staleOrder.setUserId(99L);
+        user.setOrders(new java.util.ArrayList<>(List.of(staleOrder)));
         final OrderEntity order = new OrderEntity();
         order.setUserId(1L);
 
         joinInfo.setJoinPropEntities(List.of(user), List.of(order));
 
-        assertTrue(user.getOrders() == null || user.getOrders().isEmpty());
+        assertNotNull(user.getOrders());
+        assertTrue(user.getOrders().isEmpty());
     }
 
     // setJoinPropEntities with Collection (non-List) prop type (L967 assignableFrom branch)

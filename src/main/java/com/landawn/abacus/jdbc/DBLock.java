@@ -634,7 +634,9 @@ public final class DBLock {
      *
      * <p>If the lock is successfully released, the corresponding entry is removed from
      * the database table. If the lock does not exist, or if the provided code does not
-     * match the stored code, the operation will fail (return {@code false}).</p>
+     * match the stored code, the operation returns {@code false}. When {@code code} matches
+     * a lock acquired by this instance, its local refresh entry is removed even if the row
+     * is already absent, because this instance no longer owns a database lock to refresh.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -683,7 +685,7 @@ public final class DBLock {
             throw new UncheckedSQLException(e);
         }
 
-        if (shouldRemoveFromLocal && unlocked) {
+        if (shouldRemoveFromLocal) {
             targetCodePool.remove(target, lockInfo);
         }
 

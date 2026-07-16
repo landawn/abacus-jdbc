@@ -149,6 +149,18 @@ public class JdbcTest extends TestBase {
     public record NameRecord(String firstName, String lastName) {
     }
 
+    public static class NestedEntity {
+        private TestEntity user;
+
+        public TestEntity getUser() {
+            return user;
+        }
+
+        public void setUser(final TestEntity user) {
+            this.user = user;
+        }
+    }
+
     public static final class SpringRaceHandler implements Jdbc.Handler<Object> {
         // Marker handler used by the deterministic registration-race test.
     }
@@ -224,6 +236,37 @@ public class JdbcTest extends TestBase {
         Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.forArray(fields, TestEntity.class);
         assertNotNull(setter);
         assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, new Object[] { "value" }));
+    }
+
+    @Test
+    public void testBiParametersSetterForArrayRejectsMismatchedParameterCount() {
+        final Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.forArray(Arrays.asList("name", "age"), TestEntity.class);
+
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, new Object[] { "John" }));
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, new Object[] { "John", 25, true }));
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, null));
+    }
+
+    @Test
+    public void testBiParametersSetterForListRejectsMismatchedParameterCount() {
+        final Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.forList(Arrays.asList("name", "age"), TestEntity.class);
+
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, Arrays.asList("John")));
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, Arrays.asList("John", 25, true)));
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, null));
+    }
+
+    @Test
+    public void testBiParametersSetterSnapshotsFieldNames() {
+        final List<String> arrayFields = new ArrayList<>(Arrays.asList("name", "age"));
+        final List<String> listFields = new ArrayList<>(Arrays.asList("name", "age"));
+        final Jdbc.BiParametersSetter<PreparedStatement, Object[]> arraySetter = Jdbc.BiParametersSetter.forArray(arrayFields, TestEntity.class);
+        final Jdbc.BiParametersSetter<PreparedStatement, List<Object>> listSetter = Jdbc.BiParametersSetter.forList(listFields, TestEntity.class);
+        arrayFields.set(0, "notAProperty");
+        listFields.set(0, "notAProperty");
+
+        assertDoesNotThrow(() -> arraySetter.accept(mockPreparedStatement, new Object[] { "John", 25 }));
+        assertDoesNotThrow(() -> listSetter.accept(mockPreparedStatement, Arrays.asList("Jane", 30)));
     }
 
     // TriParametersSetter Tests
@@ -792,6 +835,19 @@ public class JdbcTest extends TestBase {
                 () -> Jdbc.RowMapper.builder().to((Throwables.BiFunction<List<String>, DisposableObjArray, Object, SQLException>) null));
     }
 
+    @Test
+    public void testRowMapperBuilderSnapshotsConfigurationWhenBuilt() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSet.getInt(1)).thenReturn(42);
+        when(mockResultSet.getString(1)).thenReturn("changed");
+
+        final Jdbc.RowMapper.RowMapperBuilder builder = Jdbc.RowMapper.builder().getInt(1);
+        final Jdbc.RowMapper<Object[]> mapper = builder.toArray();
+        builder.getString(1);
+
+        assertEquals(42, mapper.apply(mockResultSet)[0]);
+    }
+
     // BiRowMapper Tests
     @Test
     public void testBiRowMapperToArray() throws SQLException {
@@ -1097,6 +1153,30 @@ public class JdbcTest extends TestBase {
         assertEquals(1L, result.getId().longValue());
         assertEquals("John", result.getName());
         assertEquals(Integer.valueOf(20), result.getAge());
+    }
+
+    @Test
+    public void testBiRowMapperBuilderSnapshotsConfigurationWhenBuilt() throws SQLException {
+        when(mockResultSet.getInt(1)).thenReturn(42);
+        when(mockResultSet.getString(1)).thenReturn("changed");
+
+        final Jdbc.BiRowMapper.BiRowMapperBuilder builder = Jdbc.BiRowMapper.builder().getInt("value");
+        final Jdbc.BiRowMapper<Object[]> mapper = builder.to(Object[].class);
+        builder.getString("value");
+
+        assertEquals(42, mapper.apply(mockResultSet, Arrays.asList("value"))[0]);
+    }
+
+    @Test
+    public void testBiRowMapperTypedArraysUseComponentTypeConversion() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(42);
+        when(mockResultSet.getString(1)).thenReturn("42");
+
+        final String[] direct = Jdbc.BiRowMapper.to(String[].class).apply(mockResultSet, Arrays.asList("value"));
+        final String[] built = Jdbc.BiRowMapper.builder().to(String[].class).apply(mockResultSet, Arrays.asList("value"));
+
+        assertEquals("42", direct[0]);
+        assertEquals("42", built[0]);
     }
 
     @Test
@@ -1632,6 +1712,46 @@ public class JdbcTest extends TestBase {
         extractor.accept(mockResultSet, new Object[3]);
 
         assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, new Object[2]));
+    }
+
+    @Test
+    public void testRowExtractorForTypeRejectsNullAndShortOutputBeforeWriting() throws SQLException {
+        final Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, Arrays.asList("id", "name"));
+        final Object[] shortOutput = { "unchanged" };
+
+        assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, shortOutput));
+        assertEquals("unchanged", shortOutput[0]);
+        assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, null));
+    }
+
+    @Test
+    public void testRowExtractorForTypeSnapshotsExplicitColumnLabels() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn("7");
+
+        final List<String> columnLabels = new ArrayList<>(Arrays.asList("id"));
+        final Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, columnLabels);
+        columnLabels.set(0, "notAProperty");
+
+        final Object[] output = new Object[1];
+        extractor.accept(mockResultSet, output);
+
+        assertEquals(7L, output[0]);
+    }
+
+    @Test
+    public void testRowExtractorBuilderSnapshotsConfigurationWhenBuilt() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSet.getInt(1)).thenReturn(42);
+        when(mockResultSet.getString(1)).thenReturn("changed");
+
+        final Jdbc.RowExtractor.RowExtractorBuilder builder = Jdbc.RowExtractor.builder().getInt(1);
+        final Jdbc.RowExtractor extractor = builder.build();
+        builder.getString(1);
+
+        final Object[] output = new Object[1];
+        extractor.accept(mockResultSet, output);
+
+        assertEquals(42, output[0]);
     }
 
     // ColumnGetter Tests
@@ -3232,6 +3352,20 @@ public class JdbcTest extends TestBase {
 
         TestEntity result = mapper.apply(mockResultSet, columnLabels);
         assertNotNull(result);
+    }
+
+    @Test
+    public void testBiRowMapperToPrefixMapSnapshotsConfiguration() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn("9");
+
+        final Map<String, String> prefixMap = new HashMap<>();
+        prefixMap.put("u", "user");
+        final Jdbc.BiRowMapper<NestedEntity> mapper = Jdbc.BiRowMapper.to(NestedEntity.class, prefixMap);
+        prefixMap.put("u", "missing");
+
+        final NestedEntity result = mapper.apply(mockResultSet, Arrays.asList("u.id"));
+
+        assertEquals(9L, result.getUser().getId());
     }
 
     @Test

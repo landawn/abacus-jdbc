@@ -132,6 +132,13 @@ public class PreparedQueryTest extends TestBase {
         query = new PreparedQuery(mockStmt);
     }
 
+    @Test
+    public void testConstructorRejectsNullStatement() {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(null));
+
+        assertTrue(thrown.getMessage().contains("stmt"));
+    }
+
     @AfterEach
     public void tearDown() throws Exception {
         if (query != null) {

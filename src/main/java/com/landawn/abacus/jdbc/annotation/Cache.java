@@ -48,6 +48,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * any of them to a DAO that supports update/delete operations fails with
  * {@code UnsupportedOperationException} at initialization time.</p>
  *
+ * <p>The configured {@link #capacity()} and {@link #evictDelayMillis()} must both be non-negative;
+ * invalid values fail DAO initialization with {@code UnsupportedOperationException}.</p>
+ *
  * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} and
  * {@code enabled = true} (or eligible methods when {@code @CacheResult(enabled = true)} is applied
  * at the type level) will have their results cached according to the specified configuration. The cache key is automatically derived from the
@@ -137,8 +140,9 @@ public @interface Cache {
 
     /**
      * Specifies the implementation class for the DAO cache.
-     * The implementation must implement {@link DaoCache} and have a public constructor
-     * that accepts two parameters: {@code (int capacity, long evictDelay)}.
+     * The implementation must implement {@link DaoCache} and declare a constructor that accepts
+     * two parameters: {@code (int capacity, long evictDelay)}. The DAO proxy resolves that exact
+     * constructor signature when it creates the cache.
      *
      * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which is backed by a
      * keyed object pool with TTL and idle-time-based eviction. You can provide

@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -71,12 +73,14 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testMinFunc() {
         assertEquals("min(score)", JdbcCodeGenerationUtil.MIN_FUNC.apply(TestEntity.class, Integer.class, "score"));
+        assertEquals("min(score)", JdbcCodeGenerationUtil.MIN_FUNC.apply(TestEntity.class, int.class, "score"));
         assertNull(JdbcCodeGenerationUtil.MIN_FUNC.apply(TestEntity.class, Object.class, "payload"));
     }
 
     @Test
     public void testMaxFunc() {
         assertEquals("max(createdAt)", JdbcCodeGenerationUtil.MAX_FUNC.apply(TestEntity.class, String.class, "createdAt"));
+        assertEquals("max(createdAt)", JdbcCodeGenerationUtil.MAX_FUNC.apply(TestEntity.class, char.class, "createdAt"));
         assertNull(JdbcCodeGenerationUtil.MAX_FUNC.apply(TestEntity.class, Runnable.class, "handler"));
     }
 
@@ -112,6 +116,35 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     public void testGenerateNamedInsertSql_AllColumnsExcluded_Throws() {
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history", List.of("id", "created_at", "status")));
+    }
+
+    @Test
+    public void testGenerateNamedInsertSql_CollidingParameterNames_Throws() throws SQLException {
+        when(resultSetMetaData.getColumnCount()).thenReturn(2);
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("userId");
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+    }
+
+    @Test
+    public void testGenerateNamedInsertSql_InvalidParameterName_Throws() throws SQLException {
+        when(resultSetMetaData.getColumnCount()).thenReturn(1);
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("123value");
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_ResolvesCamelCaseKeyToActualColumn() {
+        final String sql = JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "createdAt");
+
+        assertEquals("UPDATE order_history SET id = ?, status = ? WHERE created_at = ?", sql);
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_MissingKeyColumn_Throws() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", "missingKey"));
     }
 
     @Test
@@ -358,6 +391,35 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
     }
 
+    @Test
+    public void testGenerateEntityClass_RejectsInvalidGeneratedFieldName() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("class");
+
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", null));
+
+        assertTrue(ex.getMessage().contains("field name 'class'"), ex.getMessage());
+    }
+
+    @Test
+    public void testGenerateEntityClass_RejectsInvalidConfiguredClassName() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("123Entity").build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+    }
+
+    @Test
+    public void testGenerateEntityClass_RejectsInvalidConfiguredPackageName() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().packageName("com.example.bad-package").build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+    }
+
     // Test generateEntityClass(Connection, tableName) overload
     @Test
     public void testGenerateEntityClass_Connection_TableName() throws SQLException {
@@ -555,7 +617,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .readOnlyFields(Arrays.asList("id"))
                 .nonUpdatableFields(Arrays.asList("id"))
                 .build();
-        assertThrows(RuntimeException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
     }
 
@@ -1053,15 +1115,67 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("jakarta.persistence"));
     }
 
-    // Custom non-jakarta tableAnnotationClass replaces internal annotation import (L541)
+    // A configured annotation must be structurally usable at the generated location. Silently
+    // falling back to Abacus @Table made the configuration appear to work while ignoring it.
     @Test
-    public void testGenerateEntityClass_WithCustomNonJakartaAnnotationClass() throws SQLException {
+    public void testGenerateEntityClass_RejectsIncompatibleCustomAnnotationClass() throws SQLException {
         setupFullGenerateEntityClassMock();
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .tableAnnotationClass(org.junit.jupiter.api.Test.class) // non-jakarta, non-abacus annotation
+                .tableAnnotationClass(org.junit.jupiter.api.Test.class)
                 .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+    }
+
+    @Target(ElementType.TYPE)
+    public @interface CustomTable {
+        String name();
+    }
+
+    @Target(ElementType.FIELD)
+    public @interface CustomColumn {
+        String name();
+    }
+
+    @Target(ElementType.FIELD)
+    public @interface CustomId {
+    }
+
+    @Target(ElementType.TYPE)
+    private @interface PrivateTable {
+        String name();
+    }
+
+    @Test
+    public void testGenerateEntityClass_RejectsInaccessibleCustomAnnotationClass() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(PrivateTable.class)
+                .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+    }
+
+    @Test
+    public void testGenerateEntityClass_UsesCompatibleCustomAnnotationClasses() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(CustomTable.class)
+                .columnAnnotationClass(CustomColumn.class)
+                .idAnnotationClass(CustomId.class)
+                .idFields(List.of("id"))
+                .build();
+
         final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
-        assertNotNull(result);
+
+        assertTrue(result.contains("@" + CustomTable.class.getCanonicalName() + "(name = \"order_history\")"));
+        assertTrue(result.contains("@" + CustomColumn.class.getCanonicalName() + "(name = \"id\")"));
+        assertTrue(result.contains("@" + CustomId.class.getCanonicalName()));
+        assertFalse(result.contains("import com.landawn.abacus.annotation.Table;"));
+        assertFalse(result.contains("import com.landawn.abacus.annotation.Column;"));
+        assertFalse(result.contains("import com.landawn.abacus.annotation.Id;"));
     }
 
     // nonUpdatableFields marks a field @NonUpdatable (L661)
@@ -1922,7 +2036,10 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(rsMd.getColumnType(1)).thenReturn(Types.VARCHAR);
         when(rsMd.getColumnClassName(1)).thenReturn("java.lang.String");
 
-        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "weird_tbl", "SELECT * FROM weird_tbl WHERE 1 > 2");
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .fieldNameConverter((table, column) -> "myCol")
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "weird_tbl", "SELECT * FROM weird_tbl WHERE 1 > 2", config);
         assertNotNull(result);
         // The raw column-name quote must be escaped; pre-fix the annotation broke compilation.
         assertTrue(result.contains("@Column(name = \"my\\\"col\")"), "Expected escaped @Column annotation, got:\n" + result);
@@ -2021,6 +2138,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "myschema.users");
         assertNotNull(result);
+        assertTrue(result.contains("public class Users"), "Expected class name to be derived from the unqualified table name; got:\n" + result);
         // The PK column "id" should have produced an @Id annotation, proving the schema-qualified
         // metadata lookup succeeded. Pre-fix, getPrimaryKeys(null, null, "myschema.users") matched
         // nothing and no @Id was emitted.
@@ -2067,6 +2185,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "mycatalog.myschema.users");
         assertNotNull(result);
+        assertTrue(result.contains("public class Users"), "Expected class name to be derived from the unqualified table name; got:\n" + result);
         assertTrue(result.contains("@Id"), "Expected @Id annotation from catalog/schema-qualified PK lookup; got:\n" + result);
         Mockito.verify(md).getPrimaryKeys("mycatalog", "myschema", "users");
     }

@@ -163,22 +163,22 @@ class CodeGenerationUtilTest {
         sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(dataSource, "user1", "id");
         N.println(sql);
         assertEquals(
-                "UPDATE user1 SET FIRST_NAME = :firstName, LAST_NAME = :lastName, PROP1 = :prop1, EMAIL = :email, CREATE_TIME = :createTime WHERE id = :id",
+                "UPDATE user1 SET FIRST_NAME = :firstName, LAST_NAME = :lastName, PROP1 = :prop1, EMAIL = :email, CREATE_TIME = :createTime WHERE ID = :id",
                 sql);
 
         sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(dataSource, "user1", null, N.asList("id", "email"), null);
         N.println(sql);
         assertEquals(
-                "UPDATE user1 SET FIRST_NAME = :firstName, LAST_NAME = :lastName, PROP1 = :prop1, CREATE_TIME = :createTime WHERE id = :id AND email = :email",
+                "UPDATE user1 SET FIRST_NAME = :firstName, LAST_NAME = :lastName, PROP1 = :prop1, CREATE_TIME = :createTime WHERE ID = :id AND EMAIL = :email",
                 sql);
 
         sql = JdbcCodeGenerationUtil.generateUpdateSql(dataSource, "user1", "id");
         N.println(sql);
-        assertEquals("UPDATE user1 SET FIRST_NAME = ?, LAST_NAME = ?, PROP1 = ?, EMAIL = ?, CREATE_TIME = ? WHERE id = ?", sql);
+        assertEquals("UPDATE user1 SET FIRST_NAME = ?, LAST_NAME = ?, PROP1 = ?, EMAIL = ?, CREATE_TIME = ? WHERE ID = ?", sql);
 
         sql = JdbcCodeGenerationUtil.generateUpdateSql(dataSource, "user1", null, N.asList("id", "email"), null);
         N.println(sql);
-        assertEquals("UPDATE user1 SET FIRST_NAME = ?, LAST_NAME = ?, PROP1 = ?, CREATE_TIME = ? WHERE id = ? AND email = ?", sql);
+        assertEquals("UPDATE user1 SET FIRST_NAME = ?, LAST_NAME = ?, PROP1 = ?, CREATE_TIME = ? WHERE ID = ? AND EMAIL = ?", sql);
     }
 
     @Test

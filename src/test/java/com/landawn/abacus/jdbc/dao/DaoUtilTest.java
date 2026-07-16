@@ -24,6 +24,9 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.query.SqlParser;
+import com.landawn.abacus.query.condition.In;
+import com.landawn.abacus.query.condition.IsNull;
+import com.landawn.abacus.query.condition.Or;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.Seid;
@@ -267,6 +270,31 @@ public class DaoUtilTest extends TestBase {
     }
 
     @Test
+    public void testSinglePropValuesToCondition_PreservesSqlNullSemantics() {
+        assertTrue(DaoUtil.singlePropValuesToCondition("name", List.of("Alice")) instanceof In);
+        assertTrue(DaoUtil.singlePropValuesToCondition("name", Arrays.asList((Object) null)) instanceof IsNull);
+
+        final List<String> mixedValues = Arrays.asList("Alice", null);
+        assertTrue(DaoUtil.singlePropValuesToCondition("name", mixedValues) instanceof Or);
+        assertEquals(Arrays.asList("Alice", null), mixedValues, "building the predicate must not mutate the caller's collection");
+
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("", List.of("Alice")));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("name", List.of()));
+    }
+
+    @Test
+    public void testAddSuppressedIfDifferent_GuardsAgainstSelfSuppression() {
+        final RuntimeException primary = new RuntimeException("primary");
+        final RuntimeException secondary = new RuntimeException("secondary");
+
+        DaoUtil.addSuppressedIfDifferent(primary, secondary);
+        DaoUtil.addSuppressedIfDifferent(primary, primary);
+
+        assertEquals(1, primary.getSuppressed().length);
+        assertSame(secondary, primary.getSuppressed()[0]);
+    }
+
+    @Test
     public void testUncheckedComplete_Success() {
         List<ContinuableFuture<Void>> futures = List.of(ContinuableFuture.completed(null));
         // an already-completed future drains cleanly without raising
@@ -381,6 +409,48 @@ public class DaoUtilTest extends TestBase {
         assertSame(firstUncheckedSum, uncheckedThrown.getCause());
         assertEquals(1, firstUncheckedSum.getSuppressed().length);
         assertSame(secondUncheckedSum, firstUncheckedSum.getSuppressed()[0]);
+    }
+
+    @Test
+    public void testCompletionMethodsPreserveSuppressedFailuresWhenUnwrappingSqlCause() {
+        final SQLException firstChecked = new SQLException("first checked");
+        final SQLException secondChecked = new SQLException("second checked");
+        final RuntimeException checkedWrapper = new RuntimeException(firstChecked);
+
+        final SQLException checkedThrown = assertThrows(SQLException.class, () -> DaoUtil.complete(Arrays.asList(ContinuableFuture.run(() -> {
+            throw checkedWrapper;
+        }), ContinuableFuture.run(() -> {
+            throw secondChecked;
+        }))));
+
+        assertSame(firstChecked, checkedThrown);
+        assertEquals(1, checkedThrown.getSuppressed().length);
+        assertSame(secondChecked, checkedThrown.getSuppressed()[0]);
+
+        final SQLException firstUnchecked = new SQLException("first unchecked");
+        final SQLException secondUnchecked = new SQLException("second unchecked");
+        final RuntimeException uncheckedWrapper = new RuntimeException(firstUnchecked);
+
+        final UncheckedSQLException uncheckedThrown = assertThrows(UncheckedSQLException.class,
+                () -> DaoUtil.uncheckedComplete(Arrays.asList(ContinuableFuture.run(() -> {
+                    throw uncheckedWrapper;
+                }), ContinuableFuture.run(() -> {
+                    throw secondUnchecked;
+                }))));
+
+        assertSame(firstUnchecked, uncheckedThrown.getCause());
+        assertEquals(1, firstUnchecked.getSuppressed().length);
+        assertSame(secondUnchecked, firstUnchecked.getSuppressed()[0]);
+    }
+
+    @Test
+    public void testUncheckedCompletionRethrowsExistingUncheckedSQLException() {
+        final UncheckedSQLException expected = new UncheckedSQLException(new SQLException("failure"));
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> DaoUtil.uncheckedComplete(List.of(ContinuableFuture.run(() -> {
+            throw expected;
+        }))));
+
+        assertSame(expected, thrown);
     }
 
     @Test

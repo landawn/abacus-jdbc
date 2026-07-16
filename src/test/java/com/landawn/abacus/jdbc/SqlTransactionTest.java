@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -9,8 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -26,6 +29,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -86,6 +90,31 @@ public class SqlTransactionTest extends TestBase {
 
         verify(connection, never()).setAutoCommit(false);
         verify(connection, never()).setTransactionIsolation(Connection.TRANSACTION_NONE);
+    }
+
+    @Test
+    public void testNullCreatorIsRejectedBeforeConnectionMutation() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, null, false));
+
+        verify(connection, never()).setAutoCommit(false);
+    }
+
+    @Test
+    public void testConstructorMutationFailurePreservesCleanupFailures() throws SQLException {
+        final SQLException isolationFailure = new SQLException("isolation rejected");
+        final AssertionError autoCommitRestoreFailure = new AssertionError("auto-commit restore failed");
+        final IllegalStateException isolationRestoreFailure = new IllegalStateException("isolation restore failed");
+        doThrow(autoCommitRestoreFailure).when(connection).setAutoCommit(true);
+        doThrow(isolationFailure).when(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+        doThrow(isolationRestoreFailure).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> new SqlTransaction(dataSource, connection, IsolationLevel.SERIALIZABLE, SqlTransaction.CreatedBy.JDBC_UTIL, false));
+
+        assertSame(isolationFailure, thrown);
+        assertEquals(2, thrown.getSuppressed().length);
+        assertSame(autoCommitRestoreFailure, thrown.getSuppressed()[0]);
+        assertSame(isolationRestoreFailure, thrown.getSuppressed()[1]);
     }
 
     @Test
@@ -419,6 +448,30 @@ public class SqlTransactionTest extends TestBase {
         assertTrue(id.contains(String.valueOf(Thread.currentThread().getId())));
     }
 
+    @Test
+    public void testTransactionRegistryUsesCollisionSafeCompositeKey() throws Exception {
+        clearThreadTransactionMap();
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        try {
+            final Field mapField = SqlTransaction.class.getDeclaredField("threadTransactionMap");
+            mapField.setAccessible(true);
+            final java.util.Map<?, ?> registry = (java.util.Map<?, ?>) mapField.get(null);
+            final Object key = registry.entrySet()
+                    .stream()
+                    .filter(entry -> entry.getValue() == transaction)
+                    .map(java.util.Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+
+            assertNotNull(key);
+            assertFalse(key instanceof String, "Transaction lookup must not depend on a concatenated identity-hash string");
+            assertSame(transaction, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+        } finally {
+            transaction.rollbackIfNotCommitted();
+        }
+    }
+
     // commit() when refCount < 0 (already committed): should log warn and return (lines 299-300)
     @Test
     public void testCommit_WhenAlreadyCommitted_WarnsAndIgnores() throws SQLException {
@@ -605,6 +658,21 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
     }
 
+    @Test
+    public void testCommitUncheckedFailureRemainsPrimaryWhenRollbackAlsoFails() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AssertionError commitFailure = new AssertionError("unchecked commit failure");
+        final IllegalStateException rollbackFailure = new IllegalStateException("unchecked rollback failure");
+        doThrow(commitFailure).when(connection).commit();
+        doThrow(rollbackFailure).when(connection).rollback();
+
+        final AssertionError thrown = assertThrows(AssertionError.class, transaction::commit);
+
+        assertSame(commitFailure, thrown);
+        assertArrayEquals(new Throwable[] { rollbackFailure }, thrown.getSuppressed());
+        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+    }
+
     // rollback() after commit logs warning and returns (L391-393)
     @Test
     public void testRollback_WhenAlreadyCommitted_LogsWarningAndReturns() throws SQLException {
@@ -642,7 +710,7 @@ public class SqlTransactionTest extends TestBase {
         final SqlTransaction outerTx = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         try {
-            // cmd starts another transaction with same datasource → same _id → conflict in finally
+            // cmd starts another transaction for the same registry slot → conflict in finally
             assertThrows(IllegalStateException.class, () -> outerTx.runOutsideTransaction(() -> {
                 JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
             }));
@@ -676,7 +744,7 @@ public class SqlTransactionTest extends TestBase {
     // After runOutsideTransaction throws ISE because a different transaction was opened in cmd,
     // cleaning up the original transaction (rollbackIfNotCommitted) must not remove the OTHER
     // transaction from the registry. Before the fix, decrementAndGetRef called
-    // threadTransactionMap.remove(_id) unconditionally, evicting the unrelated transaction.
+    // registry removal was unconditional, evicting the unrelated transaction.
     @Test
     public void testCleanupAfterRunOutsideTransactionConflictDoesNotEvictOtherTransaction() throws Exception {
         clearThreadTransactionMap();
@@ -796,11 +864,10 @@ public class SqlTransactionTest extends TestBase {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private static void clearThreadTransactionMap() throws Exception {
         final Field mapField = SqlTransaction.class.getDeclaredField("threadTransactionMap");
         mapField.setAccessible(true);
-        ((java.util.Map<String, SqlTransaction>) mapField.get(null)).clear();
+        ((java.util.Map<?, ?>) mapField.get(null)).clear();
     }
 
     @Test
@@ -946,6 +1013,51 @@ public class SqlTransactionTest extends TestBase {
         outer.commit();
     }
 
+    @Test
+    public void testIncrementAndGetRef_NestedFailure_RestoresOuterConnectionIsolation() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        clearInvocations(connection);
+
+        // Some drivers can change their state and still report a failure. The failed nested entry
+        // must therefore make a best-effort call that restores the outer scope's isolation.
+        doThrow(new SQLException("nested-isolation-fail")).doNothing().when(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+
+        assertThrows(UncheckedSQLException.class, () -> outer.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false));
+
+        final InOrder inOrder = inOrder(connection);
+        inOrder.verify(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+        inOrder.verify(connection).setTransactionIsolation(IsolationLevel.READ_COMMITTED.intValue());
+        assertEquals(IsolationLevel.READ_COMMITTED, outer.isolationLevel());
+
+        outer.rollbackIfNotCommitted();
+    }
+
+    @Test
+    public void testIncrementAndGetRef_UncheckedFailureRestoresNestedState() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AssertionError mutationFailure = new AssertionError("unchecked isolation failure");
+        final IllegalStateException restoreFailure = new IllegalStateException("unchecked isolation restore failure");
+        doThrow(mutationFailure).when(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+        doThrow(restoreFailure).when(connection).setTransactionIsolation(IsolationLevel.READ_COMMITTED.intValue());
+
+        final AssertionError thrown = assertThrows(AssertionError.class, () -> outer.incrementAndGetRef(IsolationLevel.SERIALIZABLE, true));
+
+        assertSame(mutationFailure, thrown);
+        assertArrayEquals(new Throwable[] { restoreFailure }, thrown.getSuppressed());
+        assertEquals(IsolationLevel.READ_COMMITTED, outer.isolationLevel());
+
+        final Field refCountField = SqlTransaction.class.getDeclaredField("_refCount");
+        refCountField.setAccessible(true);
+        assertEquals(1, ((AtomicInteger) refCountField.get(outer)).get());
+
+        final Field isolationStackField = SqlTransaction.class.getDeclaredField("_isolationLevelStack");
+        isolationStackField.setAccessible(true);
+        assertTrue(((java.util.Deque<?>) isolationStackField.get(outer)).isEmpty());
+
+        Mockito.reset(connection);
+        outer.rollbackIfNotCommitted();
+    }
+
     // Regression: decrementAndGetRef failure path used to push the popped values back to the
     // isolation/forUpdateOnly stacks but did NOT restore the _isolationLevel/_isForUpdateOnly
     // FIELDS. After a setTransactionIsolation failure, the transaction was left in an inconsistent
@@ -974,6 +1086,33 @@ public class SqlTransactionTest extends TestBase {
         final java.util.Deque<?> stack = (java.util.Deque<?>) stackField.get(tran);
         assertEquals(1, stack.size());
         assertEquals(IsolationLevel.READ_COMMITTED, stack.peek());
+    }
+
+    @Test
+    public void testDecrementAndGetRef_UncheckedRestoreFailureRestoresScopeState() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, true);
+        final AssertionError restoreFailure = new AssertionError("unchecked restore failure");
+        doThrow(restoreFailure).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        final AssertionError thrown = assertThrows(AssertionError.class, transaction::decrementAndGetRef);
+
+        assertSame(restoreFailure, thrown);
+        assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
+
+        final Field refCountField = SqlTransaction.class.getDeclaredField("_refCount");
+        refCountField.setAccessible(true);
+        assertEquals(2, ((AtomicInteger) refCountField.get(transaction)).get());
+
+        final Field stackField = SqlTransaction.class.getDeclaredField("_isolationLevelStack");
+        stackField.setAccessible(true);
+        final java.util.Deque<?> stack = (java.util.Deque<?>) stackField.get(transaction);
+        assertEquals(1, stack.size());
+        assertEquals(IsolationLevel.READ_COMMITTED, stack.peek());
+
+        Mockito.reset(connection);
+        transaction.rollbackIfNotCommitted();
+        transaction.rollbackIfNotCommitted();
     }
 
     // Regression: executeRollback's finally block called actionAfterRollback.run() unguarded.
@@ -1040,6 +1179,32 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(1, ex.getSuppressed().length);
         assertEquals("cleanup-error", ex.getSuppressed()[0].getMessage());
         verify(connection).close();
+    }
+
+    @Test
+    public void testRollback_SharedRollbackAndCleanupFailureDoesNotSelfSuppress() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AssertionError sharedFailure = new AssertionError("shared rollback/cleanup failure");
+        doThrow(sharedFailure).when(connection).rollback();
+        doThrow(sharedFailure).when(connection).setAutoCommit(true);
+
+        final AssertionError thrown = assertThrows(AssertionError.class, tran::rollback);
+
+        assertSame(sharedFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+    }
+
+    @Test
+    public void testCommit_SharedConnectionResetFailureDoesNotSelfSuppress() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AssertionError sharedFailure = new AssertionError("shared reset failure");
+        doThrow(sharedFailure).when(connection).setAutoCommit(true);
+        doThrow(sharedFailure).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        final AssertionError thrown = assertThrows(AssertionError.class, tran::commit);
+
+        assertSame(sharedFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
     }
 
     @Test

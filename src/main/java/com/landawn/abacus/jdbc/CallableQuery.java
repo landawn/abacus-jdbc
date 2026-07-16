@@ -140,6 +140,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     final CallableStatement cstmt;
     List<Jdbc.OutParam> outParams;
 
+    /**
+     * Creates a callable query that owns the supplied statement.
+     *
+     * @param stmt the callable statement to wrap; must not be {@code null}
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}
+     */
     CallableQuery(final CallableStatement stmt) {
         super(stmt);
         cstmt = stmt;
@@ -441,14 +447,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (value == null) {
             cstmt.setNull(parameterName, Types.BIGINT);
         } else {
-            boolean noException = false;
             try {
                 cstmt.setLong(parameterName, value.longValueExact());
-                noException = true;
-            } finally {
-                if (!noException) {
-                    close();
-                }
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
+                throw e;
             }
         }
 
@@ -1637,7 +1640,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 setObject(entry.getKey(), entry.getValue());
             }
         } catch (final SQLException | RuntimeException | Error e) {
-            close();
+            closeSuppressingFailure(e);
             throw e;
         }
 
@@ -1699,7 +1702,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 propInfo.dbType.set(cstmt, parameterName, propInfo.getPropValue(entity));
             }
         } catch (final SQLException | RuntimeException | Error e) {
-            close();
+            closeSuppressingFailure(e);
             throw e;
         }
 
@@ -1748,9 +1751,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } else if (parameters instanceof Map) {
             return setParameters((Map<String, ?>) parameters);
         } else {
-            close();
-            throw new IllegalArgumentException(
+            final IllegalArgumentException iae = new IllegalArgumentException(
                     "Unsupported parameter type for name-based binding: " + cls + ". Pass a bean or a Map (or use the positional setXxx(int, ...) methods).");
+
+            closeSuppressingFailure(iae);
+            throw iae;
         }
     }
 
@@ -2192,16 +2197,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> registrar) throws IllegalArgumentException, SQLException {
         checkArgNotNull(registrar, cs.registrar);
 
-        boolean noException = false;
-
         try {
             registrar.accept(this);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return this;
@@ -2248,16 +2248,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(registrar, cs.registrar);
 
-        boolean noException = false;
-
         try {
             registrar.accept(this, parameter);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return this;

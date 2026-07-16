@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -753,6 +754,9 @@ public class DaoImplIntegrationTest extends TestBase {
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
         Optional<UserAccount> findOptByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
 
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        Optional<UserAccount> selectOnlyOneByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
         // DEFAULT QueryOperation + List<Entity> with TWO named (@Bind) parameters (multi-bind named-SQL path).
         @Query("SELECT * FROM user_account WHERE age >= :minAge AND last_name = :ln ORDER BY id")
         List<UserAccount> findListByAgeAndLastName(@com.landawn.abacus.jdbc.annotation.Bind("minAge") int minAge,
@@ -791,6 +795,7 @@ public class DaoImplIntegrationTest extends TestBase {
         final Optional<UserAccount> opt = aqDao.findOptByLastName("Sel");
         assertTrue(opt.isPresent());
         assertEquals("Sel1", opt.get().getFirstName());
+        assertThrows(com.landawn.abacus.exception.DuplicateResultException.class, () -> aqDao.selectOnlyOneByLastName("Sel"));
 
         // two @Bind params (age >= 40) -> Sel2, Sel3
         assertEquals(2, aqDao.findListByAgeAndLastName(40, "Sel").size());
@@ -966,6 +971,35 @@ public class DaoImplIntegrationTest extends TestBase {
 
         assertEquals(1, RecordingHandler.BEFORE.get());
         assertEquals(1, RecordingHandler.AFTER.get());
+    }
+
+    public static final class SharedFailureHandler implements Jdbc.Handler<SharedFailureHandlerDao> {
+        static final AssertionError FAILURE = new AssertionError("shared DAO/handler failure");
+
+        @Override
+        public void afterInvoke(final Object result, final SharedFailureHandlerDao proxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            if ("failWithSharedError".equals(methodSignature._1.getName())) {
+                throw FAILURE;
+            }
+        }
+    }
+
+    @com.landawn.abacus.jdbc.annotation.Handler(impl = SharedFailureHandler.class)
+    public interface SharedFailureHandlerDao extends CrudDao<UserAccount, Long, SharedFailureHandlerDao> {
+        default void failWithSharedError() {
+            throw SharedFailureHandler.FAILURE;
+        }
+    }
+
+    @Test
+    public void testHandler_SharedDaoAndAfterFailureDoesNotSelfSuppress() {
+        final SharedFailureHandlerDao handlerDao = JdbcUtil.createDao(SharedFailureHandlerDao.class, ds);
+
+        final AssertionError thrown = assertThrows(AssertionError.class, handlerDao::failWithSharedError);
+
+        assertSame(SharedFailureHandler.FAILURE, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
     }
 
     // =====================================================================================

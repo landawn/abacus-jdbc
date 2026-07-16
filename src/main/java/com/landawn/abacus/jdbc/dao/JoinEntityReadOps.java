@@ -615,9 +615,10 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * for related entities based on the join relationship defined in the {@code @JoinedBy} annotation
      * and populates the specified property in the entity.</p>
      *
-     * <p>The implementation should handle both collection-type properties (List, Set, etc.) and
-     * single-entity properties. For collection types, all matching join entities are loaded into
-     * the collection. For single entities, only one matching entity is loaded.</p>
+     * <p>The implementation handles collection, map, and scalar properties. Every invocation replaces
+     * the current property value: no match is represented by an empty collection or map, or by
+     * {@code null} for a scalar property. A map-valued join supports at most one matching row and
+     * stores it under the source entity's join key.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -671,7 +672,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * <p>This method is the core batch implementation for loading join entities. It efficiently loads
      * related entities for multiple parent entities in a single operation, avoiding the N+1 query problem.
      * The implementation typically uses an IN clause to fetch all related entities in one query, then
-     * distributes them to the appropriate parent entities based on the foreign key relationship.</p>
+     * distributes them to the appropriate parent entities based on the foreign key relationship.
+     * Existing property values are replaced; parents without a matching row receive an empty collection
+     * or map, or {@code null} for a scalar property.</p>
      *
      * <p>Performance characteristics:</p>
      * <ul>

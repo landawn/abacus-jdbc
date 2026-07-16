@@ -67,8 +67,8 @@ import java.lang.annotation.Target;
  * @Query("INSERT INTO users (name, email, age) VALUES (:name, :email, :age)")
  * void insertUser(User user) throws SQLException;
  *
- * // NOT supported: prefix-binding an entity with @Bind ("@Bind("u") User user" + ":u.name" fails
- * // DAO initialization) — use the single unannotated bean parameter form above instead.
+ * // NOT supported: prefix-binding an entity with @Bind("u") and then referring to :u.name.
+ * // DAO initialization fails; use the single unannotated bean parameter form above instead.
  * }</pre>
  *
  * <p>Best practices:</p>

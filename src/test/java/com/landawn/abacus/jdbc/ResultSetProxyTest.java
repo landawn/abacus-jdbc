@@ -1748,6 +1748,43 @@ public class ResultSetProxyTest extends TestBase {
         assertSame(freeFailure, thrown.getSuppressed()[0]);
     }
 
+    @Test
+    public void testGetObjectByIndex_BlobReadAndFreeSameFailureDoesNotSelfSuppress() throws SQLException {
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        final Blob blob = Mockito.mock(Blob.class);
+        final SQLException sharedFailure = new SQLException("shared read/free failure");
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(1)).thenReturn(blob);
+        when(blob.length()).thenReturn(3L);
+        when(blob.getBytes(1, 3)).thenThrow(sharedFailure);
+        Mockito.doThrow(sharedFailure).when(blob).free();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> proxy.getObject(1));
+
+        assertSame(sharedFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+    }
+
+    @Test
+    public void testGetObjectByIndex_BlobUncheckedFreeFailureIsSuppressed() throws SQLException {
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        final Blob blob = Mockito.mock(Blob.class);
+        final SQLException readFailure = new SQLException("read failed");
+        final AssertionError freeFailure = new AssertionError("unchecked free failed");
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(1)).thenReturn(blob);
+        when(blob.length()).thenReturn(3L);
+        when(blob.getBytes(1, 3)).thenThrow(readFailure);
+        Mockito.doThrow(freeFailure).when(blob).free();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> proxy.getObject(1));
+
+        assertSame(readFailure, thrown);
+        assertArrayEquals(new Throwable[] { freeFailure }, thrown.getSuppressed());
+    }
+
     // Regression: pre-fix, getObject(String) on a Blob column returned the raw Blob on row 1
     // AND every subsequent row (label path's getter was `rs -> rs.getObject(idx)`), while
     // getObject(int) returned byte[] on rows 2+. Fix routes label-path through
@@ -1891,6 +1928,42 @@ public class ResultSetProxyTest extends TestBase {
         assertSame(readFailure, thrown);
         assertEquals(1, thrown.getSuppressed().length);
         assertSame(freeFailure, thrown.getSuppressed()[0]);
+    }
+
+    @Test
+    public void testGetObjectByLabel_ClobReadAndFreeSameFailureDoesNotSelfSuppress() throws SQLException {
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        final Clob clob = Mockito.mock(Clob.class);
+        final SQLException sharedFailure = new SQLException("shared read/free failure");
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("c")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn(clob);
+        when(clob.length()).thenReturn(3L);
+        when(clob.getSubString(1, 3)).thenThrow(sharedFailure);
+        Mockito.doThrow(sharedFailure).when(clob).free();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> proxy.getObject("c"));
+
+        assertSame(sharedFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+    }
+
+    @Test
+    public void testGetObjectByLabel_ClobUncheckedFreeFailureIsSuppressed() throws SQLException {
+        final Clob clob = Mockito.mock(Clob.class);
+        final SQLException readFailure = new SQLException("read failed");
+        final IllegalStateException freeFailure = new IllegalStateException("unchecked free failed");
+        when(delegate.findColumn("c")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn(clob);
+        when(clob.length()).thenReturn(3L);
+        when(clob.getSubString(1, 3)).thenThrow(readFailure);
+        Mockito.doThrow(freeFailure).when(clob).free();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> proxy.getObject("c"));
+
+        assertSame(readFailure, thrown);
+        assertArrayEquals(new Throwable[] { freeFailure }, thrown.getSuppressed());
     }
 
     @Test

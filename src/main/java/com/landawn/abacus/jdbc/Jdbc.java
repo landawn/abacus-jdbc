@@ -268,7 +268,7 @@ public final class Jdbc {
          * must match the order of values in the input array and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if a name in {@code fieldNameList} does not resolve to a property of {@code entityClass}.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if the parameter array is {@code null}, its length differs from the field count, or a field name does not resolve to a property of {@code entityClass}.
          */
         @Beta
         @SequentialOnly
@@ -277,24 +277,29 @@ public final class Jdbc {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
+            final List<String> fieldNames = new ArrayList<>(fieldNameList);
+
             return new BiParametersSetter<>() {
-                private final int len = fieldNameList.size();
+                private final int len = fieldNames.size();
                 @SuppressWarnings("rawtypes")
                 private Type[] fieldTypes = null;
 
                 @Override
                 public void accept(final PreparedStatement stmt, final T[] params) throws SQLException {
+                    N.checkArgNotNull(params, "params");
+                    N.checkArgument(params.length == len, "The parameter array length (%s) must match the field count (%s)", params.length, len);
+
                     if (fieldTypes == null) {
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         @SuppressWarnings("rawtypes")
                         final Type[] localFieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
-                            final PropInfo propInfo = entityInfo.getPropInfo(fieldNameList.get(i));
+                            final PropInfo propInfo = entityInfo.getPropInfo(fieldNames.get(i));
 
                             if (propInfo == null) {
                                 throw new IllegalArgumentException(
-                                        "No property found with name: " + fieldNameList.get(i) + " in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                                        "No property found with name: " + fieldNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(entityClass));
                             }
 
                             localFieldTypes[i] = propInfo.dbType;
@@ -336,7 +341,7 @@ public final class Jdbc {
          * must match the order of values in the input list and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if a name in {@code fieldNameList} does not resolve to a property of {@code entityClass}.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if the parameter list is {@code null}, its size differs from the field count, or a field name does not resolve to a property of {@code entityClass}.
          */
         @Beta
         @SequentialOnly
@@ -345,24 +350,29 @@ public final class Jdbc {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
+            final List<String> fieldNames = new ArrayList<>(fieldNameList);
+
             return new BiParametersSetter<>() {
-                private final int len = fieldNameList.size();
+                private final int len = fieldNames.size();
                 @SuppressWarnings("rawtypes")
                 private Type[] fieldTypes = null;
 
                 @Override
                 public void accept(final PreparedStatement stmt, final List<T> params) throws SQLException {
+                    N.checkArgNotNull(params, "params");
+                    N.checkArgument(params.size() == len, "The parameter list size (%s) must match the field count (%s)", params.size(), len);
+
                     if (fieldTypes == null) {
                         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
                         @SuppressWarnings("rawtypes")
                         final Type[] localFieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
-                            final PropInfo propInfo = entityInfo.getPropInfo(fieldNameList.get(i));
+                            final PropInfo propInfo = entityInfo.getPropInfo(fieldNames.get(i));
 
                             if (propInfo == null) {
                                 throw new IllegalArgumentException(
-                                        "No property found with name: " + fieldNameList.get(i) + " in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                                        "No property found with name: " + fieldNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(entityClass));
                             }
 
                             localFieldTypes[i] = propInfo.dbType;
@@ -2203,6 +2213,9 @@ public final class Jdbc {
          * They should not be cached, shared, or used in parallel streams.
          * </p>
          *
+         * <p>Each terminal operation snapshots the builder's configured getters. The builder may therefore
+         * be reused or changed to create another mapper without altering mappers that were already built.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<Map<String, Object>> mapper = RowMapper.builder()
@@ -2430,15 +2443,15 @@ public final class Jdbc {
                 return this;
             }
 
-            private ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
+            private ColumnGetter<?>[] initColumnGetter(final int columnCount, final Map<Integer, ColumnGetter<?>> configuredColumnGetters) { //NOSONAR
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
-                final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
+                final ColumnGetter<?> defaultColumnGetter = configuredColumnGetters.get(0);
 
                 for (int i = 0; i < columnCount; i++) {
-                    rsColumnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
+                    rsColumnGetters[i] = configuredColumnGetters.getOrDefault(i + 1, defaultColumnGetter);
                 }
 
-                final List<Integer> missingColumnIndexes = columnGetterMap.keySet().stream().filter(it -> it > columnCount).sorted().toList();
+                final List<Integer> missingColumnIndexes = configuredColumnGetters.keySet().stream().filter(it -> it > columnCount).sorted().toList();
 
                 if (N.notEmpty(missingColumnIndexes)) {
                     throw new IllegalArgumentException(
@@ -2471,6 +2484,8 @@ public final class Jdbc {
             @SequentialOnly
             @Stateful
             public RowMapper<Object[]> toArray() {
+                final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
@@ -2479,7 +2494,7 @@ public final class Jdbc {
                     public Object[] apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
                             rsColumnCount = rs.getMetaData().getColumnCount();
-                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
                         }
 
                         final Object[] row = new Object[rsColumnCount];
@@ -2543,6 +2558,8 @@ public final class Jdbc {
             public <C extends Collection<?>> RowMapper<C> toCollection(final IntFunction<? extends C> supplier) {
                 N.checkArgNotNull(supplier, cs.supplier);
 
+                final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
@@ -2551,7 +2568,7 @@ public final class Jdbc {
                     public C apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
                             rsColumnCount = rs.getMetaData().getColumnCount();
-                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
                         }
 
                         final Collection<Object> row = (Collection<Object>) supplier.apply(rsColumnCount);
@@ -2610,6 +2627,8 @@ public final class Jdbc {
             public RowMapper<Map<String, Object>> toMap(final IntFunction<? extends Map<String, Object>> mapSupplier) {
                 N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
+                final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private List<String> columnLabels = null;
@@ -2620,7 +2639,7 @@ public final class Jdbc {
                         if (rsColumnGetters == null) {
                             columnLabels = JdbcUtil.getColumnLabels(rs);
                             rsColumnCount = columnLabels.size();
-                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
                         }
 
                         final Map<String, Object> row = mapSupplier.apply(rsColumnCount);
@@ -2664,6 +2683,8 @@ public final class Jdbc {
             public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
                 N.checkArgNotNull(finisher, "finisher");
 
+                final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
@@ -2674,7 +2695,7 @@ public final class Jdbc {
                     public R apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
                             rsColumnCount = rs.getMetaData().getColumnCount();
-                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
                             outputRow = new Object[rsColumnCount];
                             output = DisposableObjArray.wrap(outputRow);
                         }
@@ -2719,6 +2740,8 @@ public final class Jdbc {
             public <R> RowMapper<R> to(final Throwables.BiFunction<List<String>, DisposableObjArray, R, SQLException> finisher) {
                 N.checkArgNotNull(finisher, "finisher");
 
+                final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
+
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private List<String> columnLabels = null;
@@ -2731,7 +2754,7 @@ public final class Jdbc {
                         if (rsColumnGetters == null) {
                             columnLabels = JdbcUtil.getColumnLabels(rs);
                             rsColumnCount = columnLabels.size();
-                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
                             outputRow = new Object[rsColumnCount];
                             output = DisposableObjArray.wrap(outputRow);
                         }
@@ -3010,6 +3033,10 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
+         * <p>For a reference-array target such as {@code String[]}, each included column is read through
+         * the {@link ColumnGetter} for the array's component type. This performs the same JDBC-to-Java
+         * conversion used for scalar targets and preserves SQL {@code NULL} for wrapper components.</p>
+         *
          * @param <T> target type
          * @param targetClass the class to map rows to
          * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are silently skipped;
@@ -3091,6 +3118,8 @@ public final class Jdbc {
             final Function<? super String, String> columnNameConverterToBeUsed = columnNameConverter == null ? Fn.identity() : columnNameConverter;
 
             if (Object[].class.isAssignableFrom(targetClass)) {
+                final ColumnGetter<?> componentGetter = ColumnGetter.forType(targetClass.getComponentType());
+
                 if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
                         && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
                     return (rs, columnLabelList) -> {
@@ -3098,7 +3127,7 @@ public final class Jdbc {
                         final Object[] a = Array.newInstance(targetClass.getComponentType(), columnCount);
 
                         for (int i = 0; i < columnCount; i++) {
-                            a[i] = JdbcUtil.getColumnValue(rs, i + 1);
+                            a[i] = componentGetter.get(rs, i + 1);
                         }
 
                         return (T) a;
@@ -3131,7 +3160,7 @@ public final class Jdbc {
                                     continue;
                                 }
 
-                                a[i] = JdbcUtil.getColumnValue(rs, i + 1);
+                                a[i] = componentGetter.get(rs, i + 1);
                             }
 
                             return (T) a;
@@ -3420,6 +3449,9 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
+         * <p>A non-empty {@code prefixAndFieldNameMap} is defensively copied when this method is called;
+         * later changes to the caller's map do not alter the returned mapper.</p>
+         *
          * @param <T> target entity type
          * @param entityClass the class to map rows to
          * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
@@ -3441,6 +3473,7 @@ public final class Jdbc {
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not an entity class", entityClass);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
+            final Map<String, String> configuredPrefixAndFieldNameMap = new HashMap<>(prefixAndFieldNameMap);
 
             return new BiRowMapper<>() {
                 private String[] columnLabels = null;
@@ -3475,7 +3508,8 @@ public final class Jdbc {
                             }
 
                             if (propInfos[i] == null) {
-                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
+                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], configuredPrefixAndFieldNameMap,
+                                        columnLabelList);
                                 propInfos[i] = JdbcUtil.getSubPropInfo(entityClass, newColumnName);
 
                                 if (propInfos[i] == null) {
@@ -4074,6 +4108,9 @@ public final class Jdbc {
          * in parallel streams.
          * </p>
          *
+         * <p>Calling a terminal {@code to(...)} operation snapshots the configured getters. Later changes
+         * to this builder affect only mappers built afterward.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiRowMapper<User> userMapper = BiRowMapper.builder()
@@ -4293,16 +4330,16 @@ public final class Jdbc {
                 return this;
             }
 
-            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList) { //NOSONAR
+            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList, final Map<String, ColumnGetter<?>> configuredColumnGetters) { //NOSONAR
                 final int rsColumnCount = columnLabelList.size();
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount];
 
                 // Match configured column names case-insensitively (falling back from an exact match),
                 // consistent with the column/property resolution elsewhere in this class: drivers may
                 // report labels in a different case than the one used to configure the builder.
-                final Map<String, ColumnGetter<?>> lowerCaseKeyedColumnGetterMap = new HashMap<>(columnGetterMap.size());
+                final Map<String, ColumnGetter<?>> lowerCaseKeyedColumnGetterMap = new HashMap<>(configuredColumnGetters.size());
 
-                for (final Map.Entry<String, ColumnGetter<?>> entry : columnGetterMap.entrySet()) {
+                for (final Map.Entry<String, ColumnGetter<?>> entry : configuredColumnGetters.entrySet()) {
                     lowerCaseKeyedColumnGetterMap.put(entry.getKey().toLowerCase(Locale.ROOT), entry.getValue());
                 }
 
@@ -4311,7 +4348,7 @@ public final class Jdbc {
 
                 for (int i = 0; i < rsColumnCount; i++) {
                     final String columnLabel = columnLabelList.get(i);
-                    columnGetter = columnGetterMap.get(columnLabel);
+                    columnGetter = configuredColumnGetters.get(columnLabel);
 
                     if (columnGetter == null) {
                         columnGetter = lowerCaseKeyedColumnGetterMap.get(columnLabel.toLowerCase(Locale.ROOT));
@@ -4323,7 +4360,7 @@ public final class Jdbc {
 
                 final List<String> unmatchedColumnNames = new ArrayList<>();
 
-                for (final String configuredColumnName : columnGetterMap.keySet()) {
+                for (final String configuredColumnName : configuredColumnGetters.keySet()) {
                     if (!lowerCaseColumnLabels.contains(configuredColumnName.toLowerCase(Locale.ROOT))) {
                         unmatchedColumnNames.add(configuredColumnName);
                     }
@@ -4343,6 +4380,10 @@ public final class Jdbc {
              * <p>
              * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
              * </p>
+             *
+             * <p>The configured getters are snapshotted when this method is called. For reference-array
+             * targets, a default {@link ColumnGetter#GET_OBJECT} is refined to the array component type;
+             * explicitly configured non-default getters continue to take precedence.</p>
              *
              * <p>Note: when {@code targetClass} is a bean class, the returned mapper's {@code apply} method throws
              * an {@link IllegalArgumentException} on its first invocation if a result column cannot be mapped to
@@ -4383,7 +4424,11 @@ public final class Jdbc {
             public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreUnmatchedColumns) {
                 N.checkArgNotNull(targetClass, cs.targetClass);
 
+                final Map<String, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
+
                 if (Object[].class.isAssignableFrom(targetClass)) {
+                    final ColumnGetter<?> componentGetter = ColumnGetter.forType(targetClass.getComponentType());
+
                     return new BiRowMapper<>() {
                         private ColumnGetter<?>[] rsColumnGetters = null;
                         private int rsColumnCount = -1;
@@ -4392,7 +4437,13 @@ public final class Jdbc {
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
-                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
+
+                                for (int i = 0; i < rsColumnCount; i++) {
+                                    if (rsColumnGetters[i] == ColumnGetter.GET_OBJECT) {
+                                        rsColumnGetters[i] = componentGetter;
+                                    }
+                                }
                             }
 
                             final Object[] a = Array.newInstance(targetClass.getComponentType(), rsColumnCount);
@@ -4413,7 +4464,7 @@ public final class Jdbc {
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
-                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -4437,7 +4488,7 @@ public final class Jdbc {
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
-                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                             }
@@ -4467,7 +4518,7 @@ public final class Jdbc {
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
-                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] localPropInfos = new PropInfo[rsColumnCount];
@@ -4532,7 +4583,7 @@ public final class Jdbc {
                             }
 
                             if (rsColumnGetters == null) {
-                                rsColumnGetters = initColumnGetter(columnLabelList);
+                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
 
                                 if (rsColumnGetters[0] == ColumnGetter.GET_OBJECT) {
                                     rsColumnGetters[0] = ColumnGetter.forType(N.typeOf(targetClass));
@@ -4988,9 +5039,10 @@ public final class Jdbc {
      * A functional interface that represents a predicate (boolean-valued function) of one {@code ResultSet} argument.
      * Use this to filter rows <b>after</b> they have been fetched from the database.
      *
-     * <p>Unlike {@link BiRowFilter}, this interface does not receive column labels, so columns must be accessed
-     * by index (1-based) via {@code ResultSet.getXxx(int)} methods. If your filtering logic needs column names,
-     * use {@link BiRowFilter} instead.</p>
+     * <p>Unlike {@link BiRowFilter}, this interface does not receive the complete column-label list as a separate
+     * argument. Columns may still be read by either 1-based index or label through the ordinary
+     * {@code ResultSet.getXxx(...)} methods. Use {@link BiRowFilter} when the filtering logic needs to inspect or
+     * dynamically resolve the available labels.</p>
      *
      * <p><b>Performance note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
      * Use {@code RowFilter} only when the filtering logic cannot be expressed in SQL (e.g., regex matching, custom business rules).
@@ -5304,7 +5356,11 @@ public final class Jdbc {
          *
          * <p>The returned extractor writes column values into positions {@code 0..columnCount-1} of the
          * {@code outputRow} passed to {@code accept}, so that array must be at least as long as the number of
-         * mapped columns; an undersized array raises {@code ArrayIndexOutOfBoundsException}.</p>
+         * mapped columns. A {@code null} or undersized output array is rejected with
+         * {@link IllegalArgumentException} before any values are written.</p>
+        
+         * <p>Non-empty {@code columnLabels} and {@code prefixAndFieldNameMap} inputs are defensively copied when
+         * this method is called; later caller mutations do not change the returned extractor.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
          * @param columnLabels an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet}.
@@ -5318,6 +5374,8 @@ public final class Jdbc {
             N.checkArgument(Beans.isBeanClass(entityClassForFetch), "{} is not a valid entity class with getter/setter methods", entityClassForFetch);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClassForFetch);
+            final List<String> configuredColumnLabels = N.isEmpty(columnLabels) ? null : new ArrayList<>(columnLabels);
+            final Map<String, String> configuredPrefixAndFieldNameMap = N.isEmpty(prefixAndFieldNameMap) ? null : new HashMap<>(prefixAndFieldNameMap);
 
             return new RowExtractor() {
                 private Type<?>[] columnTypes = null;
@@ -5327,7 +5385,7 @@ public final class Jdbc {
                 public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
                     if (columnTypes == null) {
                         final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClassForFetch);
-                        final List<String> columnLabelList = N.isEmpty(columnLabels) ? JdbcUtil.getColumnLabels(rs) : columnLabels;
+                        final List<String> columnLabelList = configuredColumnLabels == null ? JdbcUtil.getColumnLabels(rs) : configuredColumnLabels;
                         columnCount = columnLabelList.size();
                         final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 
@@ -5350,7 +5408,8 @@ public final class Jdbc {
                             }
 
                             if (propInfo == null) {
-                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], prefixAndFieldNameMap, columnLabelList);
+                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], configuredPrefixAndFieldNameMap,
+                                        columnLabelList);
 
                                 propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, newColumnName);
 
@@ -5395,6 +5454,10 @@ public final class Jdbc {
                         }
                     }
 
+                    N.checkArgNotNull(outputRow, "outputRow");
+                    N.checkArgument(outputRow.length >= columnCount, "The output array length (%s) must be at least the column count (%s)", outputRow.length,
+                            columnCount);
+
                     for (int i = 0; i < columnCount; i++) {
                         outputRow[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
                     }
@@ -5434,6 +5497,9 @@ public final class Jdbc {
          * as they cache metadata (like column count and getter configurations) upon first execution.
          * They should not be cached, shared, or used in parallel streams.
          * </p>
+         *
+         * <p>{@link #build()} snapshots the configured getters, so later builder changes do not alter an
+         * extractor that has already been built.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -5672,20 +5738,23 @@ public final class Jdbc {
             @SequentialOnly
             @Stateful
             public RowExtractor build() {
+                final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
+
                 return new RowExtractor() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
 
                     @Override
                     public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
+                        N.checkArgNotNull(outputRow, "outputRow");
+
                         if (rsColumnGetters == null) {
                             rsColumnCount = rs.getMetaData().getColumnCount();
                             rsColumnGetters = initColumnGetter(rsColumnCount);
                         }
 
-                        if (N.len(outputRow) < rsColumnCount) {
-                            throw new IllegalArgumentException("The length of output array is less than the column count of ResultSet");
-                        }
+                        N.checkArgument(outputRow.length >= rsColumnCount, "The output array length (%s) must be at least the column count (%s)",
+                                outputRow.length, rsColumnCount);
 
                         for (int i = 0; i < rsColumnCount; i++) {
                             outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
@@ -5694,13 +5763,13 @@ public final class Jdbc {
 
                     private ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
                         final ColumnGetter<?>[] columnGetters = new ColumnGetter<?>[columnCount];
-                        final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
+                        final ColumnGetter<?> defaultColumnGetter = configuredColumnGetters.get(0);
 
                         for (int i = 0; i < columnCount; i++) {
-                            columnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
+                            columnGetters[i] = configuredColumnGetters.getOrDefault(i + 1, defaultColumnGetter);
                         }
 
-                        final List<Integer> missingColumnIndexes = columnGetterMap.keySet().stream().filter(it -> it > columnCount).sorted().toList();
+                        final List<Integer> missingColumnIndexes = configuredColumnGetters.keySet().stream().filter(it -> it > columnCount).sorted().toList();
 
                         if (N.notEmpty(missingColumnIndexes)) {
                             throw new IllegalArgumentException(
@@ -6737,8 +6806,9 @@ public final class Jdbc {
          *
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
-         * @throws IllegalArgumentException if {@code handler} is {@code null}, or if {@code handler}'s class has no canonical name
-         *         (e.g. an anonymous, local, or lambda-built handler); use {@link #register(String, Handler)} with an explicit qualifier for those.
+         * @throws IllegalArgumentException if {@code handler} is {@code null}, or if the qualifier derived by
+         *         {@link ClassUtil#getCanonicalClassName(Class)} is empty. Use {@link #register(String, Handler)}
+         *         when an explicit, stable qualifier is required (particularly for anonymous or lambda-built handlers).
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, cs.handler);
@@ -7210,10 +7280,14 @@ public final class Jdbc {
         void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * clear remove all key/value
+         * Removes all entries from this cache.
+         *
+         * <p>The default implementation is a no-op so custom cache implementations that do not
+         * support bulk invalidation remain source-compatible. Implementations that own mutable
+         * storage should override this method.</p>
          */
         default void clear() {
-
+            // No bulk-invalidation operation is required of custom caches.
         }
 
     }

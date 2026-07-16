@@ -118,8 +118,10 @@ public enum QueryOperation {
     list,
 
     /**
-     * General query operation that returns results based on the method return type.
-     * The framework automatically determines the appropriate result handling.
+     * Materializes a query result as a {@code Dataset}. It is not the general inference sentinel;
+     * use {@link #DEFAULT} for inference from an arbitrary DAO return type. Although the underlying
+     * fluent query API also has extractor-based {@code query(...)} overloads, extractor parameters
+     * on annotation-driven DAO methods are not currently enabled.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -240,12 +242,12 @@ public enum QueryOperation {
 
     /**
      * Retrieves all {@code ResultSet}s from a stored procedure call as {@code Stream}s.
-     * Enables lazy processing of multiple result sets with minimal memory usage.
+     * Result sets are discovered and processed lazily, one at a time.
      *
-     * <p>This operation is ideal for stored procedures that return large result sets
-     * where you want to process data in a streaming fashion rather than loading
-     * everything into memory at once. It is primarily used with {@code @Query} annotation
-     * to retrieve all the {@code ResultSet}s returned from the executed procedure via {@code streamAllResultSets}.</p>
+     * <p>With the standard DAO return type {@code Stream<Dataset>}, each individual result set is
+     * fully materialized as a {@code Dataset} before that stream element is emitted; the laziness is
+     * across result sets, not rows within a result set. The returned stream owns JDBC resources and
+     * must be closed. This operation requires {@code @Query(procedure = true)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -262,7 +264,9 @@ public enum QueryOperation {
      * Used when the primary goal is to get output parameters rather than result sets.
      *
      * <p>This operation is specifically designed for stored procedures with OUT or INOUT
-     * parameters. The return type must be {@code Jdbc.OutParamResult}, from which the OUT parameter values are read.</p>
+     * parameters. The return type must be {@code Jdbc.OutParamResult}, or a supertype capable of
+     * accepting it, from which the OUT parameter values are read. The corresponding
+     * {@code @Query} must set {@code procedure = true}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -281,9 +285,11 @@ public enum QueryOperation {
 
     /**
      * Executes an {@code UPDATE} or {@code DELETE} (or other data-modifying, non-INSERT) statement and
-     * returns the number of affected rows. The selected operation produces an {@code int} row count.
+     * obtains an {@code int} affected-row count from JDBC.
      *
-     * <p>The return value indicates how many rows were affected. Note: {@code INSERT} statements are
+     * <p>A DAO method may expose that count as {@code int}/{@code Integer},
+     * {@code long}/{@code Long}, {@code boolean}/{@code Boolean} ({@code true} when the count is
+     * positive), or {@code void}. Note: {@code INSERT} statements are
      * always dispatched to the dedicated insert path, which returns the generated key(s) (or
      * {@code void}), not an affected-row count — this operation does not apply to them.</p>
      *
@@ -303,10 +309,13 @@ public enum QueryOperation {
     /**
      * Executes an {@code UPDATE} or {@code DELETE} (or other data-modifying, non-INSERT) statement that
      * may affect a large number of rows.
-     * The selected operation produces a {@code long} row count for compatibility with large datasets.
+     * The selected operation obtains a {@code long} row count from JDBC for compatibility with
+     * large datasets.
      *
      * <p>Use this operation when the number of affected rows might exceed the range of {@code int}.
-     * This is particularly relevant for bulk operations on large tables.</p>
+     * This is particularly relevant for bulk operations on large tables. A DAO method may return
+     * {@code long}/{@code Long}, {@code int}/{@code Integer} (with an exact-range check),
+     * {@code boolean}/{@code Boolean} ({@code true} when the count is positive), or {@code void}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -324,11 +333,11 @@ public enum QueryOperation {
      * Default operation that lets the framework automatically determine the appropriate operation
      * based on the SQL statement type and method signature.
      *
-     * <p>When {@code DEFAULT} is used, the framework analyzes the SQL statement and method return type
-     * to select the most appropriate operation. For example, {@code SELECT} statements default to {@link #list}
-     * or {@link #query} operations, and {@code UPDATE}/{@code DELETE} statements default to {@link #update}
-     * operations; {@code INSERT} statements are dispatched to the dedicated insert path, which returns the
-     * generated key(s) (or {@code void}).</p>
+     * <p>When {@code DEFAULT} is used, the framework analyzes the SQL statement, method return type,
+     * and, for some single-result conventions, the method name. A {@code SELECT} can therefore become
+     * a list, dataset, stream, existence check, first/unique-row lookup, or scalar lookup. An
+     * {@code UPDATE}/{@code DELETE} becomes an update operation; an {@code INSERT} is dispatched to
+     * the dedicated generated-key path.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 import javax.sql.DataSource;
@@ -55,6 +56,8 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         private List<JoinOrder> orders;
         @JoinedBy("id=JoinOrder.userId")
         private List<JoinOrder> backupOrders;
+        @JoinedBy("id=JoinProfile.userId")
+        private Map<Long, JoinProfile> profileByUserId;
 
         public Long getId() {
             return id;
@@ -86,6 +89,14 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
 
         public void setBackupOrders(final List<JoinOrder> backupOrders) {
             this.backupOrders = backupOrders;
+        }
+
+        public Map<Long, JoinProfile> getProfileByUserId() {
+            return profileByUserId;
+        }
+
+        public void setProfileByUserId(final Map<Long, JoinProfile> profileByUserId) {
+            this.profileByUserId = profileByUserId;
         }
     }
 
@@ -122,11 +133,47 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         }
     }
 
+    @Table("join_profile")
+    public static class JoinProfile {
+        @Id
+        @ReadOnly
+        private Long id;
+        private long userId;
+        private String label;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(final long userId) {
+            this.userId = userId;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public void setLabel(final String label) {
+            this.label = label;
+        }
+    }
+
     @DaoConfig(allowJoiningByNullOrDefaultValue = true)
     public interface JoinUserDao extends UncheckedCrudDao<JoinUser, Long, JoinUserDao>, UncheckedCrudJoinEntityHelper<JoinUser, Long, JoinUserDao> {
     }
 
     public interface JoinOrderDao extends UncheckedCrudDao<JoinOrder, Long, JoinOrderDao> {
+    }
+
+    public interface JoinProfileDao extends UncheckedCrudDao<JoinProfile, Long, JoinProfileDao> {
     }
 
     /** Same-thread executor so the deprecated parallel overloads run deterministically. */
@@ -135,6 +182,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     private DataSource ds;
     private JoinUserDao userDao;
     private JoinOrderDao orderDao;
+    private JoinProfileDao profileDao;
 
     @BeforeAll
     public void initDb() throws SQLException {
@@ -144,10 +192,12 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
              Statement st = conn.createStatement()) {
             st.execute("CREATE TABLE IF NOT EXISTS join_user (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(64))");
             st.execute("CREATE TABLE IF NOT EXISTS join_order (id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT, amount DOUBLE)");
+            st.execute("CREATE TABLE IF NOT EXISTS join_profile (id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT, label VARCHAR(64))");
         }
 
         userDao = JdbcUtil.createDao(JoinUserDao.class, ds);
         orderDao = JdbcUtil.createDao(JoinOrderDao.class, ds);
+        profileDao = JdbcUtil.createDao(JoinProfileDao.class, ds);
     }
 
     @AfterAll
@@ -156,6 +206,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
              Statement st = conn.createStatement()) {
             st.execute("DROP TABLE IF EXISTS join_user");
             st.execute("DROP TABLE IF EXISTS join_order");
+            st.execute("DROP TABLE IF EXISTS join_profile");
         }
     }
 
@@ -165,6 +216,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
              Statement st = conn.createStatement()) {
             st.execute("TRUNCATE TABLE join_user");
             st.execute("TRUNCATE TABLE join_order");
+            st.execute("TRUNCATE TABLE join_profile");
         }
     }
 
@@ -222,6 +274,38 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         final List<JoinUser> users2 = new ArrayList<>(List.of(userDao.gett(a.getId()), userDao.gett(b.getId())));
         userDao.loadJoinEntities(users2, JoinOrder.class, List.of("id", "userId", "amount"));
         assertEquals(2, users2.get(0).getOrders().size());
+    }
+
+    @Test
+    public void testLoadMapJoinWithNoMatchReplacesStaleValue() {
+        final JoinUser persisted = seedUser("NoProfile");
+        final JoinProfile staleProfile = new JoinProfile();
+        staleProfile.setUserId(persisted.getId());
+
+        final JoinUser single = userDao.gett(persisted.getId());
+        single.setProfileByUserId(Map.of(persisted.getId(), staleProfile));
+        userDao.loadJoinEntities(single, "profileByUserId");
+        assertNotNull(single.getProfileByUserId());
+        assertTrue(single.getProfileByUserId().isEmpty());
+
+        final JoinUser inOneElementCollection = userDao.gett(persisted.getId());
+        inOneElementCollection.setProfileByUserId(Map.of(persisted.getId(), staleProfile));
+        userDao.loadJoinEntities(List.of(inOneElementCollection), "profileByUserId");
+        assertNotNull(inOneElementCollection.getProfileByUserId());
+        assertTrue(inOneElementCollection.getProfileByUserId().isEmpty());
+
+        final JoinUser secondPersisted = seedUser("AlsoNoProfile");
+        final JoinUser firstInBatch = userDao.gett(persisted.getId());
+        final JoinUser secondInBatch = userDao.gett(secondPersisted.getId());
+        firstInBatch.setProfileByUserId(Map.of(persisted.getId(), staleProfile));
+        secondInBatch.setProfileByUserId(Map.of(secondPersisted.getId(), staleProfile));
+
+        userDao.loadJoinEntities(List.of(firstInBatch, secondInBatch), "profileByUserId");
+
+        assertNotNull(firstInBatch.getProfileByUserId());
+        assertTrue(firstInBatch.getProfileByUserId().isEmpty());
+        assertNotNull(secondInBatch.getProfileByUserId());
+        assertTrue(secondInBatch.getProfileByUserId().isEmpty());
     }
 
     // loadAllJoinEntities loads every @JoinedBy property; single + collection + executor overloads.

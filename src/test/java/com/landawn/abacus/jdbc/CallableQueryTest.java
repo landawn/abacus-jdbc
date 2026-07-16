@@ -70,6 +70,13 @@ public class CallableQueryTest extends TestBase {
     }
 
     @Test
+    public void testConstructorRejectsNullStatement() {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> new CallableQuery(null));
+
+        assertTrue(thrown.getMessage().contains("stmt"));
+    }
+
+    @Test
     public void testSetBoolean_NullValue() throws SQLException {
         CallableQuery result = callableQuery.setBoolean("active", (Boolean) null);
 
@@ -1541,6 +1548,20 @@ public class CallableQueryTest extends TestBase {
         verify(callableStatement).close();
     }
 
+    @Test
+    public void testSetLongBigIntegerPreservesOverflowWhenCloseHandlerThrows() {
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        callableQuery.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final ArithmeticException thrown = assertThrows(ArithmeticException.class,
+                () -> callableQuery.setLong("bi", BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)));
+
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
+    }
+
     // executeQuery() with isFetchDirectionSet already true (L2102 pc)
     @Test
     public void testExecuteQuery_FetchDirectionAlreadySet() throws SQLException {
@@ -1672,6 +1693,23 @@ public class CallableQueryTest extends TestBase {
 
         assertSame(bindingError, assertThrows(AssertionError.class, () -> callableQuery.setParameters(params)));
         verify(callableStatement).close();
+    }
+
+    @Test
+    public void testSetParametersPreservesBindingFailureWhenCloseHandlerThrows() throws SQLException {
+        final Map<String, Object> params = Map.of("key", "value");
+        final SQLException bindingFailure = new SQLException("binding failed");
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        doThrow(bindingFailure).when(callableStatement).setString("key", "value");
+        callableQuery.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> callableQuery.setParameters(params));
+
+        assertSame(bindingFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
     }
 
     // --- registerOutParameter by index replacement (L2078 PC) ---

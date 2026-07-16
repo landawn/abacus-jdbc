@@ -106,7 +106,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 
@@ -170,7 +170,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 
@@ -330,7 +330,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 
@@ -469,7 +469,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 

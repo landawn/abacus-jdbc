@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -115,6 +116,19 @@ public class NamedQueryTest extends TestBase {
     }
 
     @Test
+    public void testUnknownParameterPreservesIllegalArgumentWhenCloseHandlerThrows() {
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        namedQuery.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> namedQuery.setNull("nonExistent", Types.INTEGER));
+
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
+    }
+
+    @Test
     public void testSetNullWithSqlTypeAndTypeName() throws SQLException {
         String paramName = "param1";
         int sqlType = Types.STRUCT;
@@ -132,6 +146,14 @@ public class NamedQueryTest extends TestBase {
         when(mockParsedSql.parameterCount()).thenReturn(2);
 
         assertThrows(IllegalArgumentException.class, () -> new NamedQuery(mockPreparedStatement, mockParsedSql));
+    }
+
+    @Test
+    public void testConstructorNullParsedSqlClosesStatement() throws SQLException {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> new NamedQuery(mockPreparedStatement, null));
+
+        assertTrue(thrown.getMessage().contains("namedSql"));
+        verify(mockPreparedStatement).close();
     }
 
     @Test
@@ -376,6 +398,20 @@ public class NamedQueryTest extends TestBase {
         assertThrows(ArithmeticException.class, () -> namedQuery.setLong("param1", tooLarge));
 
         verify(mockPreparedStatement).close();
+    }
+
+    @Test
+    public void testSetLongBigIntegerPreservesOverflowWhenCloseHandlerThrows() {
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        namedQuery.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final ArithmeticException thrown = assertThrows(ArithmeticException.class,
+                () -> namedQuery.setLong("param1", BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)));
+
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
     }
 
     @Test
@@ -3661,6 +3697,24 @@ public class NamedQueryTest extends TestBase {
         Map<String, Object> params = new HashMap<>();
         params.put("param1", null);
         assertThrows(RuntimeException.class, () -> namedQuery.setParameters(params));
+    }
+
+    @Test
+    public void testSetParametersMapPreservesBindingFailureWhenCloseHandlerThrows() throws SQLException {
+        final RuntimeException bindingFailure = new RuntimeException("binding failed");
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        doThrow(bindingFailure).when(mockPreparedStatement).setObject(anyInt(), isNull());
+        namedQuery.onClose(() -> {
+            throw closeFailure;
+        });
+        final Map<String, Object> params = new HashMap<>();
+        params.put("param1", null);
+
+        final RuntimeException thrown = assertThrows(RuntimeException.class, () -> namedQuery.setParameters(params));
+
+        assertSame(bindingFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
     }
 
     // --- setParameters(Object) with bean missing property throws (L3955-3957, L3963-3965) ---

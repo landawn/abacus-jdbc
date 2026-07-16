@@ -2026,6 +2026,29 @@ public class JoinEntityHelperTest extends TestBase {
         }
     }
 
+    @Test
+    public void testDeleteJoinEntities_MultiProp_IgnoresSelfSuppressionFromRollback() throws SQLException {
+        final TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        final TestEntity entity = new TestEntity();
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        final IllegalStateException primary = new IllegalStateException("same delete and rollback failure");
+
+        when(dao.dataSource()).thenReturn(dataSource);
+        Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
+        Mockito.doThrow(primary).when(tran).rollbackIfNotCommitted();
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
+
+            assertSame(primary, thrown);
+            assertEquals(0, thrown.getSuppressed().length);
+        }
+    }
+
     // deleteJoinEntities(Collection<T>, Class<?>) — empty input is a no-op that short-circuits before prop-name
     // resolution. This documents the contract the unchecked twin must match (see UncheckedJoinEntityHelper).
     @Test

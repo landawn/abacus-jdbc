@@ -838,6 +838,25 @@ public class UncheckedCrudDaoTest extends TestBase {
         }
 
         @Test
+        public void testBatchUpsert_NullSingleMatchProperty_MatchesExistingRow() {
+            final BatchUpsertUser existing = new BatchUpsertUser();
+            existing.setId(1L);
+            existing.setName(null);
+            dao.insert(existing);
+
+            final BatchUpsertUser candidate = new BatchUpsertUser();
+            candidate.setId(2L);
+            candidate.setName(null);
+
+            final List<BatchUpsertUser> result = dao.batchUpsert(List.of(candidate), List.of("name"), 10);
+
+            assertEquals(1, result.size());
+            assertEquals(1L, result.get(0).getId(), "the null match key must select the existing row");
+            assertNotNull(dao.gett(1L));
+            assertNull(dao.gett(2L), "a null key must not fall through to the insert path");
+        }
+
+        @Test
         public void testBatchUpsert_DuplicateLookupKeyAcrossBatches_IsQueriedOnce() {
             final BatchUpsertUser existing1 = new BatchUpsertUser();
             existing1.setId(1L);

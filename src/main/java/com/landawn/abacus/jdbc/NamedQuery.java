@@ -113,8 +113,16 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     private Map<String, IntList> paramNameIndexMap;
 
+    /**
+     * Creates a named query from an already-prepared positional statement and its parsed SQL.
+     *
+     * @param stmt the prepared statement to own; must not be {@code null}
+     * @param namedSql the parsed named SQL; must not be {@code null} and must expose one name per placeholder
+     * @throws IllegalArgumentException if an argument is {@code null} or the parsed parameter metadata is inconsistent
+     */
     NamedQuery(final PreparedStatement stmt, final ParsedSql namedSql) {
         super(stmt);
+        checkArgNotNull(namedSql, "namedSql");
         this.namedSql = namedSql;
         parameterNames = namedSql.namedParameters();
         parameterCount = namedSql.parameterCount();
@@ -142,6 +150,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     private IllegalArgumentException namedParameterNotFound(final String parameterName) {
         return new IllegalArgumentException(
                 "Named parameter not found: " + parameterName + ". Available named parameters: " + parameterNames + ". SQL: " + namedSql.originalSql());
+    }
+
+    private IllegalArgumentException closeAfterNamedParameterNotFound(final String parameterName) {
+        final IllegalArgumentException failure = namedParameterNotFound(parameterName);
+        closeSuppressingFailure(failure);
+        return failure;
     }
 
     /**
@@ -174,8 +188,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -185,8 +198,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNull(indexes.get(0), sqlType);
@@ -239,8 +251,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -250,8 +261,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNull(indexes.get(0), sqlType, typeName);
@@ -301,8 +311,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -312,8 +321,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBoolean(indexes.get(0), value);
@@ -389,8 +397,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -400,8 +407,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setByte(indexes.get(0), value);
@@ -477,8 +483,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -488,8 +493,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setShort(indexes.get(0), value);
@@ -565,8 +569,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -576,8 +579,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setInt(indexes.get(0), value);
@@ -709,8 +711,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -720,8 +721,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setLong(indexes.get(0), value);
@@ -799,14 +799,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         if (value == null) {
             setNull(parameterName, java.sql.Types.BIGINT);
         } else {
-            boolean noException = false;
             try {
                 setLong(parameterName, value.longValueExact());
-                noException = true;
-            } finally {
-                if (!noException) {
-                    close();
-                }
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
+                throw e;
             }
         }
 
@@ -841,8 +838,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -852,8 +848,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setFloat(indexes.get(0), value);
@@ -931,8 +926,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -942,8 +936,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setDouble(indexes.get(0), value);
@@ -1020,8 +1013,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1031,8 +1023,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBigDecimal(indexes.get(0), value);
@@ -1135,8 +1126,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1146,8 +1136,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setString(indexes.get(0), value);
@@ -1288,8 +1277,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1299,8 +1287,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNString(indexes.get(0), value);
@@ -1373,8 +1360,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1384,8 +1370,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setDate(indexes.get(0), value);
@@ -1483,8 +1468,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1494,8 +1478,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setTime(indexes.get(0), value);
@@ -1616,8 +1599,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1627,8 +1609,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setTimestamp(indexes.get(0), value);
@@ -1842,8 +1823,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1853,8 +1833,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBytes(indexes.get(0), value);
@@ -1915,8 +1894,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1926,8 +1904,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setAsciiStream(indexes.get(0), value);
@@ -1989,8 +1966,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2000,8 +1976,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setAsciiStream(indexes.get(0), value, length);
@@ -2062,8 +2037,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2073,8 +2047,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBinaryStream(indexes.get(0), value);
@@ -2137,8 +2110,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2148,8 +2120,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBinaryStream(indexes.get(0), value, length);
@@ -2210,8 +2181,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2221,8 +2191,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setCharacterStream(indexes.get(0), value);
@@ -2284,8 +2253,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2295,8 +2263,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setCharacterStream(indexes.get(0), value, length);
@@ -2357,8 +2324,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2368,8 +2334,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNCharacterStream(indexes.get(0), value);
@@ -2430,8 +2395,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2441,8 +2405,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNCharacterStream(indexes.get(0), value, length);
@@ -2504,8 +2467,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2515,8 +2477,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBlob(indexes.get(0), value);
@@ -2576,8 +2537,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2587,8 +2547,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBlob(indexes.get(0), value);
@@ -2650,8 +2609,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2661,8 +2619,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBlob(indexes.get(0), value, length);
@@ -2724,8 +2681,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2735,8 +2691,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setClob(indexes.get(0), value);
@@ -2790,8 +2745,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2801,8 +2755,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setClob(indexes.get(0), value);
@@ -2856,8 +2809,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2867,8 +2819,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setClob(indexes.get(0), value, length);
@@ -2921,8 +2872,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2932,8 +2882,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNClob(indexes.get(0), value);
@@ -2987,8 +2936,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2998,8 +2946,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNClob(indexes.get(0), value);
@@ -3053,8 +3000,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3064,8 +3010,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNClob(indexes.get(0), value, length);
@@ -3116,8 +3061,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3127,8 +3071,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setURL(indexes.get(0), value);
@@ -3183,8 +3126,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3194,8 +3136,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setSQLXML(indexes.get(0), value);
@@ -3247,8 +3188,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3258,8 +3198,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setRowId(indexes.get(0), value);
@@ -3311,8 +3250,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3322,8 +3260,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setRef(indexes.get(0), value);
@@ -3376,8 +3313,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3387,8 +3323,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setArray(indexes.get(0), value);
@@ -3452,8 +3387,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3463,8 +3397,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), value);
@@ -3521,8 +3454,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3532,8 +3464,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), value, sqlType);
@@ -3599,8 +3530,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3610,8 +3540,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), value, sqlType, scaleOrLength);
@@ -3666,8 +3595,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3677,8 +3605,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), value, sqlType);
@@ -3740,8 +3667,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3751,8 +3677,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), value, sqlType, scaleOrLength);
@@ -3816,8 +3741,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             if (cnt == 0) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3827,8 +3751,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             final IntList indexes = paramNameIndexMap.get(parameterName);
 
             if (indexes == null) {
-                close();
-                throw namedParameterNotFound(parameterName);
+                throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
                     type.set(stmt, indexes.get(0), value);
@@ -3890,8 +3813,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     setObject(i + 1, parameters.get(paramName));
                 }
             }
-        } catch (final Exception e) {
-            close();
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
             throw e;
         }
 
@@ -3914,8 +3837,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     setObject(i + 1, entityId.get(paramName));
                 }
             }
-        } catch (final Exception e) {
-            close();
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
             throw e;
         }
     }
@@ -3975,7 +3898,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                     if (propInfo == null) {
                         if (!JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterNames.get(i))) {
-                            close();
                             throw new IllegalArgumentException(
                                     "No property found with name: " + parameterNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
                         }
@@ -3983,8 +3905,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(parameters));
                     }
                 }
-            } catch (final Exception e) {
-                close();
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
                 throw e;
             }
         } else if (parameters instanceof Map) {
@@ -3992,15 +3914,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         } else if (parameters instanceof Collection) {
             try {
                 return setParameters((Collection) parameters);
-            } catch (final Exception e) {
-                close();
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
                 throw e;
             }
         } else if (parameters instanceof Object[]) {
             try {
                 return setParameters((Object[]) parameters);
-            } catch (final Exception e) {
-                close();
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
                 throw e;
             }
         } else if (parameters instanceof EntityId) {
@@ -4008,14 +3930,16 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         } else if (parameterCount == 1) {
             try {
                 setObject(1, parameters);
-            } catch (final Exception e) {
-                close();
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
                 throw e;
             }
         } else {
-            close();
-            throw new IllegalArgumentException(
+            final IllegalArgumentException iae = new IllegalArgumentException(
                     "Unsupported named parameter type: " + ClassUtil.getCanonicalClassName(parameters.getClass()) + " for SQL: " + namedSql.originalSql());
+
+            closeSuppressingFailure(iae);
+            throw iae;
         }
 
         return this;
@@ -4085,7 +4009,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     indexes = paramNameIndexMap.get(parameterName);
 
                     if (indexes == null) {
-                        throw namedParameterNotFound(parameterName);
+                        throw closeAfterNamedParameterNotFound(parameterName);
                     } else {
                         if (indexes.size() == 1) {
                             dbType.set(stmt, indexes.get(0), propValue);
@@ -4103,14 +4027,16 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         }
                     }
                 }
-            } catch (final Exception e) {
-                close();
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeSuppressingFailure(e);
                 throw e;
             }
         } else {
-            close();
-            throw new IllegalArgumentException(
+            final IllegalArgumentException iae = new IllegalArgumentException(
                     "Unsupported parameter type: " + ClassUtil.getCanonicalClassName(cls) + ". Only Entity/Record types are supported here");
+
+            closeSuppressingFailure(iae);
+            throw iae;
         }
 
         return this;
@@ -4151,16 +4077,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
-        boolean noException = false;
-
         try {
             parametersSetter.accept(namedSql, this, parameters);
-
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return this;
@@ -4288,11 +4209,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         @SuppressWarnings("UnnecessaryLocalVariable")
         final Iterator<?> iter = batchParameters;
-        boolean noException = false;
-
         try {
             if (!iter.hasNext()) {
-                noException = true;
                 return this;
             }
 
@@ -4449,11 +4367,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 }
             }
 
-            noException = true;
-        } finally {
-            if (!noException) {
-                close();
-            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
         }
 
         return this;

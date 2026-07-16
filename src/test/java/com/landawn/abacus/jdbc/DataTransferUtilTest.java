@@ -267,6 +267,17 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
+    public void testImportDataNullColumnTypeIsRejectedEvenForEmptyDataset() throws SQLException {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(0);
+        final Map<String, Type> columnTypeMap = new HashMap<>();
+        columnTypeMap.put("col1", null);
+
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, mockPreparedStatement, columnTypeMap));
+        verify(mockPreparedStatement, never()).addBatch();
+    }
+
+    @Test
     public void testImportDataNullColumnTypeMapIsTreatedAsEmpty() throws SQLException {
         // Regression: a null columnTypeMap must be tolerated (treated like an empty map, i.e. the default Object type
         // is used for every column), consistent with the up-front validation that already skips a null/empty map.
@@ -503,8 +514,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
         when(mockResultSet.next()).thenReturn(true, true, false);
-        when(mockResultSet.getObject(1)).thenReturn("val1");
-        when(mockResultSet.getString(1)).thenReturn("val2");
+        when(mockResultSet.getObject(1)).thenReturn("val1", "val2");
 
         // Execute
         long result = DataTransferUtil.exportCsv(mockResultSet, writer);
@@ -1548,5 +1558,112 @@ public class DataTransferUtilTest extends TestBase {
         final PreparedStatement targetStmt = mock(PreparedStatement.class);
 
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchDelay(Duration.ofMillis(-1)).to(targetStmt));
+    }
+
+    @Test
+    public void testExportCsv_HeterogeneousColumnValuesKeepTheirRuntimeTypes() throws Exception {
+        final Writer writer = new StringWriter();
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("value");
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getObject(1)).thenReturn(42, "forty-two");
+
+        final long result = DataTransferUtil.exportCsv(mockResultSet, writer);
+
+        assertEquals(2, result);
+        assertTrue(writer.toString().contains("42"));
+        assertTrue(writer.toString().contains("forty-two"));
+        // The old implementation cached IntegerType from row one and called getInt for row two,
+        // coercing a later String (or any other runtime type) through the first row's getter.
+        verify(mockResultSet, never()).getInt(1);
+    }
+
+    @Test
+    public void testExportCsv_FileOpenDoesNotUseRacyExistsThenCreateCheck() throws Exception {
+        final File actualOutput = File.createTempFile("data-transfer-race", ".csv");
+        actualOutput.deleteOnExit();
+        final File output = new File(actualOutput.getPath()) {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public boolean exists() {
+                throw new AssertionError("export must not perform a separate existence check");
+            }
+
+            @Override
+            public boolean createNewFile() throws IOException {
+                throw new AssertionError("opening the writer must create the file atomically");
+            }
+        };
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("value");
+        when(mockResultSet.next()).thenReturn(false);
+
+        assertEquals(0, DataTransferUtil.exportCsv(mockResultSet, output));
+        assertTrue(actualOutput.length() > 0, "the CSV header should have been written");
+    }
+
+    @Test
+    public void testCopyWithSelectedColumnsPreservesExplicitDelimitersOnSimpleIdentifierParts() throws Exception {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetMetadata = mock(DatabaseMetaData.class);
+        final PreparedStatement targetStatement = mock(PreparedStatement.class);
+
+        when(targetConnection.getMetaData()).thenReturn(targetMetadata);
+        when(targetMetadata.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetMetadata.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetStatement);
+        when(targetStatement.executeBatch()).thenReturn(new int[] { 1 });
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn("value");
+
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.\"MixedSource\"", "archive.\"MixedTarget\"",
+                List.of("\"MixedColumn\""));
+
+        assertEquals(1, result);
+        verify(mockConnection).prepareStatement("SELECT `MixedColumn` FROM sales.`MixedSource`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO archive.\"MixedTarget\"(\"MixedColumn\") VALUES (?)");
+    }
+
+    @Test
+    public void testRequiredImportSettersAreRejectedForEmptySources() {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("value"));
+        when(mockDataset.size()).thenReturn(0);
+
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, mockPreparedStatement,
+                (Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>) null));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(List.<String> of().iterator(), mockPreparedStatement, 10, 0,
+                (Throwables.BiConsumer<? super PreparedQuery, ? super String, SQLException>) null));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(new StringReader("header"), null, mockPreparedStatement, 10, 0,
+                (Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>) null));
+    }
+
+    @Test
+    public void testImportCsv_RowWiderThanHeaderHasDescriptiveFailure() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importCsv(new StringReader("c1,c2\n1,2,3"), null, mockPreparedStatement, 10, 0, (query, row) -> {
+                    // Parsing must fail before the setter is invoked.
+                }));
+
+        assertTrue(failure.getMessage().contains("more fields than the header's 2 column(s)"));
+        verify(mockPreparedStatement, never()).addBatch();
+    }
+
+    @Test
+    public void testCopyFromConnection_NegativeFetchSizeIsRejected() {
+        final Connection targetConnection = mock(Connection.class);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copyFrom(mockConnection, "SELECT value FROM source")
+                        .fetchSize(-1)
+                        .to(targetConnection, "INSERT INTO target(value) VALUES (?)"));
+    }
+
+    @Test
+    public void testBatchDelayTooLargeForMillisecondsIsRejectedAsIllegalArgument() {
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchDelay(Duration.ofSeconds(Long.MAX_VALUE)));
     }
 }

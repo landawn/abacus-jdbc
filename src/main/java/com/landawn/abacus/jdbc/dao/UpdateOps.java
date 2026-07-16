@@ -20,7 +20,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.landawn.abacus.query.QueryUtil;
+import com.landawn.abacus.annotation.JoinedBy;
+import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
@@ -77,7 +78,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
     /**
      * Updates records matching the condition using all updatable properties from the entity.
      * This updates every property of the entity that is considered updatable
-     * (i.e., excluding {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id}, etc.),
+     * (i.e., excluding {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id},
+     * {@link JoinedBy @JoinedBy}, etc.),
      * regardless of whether the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -95,7 +97,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      */
     default int update(final T entity, final Condition cond) throws SQLException {
         @SuppressWarnings("deprecation")
-        final Collection<String> propNamesToUpdate = QueryUtil.updatePropNames(targetEntityClass(), null);
+        final Collection<String> propNamesToUpdate = JdbcUtil.getUpdatePropNames(targetEntityClass());
 
         return update(entity, propNamesToUpdate, cond);
     }

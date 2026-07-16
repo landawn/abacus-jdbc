@@ -42,6 +42,12 @@ import com.landawn.abacus.util.RegExUtil;
  * strategy: for example, with {@link QueryOperation#DEFAULT} a {@code Stream} return type triggers lazy streaming
  * while an {@code Optional} return type triggers "find first" semantics.</p>
  *
+ * <p>INSERT statements use the generated-key path regardless of {@link #op()}. A non-batch INSERT
+ * method may return {@code void}, the DAO ID type (or a supertype capable of holding that ID), or
+ * {@link com.landawn.abacus.util.u.Optional Optional&lt;ID&gt;}. A return type narrower than the DAO ID
+ * type is rejected during DAO creation because a generated ID could not be returned safely. A batch
+ * INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible element types are rejected.</p>
+ *
  * <p>Method parameters are bound to named parameters in the SQL through {@link Bind} (and
  * {@link BindList} for {@code IN}-clause expansion); stored-procedure {@code OUT} parameters are
  * declared with {@link OutParameter} / {@link OutParameters}; and template placeholders are filled
@@ -257,7 +263,7 @@ public @interface Query {
      *   <li>{@link QueryOperation#exists} - Returns boolean indicating if any results exist</li>
      *   <li>{@link QueryOperation#queryForSingle} - Returns a single scalar value</li>
      *   <li>{@link QueryOperation#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
-     *   <li>{@link QueryOperation#update} - Executes UPDATE/INSERT/DELETE and returns row count</li>
+     *   <li>{@link QueryOperation#update} - Executes a non-INSERT data-modification statement and returns its row count</li>
      *   <li>{@link QueryOperation#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
      * </ul>
      *

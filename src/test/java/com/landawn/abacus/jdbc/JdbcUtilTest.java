@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Transient;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -1164,6 +1165,25 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testStreamAllResultSets_EarlyCloseClosesPrefetchedResultSet() throws SQLException {
+        final ResultSet secondResultSet = mock(ResultSet.class);
+
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet, secondResultSet);
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("value");
+        when(mockResultSet.next()).thenReturn(false);
+
+        try (Stream<Dataset> stream = JdbcUtil.streamAllResultSets(mockStatement)) {
+            assertTrue(stream.first().isPresent(), "the first ResultSet should be extracted");
+        }
+
+        verify(mockResultSet).close();
+        verify(secondResultSet).close();
+        verify(mockStatement, never()).close();
+    }
+
+    @Test
     @Tag("2025")
     public void testIterateAllResultSets_NextClosesResultSetIfGetMoreResultsThrows() throws SQLException {
         // hasNext() pulls the first ResultSet into the holder via stmt.getResultSet().
@@ -1615,6 +1635,8 @@ public class JdbcUtilTest extends TestBase {
         assertTrue(JdbcUtil.isNullOrDefault(false));
 
         assertFalse(JdbcUtil.isNullOrDefault(1));
+        assertFalse(JdbcUtil.isNullOrDefault(new BigDecimal("1E-400")));
+        assertFalse(JdbcUtil.isNullOrDefault(new BigInteger("1" + "0".repeat(400))));
         assertFalse(JdbcUtil.isNullOrDefault(""));
         assertFalse(JdbcUtil.isNullOrDefault("test"));
         assertFalse(JdbcUtil.isNullOrDefault(true));
@@ -2207,6 +2229,21 @@ public class JdbcUtilTest extends TestBase {
             assertSame(cache, JdbcUtil.localThreadCache_TL.get());
         }
 
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    @Test
+    public void testOpenDaoCacheScopeDoesNotClearCallerOwnedCache() {
+        final Map<String, Object> backingMap = new java.util.concurrent.ConcurrentHashMap<>();
+        backingMap.put("before", "keep");
+        final Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(backingMap);
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(cache)) {
+            backingMap.put("during", "keep-too");
+            assertSame(cache, scope.cache());
+        }
+
+        assertEquals(Map.of("before", "keep", "during", "keep-too"), backingMap);
         assertNull(JdbcUtil.localThreadCache_TL.get());
     }
 
@@ -2863,6 +2900,41 @@ public class JdbcUtilTest extends TestBase {
         assertTrue(propNames.contains("name"));
     }
 
+    @Test
+    public void testCrudPropNamesExcludeJoinedByMapProperties() {
+        class EntityWithMapJoin {
+            private String name;
+            @JoinedBy("id=RelatedEntity.entityId")
+            private Map<Long, Object> relatedById;
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(final String name) {
+                this.name = name;
+            }
+
+            public Map<Long, Object> getRelatedById() {
+                return relatedById;
+            }
+
+            public void setRelatedById(final Map<Long, Object> relatedById) {
+                this.relatedById = relatedById;
+            }
+        }
+
+        assertFalse(JdbcUtil.getInsertPropNames(EntityWithMapJoin.class).contains("relatedById"));
+        assertFalse(JdbcUtil.getSelectPropNames(EntityWithMapJoin.class).contains("relatedById"));
+        assertFalse(JdbcUtil.getSelectPropNames(EntityWithMapJoin.class, true, null).contains("relatedById"));
+        assertFalse(JdbcUtil.getUpdatePropNames(EntityWithMapJoin.class).contains("relatedById"));
+        assertTrue(JdbcUtil.getInsertPropNames(EntityWithMapJoin.class).contains("name"));
+
+        final Set<String> callerExclusions = Set.of("name");
+        assertFalse(JdbcUtil.getInsertPropNames(EntityWithMapJoin.class, callerExclusions).contains("relatedById"));
+        assertEquals(Set.of("name"), callerExclusions);
+    }
+
     // getColumnNames validation
     @Test
     public void testGetColumnNames_NullConnection() {
@@ -3333,6 +3405,45 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(connEx, thrown.getCause().getSuppressed()[1], "second suppressed should be from Connection.close()");
     }
 
+    @Test
+    @DisplayName("close overloads preserve a reused SQLException instead of attempting self-suppression")
+    public void testCloseOverloadsDoNotSelfSuppressReusedException() throws SQLException {
+        final SQLException resultSetStatementFailure = new SQLException("shared result-set/statement failure");
+        final ResultSet rs1 = mock(ResultSet.class);
+        final Statement stmt1 = mock(Statement.class);
+        doThrow(resultSetStatementFailure).when(rs1).close();
+        doThrow(resultSetStatementFailure).when(stmt1).close();
+
+        final UncheckedSQLException rsStmtThrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(rs1, stmt1));
+        assertSame(resultSetStatementFailure, rsStmtThrown.getCause());
+        assertEquals(0, resultSetStatementFailure.getSuppressed().length);
+
+        final SQLException statementConnectionFailure = new SQLException("shared statement/connection failure");
+        final Statement stmt2 = mock(Statement.class);
+        final Connection conn2 = mock(Connection.class);
+        doThrow(statementConnectionFailure).when(stmt2).close();
+        doThrow(statementConnectionFailure).when(conn2).close();
+
+        final UncheckedSQLException stmtConnThrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(stmt2, conn2));
+        assertSame(statementConnectionFailure, stmtConnThrown.getCause());
+        assertEquals(0, statementConnectionFailure.getSuppressed().length);
+
+        final SQLException allResourcesFailure = new SQLException("shared three-resource failure");
+        final ResultSet rs3 = mock(ResultSet.class);
+        final Statement stmt3 = mock(Statement.class);
+        final Connection conn3 = mock(Connection.class);
+        doThrow(allResourcesFailure).when(rs3).close();
+        doThrow(allResourcesFailure).when(stmt3).close();
+        doThrow(allResourcesFailure).when(conn3).close();
+
+        final UncheckedSQLException allThrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(rs3, stmt3, conn3));
+        assertSame(allResourcesFailure, allThrown.getCause());
+        assertEquals(0, allResourcesFailure.getSuppressed().length);
+        verify(rs3).close();
+        verify(stmt3).close();
+        verify(conn3).close();
+    }
+
     // BUG FIX: executeBatchUpdate/executeLargeBatchUpdate(ds, sql, params, batchSize) begin their own
     // transaction when listOfParameters.size() > batchSize. The unguarded rollbackIfNotCommitted() in
     // finally used to replace the primary batch failure with the rollback failure; the primary failure
@@ -3459,6 +3570,61 @@ public class JdbcUtilTest extends TestBase {
 
         assertSame(commitFailure, thrown);
         assertArrayEquals(new Throwable[] { rollbackFailure, restoreFailure }, thrown.getSuppressed());
+    }
+
+    @Test
+    @DisplayName("executeBatchUpdate(conn, ...): a reused batch/cleanup failure is not self-suppressed")
+    public void testExecuteBatchUpdateDoesNotSelfSuppressReusedFailure() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException sharedFailure = new SQLException("shared batch cleanup failure");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        org.mockito.Mockito.doNothing().doThrow(sharedFailure).when(mockConnection).setAutoCommit(org.mockito.ArgumentMatchers.anyBoolean());
+        doThrow(sharedFailure).when(mockPreparedStatement).executeBatch();
+        doThrow(sharedFailure).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(sharedFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+        verify(mockConnection).rollback();
+        verify(mockConnection).setAutoCommit(true);
+    }
+
+    @Test
+    @DisplayName("executeLargeBatchUpdate(conn, ...): a reused commit/cleanup failure is not self-suppressed")
+    public void testExecuteLargeBatchUpdateDoesNotSelfSuppressReusedFailure() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException sharedFailure = new SQLException("shared large-batch completion failure");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        org.mockito.Mockito.doNothing().doThrow(sharedFailure).when(mockConnection).setAutoCommit(org.mockito.ArgumentMatchers.anyBoolean());
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+        doThrow(sharedFailure).when(mockConnection).commit();
+        doThrow(sharedFailure).when(mockConnection).rollback();
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> JdbcUtil.executeLargeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
+
+        assertSame(sharedFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+        verify(mockConnection).rollback();
+        verify(mockConnection).setAutoCommit(true);
+    }
+
+    @Test
+    @DisplayName("transaction callback preserves a failure object reused by rollback")
+    public void testTransactionCommandDoesNotSelfSuppressReusedRollbackFailure() throws SQLException {
+        final IllegalStateException sharedFailure = new IllegalStateException("shared command/rollback failure");
+        doThrow(sharedFailure).when(mockConnection).rollback();
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> JdbcUtil.callInTransaction(mockDataSource, () -> {
+            throw sharedFailure;
+        }));
+
+        assertSame(sharedFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
     }
 
     // Regression: tableExists(metadata, ...) used to verify only TABLE_NAME when the pattern contained
@@ -3692,12 +3858,51 @@ public class JdbcUtilTest extends TestBase {
 
         // "CREATEX foo" should NOT match CREATE — there is no word boundary after CREATE.
         assertEquals(com.landawn.abacus.query.SqlOperation.UNKNOWN, m.invoke(null, "CREATEX foo"));
+        assertEquals(com.landawn.abacus.query.SqlOperation.UNKNOWN, m.invoke(null, "CREATE_TABLE foo"));
 
         // But "CREATE TABLE foo (...)" should match CREATE.
         assertEquals(com.landawn.abacus.query.SqlOperation.CREATE, m.invoke(null, "CREATE TABLE foo (id INT)"));
 
         // Punctuation also counts as a boundary.
         assertEquals(com.landawn.abacus.query.SqlOperation.DROP, m.invoke(null, "DROP(TABLE foo)"));
+    }
+
+    @Test
+    public void testGetSqlOperation_CommonTableExpressionsUseMainOperation() {
+        assertEquals(com.landawn.abacus.query.SqlOperation.SELECT, JdbcUtil.getSqlOperation("-- route query\rSELECT * FROM account"));
+        assertEquals(com.landawn.abacus.query.SqlOperation.UPDATE,
+                JdbcUtil.getSqlOperation("/* outer /* nested */ still comment */ UPDATE account SET active = TRUE"));
+        assertEquals(com.landawn.abacus.query.SqlOperation.SELECT,
+                JdbcUtil.getSqlOperation("WITH cte AS (SELECT ')' AS marker /* ignored ) */) SELECT * FROM cte"));
+        assertEquals(com.landawn.abacus.query.SqlOperation.SELECT, JdbcUtil.getSqlOperation("WITH cte AS (SELECT $tag$)$tag$ AS marker) SELECT * FROM cte"));
+        assertEquals(com.landawn.abacus.query.SqlOperation.UPDATE,
+                JdbcUtil.getSqlOperation("WITH RECURSIVE ids AS (SELECT id FROM account), more_ids AS (SELECT id FROM ids) UPDATE account SET active = TRUE"));
+        assertEquals(com.landawn.abacus.query.SqlOperation.DELETE,
+                JdbcUtil.getSqlOperation("WITH doomed(id) AS (SELECT id FROM account) DELETE FROM account WHERE id IN (SELECT id FROM doomed)"));
+        assertEquals(com.landawn.abacus.query.SqlOperation.UNKNOWN, JdbcUtil.getSqlOperation("WITHDRAW funds"));
+    }
+
+    @Test
+    public void testSplitQualifiedSqlIdentifierRejectsTextAfterClosingDelimiter() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("\"users\"suffix", "tableName"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("[users]suffix", "tableName"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("`users`suffix", "tableName"));
+
+        assertArrayEquals(new String[] { "schema.with.dot", "users" }, JdbcUtil.splitQualifiedSqlIdentifier("\"schema.with.dot\" . [users]", "tableName"));
+    }
+
+    @Test
+    public void testDropTableIfExists_DelimitedNameIsNeverRetriedUnquoted() throws SQLException {
+        final ResultSet tableRows = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        when(mockDatabaseMetaData.getTables(null, null, "mixedCase", null)).thenReturn(tableRows);
+        when(tableRows.next()).thenReturn(true);
+        when(mockPreparedStatement.execute()).thenThrow(new SQLException("table not found", "42S02"));
+
+        assertFalse(JdbcUtil.dropTableIfExists(mockConnection, "\"mixedCase\""));
+
+        verify(mockConnection).prepareStatement("DROP TABLE \"mixedCase\"");
+        verify(mockConnection, never()).prepareStatement("DROP TABLE mixedCase");
     }
 
     // ------------------------------------------------------------------------

@@ -30,8 +30,10 @@ import com.landawn.abacus.annotation.Beta;
  * re-issue the SQL instead of returning stale results.
  *
  * <p>The DAO proxy ({@code DaoImpl}) collects {@code @RefreshCache} annotations at build time. At
- * runtime, after a matching method finishes (success or failure), the proxy clears the entries
- * in the DAO's {@link Cache cache pool}. A method-level {@code @RefreshCache} can override the
+ * runtime, after a matching method finishes (success or failure), the proxy invokes the
+ * {@code Jdbc.DaoCache.update(...)} invalidation hook. The built-in caches invalidate entries for
+ * the affected table (or clear the cache when no table can be determined); a custom cache controls
+ * its own invalidation policy. A method-level {@code @RefreshCache} can override the
  * type-level one — most importantly, {@code @RefreshCache(enabled = false)} <em>opts a single
  * method back out</em> of the cache-invalidation set declared at the type level.</p>
  *

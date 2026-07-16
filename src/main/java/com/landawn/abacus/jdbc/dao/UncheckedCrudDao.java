@@ -272,6 +272,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * <p>When both inserts and updates are needed (or either set is larger than {@code batchSize}),
      * the operation is wrapped in a transaction.</p>
      *
+     * <p>For a single match property, a {@code null} key is matched with {@code IS NULL}; it is not
+     * placed in an {@code IN} predicate, whose SQL semantics would never match a null column.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> importedUsers = parseCSVFile();

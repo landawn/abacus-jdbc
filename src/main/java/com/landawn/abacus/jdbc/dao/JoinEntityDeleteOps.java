@@ -104,7 +104,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 
@@ -170,7 +170,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 
@@ -308,7 +308,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 
@@ -434,7 +434,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
                         throw rollbackFailure;
                     }
 
-                    failure.addSuppressed(rollbackFailure);
+                    DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
                 }
             }
 

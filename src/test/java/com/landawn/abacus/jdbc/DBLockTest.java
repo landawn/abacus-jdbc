@@ -498,8 +498,8 @@ public class DBLockTest extends TestBase {
         assertEquals(0, targetCodePool(fixture.lock).size());
     }
 
-    // Unlock where code matches but DB delete returns 0 rows (shouldRemoveFromLocal=true, unLocked=false)
-    // Covers the L586 branch where both operands are evaluated and unLocked is false
+    // A zero-row delete means the database lock has already expired or was removed. When the code
+    // matches this instance's lock, it must stop refreshing that stale local ownership record.
     @Test
     public void testUnlock_CodeMatchesButDBAffectReturnsZero() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 0);
@@ -511,7 +511,7 @@ public class DBLockTest extends TestBase {
         final boolean unlocked = fixture.lock.unlock("resource-no-db", code);
 
         assertFalse(unlocked);
-        assertEquals(1, targetCodePool(fixture.lock).size());
+        assertEquals(0, targetCodePool(fixture.lock).size());
     }
 
     // Interrupt-flag preservation in lock(): an interrupt that arrives while the retry loop is blocked in

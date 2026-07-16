@@ -903,12 +903,14 @@ final class ResultSetProxy implements ResultSet {
         } finally {
             try {
                 blob.free();
-            } catch (final SQLException e) {
+            } catch (final Throwable e) { //NOSONAR - preserve unchecked cleanup failures too
                 if (failure == null) {
                     throw e;
                 }
 
-                failure.addSuppressed(e);
+                if (failure != e) {
+                    failure.addSuppressed(e);
+                }
             }
         }
     }
@@ -930,12 +932,14 @@ final class ResultSetProxy implements ResultSet {
         } finally {
             try {
                 clob.free();
-            } catch (final SQLException e) {
+            } catch (final Throwable e) { //NOSONAR - preserve unchecked cleanup failures too
                 if (failure == null) {
                     throw e;
                 }
 
-                failure.addSuppressed(e);
+                if (failure != e) {
+                    failure.addSuppressed(e);
+                }
             }
         }
     }

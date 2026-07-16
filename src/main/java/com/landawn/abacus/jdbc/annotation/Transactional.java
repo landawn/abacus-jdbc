@@ -35,11 +35,12 @@ import com.landawn.abacus.jdbc.Propagation;
  * <p>The DAO proxy ({@code DaoImpl}) inspects {@code @Transactional} when building the method
  * invocation chain. At invocation time the proxy:</p>
  * <ol>
- *   <li>Begins a {@link com.landawn.abacus.jdbc.Transaction Transaction} on the DAO's
- *       {@code DataSource}, honoring {@link #propagation()} and {@link #isolationLevel()}.</li>
+ *   <li>Selects, joins, starts, suspends, or rejects a transaction context on the DAO's
+ *       {@code DataSource}, as required by {@link #propagation()} and {@link #isolationLevel()}.</li>
  *   <li>Runs the method body.</li>
- *   <li>Commits on normal return, or rolls back if any exception or error propagates out of
- *       the method body before it returns normally.</li>
+ *   <li>Commits an invocation-owned transaction on normal return, or rolls it back if an exception
+ *       or error escapes. A transaction joined through {@code REQUIRED}, {@code SUPPORTS}, or
+ *       {@code MANDATORY} remains governed by its outer owner.</li>
  * </ol>
  * The propagation rules follow the same semantics as the Spring equivalent: {@code REQUIRED}
  * joins an existing transaction or starts a new one, {@code REQUIRES_NEW} always starts a new
