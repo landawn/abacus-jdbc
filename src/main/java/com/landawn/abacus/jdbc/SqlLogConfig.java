@@ -46,6 +46,14 @@ final class SqlLogConfig {
     // Note: instances are strictly thread-confined (held in ThreadLocals in JdbcUtil and only read/written
     // by the owning thread), so the fields deliberately are NOT volatile.
 
+    /**
+     * The smallest usable value for {@link #maxSqlLogLength}: {@code Strings.abbreviate} rejects any
+     * maximum width shorter than its {@code "..."} marker plus one character, so a configured value of
+     * 1-3 would make the log-truncation call itself throw {@code IllegalArgumentException} while a
+     * statement is being prepared or executed.
+     */
+    static final int MIN_MAX_SQL_LOG_LENGTH = 4;
+
     /** {@code true} if general SQL logging (logging every executed statement) is enabled. */
     boolean isEnabled;
 
@@ -78,11 +86,12 @@ final class SqlLogConfig {
      *
      * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
+     *                        to 4, the smallest length the truncation marker supports.
      */
     SqlLogConfig(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
-        this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+        this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
         sqlPerfLogThresholdMillis = Long.MAX_VALUE;
     }
 
@@ -112,11 +121,12 @@ final class SqlLogConfig {
      *                                      based on this mechanism; pass a negative value to disable performance
      *                                      logging entirely.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
+     *                        to 4, the smallest length the truncation marker supports.
      */
     SqlLogConfig(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
         this.sqlPerfLogThresholdMillis = sqlPerfLogThresholdMillis;
-        this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+        this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
         isEnabled = false;
     }
 
@@ -141,11 +151,12 @@ final class SqlLogConfig {
      *
      * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
+     *                        to 4, the smallest length the truncation marker supports.
      */
     void set(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
-        this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+        this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
         this.sqlPerfLogThresholdMillis = Long.MAX_VALUE;
     }
 
@@ -173,11 +184,23 @@ final class SqlLogConfig {
      *                                      based on this mechanism; pass a negative value to disable performance
      *                                      logging entirely.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
+     *                        to 4, the smallest length the truncation marker supports.
      */
     void set(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
         this.isEnabled = false;
         this.sqlPerfLogThresholdMillis = sqlPerfLogThresholdMillis;
-        this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+        this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
+    }
+
+    /**
+     * Maps a caller-supplied maximum SQL log length onto the usable range: non-positive values fall back
+     * to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}, and values of 1-3 are raised to
+     * {@link #MIN_MAX_SQL_LOG_LENGTH} so log truncation can never throw while a statement is being
+     * prepared or executed (see {@code JdbcUtil.logSql}/{@code JdbcUtil.handleSqlLog}, the latter of
+     * which runs in a {@code finally} block and must never mask the statement's own outcome).
+     */
+    private static int normalizeMaxSqlLogLength(final int maxSqlLogLength) {
+        return maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : Math.max(maxSqlLogLength, MIN_MAX_SQL_LOG_LENGTH);
     }
 }

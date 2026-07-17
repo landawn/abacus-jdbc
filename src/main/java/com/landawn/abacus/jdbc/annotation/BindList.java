@@ -45,6 +45,12 @@ import com.landawn.abacus.annotation.Beta;
  * {@code ?} parameters (with plain method parameters, not {@link Bind @Bind}) alongside
  * {@code @BindList} instead.</p>
  *
+ * <p><b>Restriction:</b> a {@code @BindList} placeholder may be referenced only <em>once</em> in the
+ * SQL. Repeating it (for example {@code ... WHERE a IN ({ids}) OR b IN ({ids})}) would expand
+ * placeholders at every occurrence while the collection values are bound only once, so DAO
+ * initialization rejects it with {@code UnsupportedOperationException}. Declare a second parameter
+ * bound to the same collection value at the call site instead.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {

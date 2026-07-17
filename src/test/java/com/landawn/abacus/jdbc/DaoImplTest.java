@@ -190,6 +190,16 @@ public class DaoImplTest extends TestBase {
         int updateBatch(@com.landawn.abacus.jdbc.annotation.BindList("ids") Collection<Long> ids) throws SQLException;
     }
 
+    interface DuplicateBindListPlaceholderDao extends Dao<TestEntity, DuplicateBindListPlaceholderDao> {
+        @Query("SELECT * FROM test WHERE id IN ({ids}) OR parent_id IN ({ids})")
+        List<TestEntity> listByIds(@com.landawn.abacus.jdbc.annotation.BindList("ids") Collection<Long> ids) throws SQLException;
+    }
+
+    interface NonProcedureTuple2QueryDao extends Dao<TestEntity, NonProcedureTuple2QueryDao> {
+        @Query(value = "select * from test", op = QueryOperation.query)
+        com.landawn.abacus.util.Tuple.Tuple2<List<TestEntity>, Jdbc.OutParamResult> queryTuple() throws SQLException;
+    }
+
     @SqlSource
     interface DefaultSqlSourceDao extends Dao<TestEntity, DefaultSqlSourceDao> {
         @Query("select * from test")
@@ -594,6 +604,48 @@ public class DaoImplTest extends TestBase {
                 () -> JdbcUtil.createDao(BatchBindListDao.class, dataSource));
 
         assertTrue(thrown.getMessage().contains("@BindList"));
+    }
+
+    // BUG FIX: a @BindList placeholder referenced more than once in the SQL used to pass DAO
+    // initialization; Strings.replaceAll expanded every textual occurrence into '?' lists but the
+    // collection values were bound only once, so the first call failed with a confusing
+    // parameter-count mismatch. The combination must be rejected at creation time.
+    @Test
+    @Tag("2025")
+    void testDuplicateBindListPlaceholderRejectedAtCreation() throws SQLException {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        Mockito.when(dataSource.getConnection()).thenReturn(connection);
+        Mockito.when(connection.getMetaData()).thenReturn(metadata);
+        Mockito.when(metadata.getDatabaseProductName()).thenReturn("H2");
+        Mockito.when(metadata.getDatabaseProductVersion()).thenReturn("2");
+
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> JdbcUtil.createDao(DuplicateBindListPlaceholderDao.class, dataSource));
+
+        assertTrue(thrown.getMessage().contains("appears more than once"));
+    }
+
+    // BUG FIX: op = QueryOperation.query with a Tuple2 return type on a NON-procedure method used to
+    // pass DAO initialization even though Tuple2 results are only produced on the procedure path
+    // (result sets + OUT parameters); the method fell through to the single-value dispatch and failed
+    // obscurely at execution. The combination must be rejected at creation time.
+    @Test
+    @Tag("2025")
+    void testNonProcedureQueryOperationWithTuple2ReturnRejectedAtCreation() throws SQLException {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        Mockito.when(dataSource.getConnection()).thenReturn(connection);
+        Mockito.when(connection.getMetaData()).thenReturn(metadata);
+        Mockito.when(metadata.getDatabaseProductName()).thenReturn("H2");
+        Mockito.when(metadata.getDatabaseProductVersion()).thenReturn("2");
+
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> JdbcUtil.createDao(NonProcedureTuple2QueryDao.class, dataSource));
+
+        assertTrue(thrown.getMessage().contains("not supported by the specified queryOperation"));
     }
 
     @Test

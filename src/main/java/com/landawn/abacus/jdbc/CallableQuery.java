@@ -2485,6 +2485,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> func) throws SQLException { //NOSONAR
+        assertNotClosed();
+
         return super.executeThenApply(func);
     }
 
@@ -2522,6 +2524,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public <R> R executeThenApply(final Throwables.BiFunction<? super CallableStatement, Boolean, ? extends R, SQLException> func) throws SQLException { //NOSONAR
+        assertNotClosed();
+
         return super.executeThenApply(func);
     }
 
@@ -2538,18 +2542,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     (stmt, outParams, isResultSet) -> {
      *         Map<String, Object> map = new HashMap<>();
      *
-     *         // Process OUT parameters
-     *         for (Jdbc.OutParam param : outParams) {
-     *             if (param.getParameterName() != null) {
-     *                 map.put(param.getParameterName(),
-     *                         stmt.getObject(param.getParameterName()));
-     *             }
-     *         }
-     *
-     *         // Process result set if available
+     *         // Consume result sets first: some drivers finalize OUT parameter
+     *         // values only after all results have been processed.
      *         if (isResultSet) {
      *             ResultSet rs = stmt.getResultSet();
      *             // Add result set data to map
+     *         }
+     *
+     *         // Then read OUT parameters
+     *         for (Jdbc.OutParam param : outParams) {
+     *             if (param.parameterName() != null) {
+     *                 map.put(param.parameterName(),
+     *                         stmt.getObject(param.parameterName()));
+     *             }
      *         }
      *
      *         return map;
@@ -2618,6 +2623,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public void executeThenAccept(final Throwables.Consumer<? super CallableStatement, SQLException> consumer) throws SQLException { //NOSONAR
+        assertNotClosed();
+
         super.executeThenAccept(consumer);
     }
 
@@ -2652,6 +2659,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public void executeThenAccept(final Throwables.BiConsumer<? super CallableStatement, Boolean, SQLException> consumer) throws SQLException { //NOSONAR
+        assertNotClosed();
+
         super.executeThenAccept(consumer);
     }
 
@@ -2665,18 +2674,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.executeThenAccept((stmt, outParams, isResultSet) -> {
-     *     // Log OUT parameters
-     *     for (Jdbc.OutParam param : outParams) {
-     *         if (param.getParameterName() != null) {
-     *             logger.info(param.getParameterName() + ": " +
-     *                        stmt.getObject(param.getParameterName()));
-     *         }
-     *     }
-     *
-     *     // Process first result
+     *     // Consume result sets first: some drivers finalize OUT parameter
+     *     // values only after all results have been processed.
      *     if (isResultSet) {
      *         ResultSet rs = stmt.getResultSet();
      *         // Write results to file or external system
+     *     }
+     *
+     *     // Then log OUT parameters
+     *     for (Jdbc.OutParam param : outParams) {
+     *         if (param.parameterName() != null) {
+     *             logger.info(param.parameterName() + ": " +
+     *                        stmt.getObject(param.parameterName()));
+     *         }
      *     }
      * });
      * }</pre>
@@ -2804,6 +2814,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see Dataset
      */
     public Tuple2<Dataset, Jdbc.OutParamResult> queryAndGetOutParameters() throws SQLException {
+        assertNotClosed();
+
         return queryAndGetOutParameters(Jdbc.ResultExtractor.TO_DATASET);
     }
 
@@ -2945,6 +2957,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #queryAllResultSetsAndGetOutParameters(Jdbc.ResultExtractor)
      */
     public Tuple2<List<Dataset>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters() throws SQLException {
+        assertNotClosed();
+
         return queryAllResultSetsAndGetOutParameters(ResultExtractor.TO_DATASET);
     }
 

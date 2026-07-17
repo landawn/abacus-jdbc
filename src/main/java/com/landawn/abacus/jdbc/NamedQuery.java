@@ -3948,8 +3948,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameters from an entity (bean/record) by reading the matching properties.
      *
-     * <p>For each name in {@code parameterNamesToSet}, the entity must expose a property of the same name
-     * (otherwise an {@link IllegalArgumentException} is thrown). The value of that property is bound
+     * <p>For each name in {@code parameterNamesToSet}, the entity must expose a property that resolves
+     * to that name — by exact property name, {@code @Column} name, or the usual case/underscore-insensitive
+     * matching (so {@code :user_name} resolves to a {@code userName} property) — otherwise an
+     * {@link IllegalArgumentException} is thrown. The value of that property is bound
      * to every occurrence of the named parameter in the SQL. Named parameters in the SQL that are
      * not listed in {@code parameterNamesToSet} are left unbound by this call — bind them separately
      * before executing the query.

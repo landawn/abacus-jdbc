@@ -79,7 +79,8 @@ public @interface PerfLog {
     /**
      * Specifies the maximum length of SQL statements in performance logs.
      * SQL statements longer than this limit will be truncated to prevent excessive log sizes.
-     * A non-positive value falls back to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}.
+     * A non-positive value falls back to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}; values of 1-3
+     * are raised to 4, the smallest length the truncation marker supports.
      *
      * <p>This is useful for maintaining readable logs when dealing with complex queries
      * or queries with large parameter lists.</p>

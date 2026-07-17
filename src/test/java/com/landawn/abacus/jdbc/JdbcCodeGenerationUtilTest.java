@@ -1905,6 +1905,25 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertFalse(code.contains("userId"), () -> "physical column name must not override the alias:\n" + code);
     }
 
+    // BUG FIX: two additional fields sharing the same generic java.util collection type used to emit
+    // the identical "import java.util.List;" line twice (harmless to javac per JLS 7.5.1, but wrong
+    // output). The auto-import must be emitted once per type.
+    @Test
+    @Tag("2025")
+    public void testGenerateEntityClass_DuplicateJavaUtilAutoImportEmittedOnce() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .additionalClassBodySource("private List<String> tags;\nprivate List<Integer> scores;")
+                .build();
+
+        String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        final int first = result.indexOf("import java.util.List;");
+        assertTrue(first >= 0, () -> "expected a java.util.List import:\n" + result);
+        assertEquals(-1, result.indexOf("import java.util.List;", first + 1), () -> "duplicate java.util.List import:\n" + result);
+    }
+
     // Exercise catch blocks at lines 821–823 (IOException → UncheckedIOException when srcDir is set)
     @Test
     public void testGenerateEntityClass_WithSrcDir_WrapsIOException() throws Exception {

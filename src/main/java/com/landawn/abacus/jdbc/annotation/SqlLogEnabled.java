@@ -102,7 +102,8 @@ public @interface SqlLogEnabled {
      * Specifies the maximum length of SQL statements in logs.
      * SQL statements longer than this limit will be truncated to prevent excessive log sizes.
      * This setting only has an effect when SQL logging is enabled via {@link #value()}.
-     * A non-positive value falls back to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}.
+     * A non-positive value falls back to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}; values of 1-3
+     * are raised to 4, the smallest length the truncation marker supports.
      *
      * <p>This is particularly useful when dealing with:</p>
      * <ul>

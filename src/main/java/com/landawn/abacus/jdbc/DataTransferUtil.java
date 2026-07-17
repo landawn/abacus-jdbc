@@ -1892,12 +1892,16 @@ public final class DataTransferUtil {
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
-     * @throws IllegalArgumentException if any specified column name is not found in the query result
+     * @throws IllegalArgumentException if {@code output} is {@code null}, or if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
     @Deprecated
     public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> columnNames, final File output) throws SQLException {
+        // Validate the output target before doing any database work, so a null output fails fast
+        // instead of after the SELECT has already been executed.
+        N.checkArgNotNull(output, "output");
+
         final ParsedSql sql = ParsedSql.parse(selectSql);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
@@ -1966,12 +1970,16 @@ public final class DataTransferUtil {
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
-     * @throws IllegalArgumentException if any specified column name is not found in the query result
+     * @throws IllegalArgumentException if {@code output} is {@code null}, or if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
     @Deprecated
     public static long exportCsv(final PreparedStatement stmt, final Collection<String> columnNames, final File output) throws SQLException {
+        // Validate the output target before doing any database work, so a null output fails fast
+        // instead of after the query has already been executed.
+        N.checkArgNotNull(output, "output");
+
         ResultSet rs = null;
 
         try {
@@ -2707,6 +2715,11 @@ public final class DataTransferUtil {
      * }
      * }</pre>
      *
+     * <p><b>&#9888; Warning:</b> {@code sourceConn} and {@code targetConn} should be distinct connections.
+     * On drivers that stream large results row-by-row (MySQL/MariaDB, where the source statement is
+     * configured with a streaming fetch size), issuing the batch inserts on the same connection that
+     * holds the open streaming result set fails with a driver error.</p>
+     *
      * @param sourceConn the connection to the source database
      * @param targetConn the connection to the target database
      * @param tableName the name of the table to copy data from and to
@@ -3079,6 +3092,11 @@ public final class DataTransferUtil {
      *     System.out.println("Archived " + rowsCopied + " completed orders");
      * }
      * }</pre>
+     *
+     * <p><b>&#9888; Warning:</b> {@code sourceConn} and {@code targetConn} should be distinct connections.
+     * On drivers that stream large results row-by-row (MySQL/MariaDB, where the source statement is
+     * configured with a streaming fetch size), issuing the batch inserts on the same connection that
+     * holds the open streaming result set fails with a driver error.</p>
      *
      * @param sourceConn the connection to the source database
      * @param selectSql the SQL query to select data from the source database

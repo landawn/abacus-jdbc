@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.util.Strings;
 
 public class SqlLogConfigTest extends TestBase {
 
@@ -127,5 +129,29 @@ public class SqlLogConfigTest extends TestBase {
         config.set(false, 3000);
         assertFalse(config.isEnabled);
         assertEquals(3000, config.maxSqlLogLength);
+    }
+
+    // Regression: Strings.abbreviate(sql, maxWidth) throws IllegalArgumentException for maxWidth 1-3,
+    // and JdbcUtil.logSql/handleSqlLog call it with the configured maxSqlLogLength (the latter from a
+    // finally block that must never throw). The config must therefore never hold a value of 1-3: it is
+    // raised to the smallest width the truncation marker supports.
+    @Test
+    @Tag("2025")
+    public void testTinyMaxSqlLogLength_RaisedToMinimumAbbreviationWidth() {
+        assertEquals(4, new SqlLogConfig(true, 1).maxSqlLogLength);
+        assertEquals(4, new SqlLogConfig(true, 3).maxSqlLogLength);
+        assertEquals(4, new SqlLogConfig(500L, 2).maxSqlLogLength);
+
+        final SqlLogConfig config = new SqlLogConfig(true, 1000);
+        config.set(true, 3);
+        assertEquals(4, config.maxSqlLogLength);
+        config.set(500L, 1);
+        assertEquals(4, config.maxSqlLogLength);
+
+        // 4 is already usable and must not be altered.
+        assertEquals(4, new SqlLogConfig(true, 4).maxSqlLogLength);
+
+        // The invariant this guards: truncation at the configured width never throws.
+        assertEquals("S...", Strings.abbreviate("SELECT * FROM users", new SqlLogConfig(true, 3).maxSqlLogLength));
     }
 }

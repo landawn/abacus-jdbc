@@ -10037,7 +10037,9 @@ public final class JdbcUtil {
      * behind the public {@link #enableSqlLog(int)} / {@link #disableSqlLog()} entry points.
      *
      * @param enabled {@code true} to enable SQL logging, {@code false} to disable it.
-     * @param maxSqlLogLength The maximum length of the SQL log. Default value is 1024.
+     * @param maxSqlLogLength The maximum length of the SQL log. A value {@code <= 0} falls back to
+     *        {@link #DEFAULT_MAX_SQL_LOG_LENGTH}; values of 1-3 are raised to 4, the smallest length
+     *        the truncation marker supports.
      */
     static void setSqlLogEnabled(final boolean enabled, final int maxSqlLogLength) {
         final SqlLogConfig config = isSQLLogEnabled_TL.get();
@@ -10095,7 +10097,9 @@ public final class JdbcUtil {
      * JdbcUtil.disableSqlLog();
      * }</pre>
      *
-     * @param maxSqlLogLength the maximum length of SQL statements in logs
+     * @param maxSqlLogLength the maximum length of SQL statements in logs. A value {@code <= 0} falls
+     *        back to {@link #DEFAULT_MAX_SQL_LOG_LENGTH}; values of 1-3 are raised to 4, the smallest
+     *        length the truncation marker supports.
      */
     public static void enableSqlLog(final int maxSqlLogLength) {
         setSqlLogEnabled(true, maxSqlLogLength);
@@ -10338,7 +10342,9 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param sqlPerfLogThresholdMillis the minimum execution time in milliseconds (use a negative value to disable)
-     * @param maxSqlLogLength the maximum length of SQL statements in performance logs
+     * @param maxSqlLogLength the maximum length of SQL statements in performance logs. A value {@code <= 0}
+     *        falls back to {@link #DEFAULT_MAX_SQL_LOG_LENGTH}; values of 1-3 are raised to 4, the smallest
+     *        length the truncation marker supports.
      */
     public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
         final SqlLogConfig config = perfLogThresholdMillis_TL.get();

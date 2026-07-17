@@ -3093,6 +3093,11 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
+         * <p>Positional targets represent a filtered-out column differently: for an array target the
+         * column keeps its original index and its slot is left {@code null}, while for a {@code List}
+         * target the column is omitted entirely (the list is compacted, so list index no longer equals
+         * column index when a filter drops columns).</p>
+         *
          * @param <T> target type
          * @param targetClass the class to map rows to (bean, array, {@code Map}, {@code List}, or single-column scalar type)
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping;

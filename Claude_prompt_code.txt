@@ -413,6 +413,68 @@ Use multiple agents to execute the same Maven dependencies upgrade tasks for oth
 
 ==============================================================================================================================================
 
+Perform a comprehensive, line-by-line review of every class under:
+
+    ./src/main/java
+
+Your objectives are to identify and fix bugs, improve correctness, and enhance the overall quality of the codebase.
+
+For every issue you find:
+
+1. Fix the underlying implementation.
+2. Add or update unit tests in the existing test classes to verify the fix and prevent regressions.
+3. Correct, clarify, or improve the Javadoc where appropriate.
+
+Do NOT assume that the existing implementation, comments, or Javadoc are correct. Treat all code and documentation as potentially inaccurate, incomplete, outdated, or inconsistent. Verify behavior based on the actual implementation, API contracts, surrounding code, and intended semantics.
+
+Review every line carefully, paying particular attention to:
+
+- Logic errors
+- Edge cases
+- Null handling
+- Exception safety
+- Resource management
+- Memory leaks
+- Concurrency and thread safety
+- Performance issues and unnecessary allocations
+- API consistency
+- Input validation
+- Defensive programming
+- Code readability and maintainability
+- Correctness and completeness of Javadoc, including examples, @param, @return, @throws, @implNote, and @apiNote
+
+Do not blindly trust existing code or documentation. If code and documentation disagree, determine which is correct based on evidence.
+
+When you are uncertain about any behavior or intended semantics:
+
+- Do not make unsupported assumptions.
+- Investigate related classes, call sites, tests, interfaces, inheritance hierarchies, and existing usage patterns.
+- If uncertainty remains, avoid speculative changes unless the fix is clearly justified.
+- Record the uncertainty, supporting evidence, and your recommendation in the final report.
+
+While reviewing, also look for opportunities to:
+
+- Simplify overly complex code.
+- Improve naming consistency.
+- Remove dead or redundant code.
+- Improve error messages.
+- Improve API consistency across similar classes and methods.
+- Improve Javadoc clarity and accuracy.
+- Identify duplicated logic that could be refactored.
+
+At the end, produce a detailed final report that includes:
+
+- All bugs found and fixed.
+- The rationale for each fix.
+- All unit tests added or updated.
+- All Javadoc corrections and improvements.
+- Any remaining suspected bugs.
+- Any ambiguous or questionable behavior.
+- Any API inconsistencies.
+- Any design issues or technical debt discovered.
+- Any recommendations for future improvements, including the reasoning behind each recommendation.
+
+Prioritize correctness over preserving existing behavior. If existing behavior is clearly incorrect, fix it and update the corresponding tests and documentation accordingly.
 
 
 

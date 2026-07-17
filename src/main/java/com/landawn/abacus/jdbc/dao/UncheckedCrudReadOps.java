@@ -409,6 +409,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Object, Class)
      */
+    @Beta
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
             throws UncheckedSQLException;
@@ -488,6 +489,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Object, Class)
      */
+    @Beta
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicateResultException, UncheckedSQLException;
@@ -764,6 +766,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws DuplicateResultException if the id of the entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
+    @Beta
     @Override
     default boolean refresh(final T entity) throws UncheckedSQLException {
         try {
@@ -793,6 +796,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws DuplicateResultException if the id of the entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
+    @Beta
     @Override
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws UncheckedSQLException {
         try {
@@ -819,6 +823,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
+    @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities) throws UncheckedSQLException {
         return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -843,6 +848,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
+    @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException {
         try {
@@ -870,6 +876,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
+    @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws UncheckedSQLException {
         return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -904,6 +911,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws UncheckedSQLException if a database access error occurs
      */
+    @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize)
             throws UncheckedSQLException {

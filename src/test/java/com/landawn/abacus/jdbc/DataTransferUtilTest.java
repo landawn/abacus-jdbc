@@ -40,6 +40,7 @@ import java.util.function.Predicate;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -1665,5 +1666,16 @@ public class DataTransferUtilTest extends TestBase {
     @Test
     public void testBatchDelayTooLargeForMillisecondsIsRejectedAsIllegalArgument() {
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchDelay(Duration.ofSeconds(Long.MAX_VALUE)));
+    }
+
+    // BUG FIX: the deprecated exportCsv(stmt, columnNames, File) overload executed the SELECT before
+    // validating the output file, so a null output wasted a full query execution and failed late.
+    // The output must be validated before any database work.
+    @Test
+    @Tag("2025")
+    public void testExportCsvToNullFile_FailsFastWithoutExecutingQuery() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsv(mockPreparedStatement, null, (File) null));
+
+        verify(mockPreparedStatement, never()).executeQuery();
     }
 }

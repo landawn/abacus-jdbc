@@ -691,9 +691,9 @@ final class ResultSetProxy implements ResultSet {
      *   <li>Materializes {@link Blob} values to {@code byte[]} and {@link Clob} values to {@code String}</li>
      * </ul>
      *
-     * <p>If the column index is non-positive or beyond the column count, or the value read is SQL
-     * NULL, the call is delegated to the underlying {@link ResultSet} without caching a getter
-     * strategy.</p>
+     * <p>If the column index is non-positive or beyond the column count, the call is delegated to
+     * the underlying {@link ResultSet}; if the value read is SQL NULL, the already-read {@code null}
+     * is returned. In both cases no getter strategy is cached.</p>
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is null

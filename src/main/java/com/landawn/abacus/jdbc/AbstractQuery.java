@@ -251,11 +251,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param closeAfterExecution if {@code true}, the statement will be closed after execution. Default is {@code true}.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      */
-    public This closeAfterExecution(final boolean closeAfterExecution) throws IllegalStateException {
-        assertNotClosed();
-
+    public This closeAfterExecution(final boolean closeAfterExecution) {
         isCloseAfterExecution = closeAfterExecution;
 
         return (This) this;
@@ -4090,13 +4087,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see java.sql.PreparedStatement#addBatch()
      */
-    public This addBatch() throws IllegalStateException, SQLException {
-        assertNotClosed();
-
+    public This addBatch() throws SQLException {
         try {
             addBatchAction.accept((This) this, stmt);
             isBatch = true;
@@ -4138,15 +4132,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param direction one of {@link FetchDirection#FORWARD}, {@link FetchDirection#REVERSE},
      *                  or {@link FetchDirection#UNKNOWN}
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws IllegalArgumentException if {@code direction} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see FetchDirection
      * @see java.sql.Statement#setFetchDirection(int)
      */
-    public This setFetchDirection(final FetchDirection direction) throws IllegalStateException, IllegalArgumentException, SQLException {
-        assertNotClosed();
-
+    public This setFetchDirection(final FetchDirection direction) throws IllegalArgumentException, SQLException {
         checkArgNotNull(direction, cs.direction);
 
         if (defaultFetchDirection < 0) {
@@ -4172,11 +4163,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see #setFetchDirection(FetchDirection)
      */
-    public This setFetchDirectionToForward() throws IllegalStateException, SQLException {
+    public This setFetchDirectionToForward() throws SQLException {
         return setFetchDirection(FetchDirection.FORWARD);
     }
 
@@ -4196,13 +4186,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *        negative value with a {@code SQLException}; MySQL/MariaDB accept {@code Integer.MIN_VALUE} to enable
      *        row-by-row streaming.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs (including a negative {@code fetchSize} rejected by the driver)
      * @see java.sql.Statement#setFetchSize(int)
      */
-    public This setFetchSize(final int fetchSize) throws IllegalStateException, SQLException {
-        assertNotClosed();
-
+    public This setFetchSize(final int fetchSize) throws SQLException {
         if (!isFetchSizeCaptured) {
             defaultFetchSize = stmt.getFetchSize();
             isFetchSizeCaptured = true;
@@ -4226,13 +4213,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param max the new column size limit in bytes; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setMaxFieldSize(int)
      */
-    public This setMaxFieldSize(final int max) throws IllegalStateException, SQLException {
-        assertNotClosed();
-
+    public This setMaxFieldSize(final int max) throws SQLException {
         if (defaultMaxFieldSize < 0) {
             defaultMaxFieldSize = stmt.getMaxFieldSize();
         }
@@ -4254,13 +4238,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setMaxRows(int)
      */
-    public This setMaxRows(final int max) throws IllegalStateException, SQLException {
-        assertNotClosed();
-
+    public This setMaxRows(final int max) throws SQLException {
         if (defaultMaxRows < 0) {
             defaultMaxRows = stmt.getMaxRows();
         }
@@ -4282,13 +4263,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setLargeMaxRows(long)
      */
-    public This setLargeMaxRows(final long max) throws IllegalStateException, SQLException {
-        assertNotClosed();
-
+    public This setLargeMaxRows(final long max) throws SQLException {
         if (defaultLargeMaxRows < 0) {
             defaultLargeMaxRows = stmt.getLargeMaxRows();
         }
@@ -4310,13 +4288,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param seconds the new query timeout limit in seconds; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs (including a negative {@code seconds} rejected by the driver)
      * @see java.sql.Statement#setQueryTimeout(int)
      */
-    public This setQueryTimeout(final int seconds) throws IllegalStateException, SQLException {
-        assertNotClosed();
-
+    public This setQueryTimeout(final int seconds) throws SQLException {
         if (defaultQueryTimeout < 0) {
             defaultQueryTimeout = stmt.getQueryTimeout();
         }
@@ -4345,14 +4320,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param stmtSetter the function to configure the statement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws IllegalArgumentException if stmtSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter)
-            throws IllegalStateException, IllegalArgumentException, SQLException {
-        assertNotClosed();
+    public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException {
         checkArgNotNull(stmtSetter, cs.stmtSetter);
 
         try {
@@ -4381,14 +4353,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param stmtSetter the function to configure the statement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if this query is already closed
      * @throws IllegalArgumentException if stmtSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
     public This configureStatement(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter)
-            throws IllegalStateException, IllegalArgumentException, SQLException {
-        assertNotClosed();
+            throws IllegalArgumentException, SQLException {
         checkArgNotNull(stmtSetter, cs.stmtSetter);
 
         try {
@@ -5320,6 +5290,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Dataset
      */
     public Dataset query() throws SQLException {
+        assertNotClosed();
+
         return query(Jdbc.ResultExtractor.TO_DATASET);
     }
 
@@ -5591,6 +5563,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #streamAllResultSets()
      */
     public List<Dataset> queryAllResultSets() throws SQLException {
+        assertNotClosed();
+
         return queryAllResultSets(ResultExtractor.TO_DATASET);
     }
 
@@ -5730,6 +5704,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super Dataset, ? extends R, E> func)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(func, cs.func);
 
         return func.apply(query());
@@ -5763,6 +5738,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <R, E extends Exception> R queryThenApply(final Class<?> entityClassForExtractor, final Throwables.Function<? super Dataset, ? extends R, E> func)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
         checkArgNotNull(func, cs.func);
 
@@ -5793,6 +5769,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> consumer)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(query());
@@ -5826,6 +5803,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super Dataset, E> consumer)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
         checkArgNotNull(consumer, cs.consumer);
 
@@ -5864,6 +5842,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #queryForUniqueNonNull(Class)
      */
     public Optional<Map<String, Object>> findOnlyOne() throws DuplicateResultException, SQLException {
+        assertNotClosed();
+
         return findOnlyOne(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -5895,6 +5875,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #queryForUniqueNonNull(Class)
      */
     public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findOnlyOneOrNull(targetType));
     }
 
@@ -5924,6 +5906,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -5956,6 +5940,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -5981,6 +5967,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public Map<String, Object> findOnlyOneOrNull() throws DuplicateResultException, SQLException {
+        assertNotClosed();
+
         return findOnlyOneOrNull(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -6146,6 +6134,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public Optional<Map<String, Object>> findFirst() throws SQLException {
+        assertNotClosed();
+
         return findFirst(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -6173,6 +6163,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findFirst(final Class<? extends T> targetType) throws NullPointerException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findFirstOrNull(targetType));
     }
 
@@ -6198,6 +6190,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findFirst(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findFirstOrNull(rowMapper));
     }
 
@@ -6228,6 +6222,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Deprecated
     public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 
@@ -6258,6 +6254,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findFirst(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findFirstOrNull(rowMapper));
     }
 
@@ -6289,6 +6287,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Deprecated
     public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws NullPointerException, SQLException {
+        assertNotClosed();
+
         return Optional.ofNullable(findFirstOrNull(rowFilter, rowMapper));
     }
 
@@ -6310,6 +6310,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public Map<String, Object> findFirstOrNull() throws SQLException {
+        assertNotClosed();
+
         return findFirstOrNull(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -6537,6 +6539,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public List<Map<String, Object>> list() throws SQLException {
+        assertNotClosed();
+
         return list(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -6657,6 +6661,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("deprecation")
     public <T> List<T> list(final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
+        assertNotClosed();
+
         return list(rowMapper, Integer.MAX_VALUE);
     }
 
@@ -6682,6 +6688,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Deprecated
     public <T> List<T> list(final Jdbc.RowMapper<? extends T> rowMapper, final int maxResult) throws SQLException {
+        assertNotClosed();
+
         return list(Jdbc.RowFilter.ALWAYS_TRUE, rowMapper, maxResult);
     }
 
@@ -6720,6 +6728,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.RowMapper
      */
     public <T> List<T> list(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
+        assertNotClosed();
+
         return list(rowFilter, rowMapper, Integer.MAX_VALUE);
     }
 
@@ -6814,6 +6824,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @SuppressWarnings("deprecation")
     public <T> List<T> list(final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
+        assertNotClosed();
+
         return list(rowMapper, Integer.MAX_VALUE);
     }
 
@@ -6839,6 +6851,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Deprecated
     public <T> List<T> list(final Jdbc.BiRowMapper<? extends T> rowMapper, final int maxResult) throws SQLException {
+        assertNotClosed();
+
         return list(Jdbc.BiRowFilter.ALWAYS_TRUE, rowMapper, maxResult);
     }
 
@@ -6867,6 +6881,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.BiRowMapper
      */
     public <T> List<T> list(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
+        assertNotClosed();
+
         return list(rowFilter, rowMapper, Integer.MAX_VALUE);
     }
 
@@ -7262,6 +7278,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Class<? extends T> targetType, final Throwables.Function<? super List<T>, ? extends R, E> func)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
         checkArgNotNull(func, cs.func);
 
@@ -7304,6 +7321,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.RowMapper<? extends T> rowMapper,
             final Throwables.Function<? super List<T>, ? extends R, E> func) throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(func, cs.func);
 
         return func.apply(list(rowMapper));
@@ -7346,6 +7364,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.BiRowMapper<? extends T> rowMapper,
             final Throwables.Function<? super List<T>, ? extends R, E> func) throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(func, cs.func);
 
         return func.apply(list(rowMapper));
@@ -7393,6 +7412,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, E extends Exception> void listThenAccept(final Class<? extends T> targetType, final Throwables.Consumer<? super List<T>, E> consumer)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
         checkArgNotNull(consumer, cs.consumer);
 
@@ -7427,6 +7447,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.RowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(list(rowMapper));
@@ -7464,6 +7485,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.BiRowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
             throws IllegalStateException, IllegalArgumentException, SQLException, E {
+        assertNotClosed();
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(list(rowMapper));
@@ -7500,6 +7522,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @LazyEvaluation
     public Stream<Map<String, Object>> stream() {
+        assertNotClosed();
+
         return stream(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -7758,6 +7782,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     @LazyEvaluation
     public Stream<Dataset> streamAllResultSets() {
+        assertNotClosed();
+
         return streamAllResultSets(ResultExtractor.TO_DATASET);
     }
 
@@ -7976,6 +8002,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public boolean notExists() throws IllegalStateException, SQLException {
+        assertNotClosed();
+
         return !exists();
     }
 
@@ -8526,6 +8554,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #allMatch(RowFilter)
      */
     public boolean noneMatch(final Jdbc.RowFilter rowFilter) throws SQLException {
+        assertNotClosed();
+
         return !anyMatch(rowFilter);
     }
 
@@ -8558,6 +8588,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #anyMatch(BiRowFilter)
      */
     public boolean noneMatch(final Jdbc.BiRowFilter rowFilter) throws SQLException {
+        assertNotClosed();
+
         return !anyMatch(rowFilter);
     }
 
@@ -8930,6 +8962,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #batchInsert()
      */
     public <ID> Optional<ID> insert() throws SQLException {
+        assertNotClosed();
+
         return insert((Jdbc.RowMapper<ID>) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR);
     }
 
@@ -8968,6 +9002,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #insert()
      */
     public <ID> Optional<ID> insert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
+        assertNotClosed();
+
         return insert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -9000,6 +9036,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #insert()
      */
     public <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
+        assertNotClosed();
+
         return insert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -9014,9 +9052,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated key
      * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
      * @return An Optional containing the generated key if it exists and is valid, otherwise an empty Optional
-     * @throws SQLException if a database access error occurs
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if a required argument is null
+     * @throws SQLException if a database access error occurs
      */
     <ID> Optional<ID> insert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
@@ -9045,9 +9083,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels
      * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
      * @return An Optional containing the generated key if it exists and is valid, otherwise an empty Optional
-     * @throws SQLException if a database access error occurs
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if a required argument is null
+     * @throws SQLException if a database access error occurs
      */
     <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
@@ -9095,6 +9133,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #batchInsert(RowMapper)
      */
     public <ID> List<ID> batchInsert() throws SQLException {
+        assertNotClosed();
+
         return batchInsert((Jdbc.RowMapper<ID>) JdbcUtil.SINGLE_GENERATED_KEY_EXTRACTOR);
     }
 
@@ -9123,6 +9163,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #batchInsert(BiRowMapper)
      */
     public <ID> List<ID> batchInsert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
+        assertNotClosed();
+
         return batchInsert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -9155,6 +9197,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #batchInsert()
      */
     public <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor) throws SQLException {
+        assertNotClosed();
+
         return batchInsert(autoGeneratedKeyExtractor, JdbcUtil.defaultIdTester);
     }
 
@@ -9168,9 +9212,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated keys
      * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
      * @return A list of generated keys, one per inserted row preserving order; or an empty list if every generated key is a default/invalid value
-     * @throws SQLException if a database access error occurs
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if a required argument is null
+     * @throws SQLException if a database access error occurs
      */
     <ID> List<ID> batchInsert(final Jdbc.RowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();
@@ -9208,9 +9252,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels
      * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
      * @return A list of generated keys, one per inserted row preserving order; or an empty list if every generated key is a default/invalid value
-     * @throws SQLException if a database access error occurs
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if a required argument is null
+     * @throws SQLException if a database access error occurs
      */
     <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester) throws SQLException {
         assertNotClosed();

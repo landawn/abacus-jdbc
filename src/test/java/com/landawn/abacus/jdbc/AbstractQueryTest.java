@@ -209,7 +209,32 @@ public class AbstractQueryTest extends TestBase {
     public void testCloseAfterExecution_ClosedQuery() throws SQLException {
         query.close();
 
-        assertThrows(IllegalStateException.class, () -> query.closeAfterExecution(false));
+        // Non-execution configuration methods no longer check the closed state.
+        assertSame(query, query.closeAfterExecution(false));
+    }
+
+    // New contract: only execution methods check the closed state. Parameter setters, batch staging,
+    // statement configuration, and lifecycle methods no longer throw IllegalStateException on a
+    // closed query — a closed underlying statement surfaces as the driver's SQLException instead —
+    // while execution methods still fail fast with IllegalStateException.
+    @Test
+    @Tag("2025")
+    public void testNonExecutionMethods_ClosedQuery_DoNotThrowIllegalState() throws SQLException {
+        query.close();
+
+        assertSame(query, query.setFetchSize(100));
+        assertSame(query, query.setMaxRows(10));
+        assertSame(query, query.setLargeMaxRows(10L));
+        assertSame(query, query.setMaxFieldSize(256));
+        assertSame(query, query.setQueryTimeout(5));
+        assertSame(query, query.setFetchDirection(FetchDirection.FORWARD));
+        assertSame(query, query.addBatch());
+        assertSame(query, query.configureStatement(stmt -> stmt.setPoolable(false)));
+
+        // Execution methods keep the fail-fast IllegalStateException.
+        assertThrows(IllegalStateException.class, () -> query.exists());
+        assertThrows(IllegalStateException.class, () -> query.update());
+        assertThrows(IllegalStateException.class, () -> query.list());
     }
 
     // Tests for setBoolean with defaultValueForNull
@@ -1447,7 +1472,7 @@ public class AbstractQueryTest extends TestBase {
     public void testAssertNotClosed_ErrorMessageContainsClassName() {
         query.close();
 
-        final IllegalStateException ise = assertThrows(IllegalStateException.class, () -> query.closeAfterExecution(false));
+        final IllegalStateException ise = assertThrows(IllegalStateException.class, () -> query.update());
         assertTrue(ise.getMessage().contains("TestQuery"));
         assertTrue(ise.getMessage().contains("closed"));
     }
@@ -1851,6 +1876,27 @@ public class AbstractQueryTest extends TestBase {
         query.close();
 
         assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null, 10));
+    }
+
+    // Same ISE-vs-IAE priority regression for the @Beta queryThen*/listThen* delegating helpers: they
+    // used to run checkArgNotNull before delegating to query()/list(), so a closed query with a null
+    // functional argument threw IllegalArgumentException instead of the documented
+    // IllegalStateException. assertNotClosed() must run first, matching queryForSingleValue(Class).
+    @Test
+    @Tag("2025")
+    public void testQueryThenListThenHelpers_ClosedQueryWithNullArg_ThrowsIllegalStateNotIllegalArgument() {
+        query.close();
+
+        assertThrows(IllegalStateException.class, () -> query.queryThenApply(null));
+        assertThrows(IllegalStateException.class, () -> query.queryThenApply(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(null));
+        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.listThenApply(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.RowMapper<String>) rs -> "x", null));
+        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
+        assertThrows(IllegalStateException.class, () -> query.listThenAccept(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.RowMapper<String>) rs -> "x", null));
+        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
     }
 
     // The open-query behavior is unchanged: a null argument still fails fast with

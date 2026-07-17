@@ -731,8 +731,11 @@ final class DaoImpl {
         final boolean isListQuery = isListQuery(method, returnType, queryOperation, fullClassMethodName);
         final boolean isExists = isExistsQuery(method, queryOperation, fullClassMethodName);
 
+        // A Tuple2 return type for QueryOperation.query is only handled on the procedure path (result
+        // sets + OUT parameters); accepting it for a plain query would silently fall through to the
+        // single-value dispatch and fail obscurely at execution instead of here at proxy creation.
         if ((queryOperation == QueryOperation.stream && !Stream.class.isAssignableFrom(returnType)) || (queryOperation == QueryOperation.query
-                && !(Dataset.class.isAssignableFrom(returnType) || Tuple2.class.isAssignableFrom(returnType) || (lastParamType != null
+                && !(Dataset.class.isAssignableFrom(returnType) || (Tuple2.class.isAssignableFrom(returnType) && isProcedure) || (lastParamType != null
                         && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)))))) {
             throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
                     + " is not supported by the specified queryOperation: " + queryOperation);
@@ -5404,6 +5407,20 @@ final class DaoImpl {
                     if (N.notEmpty(duplicateFragmentPlaceholders)) {
                         throw new IllegalArgumentException("Multiple method parameters target the same SQL fragment placeholder in method: "
                                 + fullClassMethodName + ": " + duplicateFragmentPlaceholders);
+                    }
+
+                    // A @BindList placeholder that appears more than once in the SQL would be expanded at
+                    // every textual occurrence (Strings.replaceAll), but the collection values are bound only
+                    // once, so execution would fail with a parameter-count mismatch. Fail at proxy creation
+                    // instead. @SqlFragment/@SqlFragmentList inject text without binding values, so repeated
+                    // occurrences of their placeholders remain supported.
+                    for (int i = 0; i < fragmentParamLen; i++) {
+                        if (N.anyMatch(method.getParameterAnnotations()[fragmentParamIndexes[i]], it -> it.annotationType().equals(BindList.class))
+                                && Strings.countMatches(query, fragmentAnnos[i]._2) > 1) {
+                            throw new UnsupportedOperationException(
+                                    "The placeholder: " + fragmentAnnos[i]._2 + " of the parameter annotated with @BindList in method: " + fullClassMethodName
+                                            + " appears more than once in the SQL. A @BindList placeholder can be referenced only once.");
+                        }
                     }
 
                     final BiFunction<Annotation, Object, String>[] fragmentMappers = IntStream.of(fragmentParamIndexes)

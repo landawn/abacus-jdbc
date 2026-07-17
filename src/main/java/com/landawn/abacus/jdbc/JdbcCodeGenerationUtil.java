@@ -657,12 +657,16 @@ public final class JdbcCodeGenerationUtil {
 
             final StringBuilder headPartBuilder = new StringBuilder();
 
+            // Deduplicated: two additional fields sharing the same generic collection type (e.g. two
+            // List<...> fields) must not emit the same import line twice.
+            final Set<String> importedJavaUtilTypes = new HashSet<>();
+
             for (final Tuple3<String, String, Boolean> tp : additionalFields) {
                 if (tp._1.indexOf('<') > 0) { //NOSONAR
                     final String clsName = tp._1.substring(0, tp._1.indexOf('<'));
 
                     try { //NOSONAR
-                        if (ClassUtil.forName("java.util." + clsName) != null) {
+                        if (ClassUtil.forName("java.util." + clsName) != null && importedJavaUtilTypes.add(clsName)) {
                             headPartBuilder.append(LINE_SEPARATOR).append("import java.util.").append(clsName).append(';');
                         }
                     } catch (final Exception e) {
@@ -1009,7 +1013,9 @@ public final class JdbcCodeGenerationUtil {
             columnClassName = ClassUtil.getCanonicalClassName(java.sql.Time.class);
         }
 
-        columnClassName = columnClassName.replace("java.lang.", "");
+        // Strip only a LEADING "java.lang." package prefix: a global replace would corrupt any
+        // (pathological) type whose qualified name merely contains that substring.
+        columnClassName = Strings.removeStart(columnClassName, "java.lang.");
 
         return eccClassNameMap.getOrDefault(columnClassName, columnClassName);
     }
@@ -1019,7 +1025,7 @@ public final class JdbcCodeGenerationUtil {
             return ClassUtil.getCanonicalClassName(Object.class);
         }
 
-        String className = columnClassName.replace("java.lang.", "");
+        String className = Strings.removeStart(columnClassName, "java.lang.");
 
         if (isCustomizedType) {
             return className;
@@ -2794,6 +2800,11 @@ public final class JdbcCodeGenerationUtil {
         /**
          * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.).
          * Default is {@code false} (uses primitives where possible).
+         *
+         * <p>Column nullability reported by the database is NOT consulted: with the default
+         * {@code false}, a nullable numeric/boolean column still maps to a primitive field, so a SQL
+         * {@code NULL} materializes as {@code 0}/{@code false} when the entity is loaded. Set this to
+         * {@code true} when distinguishing {@code NULL} from the primitive default matters.</p>
          */
         private boolean useBoxedTypes;
 
@@ -2838,6 +2849,13 @@ public final class JdbcCodeGenerationUtil {
          * Additional source code to append to the generated entity class body.
          * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}).
          * Lines starting with {@code //} are treated as comments and stripped during field parsing.
+         *
+         * <p>Imports are auto-added only for generic {@code java.util} types used by these fields
+         * (e.g. {@code List}, {@code Map}); any other type (such as {@code java.time.LocalDate} or a
+         * custom class) must be listed in {@link #classNamesToImport} or referenced by its fully
+         * qualified name, otherwise the generated source will not compile. Declare one variable per
+         * declaration: for a multi-variable declaration like {@code "private int a, b;"} only the
+         * first variable participates in the generated {@code copy()} method.</p>
          */
         private String additionalClassBodySource;
 
