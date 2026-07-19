@@ -3,6 +3,7 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -1677,5 +1678,48 @@ public class DataTransferUtilTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsv(mockPreparedStatement, null, (File) null));
 
         verify(mockPreparedStatement, never()).executeQuery();
+    }
+
+    /**
+     * Contract test for CSV short-row padding in
+     * {@code importCsv(Reader, Predicate, PreparedStatement, int, long, BiConsumer)}.
+     *
+     * <p>The header determines the reusable row-array width. A data row with FEWER fields than the
+     * header must be accepted and its missing trailing positions padded with {@code null} (class doc,
+     * "CSV row width"; {@code parseCsvRow} only rejects rows WIDER than the header). This pins the
+     * padding contract: the row array handed to the parameter setter is header-width with {@code null}
+     * in every position the short row did not supply, and those {@code null}s are what get bound to
+     * the statement parameters.</p>
+     */
+    @Test
+    @Tag("2025")
+    public void testImportCsv_RowShorterThanHeader_PadsMissingTrailingColumnsWithNull() throws Exception {
+        // Header has 3 columns; the single accepted data row supplies only the first field.
+        final String csv = "c1,c2,c3\nonly1";
+        final Reader reader = new StringReader(csv);
+
+        final java.util.concurrent.atomic.AtomicReference<String[]> capturedRow = new java.util.concurrent.atomic.AtomicReference<>();
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (pq, row) -> {
+            capturedRow.set(row.clone());
+            pq.setString(1, row[0]);
+            pq.setString(2, row[1]);
+            pq.setString(3, row[2]);
+        };
+
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = DataTransferUtil.importCsv(reader, null, mockPreparedStatement, 10, 0L, stmtSetter);
+
+        assertEquals(1, result);
+        // The setter received a header-width row: field 0 from the CSV, trailing positions padded with null.
+        final String[] captured = capturedRow.get();
+        assertEquals(3, captured.length);
+        assertEquals("only1", captured[0]);
+        assertNull(captured[1]);
+        assertNull(captured[2]);
+        // And the padded nulls are exactly what was bound to the trailing statement parameters.
+        verify(mockPreparedStatement).setString(1, "only1");
+        verify(mockPreparedStatement).setString(2, null);
+        verify(mockPreparedStatement).setString(3, null);
     }
 }

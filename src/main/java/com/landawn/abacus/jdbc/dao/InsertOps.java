@@ -52,6 +52,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * }</pre>
      *
      * @param entity the entity to insert
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     void save(final T entity) throws SQLException;
@@ -68,7 +69,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * }</pre>
      *
      * @param entity the entity to insert
-     * @param propNamesToSave the property names to include in the INSERT
+     * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     void save(final T entity, final Collection<String> propNamesToSave) throws SQLException;
@@ -85,6 +87,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param namedInsertSql the named INSERT SQL statement
      * @param entity the entity providing the parameter values
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     void save(final String namedInsertSql, final T entity) throws SQLException;
@@ -120,6 +123,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entities, final int batchSize) throws SQLException;
@@ -129,7 +133,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * Only the listed properties will be included in the INSERT statements.
      *
      * @param entities the collection of entities to insert
-     * @param propNamesToSave the property names to include in the INSERT
+     * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws SQLException {
@@ -141,9 +146,10 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * Combines property selection with batch processing for optimal performance.
      *
      * @param entities the collection of entities to insert
-     * @param propNamesToSave the property names to include
+     * @param propNamesToSave the property names to include (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
@@ -169,6 +175,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entities the entities providing parameter values
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     @Beta

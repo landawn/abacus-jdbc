@@ -152,6 +152,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws SQLException;

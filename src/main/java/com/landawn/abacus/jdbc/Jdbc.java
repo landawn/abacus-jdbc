@@ -3887,6 +3887,12 @@ public final class Jdbc {
          * Creates a {@code BiRowMapper} that maps all columns of a row to an {@code Object[]}.
          * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<Object[]> arrayMapper = BiRowMapper.toArray(ColumnGetter.GET_OBJECT);
+         * // When applied to a row: Object[] rowData = arrayMapper.apply(rs, columnLabels);
+         * }</pre>
+         *
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
          * @return a {@code BiRowMapper} that produces an {@code Object[]}
          * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
@@ -3911,6 +3917,12 @@ public final class Jdbc {
          * Creates a {@code BiRowMapper} that maps all columns of a row to a {@code List<Object>}.
          * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<List<Object>> listMapper = BiRowMapper.toList(ColumnGetter.GET_OBJECT);
+         * // When applied to a row: List<Object> rowData = listMapper.apply(rs, columnLabels);
+         * }</pre>
+         *
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
          * @return a {@code BiRowMapper} that produces a {@code List<Object>}
          * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
@@ -3922,6 +3934,15 @@ public final class Jdbc {
 
         /**
          * Creates a {@code BiRowMapper} that maps all columns of a row to a {@code Collection}.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Create a mapper that maps each row to an ArrayList
+         * BiRowMapper<ArrayList<Object>> mapper = BiRowMapper.toCollection(
+         *     ColumnGetter.GET_OBJECT,
+         *     size -> new ArrayList<>(size)
+         * );
+         * }</pre>
          *
          * @param <C> collection type
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
@@ -3957,6 +3978,13 @@ public final class Jdbc {
          * You must process or copy its contents before the next row is mapped. Do not cache, share, or
          * use this mapper in parallel streams.
          * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<DisposableObjArray> mapper = BiRowMapper.toDisposableObjArray();
+         * // Process immediately: DisposableObjArray data = mapper.apply(rs, columnLabels);
+         * // WARNING: Do not store 'data' reference, process it immediately
+         * }</pre>
          *
          * @return a stateful {@code BiRowMapper} for high-performance, single-threaded row processing
          */
@@ -4000,6 +4028,13 @@ public final class Jdbc {
          * <p>Columns that cannot be matched to a property of {@code entityClass} are not skipped; they are
          * extracted with the default {@code Object} reader (via {@code JdbcUtil.getColumnValue}) and placed
          * into the output array at their original column index.</p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<DisposableObjArray> mapper = BiRowMapper.toDisposableObjArray(User.class);
+         * // Type conversions based on User class properties
+         * // WARNING: Process result immediately, do not store
+         * }</pre>
          *
          * @param entityClass the class used to infer the data type for each column based on matching property names
          * @return a stateful {@code BiRowMapper} for high-performance, type-aware, single-threaded row processing
@@ -5388,6 +5423,8 @@ public final class Jdbc {
 
                 @Override
                 public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
+                    N.checkArgNotNull(outputRow, "outputRow");
+
                     if (columnTypes == null) {
                         final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClassForFetch);
                         final List<String> columnLabelList = configuredColumnLabels == null ? JdbcUtil.getColumnLabels(rs) : configuredColumnLabels;
@@ -5459,7 +5496,6 @@ public final class Jdbc {
                         }
                     }
 
-                    N.checkArgNotNull(outputRow, "outputRow");
                     N.checkArgument(outputRow.length >= columnCount, "The output array length (%s) must be at least the column count (%s)", outputRow.length,
                             columnCount);
 

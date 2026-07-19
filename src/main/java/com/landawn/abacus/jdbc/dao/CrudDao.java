@@ -287,8 +287,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         final Class<?> cls = first.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
-        final PropInfo uniquePropInfo = entityInfo.getPropInfo(uniquePropNameList.get(0));
-
         final List<PropInfo> uniquePropInfos = N.map(uniquePropNameList, entityInfo::getPropInfo);
 
         for (int i = 0; i < uniquePropInfos.size(); i++) {
@@ -297,6 +295,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             }
         }
 
+        final PropInfo uniquePropInfo = uniquePropInfos.get(0);
         final com.landawn.abacus.util.function.Function<T, Object> singleKeyExtractor = uniquePropInfo::getPropValue;
 
         @SuppressWarnings("deprecation")

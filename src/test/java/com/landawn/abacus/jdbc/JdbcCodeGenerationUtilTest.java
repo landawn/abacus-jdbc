@@ -1833,6 +1833,44 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", "id"));
     }
 
+    // resolveKeyColumnNames exact-match ambiguity branch: two metadata labels that are case variants of
+    // each other ("USER_ID" / "user_id") both equalsIgnoreCase-match the requested key column, so the key
+    // cannot be resolved to a single column and must be rejected instead of silently picking one.
+    @Test
+    @Tag("2025")
+    public void testGenerateUpdateSql_KeyColumnMatchesTwoCaseVariantLabels_AmbiguousThrows() throws SQLException {
+        when(resultSetMetaData.getColumnCount()).thenReturn(3);
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("USER_ID");
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("user_id");
+        when(resultSetMetaData.getColumnLabel(3)).thenReturn("status");
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "user_id"));
+
+        assertTrue(thrown.getMessage().contains("Ambiguous key column"), () -> "unexpected message: " + thrown.getMessage());
+        assertTrue(thrown.getMessage().contains("user_id"), () -> "unexpected message: " + thrown.getMessage());
+    }
+
+    // resolveKeyColumnNames camelCase-match ambiguity branch: the requested key "user-id" exact-matches
+    // no metadata label, but its camelCase normalization "userId" matches BOTH "user_id" and "userId",
+    // so the fallback resolution must be rejected as ambiguous (naming both candidate columns).
+    @Test
+    @Tag("2025")
+    public void testGenerateNamedUpdateSql_CamelCaseKeyMatchesTwoDistinctLabels_AmbiguousThrows() throws SQLException {
+        when(resultSetMetaData.getColumnCount()).thenReturn(3);
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("userId");
+        when(resultSetMetaData.getColumnLabel(3)).thenReturn("status");
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", "user-id"));
+
+        assertTrue(thrown.getMessage().contains("Ambiguous key column"), () -> "unexpected message: " + thrown.getMessage());
+        assertTrue(thrown.getMessage().contains("matches both"), () -> "unexpected message: " + thrown.getMessage());
+        assertTrue(thrown.getMessage().contains("user_id"), () -> "unexpected message: " + thrown.getMessage());
+        assertTrue(thrown.getMessage().contains("userId"), () -> "unexpected message: " + thrown.getMessage());
+    }
+
     // Exercise continue on line 481 when excludedFields match by column name (snake_case)
     @Test
     public void testGenerateEntityClass_ExcludedFieldsByColumnName() throws SQLException {

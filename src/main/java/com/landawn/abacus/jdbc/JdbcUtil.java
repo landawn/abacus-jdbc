@@ -1979,7 +1979,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Statement stmt = connection.createStatement();
-     *      ResultSet rs = stmt.executeQuery("SELECT user_id AS 'User ID', user_name AS 'User Name' FROM users")) {
+     *      ResultSet rs = stmt.executeQuery("SELECT user_id AS \"User ID\", user_name AS \"User Name\" FROM users")) {
      *
      *     List<String> labels = JdbcUtil.getColumnLabels(rs);
      *     System.out.println(labels);   // Output: [User ID, User Name]
@@ -7315,9 +7315,23 @@ public final class JdbcUtil {
         N.checkArgNotNull(rs, cs.rs);
         N.checkArgPositive(columnIndex, cs.columnIndex);
 
-        // getColumnValue ignores checkDateType for a ResultSetProxy (it self-normalizes), so skip the metadata lookup then.
-        final boolean checkDateType = !(rs instanceof ResultSetProxy) && JdbcUtil.checkDateType(rs);
-        final RowMapper<? extends T> rowMapper = resultSet -> (T) getColumnValue(resultSet, columnIndex, checkDateType);
+        final RowMapper<? extends T> rowMapper = new RowMapper<>() {
+            private boolean checkDateTypeResolved = false;
+            private boolean checkDateType = false;
+
+            @Override
+            public T apply(final ResultSet resultSet) throws SQLException {
+                if (!checkDateTypeResolved) {
+                    // Resolved lazily on the first row (like the columnLabel overload) so an unconsumed stream
+                    // costs no metadata round-trip. getColumnValue ignores checkDateType for a ResultSetProxy
+                    // (it self-normalizes), so skip the lookup then.
+                    checkDateType = !(resultSet instanceof ResultSetProxy) && JdbcUtil.checkDateType(resultSet);
+                    checkDateTypeResolved = true;
+                }
+
+                return (T) getColumnValue(resultSet, columnIndex, checkDateType);
+            }
+        };
 
         return stream(rs, rowMapper);
     }
@@ -7359,7 +7373,8 @@ public final class JdbcUtil {
                         throw new IllegalArgumentException("Column not found: '" + columnLabel + "'");
                     }
 
-                    checkDateType = JdbcUtil.checkDateType(resultSet);
+                    // getColumnValue ignores checkDateType for a ResultSetProxy (it self-normalizes), so skip the metadata lookup then.
+                    checkDateType = !(resultSet instanceof ResultSetProxy) && JdbcUtil.checkDateType(resultSet);
                 }
 
                 return (T) getColumnValue(resultSet, columnIndex, checkDateType);
@@ -12315,7 +12330,6 @@ public final class JdbcUtil {
         }
     }
 
-    @SuppressWarnings("unused")
     static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
         String paramKey = null;
 

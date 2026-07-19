@@ -69,7 +69,6 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.function.TriFunction;
-import com.landawn.abacus.util.stream.CharStream;
 import com.landawn.abacus.util.stream.Collectors;
 import com.landawn.abacus.util.stream.Stream;
 
@@ -575,8 +574,9 @@ public final class JdbcCodeGenerationUtil {
                 // name otherwise, which is what query-result mapping keys on (see JdbcUtil.getColumnLabels).
                 final String columnName = Strings.isEmpty(rsmd.getColumnLabel(i)) ? rsmd.getColumnName(i) : rsmd.getColumnLabel(i);
 
-                final EntityCodeConfig.FieldMapping customFieldMapping = customFieldMappingMap.getOrDefault(columnName.toLowerCase(Locale.ROOT),
-                        customFieldMappingMap.get(Strings.toCamelCase(columnName).toLowerCase(Locale.ROOT)));
+                final EntityCodeConfig.FieldMapping directFieldMapping = customFieldMappingMap.get(columnName.toLowerCase(Locale.ROOT));
+                final EntityCodeConfig.FieldMapping customFieldMapping = directFieldMapping != null ? directFieldMapping
+                        : customFieldMappingMap.get(Strings.toCamelCase(columnName).toLowerCase(Locale.ROOT));
 
                 final String fieldName = customFieldMapping == null || Strings.isEmpty(customFieldMapping.fieldName())
                         ? fieldNameConverter.apply(entityName, columnName)
@@ -829,10 +829,11 @@ public final class JdbcCodeGenerationUtil {
                         .append("\")")
                         .append(LINE_SEPARATOR);
 
-                final Tuple2<String, String> dbType = fieldTypeAnnotationArgumentMap.getOrDefault(fieldName, fieldTypeAnnotationArgumentMap.get(columnName));
+                final Tuple2<String, String> fieldTypeAnnoArg = fieldTypeAnnotationArgumentMap.get(fieldName);
+                final Tuple2<String, String> typeAnnoArg = fieldTypeAnnoArg != null ? fieldTypeAnnoArg : fieldTypeAnnotationArgumentMap.get(columnName);
 
-                if (dbType != null) {
-                    sb.append("    @Type(").append(dbType._2).append(")").append(LINE_SEPARATOR);
+                if (typeAnnoArg != null) {
+                    sb.append("    @Type(").append(typeAnnoArg._2).append(")").append(LINE_SEPARATOR);
                 }
 
                 sb.append("    private ").append(columnClassName).append(" ").append(fieldName).append(";").append(LINE_SEPARATOR);
@@ -1003,13 +1004,14 @@ public final class JdbcCodeGenerationUtil {
             logger.debug(e, "Failed to resolve JDBC column class({}); using reported name", columnClassName);
         }
 
-        if ("oracle.sql.TIMESTAMP".equals(columnClassName) || "oracle.sql.TIMESTAMPTZ".equals(columnClassName)
-                || "oracle.sql.TIMESTAMPLTZ".equals(columnClassName) || Strings.endsWithIgnoreCase(columnClassName, ".Timestamp")
-                || Strings.endsWithIgnoreCase(columnClassName, ".DateTime")) {
+        // The case-insensitive suffix checks also cover oracle.sql.TIMESTAMP/DATE/TIME; only the
+        // TZ/LTZ variants need explicit matches.
+        if ("oracle.sql.TIMESTAMPTZ".equals(columnClassName) || "oracle.sql.TIMESTAMPLTZ".equals(columnClassName)
+                || Strings.endsWithIgnoreCase(columnClassName, ".Timestamp") || Strings.endsWithIgnoreCase(columnClassName, ".DateTime")) {
             columnClassName = ClassUtil.getCanonicalClassName(java.sql.Timestamp.class);
-        } else if ("oracle.sql.DATE".equals(columnClassName) || Strings.endsWithIgnoreCase(columnClassName, ".Date")) {
+        } else if (Strings.endsWithIgnoreCase(columnClassName, ".Date")) {
             columnClassName = ClassUtil.getCanonicalClassName(java.sql.Date.class);
-        } else if ("oracle.sql.TIME".equals(columnClassName) || Strings.endsWithIgnoreCase(columnClassName, ".Time")) {
+        } else if (Strings.endsWithIgnoreCase(columnClassName, ".Time")) {
             columnClassName = ClassUtil.getCanonicalClassName(java.sql.Time.class);
         }
 
@@ -2455,7 +2457,7 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static String checkTableName(final String tableName, final ProductInfo dbProductInfo) {
-        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
+        final String quote = getTableColumnNameQuoteString(dbProductInfo);
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
 
         if (parts.length == 1) {
@@ -2480,7 +2482,7 @@ public final class JdbcCodeGenerationUtil {
     private static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
         N.checkArgNotBlank(columnName, cs.columnName);
 
-        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
+        final String quote = getTableColumnNameQuoteString(dbProductInfo);
 
         return isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quote);
     }
@@ -2496,7 +2498,15 @@ public final class JdbcCodeGenerationUtil {
             return false;
         }
 
-        return CharStream.of(identifier).skip(1).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_');
+        for (int i = 1, len = identifier.length(); i < len; i++) {
+            final char ch = identifier.charAt(i);
+
+            if (!(Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_')) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static String quoteIdentifier(final String identifier, final String quote) {
@@ -2685,7 +2695,7 @@ public final class JdbcCodeGenerationUtil {
         return true;
     }
 
-    private static String getTableColumnNameQuoteChar(final ProductInfo dbProductInfo) {
+    private static String getTableColumnNameQuoteString(final ProductInfo dbProductInfo) {
         return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.name(), "MySQL", "MariaDB") ? "`" : "\"";
     }
 
@@ -2703,8 +2713,8 @@ public final class JdbcCodeGenerationUtil {
      *        .packageName("codes.entity")
      *        .srcDir("./samples")
      *        .fieldNameConverter((entityOrTableName, columnName) -> Strings.toCamelCase(columnName))
-     *        .fieldTypeConverter((entityOrTableName, fieldName, columnName, columnClassName) -> columnClassName
-     *                .replace("java.lang.", ""))
+     *        .fieldTypeConverter((entityOrTableName, fieldName, columnName, columnClassName) ->
+     *                "int".equals(columnClassName) ? "Integer" : columnClassName)
      *        .useBoxedTypes(false)
      *        .readOnlyFields(N.asSet("id"))
      *        .nonUpdatableFields(N.asSet("create_time"))
@@ -2774,8 +2784,11 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * Function to convert database column types to Java field types.
-         * Parameters: entity/table name, field name, column name, column class name (from ResultSetMetaData).
-         * Example: (entity, field, column, className) -> className.replace("java.lang.", "")
+         * Parameters: entity/table name, field name, column name, and the resolved column class name.
+         * The class name is already normalized before the converter runs: the {@code java.lang.} prefix is
+         * stripped and boxed numeric types are reduced to primitives (for example {@code java.lang.Integer}
+         * arrives as {@code int} and {@code oracle.sql.TIMESTAMP} as {@code java.sql.Timestamp}).
+         * Example: (entity, field, column, className) -> "int".equals(className) ? "Integer" : className
          */
         private QuadFunction<String, String, String, String, String> fieldTypeConverter;
 

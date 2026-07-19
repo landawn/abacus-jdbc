@@ -207,7 +207,7 @@ public interface Transaction {
      * <pre>
      * ACTIVE → COMMITTED (on successful commit)
      *        → ROLLED_BACK (on successful rollback)
-     *        → MARKED_ROLLBACK → ROLLED_BACK (on rollback-only mode)
+     *        → MARKED_ROLLBACK → ROLLED_BACK / FAILED_ROLLBACK (on rollback-only mode)
      *        → FAILED_COMMIT (on commit failure)
      *        → FAILED_ROLLBACK (on rollback failure)
      * FAILED_COMMIT → ROLLED_BACK / FAILED_ROLLBACK (on automatic rollback after a failed commit)

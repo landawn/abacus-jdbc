@@ -398,9 +398,17 @@ public final class ApiDocGenerator {
             }
         }
 
-        addGeneratedValueMembers(classTree, type, instanceFields);
+        final boolean hasExplicitConstructor = classTree.getMembers()
+                .stream()
+                .filter(MethodTree.class::isInstance)
+                .map(MethodTree.class::cast)
+                .anyMatch(member -> isConstructor(member, classTree) && !isImplicitConstructor(unitData, sourcePositions, member, classTree));
 
-        if (hasAnnotation(classTree.getModifiers(), "Builder")) {
+        addGeneratedValueMembers(classTree, type, instanceFields, hasExplicitConstructor);
+
+        final MethodTree builderConstructor = findBuilderConstructor(classTree);
+
+        if (hasAnnotation(classTree.getModifiers(), "Builder") || builderConstructor != null) {
             final String builderName = simpleName + "Builder";
             addGeneratedMethod(type, "builder", "static", builderName, "public static " + builderName + " builder()", List.of());
 
@@ -421,12 +429,18 @@ public final class ApiDocGenerator {
                 allTypes.putIfAbsent(builderType.fqn, builderType.fqn);
             }
 
-            for (final VariableTree field : instanceFields) {
-                final String fieldName = field.getName().toString();
-                final String fieldType = normalize(field.getType().toString());
-                final ParamInfo param = generatedParam(fieldName, fieldType);
-                addGeneratedMethod(builderType, fieldName, "instance", builderName,
-                        "public " + builderName + " " + fieldName + "(" + fieldType + " " + fieldName + ")", List.of(param));
+            // With @Builder on a constructor, Lombok derives the builder properties from that
+            // constructor's parameters rather than from the instance fields.
+            final List<ParamInfo> builderProperties = builderConstructor == null
+                    ? instanceFields.stream().map(field -> generatedParam(field.getName().toString(), normalize(field.getType().toString()))).toList()
+                    : builderConstructor.getParameters()
+                            .stream()
+                            .map(param -> generatedParam(param.getName().toString(), normalize(param.getType().toString())))
+                            .toList();
+
+            for (final ParamInfo property : builderProperties) {
+                addGeneratedMethod(builderType, property.name, "instance", builderName,
+                        "public " + builderName + " " + property.name + "(" + property.type + " " + property.name + ")", List.of(property));
             }
 
             addGeneratedMethod(builderType, "build", "instance", simpleName, "public " + simpleName + " build()", List.of());
@@ -453,6 +467,16 @@ public final class ApiDocGenerator {
 
     private static boolean isConstructor(final MethodTree methodTree, final ClassTree owner) {
         return methodTree.getReturnType() == null;
+    }
+
+    private static MethodTree findBuilderConstructor(final ClassTree classTree) {
+        return classTree.getMembers()
+                .stream()
+                .filter(MethodTree.class::isInstance)
+                .map(MethodTree.class::cast)
+                .filter(member -> isConstructor(member, classTree) && hasAnnotation(member.getModifiers(), "Builder"))
+                .findFirst()
+                .orElse(null);
     }
 
     private static boolean isImplicitConstructor(final UnitData unitData, final SourcePositions sourcePositions, final MethodTree methodTree,
@@ -505,7 +529,8 @@ public final class ApiDocGenerator {
         return false;
     }
 
-    private static void addGeneratedValueMembers(final ClassTree classTree, final TypeInfo type, final List<VariableTree> instanceFields) {
+    private static void addGeneratedValueMembers(final ClassTree classTree, final TypeInfo type, final List<VariableTree> instanceFields,
+            final boolean hasExplicitConstructor) {
         final boolean data = hasAnnotation(classTree.getModifiers(), "Data");
         final boolean value = hasAnnotation(classTree.getModifiers(), "Value");
         final boolean record = classTree.getKind() == Tree.Kind.RECORD;
@@ -545,7 +570,9 @@ public final class ApiDocGenerator {
             addGeneratedConstructor(type, "public " + type.name + "()", List.of());
         }
 
-        if (hasAnnotation(classTree.getModifiers(), "AllArgsConstructor") || value) {
+        // Lombok skips the @Value-implied all-args constructor when the class declares any explicit
+        // constructor; an explicit @AllArgsConstructor annotation always generates one.
+        if (hasAnnotation(classTree.getModifiers(), "AllArgsConstructor") || (value && !hasExplicitConstructor)) {
             final List<ParamInfo> params = instanceFields.stream()
                     .map(field -> generatedParam(field.getName().toString(), normalize(field.getType().toString())))
                     .toList();

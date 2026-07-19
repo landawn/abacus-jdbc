@@ -368,6 +368,29 @@ public class JoinInfoTest extends TestBase {
         assertEquals(1, user2.getOrders().size());
     }
 
+    // A source entity with NO matching join rows must receive a fresh MUTABLE empty collection,
+    // not the shared immutable N.emptyList() singleton (matched entities get a mutable ArrayList).
+    @Test
+    public void testSetJoinPropEntities_NoMatch_AssignsMutableEmptyList() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        final UserEntity matched = new UserEntity();
+        matched.setUserId(1L);
+        final UserEntity unmatched = new UserEntity();
+        unmatched.setUserId(2L);
+        final OrderEntity order = new OrderEntity();
+        order.setUserId(1L);
+
+        joinInfo.setJoinPropEntities(Arrays.asList(matched, unmatched), Arrays.asList(order));
+
+        assertNotNull(unmatched.getOrders());
+        assertTrue(unmatched.getOrders().isEmpty());
+
+        final OrderEntity lateOrder = new OrderEntity();
+        lateOrder.setUserId(2L);
+        unmatched.getOrders().add(lateOrder); // must not throw UnsupportedOperationException
+        assertEquals(1, unmatched.getOrders().size());
+    }
+
     // Test isManyToManyJoin is false for direct join
     @Test
     public void testIsManyToManyJoin_False() {

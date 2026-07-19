@@ -723,17 +723,17 @@ public final class DataTransferUtil {
         final List<String> allColumnNames = dataset.columnNames();
         final List<String> selectedColumnNameList = new ArrayList<>(columnNames);
 
-        // Validate that all selected column names exist in the dataset
-        for (final String colName : selectedColumnNameList) {
-            if (!allColumnNames.contains(colName)) {
-                throw new IllegalArgumentException("Column '" + colName + "' is not found in dataset columns: " + allColumnNames);
-            }
-        }
-
-        // Map selected column names to their indices in the dataset
+        // Map selected column names to their indices in the dataset, validating existence in the same scan
         final int[] selectedColumnIndices = new int[selectedColumnNameList.size()];
         for (int i = 0; i < selectedColumnNameList.size(); i++) {
-            selectedColumnIndices[i] = allColumnNames.indexOf(selectedColumnNameList.get(i));
+            final String colName = selectedColumnNameList.get(i);
+            final int columnIndex = allColumnNames.indexOf(colName);
+
+            if (columnIndex < 0) {
+                throw new IllegalArgumentException("Column '" + colName + "' is not found in dataset columns: " + allColumnNames);
+            }
+
+            selectedColumnIndices[i] = columnIndex;
         }
 
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> parameterSetter = (t, row) -> {
@@ -1742,7 +1742,7 @@ public final class DataTransferUtil {
 
             final String[] titles = headerParser.apply(line);
 
-            int columnCount = titles.length;
+            final int columnCount = titles.length;
             final String[] output = new String[columnCount];
 
             while ((line = br.readLine()) != null) {
@@ -2017,6 +2017,7 @@ public final class DataTransferUtil {
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
+     * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
@@ -2052,7 +2053,7 @@ public final class DataTransferUtil {
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
-     * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
+     * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
@@ -2184,6 +2185,7 @@ public final class DataTransferUtil {
      * @param rs the ResultSet containing the data to be exported (will not be closed by this method)
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
+     * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing
      */
@@ -2220,7 +2222,7 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to be selected for export; if {@code null} or empty, all columns are exported
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
-     * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
+     * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing
      */
@@ -2678,6 +2680,10 @@ public final class DataTransferUtil {
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
+        // Fail fast before acquiring either connection (matches the positional overloads' up-front validation).
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
+
         Connection sourceConn = null;
         Connection targetConn = null;
 

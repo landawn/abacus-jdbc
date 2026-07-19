@@ -33,7 +33,6 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +121,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     NamedQuery(final PreparedStatement stmt, final ParsedSql namedSql) {
         super(stmt);
-        checkArgNotNull(namedSql, "namedSql");
+        checkArgNotNull(namedSql, cs.namedSql);
         this.namedSql = namedSql;
         parameterNames = namedSql.namedParameters();
         parameterCount = namedSql.parameterCount();
@@ -137,7 +136,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     private void initParamNameIndexMap() {
-        paramNameIndexMap = new HashMap<>(parameterCount);
+        paramNameIndexMap = N.newHashMap(parameterCount);
         int index = 1;
 
         for (final String paramName : parameterNames) {
@@ -799,12 +798,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         if (value == null) {
             setNull(parameterName, java.sql.Types.BIGINT);
         } else {
+            final long longValue;
             try {
-                setLong(parameterName, value.longValueExact());
-            } catch (final SQLException | RuntimeException | Error e) {
+                longValue = value.longValueExact();
+            } catch (final ArithmeticException e) {
                 closeSuppressingFailure(e);
                 throw e;
             }
+
+            setLong(parameterName, longValue);
         }
 
         return this;
@@ -4209,20 +4211,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(batchParameters, cs.batchParameters);
 
-        @SuppressWarnings("UnnecessaryLocalVariable")
-        final Iterator<?> iter = batchParameters;
         try {
-            if (!iter.hasNext()) {
+            if (!batchParameters.hasNext()) {
                 return this;
             }
 
-            final Object first = iter.next();
+            final Object first = batchParameters.next();
 
             if (first == null) {
                 addNullBatchParameter();
 
-                while (iter.hasNext()) {
-                    final Object params = iter.next();
+                while (batchParameters.hasNext()) {
+                    final Object params = batchParameters.next();
 
                     if (params == null) {
                         addNullBatchParameter();
@@ -4261,8 +4261,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     addBatch();
 
                     Object params = null;
-                    while (iter.hasNext()) {
-                        params = iter.next();
+                    while (batchParameters.hasNext()) {
+                        params = batchParameters.next();
 
                         if (params == null) {
                             addNullBatchParameter();
@@ -4289,8 +4289,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                     Map<String, ?> params = null;
 
-                    while (iter.hasNext()) {
-                        params = (Map<String, ?>) iter.next();
+                    while (batchParameters.hasNext()) {
+                        params = (Map<String, ?>) batchParameters.next();
 
                         if (params == null) {
                             addNullBatchParameter();
@@ -4307,8 +4307,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     addBatch();
 
                     Collection params = null;
-                    while (iter.hasNext()) {
-                        params = (Collection) iter.next();
+                    while (batchParameters.hasNext()) {
+                        params = (Collection) batchParameters.next();
 
                         if (params == null) {
                             addNullBatchParameter();
@@ -4325,8 +4325,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     addBatch();
 
                     Object[] params = null;
-                    while (iter.hasNext()) {
-                        params = (Object[]) iter.next();
+                    while (batchParameters.hasNext()) {
+                        params = (Object[]) batchParameters.next();
 
                         if (params == null) {
                             addNullBatchParameter();
@@ -4343,8 +4343,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     addBatch();
 
                     EntityId params = null;
-                    while (iter.hasNext()) {
-                        params = (EntityId) iter.next();
+                    while (batchParameters.hasNext()) {
+                        params = (EntityId) batchParameters.next();
 
                         if (params == null) {
                             addNullBatchParameter();
@@ -4359,8 +4359,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     setObject(1, first); // typed binding via the Abacus type system, like the non-batch path
                     addBatch();
 
-                    while (iter.hasNext()) {
-                        setObject(1, iter.next());
+                    while (batchParameters.hasNext()) {
+                        setObject(1, batchParameters.next());
                         addBatch();
                     }
                 } else {

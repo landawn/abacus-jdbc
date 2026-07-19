@@ -105,6 +105,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to delete
      * @param batchSize the size of each batch
      * @return the total number of rows deleted
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -142,6 +143,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param ids the collection of entity IDs to delete
      * @param batchSize the size of each batch
      * @return the total number of rows deleted
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

@@ -84,6 +84,10 @@ public @interface DaoConfig {
      * <p>The LIMIT is <em>not</em> added for {@code count(Condition)} (which already issues a
      * {@code SELECT COUNT(*)}) or for arbitrary user-supplied SQL in {@link Query @Query} methods.</p>
      *
+     * <p>On SQL Server the limit renders as {@code OFFSET/FETCH}, whose grammar requires an
+     * {@code ORDER BY} clause, so this best-effort limit is only added when the supplied condition
+     * carries one; conditions without {@code ORDER BY} execute unchanged.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(addLimitForSingleQuery = true)

@@ -47,6 +47,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param entity the entity to insert
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -63,7 +64,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param entity the entity to insert
-     * @param propNamesToSave the property names to include in the INSERT
+     * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -82,6 +84,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param namedInsertSql the named insert SQL statement
      * @param entity the entity to save
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -121,6 +124,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param entities the collection of entities to save
      * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -136,7 +140,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param entities the collection of entities to save
-     * @param propNamesToSave the properties to save for each entity
+     * @param propNamesToSave the properties to save for each entity (must not be {@code null} or empty)
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -154,8 +159,9 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param entities the collection of entities to save
-     * @param propNamesToSave the properties to save for each entity
+     * @param propNamesToSave the properties to save for each entity (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -194,6 +200,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param namedInsertSql the named insert SQL statement
      * @param entities the collection of entities to save
      * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta

@@ -287,8 +287,14 @@ public interface s { // NOSONAR
         /** Function property(field) name {@code "min(email)"} for classes: {@code [ImmutableUser, User]} */
         String min_email = "min(email)";
 
+        /** Function property(field) name {@code "min(employeeId)"} for classes: {@code [Employee, EmployeeProject]} */
+        String min_employeeId = "min(employeeId)";
+
         /** Function property(field) name {@code "min(firstName)"} for classes: {@code [Employee, ImmutableUser, User]} */
         String min_firstName = "min(firstName)";
+
+        /** Function property(field) name {@code "min(id)"} for classes: {@code [Address, Device, ImmutableUser, User]} */
+        String min_id = "min(id)";
 
         /** Function property(field) name {@code "min(lastName)"} for classes: {@code [Employee, ImmutableUser, User]} */
         String min_lastName = "min(lastName)";
@@ -302,6 +308,9 @@ public interface s { // NOSONAR
         /** Function property(field) name {@code "min(nickName)"} for classes: {@code [ImmutableUser, User]} */
         String min_nickName = "min(nickName)";
 
+        /** Function property(field) name {@code "min(projectId)"} for classes: {@code [EmployeeProject, Project]} */
+        String min_projectId = "min(projectId)";
+
         /** Function property(field) name {@code "min(startDate)"} for classes: {@code [Project]} */
         String min_startDate = "min(startDate)";
 
@@ -310,6 +319,9 @@ public interface s { // NOSONAR
 
         /** Function property(field) name {@code "min(title)"} for classes: {@code [Project]} */
         String min_title = "min(title)";
+
+        /** Function property(field) name {@code "min(userId)"} for classes: {@code [Address, Device]} */
+        String min_userId = "min(userId)";
 
         /** Function property(field) name {@code "max(city)"} for classes: {@code [Address]} */
         String max_city = "max(city)";
@@ -320,8 +332,14 @@ public interface s { // NOSONAR
         /** Function property(field) name {@code "max(email)"} for classes: {@code [ImmutableUser, User]} */
         String max_email = "max(email)";
 
+        /** Function property(field) name {@code "max(employeeId)"} for classes: {@code [Employee, EmployeeProject]} */
+        String max_employeeId = "max(employeeId)";
+
         /** Function property(field) name {@code "max(firstName)"} for classes: {@code [Employee, ImmutableUser, User]} */
         String max_firstName = "max(firstName)";
+
+        /** Function property(field) name {@code "max(id)"} for classes: {@code [Address, Device, ImmutableUser, User]} */
+        String max_id = "max(id)";
 
         /** Function property(field) name {@code "max(lastName)"} for classes: {@code [Employee, ImmutableUser, User]} */
         String max_lastName = "max(lastName)";
@@ -335,6 +353,9 @@ public interface s { // NOSONAR
         /** Function property(field) name {@code "max(nickName)"} for classes: {@code [ImmutableUser, User]} */
         String max_nickName = "max(nickName)";
 
+        /** Function property(field) name {@code "max(projectId)"} for classes: {@code [EmployeeProject, Project]} */
+        String max_projectId = "max(projectId)";
+
         /** Function property(field) name {@code "max(startDate)"} for classes: {@code [Project]} */
         String max_startDate = "max(startDate)";
 
@@ -343,6 +364,9 @@ public interface s { // NOSONAR
 
         /** Function property(field) name {@code "max(title)"} for classes: {@code [Project]} */
         String max_title = "max(title)";
+
+        /** Function property(field) name {@code "max(userId)"} for classes: {@code [Address, Device]} */
+        String max_userId = "max(userId)";
 
     }
 

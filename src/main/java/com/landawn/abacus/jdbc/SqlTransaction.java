@@ -837,7 +837,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             _isForUpdateOnlyStack.push(_isForUpdateOnly);
         }
 
-        if (_conn != null && isolationLevel != IsolationLevel.DEFAULT) {
+        // Skip the connection mutation when the effective level is unchanged: the constructor already
+        // applied the requested isolation for the outermost scope (where _isolationLevel equals the
+        // requested level), and a nested scope re-requesting the current level needs no JDBC call.
+        if (_conn != null && isolationLevel != IsolationLevel.DEFAULT && isolationLevel != _isolationLevel) {
             try {
                 _conn.setTransactionIsolation(isolationLevel.intValue());
             } catch (final SQLException e) {

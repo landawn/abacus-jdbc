@@ -273,6 +273,39 @@ public class DataTransferUtilIntegrationTest extends TestBase {
                         .to(ds, CSV_INSERT_SQL));
     }
 
+    // The remaining mutually-exclusive strategy combinations (the test above covers columns+parameterSetter):
+    // columns+columnTypes, columnTypes+parameterSetter, and all three configured at once are equally rejected.
+    @SuppressWarnings("rawtypes")
+    @Test
+    public void testImportFrom_RemainingMutuallyExclusiveStrategyPairs_Throw() throws SQLException {
+        final Map<String, Type> columnTypeMap = Map.of("id", Type.of(Long.class), "name", Type.of(String.class), "amount", Type.of(Double.class));
+
+        // columns + columnTypes
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importFrom(threeRowDataset())
+                        .columns(List.of("id", "name", "amount"))
+                        .columnTypes(columnTypeMap)
+                        .to(ds, CSV_INSERT_SQL));
+
+        // columnTypes + parameterSetter
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importFrom(threeRowDataset())
+                        .columnTypes(columnTypeMap)
+                        .parameterSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
+                        .to(ds, CSV_INSERT_SQL));
+
+        // all three strategies at once
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importFrom(threeRowDataset())
+                        .columns(List.of("id", "name", "amount"))
+                        .columnTypes(columnTypeMap)
+                        .parameterSetter((pq, row) -> pq.setLong(1, (Long) row[0]))
+                        .to(ds, CSV_INSERT_SQL));
+
+        // The rejection happens before any row is imported.
+        assertEquals(0, count("csv_tgt"));
+    }
+
     private static final String COPY_SELECT_SQL = "SELECT id, name, amount FROM copy_src";
     private static final String COPY_INSERT_SQL = "INSERT INTO copy_tgt (id, name, amount) VALUES (?, ?, ?)";
 

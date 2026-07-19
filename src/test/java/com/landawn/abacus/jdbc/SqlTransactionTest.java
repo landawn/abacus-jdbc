@@ -430,6 +430,27 @@ public class SqlTransactionTest extends TestBase {
         verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
     }
 
+    // A setTransactionIsolation failure while leaving a nested scope must be retry-safe: the stacks,
+    // the isolation/forUpdateOnly fields AND the ref count are all restored symmetrically, so the
+    // nested scope stays current and a later exit attempt can still succeed.
+    @Test
+    public void testDecrementAndGetRef_NestedExitFailureIsRetrySafe() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false);
+        assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
+
+        // Fail only the first restore back to READ_COMMITTED on the nested exit; the retry succeeds.
+        doThrow(new SQLException("restore failed")).doNothing().when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        assertThrows(UncheckedSQLException.class, transaction::decrementAndGetRef);
+
+        // The failed exit left the nested scope current and the ref count re-armed.
+        assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
+
+        assertEquals(1, transaction.decrementAndGetRef());
+        assertEquals(IsolationLevel.READ_COMMITTED, transaction.isolationLevel());
+    }
+
     @Test
     public void testIsForUpdateOnly() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
@@ -962,23 +983,19 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
-    public void testBeginTransaction_PostConstructionFailure_RestoresConnectionState() throws SQLException {
-        // Constructor's setTransactionIsolation succeeds; the second call (from incrementAndGetRef) throws.
+    public void testBeginTransaction_OutermostScope_AppliesIsolationExactlyOnce() throws SQLException {
+        // The constructor applies the requested isolation; the first incrementAndGetRef must NOT
+        // re-issue the same setTransactionIsolation (redundant driver round-trip). A doThrow on a
+        // hypothetical second call proves the outermost begin never makes one.
         final int serializable = IsolationLevel.SERIALIZABLE.intValue();
-        doThrow(new SQLException("transient")).doNothing().when(connection).setTransactionIsolation(serializable);
+        doNothing().doThrow(new SQLException("unexpected second isolation call")).when(connection).setTransactionIsolation(serializable);
 
-        // First call (constructor) is rigged to throw to force the failure path AFTER the constructor; rearrange so
-        // that the constructor's isolation set succeeds and the second one fails. Mockito doAnswer chains by order:
-        Mockito.reset(connection);
-        when(connection.getAutoCommit()).thenReturn(true);
-        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
-        doNothing().doThrow(new SQLException("transient")).when(connection).setTransactionIsolation(serializable);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
 
-        assertThrows(UncheckedSQLException.class, () -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE));
+        verify(connection, times(1)).setTransactionIsolation(serializable);
 
-        // resetAndCloseConnection (invoked from JdbcUtil.beginTransaction's failure path) must have restored
-        // both autoCommit and the original isolation level before the connection went back to the pool.
-        verify(connection).setAutoCommit(true);
+        // Ending the outermost scope restores the captured original isolation level.
+        tran.rollbackIfNotCommitted();
         verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
     }
 

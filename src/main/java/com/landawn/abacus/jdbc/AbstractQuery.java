@@ -2158,8 +2158,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
      * @return this AbstractQuery instance for method chaining
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public This setObject(final int parameterIndex, final Object value, final int sqlType) throws SQLException {
@@ -2189,8 +2189,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public This setObject(final int parameterIndex, final Object value, final int sqlType, final int scaleOrLength) throws SQLException {
@@ -2219,8 +2219,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use
      * @return this AbstractQuery instance for method chaining
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
+     * @throws SQLException if a database access error occurs
      */
     public This setObject(final int parameterIndex, final Object value, final SQLType sqlType) throws SQLException {
         checkArgNotNull(sqlType, cs.sqlType);
@@ -2246,8 +2246,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param sqlType the SQL type to use
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
+     * @throws SQLException if a database access error occurs
      */
     public This setObject(final int parameterIndex, final Object value, final SQLType sqlType, final int scaleOrLength) throws SQLException {
         checkArgNotNull(sqlType, cs.sqlType);
@@ -3782,10 +3782,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         final Iterator<? extends T> iter = batchParameters;
         final Type<T> setter = N.typeOf(type);
         try {
-            if (!iter.hasNext()) {
-                return (This) this;
-            }
-
             while (iter.hasNext()) {
                 setter.set(stmt, 1, iter.next());
                 addBatch();
@@ -5403,7 +5399,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs, JdbcUtil.getColumnLabels(rs)));
         } finally {
             closeAfterExecutionIfAllowed();
-
         }
     }
 

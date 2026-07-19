@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -1642,6 +1643,17 @@ public class JdbcTest extends TestBase {
         assertEquals(1L, outputRow[0]);
         assertEquals("John", outputRow[1]);
         assertEquals(25, outputRow[2]);
+    }
+
+    // A null outputRow is rejected up front, before the extractor performs any ResultSet metadata
+    // work on the first call (matching RowExtractorBuilder.build()'s validate-first ordering).
+    @Test
+    @Tag("2025")
+    public void testRowExtractorCreateBy_NullOutputRow_RejectedBeforeMetadataAccess() throws SQLException {
+        final Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class);
+
+        assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, null));
+        verify(mockResultSet, never()).getMetaData();
     }
 
     @Test

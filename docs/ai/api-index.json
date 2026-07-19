@@ -1,8 +1,8 @@
 {
   "library": {
     "name": "abacus-jdbc",
-    "version": "4.8.1",
-    "generated_at": "2026-07-13",
+    "version": "4.8.5",
+    "generated_at": "2026-07-18",
     "java_target": "17",
     "source": {
       "git_sha": "unknown"
@@ -46,7 +46,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This closeAfterExecution(final boolean closeAfterExecution) throws IllegalStateException",
+              "signature": "public This closeAfterExecution(final boolean closeAfterExecution)",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -57,12 +57,7 @@
                   "nullability": "unspecified"
                 }
               ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                }
-              ],
+              "throws": [],
               "javadoc_summary": "Sets whether the PreparedStatement should be closed after execution.",
               "contract": [
                 "Sets whether the PreparedStatement should be closed after execution.",
@@ -3894,7 +3889,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters is null"
+                  "condition": "if {@code parameters} is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -3926,7 +3921,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters is null"
+                  "condition": "if {@code parameters} is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -4193,7 +4188,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters is null"
+                  "condition": "if {@code startParameterIndex} is not positive or {@code parameters} is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -4231,7 +4226,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters is null"
+                  "condition": "if {@code startParameterIndex} is not positive or {@code parameters} is null"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -4269,7 +4264,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters is null"
+                  "condition": "if {@code startParameterIndex} is not positive or {@code parameters} is null"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -4314,7 +4309,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters is null"
+                  "condition": "if {@code startParameterIndex} is not positive or {@code parameters} is null"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -4352,7 +4347,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters is null"
+                  "condition": "if {@code startParameterIndex} is not positive or {@code parameters} is null"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -4403,7 +4398,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if parameters or type is null"
+                  "condition": "if {@code startParameterIndex} is not positive, or if {@code parameters} or {@code type} is null"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -5338,15 +5333,11 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This addBatch() throws IllegalStateException, SQLException",
+              "signature": "public This addBatch() throws SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if a database access error occurs"
@@ -5365,7 +5356,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This setFetchDirection(final FetchDirection direction) throws IllegalStateException, IllegalArgumentException, SQLException",
+              "signature": "public This setFetchDirection(final FetchDirection direction) throws IllegalArgumentException, SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5377,10 +5368,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.lang.IllegalArgumentException",
                   "condition": "if {@code direction} is {@code null}"
@@ -5404,15 +5391,11 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This setFetchDirectionToForward() throws IllegalStateException, SQLException",
+              "signature": "public This setFetchDirectionToForward() throws SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if a database access error occurs"
@@ -5431,7 +5414,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This setFetchSize(final int fetchSize) throws IllegalStateException, SQLException",
+              "signature": "public This setFetchSize(final int fetchSize) throws SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5443,10 +5426,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if a database access error occurs (including a negative {@code fetchSize} rejected by the driver)"
@@ -5467,7 +5446,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This setMaxFieldSize(final int max) throws IllegalStateException, SQLException",
+              "signature": "public This setMaxFieldSize(final int max) throws SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5479,10 +5458,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if a database access error occurs (including a negative {@code max} rejected by the driver)"
@@ -5501,7 +5476,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This setMaxRows(final int max) throws IllegalStateException, SQLException",
+              "signature": "public This setMaxRows(final int max) throws SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5513,10 +5488,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if a database access error occurs (including a negative {@code max} rejected by the driver)"
@@ -5537,7 +5508,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This setLargeMaxRows(final long max) throws IllegalStateException, SQLException",
+              "signature": "public This setLargeMaxRows(final long max) throws SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5549,10 +5520,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if a database access error occurs (including a negative {@code max} rejected by the driver)"
@@ -5573,7 +5540,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public This setQueryTimeout(final int seconds) throws IllegalStateException, SQLException",
+              "signature": "public This setQueryTimeout(final int seconds) throws SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5585,10 +5552,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if a database access error occurs (including a negative {@code seconds} rejected by the driver)"
@@ -5609,7 +5572,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Beta public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalStateException, IllegalArgumentException, SQLException",
+              "signature": "@Beta public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5621,10 +5584,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.lang.IllegalArgumentException",
                   "condition": "if stmtSetter is null"
@@ -5645,7 +5604,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Beta public This configureStatement(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws IllegalStateException, IllegalArgumentException, SQLException",
+              "signature": "@Beta public This configureStatement(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5657,10 +5616,6 @@
                 }
               ],
               "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if this query is already closed"
-                },
                 {
                   "type": "java.lang.IllegalArgumentException",
                   "condition": "if stmtSetter is null"
@@ -10994,7 +10949,9 @@
                 }
               ],
               "javadoc_summary": "Asynchronously executes the provided SQL action using this query instance.",
-              "contract": [],
+              "contract": [
+                "The action must return a materialized value; do not return a JDBC-backed lazy {@link Stream} , because this query is closed when the asynchronous action itself completes."
+              ],
               "examples": [],
               "see_also": [
                 "#callAsync(Throwables.Function, Executor)",
@@ -11043,7 +11000,8 @@
               ],
               "javadoc_summary": "Asynchronously executes the provided SQL action using this query instance with a custom executor.",
               "contract": [
-                "This is useful when you want to control the thread pool used for database operations."
+                "This is useful when you want to control the thread pool used for database operations.",
+                "The action must return a materialized value; do not return a JDBC-backed lazy {@link Stream} , because this query is closed when the asynchronous action itself completes."
               ],
               "examples": [],
               "see_also": [
@@ -11126,162 +11084,6 @@
                 "#runAsync(Throwables.Consumer)",
                 "#callAsync(Throwables.Function)"
               ]
-            },
-            {
-              "name": "callAsync",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "@Deprecated @Beta public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Function<? super This, ? extends R, SQLException>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException"
-                },
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Throwables.Function)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "@Deprecated @Beta public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Function<? super This, ? extends R, SQLException>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "executor",
-                  "type": "Executor",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException"
-                },
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Throwables.Function, Executor)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "@Deprecated @Beta public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction) throws IllegalStateException, IllegalArgumentException",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Consumer<? super This, SQLException>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException"
-                },
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Throwables.Consumer)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "@Deprecated @Beta public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Consumer<? super This, SQLException>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "executor",
-                  "type": "Executor",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException"
-                },
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Throwables.Consumer, Executor)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
             },
             {
               "name": "close",
@@ -13744,7 +13546,9 @@
                 }
               ],
               "javadoc_summary": "Sets multiple parameters from a Map where keys are parameter names and values are parameter values.",
-              "contract": [],
+              "contract": [
+                "If any binding fails, this query is closed because its parameters may have been only partially set."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -13783,7 +13587,9 @@
               ],
               "javadoc_summary": "Sets multiple parameters for this CallableQuery by extracting values from an entity object.",
               "contract": [
-                "Each parameter name in the list should correspond to a property name in the entity object."
+                "Each parameter name in the list should correspond to a property name in the entity object.",
+                "If any binding fails, this query is closed because its parameters may have been only partially set.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Employee employee = new Employee(); employee.setId(1001); employee.setName(\"John Doe\"); employee.setDepartment(\"Sales\"); List<String> paramNames = Arrays.asList(\"id\", \"name\", \"department\"); query.setParameters(employee, paramNames) .execute(); } </pre> <p> If any binding fails, this query is closed because its parameters may have been only partially set."
               ],
               "examples": [],
               "see_also": [
@@ -14563,7 +14369,7 @@
               ],
               "javadoc_summary": "Executes the stored procedure and applies the provided tri-function to process the results with full access to the CallableStatement, OUT parameters, and result type information.",
               "contract": [
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Map<String, Object> results = query.executeThenApply( (stmt, outParams, isResultSet) -> { Map<String, Object> map = new HashMap<>(); // Process OUT parameters for (Jdbc.OutParam param : outParams) { if (param.getParameterName() != null) { map.put(param.getParameterName(), stmt.getObject(param.getParameterName())); } } // Process result set if available if (isResultSet) { ResultSet rs = stmt.getResultSet(); // Add result set data to map } return map; } ); } </pre>"
+                "if (isResultSet) { ResultSet rs = stmt.getResultSet(); // Add result set data to map } // Then read OUT parameters for (Jdbc.OutParam param : outParams) { if (param.parameterName() != null) { map.put(param.parameterName(), stmt.getObject(param.parameterName())); } } return map; } ); } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -14662,7 +14468,7 @@
               ],
               "javadoc_summary": "Executes the stored procedure and applies the provided tri-consumer for processing with full access to all execution results.",
               "contract": [
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code query.executeThenAccept((stmt, outParams, isResultSet) -> { // Log OUT parameters for (Jdbc.OutParam param : outParams) { if (param.getParameterName() != null) { logger.info(param.getParameterName() + \": \" + stmt.getObject(param.getParameterName())); } } // Process first result if (isResultSet) { ResultSet rs = stmt.getResultSet(); // Write results to file or external system } }); } </pre>"
+                "if (isResultSet) { ResultSet rs = stmt.getResultSet(); // Write results to file or external system } // Then log OUT parameters for (Jdbc.OutParam param : outParams) { if (param.parameterName() != null) { logger.info(param.parameterName() + \": \" + stmt.getObject(param.parameterName())); } } }); } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -15766,7 +15572,8 @@
               "contract": [
                 "The lock is released only if the provided {@code code} matches the unique code associated with the currently held lock for that target.",
                 "<p> If the lock is successfully released, the corresponding entry is removed from the database table.",
-                "If the lock does not exist, or if the provided code does not match the stored code, the operation will fail (return {@code false} ).",
+                "If the lock does not exist, or if the provided code does not match the stored code, the operation returns {@code false} .",
+                "When {@code code} matches a lock acquired by this instance, its local refresh entry is removed even if the row is already absent, because this instance no longer owns a database lock to refresh.",
                 "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, \"my_locks_table\"); String resourceIdentifier = \"configuration_update\"; String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000); // Acquire lock for 30s, wait 5s if (lockCode != null) { try { System.out.println(\"Lock acquired for: \" + resourceIdentifier); // Perform configuration update // ...",
                 "} finally { boolean released = dbLock.unlock(resourceIdentifier, lockCode); if (released) { System.out.println(\"Lock successfully released for: \" + resourceIdentifier); } else { System.err.println(\"Failed to release lock for: \" + resourceIdentifier + \"."
               ],
@@ -16334,7 +16141,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>",
-                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row",
+                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -16393,7 +16200,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>",
-                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row",
+                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -16462,7 +16269,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>",
-                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row",
+                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -16828,7 +16635,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , or any key in {@code columnTypeMap} is not a column of the dataset"
+                  "condition": "if {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -16870,7 +16677,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>",
-                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row",
+                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -16923,7 +16730,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>",
-                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row",
+                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -16986,14 +16793,14 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>",
-                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row",
+                  "javadoc": "a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}"
+                  "condition": "if {@code parameterSetter} is {@code null} , {@code batchSize <= 0} , or {@code batchIntervalInMillis < 0}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -17048,7 +16855,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>",
-                  "javadoc": "a BiConsumer to map iterator elements to {@link PreparedQuery} parameters",
+                  "javadoc": "a BiConsumer to map iterator elements to {@link PreparedQuery} parameters; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17117,7 +16924,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>",
-                  "javadoc": "a BiConsumer to map iterator elements to {@link PreparedQuery} parameters",
+                  "javadoc": "a BiConsumer to map iterator elements to {@link PreparedQuery} parameters; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17184,7 +16991,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>",
-                  "javadoc": "a BiConsumer to map iterator elements to {@link PreparedQuery} parameters",
+                  "javadoc": "a BiConsumer to map iterator elements to {@link PreparedQuery} parameters; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17241,7 +17048,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17300,7 +17107,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17345,7 +17152,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17400,7 +17207,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17465,7 +17272,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17516,7 +17323,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17559,7 +17366,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17614,7 +17421,7 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
@@ -17677,14 +17484,14 @@
                 {
                   "name": "parameterSetter",
                   "type": "Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>",
-                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values",
+                  "javadoc": "a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}"
+                  "condition": "if {@code reader} or {@code parameterSetter} is {@code null} , {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , or a data row has more fields than the header"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -18157,7 +17964,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if any specified column name is not found in the ResultSet"
+                  "condition": "if {@code rs} or {@code output} is {@code null} , or if any specified column name is not found in the ResultSet"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -18513,7 +18320,7 @@
                 {
                   "name": "fetchSize",
                   "type": "int",
-                  "javadoc": "the number of rows to fetch at a time (should be larger than batchSize)",
+                  "javadoc": "the JDBC fetch-size hint; must be {@code >= 0} and should be larger than {@code batchSize}",
                   "nullability": "unspecified"
                 },
                 {
@@ -18635,7 +18442,7 @@
                 {
                   "name": "fetchSize",
                   "type": "int",
-                  "javadoc": "the number of rows to fetch at a time (should be larger than batchSize)",
+                  "javadoc": "the JDBC fetch-size hint; must be {@code >= 0} and should be larger than {@code batchSize}",
                   "nullability": "unspecified"
                 },
                 {
@@ -18721,7 +18528,9 @@
                 }
               ],
               "javadoc_summary": "Copies all data from a table with the same name between two database connections.",
-              "contract": [],
+              "contract": [
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code try (Connection sourceConn = sourceDS.getConnection(); Connection targetConn = targetDS.getConnection()) { long rowsCopied = DataTransferUtil.copy(sourceConn, targetConn, \"products\"); System.out.println(\"Copied \" + rowsCopied + \" products\"); } } </pre> <p> <b> &#9888; Warning: </b> {@code sourceConn} and {@code targetConn} should be distinct connections."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -18994,7 +18803,9 @@
                 }
               ],
               "javadoc_summary": "Copies data between databases using custom SQL queries and existing connections.",
-              "contract": [],
+              "contract": [
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (Connection sourceConn = sourceDS.getConnection(); Connection targetConn = targetDS.getConnection()) { String selectSql = \"SELECT * FROM orders WHERE status = 'COMPLETED'\"; String insertSql = \"INSERT INTO completed_orders VALUES (?, ?, ?, ?)\"; long rowsCopied = DataTransferUtil.copy(sourceConn, selectSql, targetConn, insertSql); System.out.println(\"Archived \" + rowsCopied + \" completed orders\"); } } </pre> <p> <b> &#9888; Warning: </b> {@code sourceConn} and {@code targetConn} should be distinct connections."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -19024,7 +18835,7 @@
                 {
                   "name": "fetchSize",
                   "type": "int",
-                  "javadoc": "the number of rows to fetch at a time from the source database",
+                  "javadoc": "the JDBC fetch-size hint for the source statement; must be {@code >= 0}",
                   "nullability": "unspecified"
                 },
                 {
@@ -19146,7 +18957,7 @@
                 {
                   "name": "fetchSize",
                   "type": "int",
-                  "javadoc": "the number of rows to fetch at a time from the source database",
+                  "javadoc": "the JDBC fetch-size hint for the source statement; must be {@code >= 0}",
                   "nullability": "unspecified"
                 },
                 {
@@ -19507,7 +19318,7 @@
                 }
               ],
               "throws": [],
-              "javadoc_summary": "Creates a fluent builder for exporting the rows of the given {@link ResultSet} to CSV, starting from its current position.",
+              "javadoc_summary": "Creates a fluent builder for exporting the rows of the given {@link ResultSet} to CSV.",
               "contract": [],
               "examples": [],
               "see_also": []
@@ -19773,7 +19584,7 @@
                 {
                   "name": "delay",
                   "type": "Duration",
-                  "javadoc": "the delay between completed batches; must not be {@code null} or negative",
+                  "javadoc": "the delay between completed batches; must not be {@code null} , negative, or too large to represent in milliseconds",
                   "nullability": "unspecified"
                 }
               ],
@@ -20011,7 +19822,7 @@
                 {
                   "name": "delay",
                   "type": "Duration",
-                  "javadoc": "the delay between completed batches; must not be {@code null} or negative",
+                  "javadoc": "the delay between completed batches; must not be {@code null} , negative, or too large to represent in milliseconds",
                   "nullability": "unspecified"
                 }
               ],
@@ -20272,7 +20083,7 @@
                 {
                   "name": "fetchSize",
                   "type": "int",
-                  "javadoc": "the fetch size",
+                  "javadoc": "the JDBC fetch-size hint; must be {@code >= 0} when {@code to(...)} is called",
                   "nullability": "unspecified"
                 }
               ],
@@ -20320,7 +20131,7 @@
                 {
                   "name": "delay",
                   "type": "Duration",
-                  "javadoc": "the delay between completed batches; must not be {@code null} or negative",
+                  "javadoc": "the delay between completed batches; must not be {@code null} , negative, or too large to represent in milliseconds",
                   "nullability": "unspecified"
                 }
               ],
@@ -20420,7 +20231,7 @@
                 {
                   "name": "fetchSize",
                   "type": "int",
-                  "javadoc": "the fetch size",
+                  "javadoc": "the JDBC fetch-size hint; must be {@code >= 0} when {@code to(...)} is called",
                   "nullability": "unspecified"
                 }
               ],
@@ -20468,7 +20279,7 @@
                 {
                   "name": "delay",
                   "type": "Duration",
-                  "javadoc": "the delay between completed batches; must not be {@code null} or negative",
+                  "javadoc": "the delay between completed batches; must not be {@code null} , negative, or too large to represent in milliseconds",
                   "nullability": "unspecified"
                 }
               ],
@@ -20591,7 +20402,7 @@
                 {
                   "name": "delay",
                   "type": "Duration",
-                  "javadoc": "the delay between completed batches; must not be {@code null} or negative",
+                  "javadoc": "the delay between completed batches; must not be {@code null} , negative, or too large to represent in milliseconds",
                   "nullability": "unspecified"
                 }
               ],
@@ -20943,7 +20754,7 @@
               ],
               "type": "FetchDirection",
               "value": "new FetchDirection(ResultSet.FETCH_FORWARD)",
-              "javadoc_summary": "Indicates that rows in a {@link ResultSet} will be processed in a forward direction, from the first row to the last."
+              "javadoc_summary": "Indicates that the application expects to traverse a {@link ResultSet} in a forward direction, from the first row toward the last."
             },
             {
               "name": "REVERSE",
@@ -20965,7 +20776,7 @@
               ],
               "type": "FetchDirection",
               "value": "new FetchDirection(ResultSet.FETCH_UNKNOWN)",
-              "javadoc_summary": "Indicates that the order in which rows in a {@link ResultSet} will be processed is unknown."
+              "javadoc_summary": "Indicates that the expected traversal direction of a {@link ResultSet} is unknown."
             }
           ]
         },
@@ -20994,7 +20805,9 @@
               "params": [],
               "throws": [],
               "javadoc_summary": "Returns the raw JDBC integer constant value associated with this {@code IsolationLevel} .",
-              "contract": [],
+              "contract": [
+                "{@code DEFAULT} returns {@code -1} and is a framework sentinel meaning \"leave the connection's current/default isolation unchanged\"; {@link #NONE} describes a connection that does not support transactions and must not be passed to that setter."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -21077,7 +20890,7 @@
               ],
               "type": "IsolationLevel",
               "value": "new IsolationLevel(Connection.TRANSACTION_REPEATABLE_READ)",
-              "javadoc_summary": "Prevents \"dirty reads\" and \"non-repeatable reads.\" At this isolation level, a transaction is guaranteed to read the same data if it re-reads any row within the same transaction."
+              "javadoc_summary": "Prevents \"dirty reads\" and \"non-repeatable reads.\" At this isolation level, a transaction does not observe another transaction's committed modification when it re-reads the same row."
             },
             {
               "name": "SERIALIZABLE",
@@ -24748,7 +24561,8 @@
               "throws": [],
               "javadoc_summary": "Creates a stateful {@code BiRowMapper} with full customization over column filtering, name conversion, and handling of non-matched columns.",
               "contract": [
-                "It should not be cached, shared across different query structures, or used in parallel streams."
+                "It should not be cached, shared across different query structures, or used in parallel streams.",
+                "</p> <p> Positional targets represent a filtered-out column differently: for an array target the column keeps its original index and its slot is left {@code null} , while for a {@code List} target the column is omitted entirely (the list is compacted, so list index no longer equals column index when a filter drops columns)."
               ],
               "examples": [],
               "see_also": []
@@ -24832,7 +24646,8 @@
               "throws": [],
               "javadoc_summary": "Creates a stateful {@code BiRowMapper} with prefix-to-property mapping and an option to ignore non-matched columns.",
               "contract": [
-                "It should not be cached, shared across different query structures, or used in parallel streams."
+                "It should not be cached, shared across different query structures, or used in parallel streams.",
+                "</p> <p> A non-empty {@code prefixAndFieldNameMap} is defensively copied when this method is called; later changes to the caller's map do not alter the returned mapper."
               ],
               "examples": [],
               "see_also": []
@@ -25049,7 +24864,9 @@
               ],
               "throws": [],
               "javadoc_summary": "Creates a {@code BiRowMapper} that maps all columns of a row to an {@code Object[]} .",
-              "contract": [],
+              "contract": [
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code BiRowMapper<Object[]> arrayMapper = BiRowMapper.toArray(ColumnGetter.GET_OBJECT); // When applied to a row: Object[] rowData = arrayMapper.apply(rs, columnLabels); } </pre>"
+              ],
               "examples": [],
               "see_also": []
             },
@@ -25073,7 +24890,9 @@
               ],
               "throws": [],
               "javadoc_summary": "Creates a {@code BiRowMapper} that maps all columns of a row to a {@code List<Object>} .",
-              "contract": [],
+              "contract": [
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code BiRowMapper<List<Object>> listMapper = BiRowMapper.toList(ColumnGetter.GET_OBJECT); // When applied to a row: List<Object> rowData = listMapper.apply(rs, columnLabels); } </pre>"
+              ],
               "examples": [],
               "see_also": []
             },
@@ -25649,6 +25468,7 @@
               "throws": [],
               "javadoc_summary": "Builds and returns a stateful {@code BiRowMapper} that maps each row to an instance of the specified {@code targetClass} .",
               "contract": [
+                "</p> <p> The configured getters are snapshotted when this method is called.",
                 "</p> <p> Note: when {@code targetClass} is a bean class, the returned mapper's {@code apply} method throws an {@link IllegalArgumentException} on its first invocation if a result column cannot be mapped to any property; use {@link #to(Class, boolean)} with {@code true} to ignore unmatched columns."
               ],
               "examples": [],
@@ -26496,7 +26316,8 @@
               "javadoc_summary": "Creates a stateful {@code RowExtractor} with comprehensive customization options, including an entity class for type mapping, an explicit list of column labels, and a prefix map for complex mappings.",
               "contract": [
                 "It should not be reused across queries with different column structures or in parallel streams.",
-                "</p> <p> The returned extractor writes column values into positions {@code 0..columnCount-1} of the {@code outputRow} passed to {@code accept} , so that array must be at least as long as the number of mapped columns; an undersized array raises {@code ArrayIndexOutOfBoundsException} ."
+                "</p> <p> The returned extractor writes column values into positions {@code 0..columnCount-1} of the {@code outputRow} passed to {@code accept} , so that array must be at least as long as the number of mapped columns.",
+                "</p> <p> Non-empty {@code columnLabels} and {@code prefixAndFieldNameMap} inputs are defensively copied when this method is called; later caller mutations do not change the returned extractor."
               ],
               "examples": [],
               "see_also": []
@@ -27873,47 +27694,49 @@
         {
           "fqn": "com.landawn.abacus.jdbc.Jdbc.OutParam",
           "name": "OutParam",
-          "kind": "class",
+          "kind": "record",
           "modifiers": [
             "public",
             "static",
             "final"
           ],
-          "javadoc_summary": "Represents an output parameter for a stored procedure call.",
+          "javadoc_summary": "Immutable descriptor of a JDBC {@code OUT} parameter for a stored procedure or function call.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
           "constructors": [
             {
-              "signature": "public OutParam()",
-              "params": []
-            },
-            {
               "signature": "public OutParam(int parameterIndex, String parameterName, int sqlType, String typeName, int scale)",
+              "javadoc_summary": "Creates an output-parameter descriptor without validating the addressing or SQL metadata.",
               "params": [
                 {
                   "name": "parameterIndex",
                   "type": "int",
+                  "javadoc": "the 1-based parameter index, or a non-positive value for name-based access",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "parameterName",
                   "type": "String",
+                  "javadoc": "the parameter name for name-based access, or {@code null} for index-based access",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "sqlType",
                   "type": "int",
+                  "javadoc": "the JDBC SQL type code",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "typeName",
                   "type": "String",
+                  "javadoc": "the database-specific SQL type name, or {@code null} if it was not supplied",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "scale",
                   "type": "int",
+                  "javadoc": "the registered numeric scale or a sentinel/default value if it was not supplied",
                   "nullability": "unspecified"
                 }
               ]
@@ -27934,103 +27757,65 @@
                 {
                   "name": "parameterIndex",
                   "type": "int",
-                  "javadoc": "the 1-based index of the parameter (must be {@code > 0} ).",
+                  "javadoc": "the 1-based parameter index; must be greater than zero",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "sqlType",
                   "type": "int",
-                  "javadoc": "the SQL type from {@code java.sql.Types} .",
+                  "javadoc": "the JDBC SQL type code, normally a constant from {@link Types}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [],
-              "javadoc_summary": "A factory method to create an {@code OutParam} with the specified index and SQL type.",
+              "javadoc_summary": "Creates a validated index-based output-parameter descriptor with no type name and a scale of zero.",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code OutParam idOut = OutParam.of(1, Types.INTEGER); int idx = idOut.getParameterIndex(); // returns 1 int type = idOut.getSqlType(); // returns Types.INTEGER String name = idOut.getParameterName(); // returns null (index-based registration) // parameterIndex is 1-based and must be greater than 0."
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code OutParam idOut = OutParam.of(1, Types.INTEGER); int index = idOut.parameterIndex(); // 1 int type = idOut.sqlType(); // Types.INTEGER String name = idOut.parameterName(); // null // parameterIndex is 1-based and must be greater than 0."
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "CallableStatement#registerOutParameter(int, int)"
+              ]
             },
             {
-              "name": "getParameterIndex",
-              "kind": "instance",
+              "name": "of",
+              "kind": "static",
               "modifiers": [
-                "public"
+                "public",
+                "static"
               ],
-              "signature": "public int getParameterIndex()",
-              "return_type": "int",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "setParameterIndex",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "public void setParameterIndex(int parameterIndex)",
-              "return_type": "void",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "parameterIndex",
-                  "type": "int",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "getParameterName",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "public String getParameterName()",
-              "return_type": "String",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "setParameterName",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "public void setParameterName(String parameterName)",
-              "return_type": "void",
+              "signature": "public static OutParam of(String parameterName, int sqlType)",
+              "return_type": "OutParam",
               "type_params": [],
               "params": [
                 {
                   "name": "parameterName",
                   "type": "String",
+                  "javadoc": "the parameter name; must not be {@code null} or empty",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "sqlType",
+                  "type": "int",
+                  "javadoc": "the JDBC SQL type code, normally a constant from {@link Types}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [],
+              "javadoc_summary": "Creates a validated name-based output-parameter descriptor with no type name and a scale of zero.",
               "contract": [],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "CallableStatement#registerOutParameter(String, int)"
+              ]
             },
             {
-              "name": "getSqlType",
+              "name": "parameterIndex",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public int getSqlType()",
+              "signature": "public int parameterIndex()",
               "return_type": "int",
               "type_params": [],
               "params": [],
@@ -28040,33 +27825,12 @@
               "see_also": []
             },
             {
-              "name": "setSqlType",
+              "name": "parameterName",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public void setSqlType(int sqlType)",
-              "return_type": "void",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlType",
-                  "type": "int",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "getTypeName",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "public String getTypeName()",
+              "signature": "public String parameterName()",
               "return_type": "String",
               "type_params": [],
               "params": [],
@@ -28076,33 +27840,12 @@
               "see_also": []
             },
             {
-              "name": "setTypeName",
+              "name": "sqlType",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public void setTypeName(String typeName)",
-              "return_type": "void",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "typeName",
-                  "type": "String",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "getScale",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "public int getScale()",
+              "signature": "public int sqlType()",
               "return_type": "int",
               "type_params": [],
               "params": [],
@@ -28112,21 +27855,30 @@
               "see_also": []
             },
             {
-              "name": "setScale",
+              "name": "typeName",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public void setScale(int scale)",
-              "return_type": "void",
+              "signature": "public String typeName()",
+              "return_type": "String",
               "type_params": [],
-              "params": [
-                {
-                  "name": "scale",
-                  "type": "int",
-                  "nullability": "unspecified"
-                }
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "scale",
+              "kind": "instance",
+              "modifiers": [
+                "public"
               ],
+              "signature": "public int scale()",
+              "return_type": "int",
+              "type_params": [],
+              "params": [],
               "throws": [],
               "contract": [],
               "examples": [],
@@ -28468,7 +28220,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code handler} is {@code null} , or if {@code handler} 's class has no canonical name (e.g. an anonymous, local, or lambda-built handler); use {@link #register(String, Handler)} with an explicit qualifier for those."
+                  "condition": "if {@code handler} is {@code null} , or if the qualifier derived by {@link ClassUtil#getCanonicalClassName(Class)} is empty. Use {@link #register(String, Handler)} when an explicit, stable qualifier is required (particularly for anonymous or lambda-built handlers)."
                 }
               ],
               "javadoc_summary": "Registers a handler instance.",
@@ -29036,6 +28788,25 @@
               ],
               "examples": [],
               "see_also": []
+            },
+            {
+              "name": "clear",
+              "kind": "instance",
+              "modifiers": [
+                "default",
+                "public"
+              ],
+              "signature": "default void clear()",
+              "return_type": "void",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "javadoc_summary": "Removes all entries from this cache.",
+              "contract": [
+                "Implementations that own mutable storage should override this method."
+              ],
+              "examples": [],
+              "see_also": []
             }
           ],
           "fields": []
@@ -29267,6 +29038,21 @@
               "contract": [
                 "If the table name can be determined from the cache key, it removes all cache entries whose key references that table (matched case-insensitively)."
               ],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "clear",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "@Override public void clear()",
+              "return_type": "void",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
               "examples": [],
               "see_also": []
             }
@@ -30159,7 +29945,7 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
                   "nullability": "unspecified"
                 }
               ],
@@ -30200,7 +29986,7 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
                   "nullability": "unspecified"
                 }
               ],
@@ -30247,7 +30033,7 @@
                 {
                   "name": "keyColumnNames",
                   "type": "Collection<String>",
-                  "javadoc": "a collection of column names to use in the WHERE clause. Can be {@code null} or empty",
+                  "javadoc": "column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty",
                   "nullability": "unspecified"
                 },
                 {
@@ -30304,7 +30090,7 @@
                 {
                   "name": "keyColumnNames",
                   "type": "Collection<String>",
-                  "javadoc": "a collection of column names to use in the WHERE clause. Can be {@code null} or empty",
+                  "javadoc": "column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty",
                   "nullability": "unspecified"
                 },
                 {
@@ -30430,7 +30216,7 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
                   "nullability": "unspecified"
                 }
               ],
@@ -30471,7 +30257,7 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the column name for the WHERE clause. It is excluded from the SET clause using camelCase-insensitive matching, but is emitted <i> verbatim </i> into the {@code WHERE} clause, so supply the actual database column name (e.g. {@code user_id} , not {@code userId} )",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
                   "nullability": "unspecified"
                 }
               ],
@@ -30518,7 +30304,7 @@
                 {
                   "name": "keyColumnNames",
                   "type": "Collection<String>",
-                  "javadoc": "a collection of column names to use in the WHERE clause. Can be {@code null} or empty",
+                  "javadoc": "column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty",
                   "nullability": "unspecified"
                 },
                 {
@@ -30575,7 +30361,7 @@
                 {
                   "name": "keyColumnNames",
                   "type": "Collection<String>",
-                  "javadoc": "a collection of column names to use in the WHERE clause. Can be {@code null} or empty",
+                  "javadoc": "column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty",
                   "nullability": "unspecified"
                 },
                 {
@@ -30663,7 +30449,7 @@
               "throws": [],
               "javadoc_summary": "Converts an INSERT SQL statement to an UPDATE SQL statement with an optional WHERE clause.",
               "contract": [
-                "</p> <ul> <li> Column and value counts must match or conversion fails.",
+                "</li> <li> Column and value counts must match or conversion fails.",
                 "</li> <li> The WHERE clause is appended only when {@code whereClause} is non-empty."
               ],
               "examples": [],
@@ -30712,7 +30498,7 @@
                 "final"
               ],
               "type": "TriFunction<Class<?>, Class<?>, String, String>",
-              "value": "(entityClass,propClass,propName)->{ if (Comparable.class.isAssignableFrom(propClass)) { return \"min(\" + propName + \")\"; } return null; }",
+              "value": "(entityClass,propClass,propName)->{ if (Comparable.class.isAssignableFrom(ClassUtil.wrap(propClass))) { return \"min(\" + propName + \")\"; } return null; }",
               "javadoc_summary": "Pre-defined function for generating a MIN SQL aggregate expression."
             },
             {
@@ -30723,7 +30509,7 @@
                 "final"
               ],
               "type": "TriFunction<Class<?>, Class<?>, String, String>",
-              "value": "(entityClass,propClass,propName)->{ if (Comparable.class.isAssignableFrom(propClass)) { return \"max(\" + propName + \")\"; } return null; }",
+              "value": "(entityClass,propClass,propName)->{ if (Comparable.class.isAssignableFrom(ClassUtil.wrap(propClass))) { return \"max(\" + propName + \")\"; } return null; }",
               "javadoc_summary": "Pre-defined function for generating a MAX SQL aggregate expression."
             }
           ]
@@ -30744,6 +30530,7 @@
           "constructors": [
             {
               "signature": "public EntityCodeConfig()",
+              "javadoc_summary": "Creates a configuration with all options unset or initialized to their Java default values.",
               "params": []
             },
             {
@@ -33041,7 +32828,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} ."
+                  "condition": "if {@code ds} is {@code null} , or if the database metadata reports a null, empty, or blank product name."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33077,7 +32864,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} ."
+                  "condition": "if {@code conn} is {@code null} , or if the database metadata reports a null, empty, or blank product name."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -38656,7 +38443,8 @@
               "contract": [
                 "Drops the specified table if it exists.",
                 "<p> The method first checks for existence via {@link #tableExists(Connection, String)} and only issues a {@code DROP TABLE} if the table is found.",
-                "If the drop itself fails because the table no longer exists (for example, a concurrent drop), the method returns {@code false} ; any other SQL error is wrapped and rethrown as {@link UncheckedSQLException} ."
+                "If the drop itself fails because the table no longer exists (for example, a concurrent drop), the method returns {@code false} ; any other SQL error is wrapped and rethrown as {@link UncheckedSQLException} .",
+                "For an unquoted simple name, a case-folded, unquoted retry may be attempted when a database stores unquoted identifiers in a canonical case."
               ],
               "examples": [],
               "see_also": []
@@ -39290,603 +39078,6 @@
               "see_also": []
             },
             {
-              "name": "runAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static ContinuableFuture<Void> runAsync(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Runnable<Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Throwables.Runnable)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2) throws IllegalArgumentException",
-              "return_type": "Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>>",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlAction1",
-                  "type": "Throwables.Runnable<Exception>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction2",
-                  "type": "Throwables.Runnable<Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Throwables.Runnable, Throwables.Runnable)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) throws IllegalArgumentException",
-              "return_type": "Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>>",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlAction1",
-                  "type": "Throwables.Runnable<Exception>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction2",
-                  "type": "Throwables.Runnable<Exception>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction3",
-                  "type": "Throwables.Runnable<Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Throwables.Runnable, Throwables.Runnable, Throwables.Runnable)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <T> ContinuableFuture<Void> runAsync(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [
-                {
-                  "name": "T",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "parameter",
-                  "type": "T",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Consumer<? super T, Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Object, Throwables.Consumer)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <T, U> ContinuableFuture<Void> runAsync(final T parameter1, final U parameter2, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [
-                {
-                  "name": "T",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "U",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "parameter1",
-                  "type": "T",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "parameter2",
-                  "type": "U",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.BiConsumer<? super T, ? super U, Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Object, Object, Throwables.BiConsumer)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <A, B, C> ContinuableFuture<Void> runAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [
-                {
-                  "name": "A",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "B",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "C",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "parameter1",
-                  "type": "A",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "parameter2",
-                  "type": "B",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "parameter3",
-                  "type": "C",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.TriConsumer<? super A, ? super B, ? super C, Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Object, Object, Object, Throwables.TriConsumer)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <R> ContinuableFuture<R> callAsync(final Callable<? extends R> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Callable<? extends R>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Callable)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2) throws IllegalArgumentException",
-              "return_type": "Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>>",
-              "type_params": [
-                {
-                  "name": "R1",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "R2",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "sqlAction1",
-                  "type": "Callable<? extends R1>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction2",
-                  "type": "Callable<? extends R2>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Callable, Callable)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2, final Callable<? extends R3> sqlAction3) throws IllegalArgumentException",
-              "return_type": "Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>>",
-              "type_params": [
-                {
-                  "name": "R1",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "R2",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "R3",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "sqlAction1",
-                  "type": "Callable<? extends R1>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction2",
-                  "type": "Callable<? extends R2>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction3",
-                  "type": "Callable<? extends R3>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Callable, Callable, Callable)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <T, R> ContinuableFuture<R> callAsync(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "T",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "parameter",
-                  "type": "T",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Function<? super T, ? extends R, Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Object, Throwables.Function)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <T, U, R> ContinuableFuture<R> callAsync(final T parameter1, final U parameter2, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "T",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "U",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "parameter1",
-                  "type": "T",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "parameter2",
-                  "type": "U",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.BiFunction<? super T, ? super U, ? extends R, Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Object, Object, Throwables.BiFunction)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated @Beta public static <A, B, C, R> ContinuableFuture<R> callAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "A",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "B",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "C",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                },
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "parameter1",
-                  "type": "A",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "parameter2",
-                  "type": "B",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "parameter3",
-                  "type": "C",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalArgumentException"
-                }
-              ],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Object, Object, Object, Throwables.TriFunction)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
               "name": "getOutParameters",
               "kind": "static",
               "modifiers": [
@@ -40053,7 +39244,7 @@
               "throws": [],
               "javadoc_summary": "Gets the property names suitable for SELECT operations for the given entity class.",
               "contract": [
-                "This method returns all property names that should be included in a SELECT statement, excluding properties marked with @Transient or other exclusion annotations.",
+                "This method returns all property names that should be included in a SELECT statement, excluding properties marked with {@code @Transient} , {@link JoinedBy} , or other exclusion annotations.",
                 "<p> <b> Usage Examples: </b> </p> <pre> {@code Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class); // Returns property names that should be included in SELECT statement } </pre>"
               ],
               "examples": [],
@@ -40146,7 +39337,7 @@
               "throws": [],
               "javadoc_summary": "Gets the property names suitable for UPDATE operations for the given entity class.",
               "contract": [
-                "This method returns all property names that should be included in an UPDATE statement, excluding properties marked with @ReadOnly, @NonUpdatable, @Id, etc."
+                "This method returns all property names that should be included in an UPDATE statement, excluding properties marked with {@code @ReadOnly} , {@code @NonUpdatable} , {@code @Id} , {@link JoinedBy} , etc."
               ],
               "examples": [],
               "see_also": []
@@ -40378,7 +39569,7 @@
               "javadoc_summary": "Checks if the given value is {@code null} or equals the default value for its type.",
               "contract": [
                 "Checks if the given value is {@code null} or equals the default value for its type.",
-                "A value is considered \"null or default\" when it is {@code null} , a {@link Number} whose {@code doubleValue()} is {@code 0} , the {@link Boolean} {@code false} , or otherwise {@link N#equals(Object, Object) equals} the {@link N#defaultValueOf default value} of its runtime class.",
+                "A value is considered \"null or default\" when it is {@code null} , a numeric zero, the {@link Boolean} {@code false} , or otherwise {@link N#equals(Object, Object) equals} the {@link N#defaultValueOf default value} of its runtime class.",
                 "Reference types (such as {@link String} or any collection) are only considered default when {@code null} ; an empty {@code String} or empty collection is <em> not </em> default."
               ],
               "examples": [],
@@ -40472,7 +39663,7 @@
                 {
                   "name": "maxSqlLogLength",
                   "type": "int",
-                  "javadoc": "the maximum length of SQL statements in logs",
+                  "javadoc": "the maximum length of SQL statements in logs. A value {@code <= 0} falls back to {@link #DEFAULT_MAX_SQL_LOG_LENGTH} ; values of 1-3 are raised to 4, the smallest length the truncation marker supports.",
                   "nullability": "unspecified"
                 }
               ],
@@ -40654,7 +39845,7 @@
                 {
                   "name": "maxSqlLogLength",
                   "type": "int",
-                  "javadoc": "the maximum length of SQL statements in performance logs",
+                  "javadoc": "the maximum length of SQL statements in performance logs. A value {@code <= 0} falls back to {@link #DEFAULT_MAX_SQL_LOG_LENGTH} ; values of 1-3 are raised to 4, the smallest length the truncation marker supports.",
                   "nullability": "unspecified"
                 }
               ],
@@ -40677,86 +39868,6 @@
               "params": [],
               "throws": [],
               "javadoc_summary": "Gets the current minimum execution time threshold for SQL performance logging in the current thread.",
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "sqlPerfLogThresholdMillis",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated public static void sqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis)",
-              "return_type": "void",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlPerfLogThresholdMillis",
-                  "type": "long",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #setSqlPerfLogThresholdMillis(long)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "sqlPerfLogThresholdMillis",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated public static void sqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength)",
-              "return_type": "void",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlPerfLogThresholdMillis",
-                  "type": "long",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "maxSqlLogLength",
-                  "type": "int",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #setSqlPerfLogThresholdMillis(long, int)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "sqlPerfLogThresholdMillis",
-              "kind": "static",
-              "modifiers": [
-                "public",
-                "static"
-              ],
-              "signature": "@Deprecated public static long sqlPerfLogThresholdMillis()",
-              "return_type": "long",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #getSqlPerfLogThresholdMillis()}",
-                "for_removal": false
-              },
               "contract": [],
               "examples": [],
               "see_also": []
@@ -42020,7 +41131,7 @@
               "javadoc_summary": "Default maximum length (in characters) for SQL statements written to the SQL log."
             },
             {
-              "name": "DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG",
+              "name": "DEFAULT_PERF_LOG_THRESHOLD_MILLIS",
               "modifiers": [
                 "public",
                 "static",
@@ -42031,7 +41142,7 @@
               "javadoc_summary": "Default minimum execution time (in milliseconds) for SQL performance logging."
             },
             {
-              "name": "DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG",
+              "name": "DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS",
               "modifiers": [
                 "public",
                 "static",
@@ -42077,38 +41188,7 @@
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
-          "constructors": [
-            {
-              "signature": "public DaoCreationOptions(String targetTableName, Dsl dsl, SqlMapper sqlMapper, Jdbc.DaoCache cache, Executor executor)",
-              "params": [
-                {
-                  "name": "targetTableName",
-                  "type": "String",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "dsl",
-                  "type": "Dsl",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "sqlMapper",
-                  "type": "SqlMapper",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "cache",
-                  "type": "Jdbc.DaoCache",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "executor",
-                  "type": "Executor",
-                  "nullability": "unspecified"
-                }
-              ]
-            }
-          ],
+          "constructors": [],
           "methods": [
             {
               "name": "targetTableName",
@@ -42451,7 +41531,8 @@
               "throws": [],
               "javadoc_summary": "Restores the DAO-cache binding that preceded this scope.",
               "contract": [
-                "Nested scopes must be closed in reverse order."
+                "Nested scopes must be closed in reverse order.",
+                "If this scope was created by {@link JdbcUtil#openDaoCacheScope()} , its internally created cache is cleared first; caller-supplied caches are not cleared."
               ],
               "examples": [],
               "see_also": []
@@ -42607,7 +41688,7 @@
               "throws": [],
               "javadoc_summary": "Sets join property entities for a collection of source entities.",
               "contract": [
-                "If the join property is declared as a {@code List} and the grouped value is already a {@code List} , the list is assigned directly; otherwise a new collection of the declared type is created and populated."
+                "If the grouped value is assignable to the declared collection type, it is assigned directly; otherwise a new collection of the declared type is created and populated."
               ],
               "examples": [],
               "see_also": [
@@ -45807,7 +44888,7 @@
               ],
               "javadoc_summary": "Sets the specified named parameters from an entity (bean/record) by reading the matching properties.",
               "contract": [
-                "<p> For each name in {@code parameterNamesToSet} , the entity must expose a property of the same name (otherwise an {@link IllegalArgumentException} is thrown)."
+                "<p> For each name in {@code parameterNamesToSet} , the entity must expose a property that resolves to that name \\u2014 by exact property name, {@code @Column} name, or the usual case/underscore-insensitive matching (so {@code :user_name} resolves to a {@code userName} property) \\u2014 otherwise an {@link IllegalArgumentException} is thrown."
               ],
               "examples": [],
               "see_also": [
@@ -46111,7 +45192,7 @@
               ],
               "type": "QueryOperation",
               "value": "new QueryOperation()",
-              "javadoc_summary": "General query operation that returns results based on the method return type."
+              "javadoc_summary": "Materializes a query result as a {@code Dataset} ."
             },
             {
               "name": "stream",
@@ -46199,7 +45280,7 @@
               ],
               "type": "QueryOperation",
               "value": "new QueryOperation()",
-              "javadoc_summary": "Executes an {@code UPDATE} or {@code DELETE} (or other data-modifying, non-INSERT) statement and returns the number of affected rows."
+              "javadoc_summary": "Executes an {@code UPDATE} or {@code DELETE} (or other data-modifying, non-INSERT) statement and obtains an {@code int} affected-row count from JDBC."
             },
             {
               "name": "largeUpdate",
@@ -46594,7 +45675,7 @@
               ],
               "javadoc_summary": "Executes the specified {@code Runnable} outside of this transaction context.",
               "contract": [
-                "This method temporarily removes the transaction from the current thread, executes the runnable, and then restores the transaction (only if it was registered on this thread and is still active when {@code cmd} completes).",
+                "This method temporarily removes the transaction from the current thread, executes the runnable, and then restores the transaction (only if it was registered on this thread and is still active or marked rollback-only when {@code cmd} completes).",
                 "<p> This is useful when you need to perform operations that should not be part of the current transaction, such as logging or audit operations that should not be rolled back with the main transaction."
               ],
               "examples": [],
@@ -46638,7 +45719,7 @@
               ],
               "javadoc_summary": "Executes the specified {@code Callable} outside of this transaction context.",
               "contract": [
-                "This method temporarily removes the transaction from the current thread, executes the callable, and then restores the transaction (only if it was registered on this thread and is still active when {@code cmd} completes).",
+                "This method temporarily removes the transaction from the current thread, executes the callable, and then restores the transaction (only if it was registered on this thread and is still active or marked rollback-only when {@code cmd} completes).",
                 "<p> This is useful when you need to perform operations that should not be part of the current transaction and return a result, such as querying data that should not be affected by uncommitted changes."
               ],
               "examples": [],
@@ -48317,7 +47398,8 @@
               "throws": [],
               "javadoc_summary": "Specifies the implementation class for the DAO cache.",
               "contract": [
-                "The implementation must implement {@link DaoCache} and have a public constructor that accepts two parameters: {@code (int capacity, long evictDelay)} ."
+                "The implementation must implement {@link DaoCache} and declare a constructor that accepts two parameters: {@code (int capacity, long evictDelay)} .",
+                "The DAO proxy resolves that exact constructor signature when it creates the cache."
               ],
               "examples": [],
               "see_also": []
@@ -48550,6 +47632,7 @@
               "javadoc_summary": "Controls whether to automatically add a LIMIT clause (or its database equivalent) to single-result {@link com.landawn.abacus.query.condition.Condition Condition} -based query methods declared by {@code Dao} / {@code CrudDao} .",
               "contract": [
                 "<p> When {@code true} , the framework appends: </p> <ul> <li> {@code LIMIT 1} for {@code exists(Condition)} , {@code findFirst(...)} and {@code queryForSingleXxx(...)} variants </li> <li> {@code LIMIT 2} for {@code findOnlyOne(...)} and {@code queryForUniqueXxx(...)} variants (so duplicates can still be detected) </li> </ul> <p> The LIMIT is <em> not </em> added for {@code count(Condition)} (which already issues a {@code SELECT COUNT(*)} ) or for arbitrary user-supplied SQL in {@link Query @Query} methods.",
+                "</p> <p> On SQL Server the limit renders as {@code OFFSET/FETCH} , whose grammar requires an {@code ORDER BY} clause, so this best-effort limit is only added when the supplied condition carries one; conditions without {@code ORDER BY} execute unchanged.",
                 "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(addLimitForSingleQuery = true) public interface ProductDao extends CrudDao<Product, Long, ProductDao> { // Built-in Condition-based methods will have LIMIT 1 appended // when invoked through the proxy."
               ],
               "examples": [],
@@ -48609,7 +47692,7 @@
                 "Controls whether framework-managed join operations (driven by {@code @JoinedBy} entity annotations) can be performed when the join key value is {@code null} or the type's default value.",
                 "When {@code false} (default), an {@code IllegalArgumentException} is thrown at runtime if a null or default join key is encountered.",
                 "When {@code true} , the join query is executed with the null/default key (typically loading no join entities) instead of raising an error.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true) public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> { // @JoinedBy-driven joins are allowed even if the join key is null or zero: // use the inherited JoinEntityHelper methods (e.g."
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true) public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> { // @JoinedBy-driven joins are allowed even if the join key is null or zero: // use inherited JoinEntityHelper methods (for example, loadJoinEntities or loadAllJoinEntities)."
               ],
               "examples": [],
               "see_also": []
@@ -49033,22 +48116,6 @@
           "constructors": [],
           "methods": [
             {
-              "name": "sqlPerfLogThresholdMillis",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG",
-              "return_type": "long",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "javadoc_summary": "Specifies the minimum execution time threshold (in milliseconds) for logging SQL performance.",
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
               "name": "maxSqlLogLength",
               "kind": "instance",
               "modifiers": [
@@ -49067,12 +48134,28 @@
               "see_also": []
             },
             {
+              "name": "sqlPerfLogThresholdMillis",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS",
+              "return_type": "long",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "javadoc_summary": "Specifies the minimum execution time threshold (in milliseconds) for logging SQL performance.",
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
               "name": "daoMethodPerfLogThresholdMillis",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "long daoMethodPerfLogThresholdMillis() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG",
+              "signature": "long daoMethodPerfLogThresholdMillis() default JdbcUtil.DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS",
               "return_type": "long",
               "type_params": [],
               "params": [],
@@ -49208,7 +48291,7 @@
               "throws": [],
               "javadoc_summary": "Specifies the operation type for this query.",
               "contract": [
-                "<p> The operation type influences: </p> <ul> <li> Result set processing strategy </li> <li> Return type handling and conversion </li> <li> Performance optimizations applied by the framework </li> <li> Expected behavior for edge cases (e.g., empty results) </li> </ul> <p> Common operation types: </p> <ul> <li> {@link QueryOperation#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases) </li> <li> {@link QueryOperation#list} - Returns all results as a List </li> <li> {@link QueryOperation#stream} - (Deprecated) Returns results as a Stream; prefer {@link QueryOperation#DEFAULT} with a {@code Stream} return type </li> <li> {@link QueryOperation#findFirst} - Returns the first result wrapped in Optional </li> <li> {@link QueryOperation#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link QueryOperation#exists} - Returns boolean indicating if any results exist </li> <li> {@link QueryOperation#queryForSingle} - Returns a single scalar value </li> <li> {@link QueryOperation#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link QueryOperation#update} - Executes UPDATE/INSERT/DELETE and returns row count </li> <li> {@link QueryOperation#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Existence check @Query(value = \"SELECT 1 FROM users WHERE email = :email\", op = QueryOperation.exists) boolean emailExists(@Bind(\"email\") String email); // Single scalar value @Query(value = \"SELECT COUNT(*) FROM users WHERE active = true\", op = QueryOperation.queryForSingle) long countActiveUsers(); // First result from ordered query @Query(value = \"SELECT * FROM users ORDER BY created_date DESC\", op = QueryOperation.findFirst) Optional<User> findLatestUser(); // At most one match (throws DuplicateResultException if more than one matches; null if none) @Query(value = \"SELECT * FROM users WHERE id = :id\", op = QueryOperation.findOnlyOne) User getUserById(@Bind(\"id\") Long id); // Stream for large result sets (a Stream return type makes the framework stream automatically) @Query(value = \"SELECT * FROM large_table\", fetchSize = 1000) Stream<Record> streamAllRecords(); // Explicit update operation @Query(value = \"DELETE FROM audit_logs WHERE created_date < :cutoff\", op = QueryOperation.update) int purgeOldLogs(@Bind(\"cutoff\") Date cutoff); } </pre> <p> When to specify explicitly: </p> <ul> <li> For existence checks: use {@code QueryOperation.exists} for performance </li> <li> For scalar aggregates: use {@code QueryOperation.queryForSingle} </li> <li> When you need strict validation: use {@code QueryOperation.findOnlyOne} </li> <li> For large result sets: return a {@code Stream} with an appropriate fetch size (the framework streams automatically) </li> </ul> <p> Note: In most cases, {@link QueryOperation#DEFAULT} is sufficient as the framework intelligently determines the appropriate operation based on the SQL statement type and method return type."
+                "<p> The operation type influences: </p> <ul> <li> Result set processing strategy </li> <li> Return type handling and conversion </li> <li> Performance optimizations applied by the framework </li> <li> Expected behavior for edge cases (e.g., empty results) </li> </ul> <p> Common operation types: </p> <ul> <li> {@link QueryOperation#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases) </li> <li> {@link QueryOperation#list} - Returns all results as a List </li> <li> {@link QueryOperation#stream} - (Deprecated) Returns results as a Stream; prefer {@link QueryOperation#DEFAULT} with a {@code Stream} return type </li> <li> {@link QueryOperation#findFirst} - Returns the first result wrapped in Optional </li> <li> {@link QueryOperation#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link QueryOperation#exists} - Returns boolean indicating if any results exist </li> <li> {@link QueryOperation#queryForSingle} - Returns a single scalar value </li> <li> {@link QueryOperation#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable} , otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found </li> <li> {@link QueryOperation#update} - Executes a non-INSERT data-modification statement and returns its row count </li> <li> {@link QueryOperation#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Existence check @Query(value = \"SELECT 1 FROM users WHERE email = :email\", op = QueryOperation.exists) boolean emailExists(@Bind(\"email\") String email); // Single scalar value @Query(value = \"SELECT COUNT(*) FROM users WHERE active = true\", op = QueryOperation.queryForSingle) long countActiveUsers(); // First result from ordered query @Query(value = \"SELECT * FROM users ORDER BY created_date DESC\", op = QueryOperation.findFirst) Optional<User> findLatestUser(); // At most one match (throws DuplicateResultException if more than one matches; null if none) @Query(value = \"SELECT * FROM users WHERE id = :id\", op = QueryOperation.findOnlyOne) User getUserById(@Bind(\"id\") Long id); // Stream for large result sets (a Stream return type makes the framework stream automatically) @Query(value = \"SELECT * FROM large_table\", fetchSize = 1000) Stream<Record> streamAllRecords(); // Explicit update operation @Query(value = \"DELETE FROM audit_logs WHERE created_date < :cutoff\", op = QueryOperation.update) int purgeOldLogs(@Bind(\"cutoff\") Date cutoff); } </pre> <p> When to specify explicitly: </p> <ul> <li> For existence checks: use {@code QueryOperation.exists} for performance </li> <li> For scalar aggregates: use {@code QueryOperation.queryForSingle} </li> <li> When you need strict validation: use {@code QueryOperation.findOnlyOne} </li> <li> For large result sets: return a {@code Stream} with an appropriate fetch size (the framework streams automatically) </li> </ul> <p> Note: In most cases, {@link QueryOperation#DEFAULT} is sufficient as the framework intelligently determines the appropriate operation based on the SQL statement type and method return type."
               ],
               "examples": [],
               "see_also": [
@@ -49636,7 +48719,7 @@
               "throws": [],
               "javadoc_summary": "Specifies the path to the SQL mapper XML file.",
               "contract": [
-                "The path is loaded by {@code SqlMapper.load(...)} at DAO initialization time and is typically interpreted as classpath-relative; the value should include the file extension.",
+                "After surrounding whitespace is trimmed, the location is passed to {@code SqlMapper.loadFrom(...)} at DAO initialization time and should include the file extension.",
                 "<p> Common conventions: </p> <ul> <li> Place mapper files in a resources directory mirroring the package structure </li> <li> Name mapper files after the DAO interface (e.g., UserDao.xml for UserDao interface) </li> <li> Use a dedicated directory like \"sql/\" or \"mappers/\" for organization </li> </ul> <p> Example paths: </p> <pre> {@code @SqlSource(\"sql/UserDao.xml\") // In sql directory @SqlSource(\"com/example/dao/UserDao.xml\") // Package-based path @SqlSource(\"mappers/user-queries.xml\") // Custom naming } </pre> <p> Every SQL id loaded from this resource must be unique across the mapper and any {@link SqlScript} fields declared on the same DAO; a collision fails DAO initialization with {@code IllegalArgumentException} ."
               ],
               "examples": [],
@@ -51231,8 +50314,10 @@
                 }
               ],
               "throws": [],
-              "javadoc_summary": "Executes an asynchronous database operation without return value using default executor.",
-              "contract": [],
+              "javadoc_summary": "Executes an asynchronous database operation without a result value using the default executor.",
+              "contract": [
+                "The returned future should still be observed so database failures are not silently discarded."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -51262,138 +50347,6 @@
               ],
               "throws": [],
               "javadoc_summary": "Executes an asynchronous database operation without return value using specified executor.",
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "instance",
-              "modifiers": [
-                "default",
-                "public"
-              ],
-              "signature": "@Deprecated @Beta @NonDBOperation default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction)",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Function<? super TD, ? extends R, SQLException>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Throwables.Function)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "callAsync",
-              "kind": "instance",
-              "modifiers": [
-                "default",
-                "public"
-              ],
-              "signature": "@Deprecated @Beta @NonDBOperation default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor)",
-              "return_type": "ContinuableFuture<R>",
-              "type_params": [
-                {
-                  "name": "R",
-                  "bounds": [
-                    "java.lang.Object"
-                  ]
-                }
-              ],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Function<? super TD, ? extends R, SQLException>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "executor",
-                  "type": "Executor",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #callAsync(Throwables.Function, Executor)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "instance",
-              "modifiers": [
-                "default",
-                "public"
-              ],
-              "signature": "@Deprecated @Beta @NonDBOperation default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction)",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Consumer<? super TD, SQLException>",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Throwables.Consumer)}",
-                "for_removal": false
-              },
-              "contract": [],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "runAsync",
-              "kind": "instance",
-              "modifiers": [
-                "default",
-                "public"
-              ],
-              "signature": "@Deprecated @Beta @NonDBOperation default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor)",
-              "return_type": "ContinuableFuture<Void>",
-              "type_params": [],
-              "params": [
-                {
-                  "name": "sqlAction",
-                  "type": "Throwables.Consumer<? super TD, SQLException>",
-                  "nullability": "unspecified"
-                },
-                {
-                  "name": "executor",
-                  "type": "Executor",
-                  "nullability": "unspecified"
-                }
-              ],
-              "throws": [],
-              "deprecated": {
-                "is_deprecated": true,
-                "message": "use {@link #runAsync(Throwables.Consumer, Executor)}",
-                "for_removal": false
-              },
               "contract": [],
               "examples": [],
               "see_also": []

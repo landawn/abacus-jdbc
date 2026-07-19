@@ -552,9 +552,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming
      * contexts and lambda expressions.</p>
      *
-     * <p>The implementation handles both collection-type properties (List, Set, etc.) and
-     * single-entity properties. For collection types, all matching join entities are loaded into
-     * the collection. For single-entity properties, only one matching entity is loaded.</p>
+     * <p>The implementation handles collection, map, and scalar properties. Every invocation replaces
+     * the current property value: no match is represented by an empty collection or map, or by
+     * {@code null} for a scalar property. A map-valued join supports at most one matching row and
+     * stores it under the source entity's join key.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -613,7 +614,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * <p>It efficiently loads related entities for multiple parent entities in a single operation,
      * avoiding the N+1 query problem. The implementation typically uses an IN clause to fetch all
      * related entities in one query, then distributes them to the appropriate parent entities based
-     * on the foreign key relationship.</p>
+     * on the foreign key relationship. Existing property values are replaced; parents without a
+     * matching row receive an empty collection or map, or {@code null} for a scalar property.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityReadOps}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts

@@ -40,6 +40,8 @@ import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.Tuple.Tuple3;
@@ -384,6 +386,28 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(3, dao.count(Filters.eq("firstName", "Multi").or(Filters.eq("lastName", "Key"))));
     }
 
+    // batchUpsert de-duplicates lookup keys before splitting them into query batches: equal match
+    // keys landing in different query batches previously returned the same database row more than
+    // once, making the throwing merger report a spurious duplicate result (CrudDao de-dup comment).
+    @Test
+    public void testBatchUpsert_DuplicateMatchKeysAcrossQueryBatches() throws SQLException {
+        final Long existingId = dao.insert(newUser("Dup", "Existing", 80));
+
+        final List<UserAccount> batch = new ArrayList<>();
+        batch.add(newUser("Dup", "First", 81));
+        batch.add(newUser("Dup", "Second", 82));
+        batch.add(newUser("Dup", "Third", 83));
+        batch.add(newUser("Other", "New", 30));
+
+        // batchSize=2 splits the four (pre-dedup) keys into two query batches that share the "Dup" key.
+        final List<UserAccount> result = assertDoesNotThrow(() -> dao.batchUpsert(batch, List.of("firstName"), 2));
+        assertEquals(4, result.size());
+
+        // Still exactly one "Dup" row: the three duplicate-key entities all updated the same existing row.
+        assertEquals(1, dao.count(Filters.eq("firstName", "Dup")));
+        assertEquals(existingId, dao.list(Filters.eq("firstName", "Dup")).get(0).getId());
+    }
+
     // gett with an unknown id returns null and exists is false (no-row branch).
     @Test
     public void testGet_UnknownId_ReturnsNull() throws SQLException {
@@ -679,10 +703,28 @@ public class DaoImplIntegrationTest extends TestBase {
         assertNotNull(bindDao);
         dao.insert(newUser("Bind", "Me", 77));
 
-        // ...that executes queries against the datasource without error.
+        // ...that executes queries against the datasource without error. On SQL Server the
+        // addLimitForSingleQuery auto-limit renders as OFFSET/FETCH, whose grammar requires
+        // ORDER BY, so it must be skipped for this ORDER-BY-less condition instead of
+        // producing an unbuildable query.
         assertDoesNotThrow(() -> {
             bindDao.findFirst(Filters.eq("firstName", "me"));
         });
+    }
+
+    // Companion to testCreateDao: when the condition carries its own ORDER BY, the SQL Server
+    // auto-limit is still added (ORDER BY ... OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY, which H2
+    // also accepts) and findFirst honors the requested order.
+    @Test
+    public void testCreateDao_SqlServerAutoLimit_WithOrderBy() throws SQLException {
+        final SqlDialect sqlDialect = SqlDialect.builder().productInfo(ProductInfo.of("SQL Server", "10")).build();
+        final BindDao bindDao = JdbcUtil.createDao(BindDao.class, ds, sqlDialect);
+        dao.insert(newUser("Srv", "First", 41));
+        dao.insert(newUser("Srv", "Second", 42));
+
+        final Condition orderedCond = Criteria.builder().add(Filters.eq("firstName", "Srv")).orderByDesc("age").build();
+
+        assertEquals("Second", bindDao.findFirst(orderedCond).map(UserAccount::getLastName).orElseNull());
     }
 
     @Test

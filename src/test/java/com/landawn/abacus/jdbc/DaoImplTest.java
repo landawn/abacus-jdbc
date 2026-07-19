@@ -1610,10 +1610,14 @@ public class DaoImplTest extends TestBase {
     }
 
     private static Condition invokeHandleLimit(final Condition cond, final int count) throws Exception {
-        final Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", Condition.class, int.class);
+        return invokeHandleLimit(cond, count, false);
+    }
+
+    private static Condition invokeHandleLimit(final Condition cond, final int count, final boolean skipLimitWithoutOrderBy) throws Exception {
+        final Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", Condition.class, int.class, boolean.class);
         handleLimit.setAccessible(true);
 
-        return (Condition) handleLimit.invoke(null, cond, count);
+        return (Condition) handleLimit.invoke(null, cond, count, skipLimitWithoutOrderBy);
     }
 
     @Test
@@ -1643,19 +1647,44 @@ public class DaoImplTest extends TestBase {
     // with a second LIMIT/FETCH appended — producing invalid SQL on those databases.
     @Test
     public void testHandleLimit_FetchFirstSqlExpressionNotDuplicated() throws Exception {
-        Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", com.landawn.abacus.query.condition.Condition.class, int.class);
-        handleLimit.setAccessible(true);
-
         SqlExpression expr = Filters.expr("id > 0 FETCH FIRST 10 ROWS ONLY");
 
         // Prior bug → wrapped in Criteria with extra FETCH FIRST appended. After fix, returned as-is.
-        Object out = handleLimit.invoke(null, expr, 5);
+        Object out = invokeHandleLimit(expr, 5);
         assertSame(expr, out, "SqlExpression already containing FETCH FIRST must not be re-wrapped");
 
         // Sanity: an SqlExpression containing a plain LIMIT is also returned as-is (already covered before fix).
         SqlExpression limitExpr = Filters.expr("id > 0 LIMIT 10");
-        Object out2 = handleLimit.invoke(null, limitExpr, 5);
+        Object out2 = invokeHandleLimit(limitExpr, 5);
         assertSame(limitExpr, out2, "SqlExpression already containing LIMIT must not be re-wrapped");
+    }
+
+    // skipLimitWithoutOrderBy marks a best-effort limit on a dialect (SQL Server) whose LIMIT renders
+    // as OFFSET/FETCH requiring ORDER BY: the limit is added only when the condition carries one.
+    @Test
+    public void testHandleLimit_SkipLimitWithoutOrderBy() throws Exception {
+        // Bare condition without ORDER BY: returned unchanged, no limit added.
+        final Condition bare = Filters.eq("id", 1);
+        assertSame(bare, invokeHandleLimit(bare, 1, true));
+
+        // Criteria without ORDER BY (and without its own limit): also returned unchanged.
+        final Criteria unordered = Criteria.builder().add(Filters.eq("id", 1)).build();
+        assertSame(unordered, invokeHandleLimit(unordered, 1, true));
+
+        // Criteria carrying ORDER BY: the limit IS added.
+        final Criteria ordered = Criteria.builder().add(Filters.eq("id", 1)).orderByAsc("id").build();
+        final Criteria orderedLimited = (Criteria) invokeHandleLimit(ordered, 1, true);
+        assertNotNull(orderedLimited.limit());
+        assertNotNull(orderedLimited.orderBy());
+
+        // A bare OrderBy condition routes into the built criteria's ORDER BY slot, so the limit stays.
+        final Criteria fromOrderBy = (Criteria) invokeHandleLimit(Filters.orderBy("id"), 1, true);
+        assertNotNull(fromOrderBy.limit());
+        assertNotNull(fromOrderBy.orderBy());
+
+        // Without the flag, a bare condition is wrapped with the framework limit as before.
+        final Criteria wrapped = (Criteria) invokeHandleLimit(bare, 1, false);
+        assertNotNull(wrapped.limit());
     }
 
     @Test

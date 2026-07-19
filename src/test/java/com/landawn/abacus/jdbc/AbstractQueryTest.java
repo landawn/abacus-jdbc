@@ -56,9 +56,12 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.u.OptionalBoolean;
 import com.landawn.abacus.util.u.OptionalByte;
+import com.landawn.abacus.util.u.OptionalChar;
 import com.landawn.abacus.util.u.OptionalDouble;
 import com.landawn.abacus.util.u.OptionalFloat;
+import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.stream.Stream;
@@ -190,6 +193,41 @@ public class AbstractQueryTest extends TestBase {
     public void testSetObject_IntSqlType_Scale_Invalid_ThrowsIAE() {
         // The 4-arg int overload validates sqlType too.
         assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", 99999, 2));
+    }
+
+    // Close-before-throw contract: an invalid sqlType closes the query (checkSqlType → closeSuppressingFailure),
+    // so a later execution attempt fails with ISE instead of running on a half-configured statement.
+    @Test
+    @Tag("2025")
+    public void testSetObject_IntSqlType_Invalid_ClosesQuery() {
+        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", 99999));
+
+        assertTrue(query.isClosed);
+        assertThrows(IllegalStateException.class, () -> query.update());
+    }
+
+    // Mixed-shape batch rows: the first element fixes the row shape; a later element of a different
+    // shape fails with ClassCastException and the query closes on the failure path.
+    @Test
+    @Tag("2025")
+    public void testAddBatchParameters_Iterator_MixedShapes_ClosesQuery() {
+        final List<Object> rows = new ArrayList<>();
+        rows.add(List.of("a"));
+        rows.add(new Object[] { "b" });
+
+        assertThrows(ClassCastException.class, () -> query.addBatchParameters(rows.iterator()));
+        assertTrue(query.isClosed);
+    }
+
+    // An empty typed iterator adds no batch rows and leaves the query open and reusable.
+    @Test
+    @Tag("2025")
+    public void testAddBatchParameters_TypedIterator_Empty_NoOp() throws SQLException {
+        final TestQuery result = query.addBatchParameters(List.<String> of().iterator(), String.class);
+
+        assertSame(query, result);
+        assertFalse(query.isClosed);
+        verify(preparedStatement, never()).addBatch();
     }
 
     @Test
@@ -720,6 +758,55 @@ public class AbstractQueryTest extends TestBase {
         when(rs.next()).thenReturn(false);
         // OptionalChar.empty() is returned; verify it is absent (isEmpty)
         assertTrue(query.queryForChar().isEmpty());
+    }
+
+    // queryForChar() — a row whose column is SQL NULL yields a PRESENT OptionalChar holding (char) 0;
+    // empty() is reserved for the no-row case (documented present-with-default contract).
+    @Tag("2025")
+    @Test
+    public void testQueryForChar_SqlNull_PresentWithDefault() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getString(1)).thenReturn(null);
+
+        assertEquals(OptionalChar.of((char) 0), query.queryForChar());
+    }
+
+    // queryForChar() — an empty string column also maps to a PRESENT (char) 0, per AbstractCharacterType.
+    @Tag("2025")
+    @Test
+    public void testQueryForChar_EmptyString_PresentWithDefault() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getString(1)).thenReturn("");
+
+        assertEquals(OptionalChar.of((char) 0), query.queryForChar());
+    }
+
+    // queryForInt() — SQL NULL maps to a PRESENT OptionalInt.of(0) (ResultSet.getInt contract), not empty().
+    @Tag("2025")
+    @Test
+    public void testQueryForInt_SqlNull_PresentWithZero() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getInt(1)).thenReturn(0);
+
+        assertEquals(OptionalInt.of(0), query.queryForInt());
+    }
+
+    // queryForBoolean() — SQL NULL maps to a PRESENT OptionalBoolean.of(false), not empty().
+    @Tag("2025")
+    @Test
+    public void testQueryForBoolean_SqlNull_PresentWithFalse() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getBoolean(1)).thenReturn(false);
+
+        assertEquals(OptionalBoolean.of(false), query.queryForBoolean());
     }
 
     @Test

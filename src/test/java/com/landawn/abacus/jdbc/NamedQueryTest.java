@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -398,6 +399,16 @@ public class NamedQueryTest extends TestBase {
         assertThrows(ArithmeticException.class, () -> namedQuery.setLong("param1", tooLarge));
 
         verify(mockPreparedStatement).close();
+    }
+
+    // The BigInteger overload guards only the long conversion; a parameter-not-found IAE from the
+    // delegated setLong(name, long) closes the statement exactly once, with no redundant re-close.
+    @Test
+    public void testSetLongBigIntegerUnknownParamClosesOnce() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setLong("nonExistent", BigInteger.ONE));
+
+        verify(mockPreparedStatement, times(1)).close();
+        verify(mockPreparedStatement, never()).setLong(anyInt(), anyLong());
     }
 
     @Test
@@ -3510,6 +3521,50 @@ public class NamedQueryTest extends TestBase {
         List<Object> batch = new ArrayList<>();
         batch.add(42); // Integer, not a bean; paramCount=2
         assertThrows(IllegalArgumentException.class, () -> namedQuery.addBatchParameters(batch.iterator()));
+    }
+
+    // --- addBatchParameters(Iterator): bean elements bind each named parameter via its PropInfo ---
+
+    @Test
+    public void testAddBatchParameters_BeanElements() throws SQLException {
+        final TestEntity e1 = new TestEntity();
+        e1.setParam1("v1");
+        e1.setParam2(1);
+        final TestEntity e2 = new TestEntity();
+        e2.setParam1("v2");
+        e2.setParam2(2);
+
+        namedQuery.addBatchParameters(Arrays.asList(e1, e2).iterator());
+
+        verify(mockPreparedStatement).setString(1, "v1");
+        verify(mockPreparedStatement).setString(1, "v2");
+        verify(mockPreparedStatement).setInt(2, 1);
+        verify(mockPreparedStatement).setInt(2, 2);
+        verify(mockPreparedStatement, times(2)).addBatch();
+        // The bean branch deliberately never clears parameters between rows, so pre-bound
+        // non-property named parameters survive across bean rows.
+        verify(mockPreparedStatement, never()).clearParameters();
+    }
+
+    // --- addBatchParameters(Iterator): null first element followed by a non-null one — the
+    // continuation clears stale bindings and binds the non-null row through the type system ---
+
+    @Test
+    public void testAddBatchParameters_NullFirstThenNonNull() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        List<Object> batch = new ArrayList<>();
+        batch.add(null);
+        batch.add(7);
+        q.addBatchParameters(batch.iterator());
+
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement).setInt(1, 7);
+        verify(mockPreparedStatement, times(2)).addBatch();
+        // Once by addNullBatchParameter for the null row, once by the non-null continuation.
+        verify(mockPreparedStatement, times(2)).clearParameters();
     }
 
     // setNullTypeName map branch - 1 occurrence (L235-236)

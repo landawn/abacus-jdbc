@@ -349,8 +349,8 @@ public final class JoinInfo {
             final Condition cond = Filters.in(right[1], placeholderList); //
             final String inCondToReplace = Strings.repeat("?", placeholderList.size(), ", ");
 
-            final List<String> middleSelectPropNames = N.asList(right[0].substring(right[0].indexOf('.') + 1));
-            final Condition middleEntityCond = Filters.eq(left[1].substring(left[1].indexOf('.') + 1));
+            final List<String> middleSelectPropNames = N.asList(rightMiddlePropName);
+            final Condition middleEntityCond = Filters.eq(leftMiddlePropName);
 
             final Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1,
                     getJoinPropValue(srcPropInfos[0], entity));
@@ -1005,7 +1005,9 @@ public final class JoinInfo {
             final List<Object> propEntities = matchedPropEntities == null ? N.emptyList() : matchedPropEntities;
 
             if (isCollectionProp) {
-                if (joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
+                // A no-match entity must not receive the shared immutable N.emptyList(): callers may mutate
+                // the assigned join collection, so build a fresh mutable collection just like the matched path.
+                if (matchedPropEntities != null && joinPropInfo.clazz.isAssignableFrom(propEntities.getClass())) {
                     joinPropInfo.setPropValue(entity, propEntities);
                 } else {
                     @SuppressWarnings("rawtypes")

@@ -362,8 +362,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
-     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
-     *             prefer the sequential {@link #deleteJoinEntities(Object, Collection)} for transactional deletion
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      */
     @Beta
     @Deprecated
@@ -404,8 +404,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
-     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
-     *             prefer the sequential {@link #deleteJoinEntities(Object, Collection)} for transactional deletion
+     * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
+     *             transaction; prefer {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      */
     @Beta
     @Deprecated
@@ -498,8 +498,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
-     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
-     *             prefer the sequential {@link #deleteJoinEntities(Collection, Collection)} for transactional deletion
+     * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
+     *             transaction; prefer {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      */
     @Beta
     @Deprecated
@@ -537,8 +537,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
-     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
-     *             prefer the sequential {@link #deleteJoinEntities(Collection, Collection)} for transactional deletion
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      */
     @Beta
     @Deprecated
@@ -596,8 +596,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total count of deleted records
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
-     *             prefer the sequential {@link #deleteAllJoinEntities(Object)} for transactional deletion
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
      */
     @Beta
     @Deprecated
@@ -628,8 +628,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}
-     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
-     *             prefer the sequential {@link #deleteAllJoinEntities(Object)} for transactional deletion
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
      */
     @Beta
     @Deprecated
@@ -682,8 +682,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total count of deleted records, or 0 if {@code entities} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
-     *             prefer the sequential {@link #deleteAllJoinEntities(Collection)} for transactional deletion
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
      */
     @Beta
     @Deprecated
@@ -714,8 +714,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}
-     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
-     *             prefer the sequential {@link #deleteAllJoinEntities(Collection)} for transactional deletion
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
      */
     @Beta
     @Deprecated

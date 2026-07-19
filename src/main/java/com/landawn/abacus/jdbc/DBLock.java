@@ -35,7 +35,6 @@ import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.MoreExecutors;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.Strings;
 
 /**
@@ -203,7 +202,6 @@ public final class DBLock {
      * @throws UncheckedSQLException if any database operation fails during initialization (e.g., table creation).
      * @throws IllegalStateException if the lock table cannot be verified after the creation attempt.
      */
-    @SuppressWarnings("deprecation")
     DBLock(final DataSource ds, final String tableName) {
         this.ds = ds;
         final Connection conn = JdbcUtil.getConnection(ds);
@@ -245,31 +243,27 @@ public final class DBLock {
 
         final Runnable refreshTask = () -> {
             if (!targetCodePool.isEmpty()) {
-                final Map<String, LockInfo> m = Objectory.createMap();
-
                 try {
-                    m.putAll(targetCodePool);
-
                     final Connection refreshConn = JdbcUtil.getConnection(ds);
                     try {
                         int refreshed = 0;
                         int staleRemoved = 0;
                         int failed = 0;
 
-                        for (final Map.Entry<String, LockInfo> entry : m.entrySet()) {
+                        // Iterate the ConcurrentHashMap directly: its iteration is weakly consistent and the
+                        // stale-entry removal below is the atomic remove(key, value), so no point-in-time
+                        // snapshot is needed.
+                        for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
                             final LockInfo info = entry.getValue();
-                            if (info == null) {
-                                continue;
-                            }
 
                             // Guard each entry individually: one failing refresh (e.g. a transient DB error
                             // for a single target) must not abort the entire batch and leave the remaining
                             // locks un-refreshed.
                             try {
                                 final Timestamp now = Dates.currentTimestamp();
-                                final Timestamp expiry = expiryTimestamp(now, info.liveTime);
+                                final Timestamp expiry = expiryTimestamp(now, info.liveTime());
 
-                                final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code);
+                                final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code());
 
                                 if (updated == 0) {
                                     // Remove from pool only if the cached lock instance is still present
@@ -305,8 +299,6 @@ public final class DBLock {
                     if (logger.isWarnEnabled()) {
                         logger.warn(e, "Error occurred in DB lock refresh task(active={})", targetCodePool.size());
                     }
-                } finally {
-                    Objectory.recycle(m);
                 }
             }
         };
@@ -675,7 +667,7 @@ public final class DBLock {
         N.checkArgNotEmpty(code, "code");
 
         final LockInfo lockInfo = targetCodePool.get(target);
-        final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code);
+        final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code());
         final boolean unlocked;
 
         try {
