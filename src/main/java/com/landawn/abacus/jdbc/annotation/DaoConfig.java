@@ -45,7 +45,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // The inherited Condition-based single-result methods (e.g. findFirst, findOnlyOne, exists)
  *     // will have a LIMIT clause appended automatically, for example:
- *     //     Optional<User> user = userDao.findFirst(CF.eq("email", email));   // LIMIT 1 added automatically
+ *     //     Optional<User> user = userDao.findFirst(Filters.eq("email", email));   // LIMIT 1 added automatically
  *     // User-supplied SQL in @Query methods is left untouched.
  *
  *     // ID generation will be called if user.id is null or 0

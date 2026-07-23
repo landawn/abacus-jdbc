@@ -899,4 +899,43 @@ public class JdbcUtilIntegrationTest extends TestBase {
             }
         }
     }
+
+    // ResultExtractor.toMergedList(Class, Collection) must merge rows by the supplied composite key,
+    // not by the bean's default @Id. Three rows with distinct ids but two distinct names must collapse
+    // to two entities when merging by "name". (Regression: the collection was previously passed to the
+    // Dataset selectPropNames slot, so merging fell back to the default id and produced three entities.)
+    @Test
+    public void testResultExtractorToMergedList_MergesByGivenCompositeKey() throws SQLException {
+        insertWidget("Alice", 1);
+        insertWidget("Alice", 2);
+        insertWidget("Bob", 3);
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT id, name, qty FROM widget ORDER BY id");
+             ResultSet rs = stmt.executeQuery()) {
+
+            final List<Widget> merged = Jdbc.ResultExtractor.toMergedList(Widget.class, List.of("name")).apply(rs);
+
+            assertEquals(2, merged.size());
+            assertEquals("Alice", merged.get(0).getName());
+            assertEquals("Bob", merged.get(1).getName());
+        }
+    }
+
+    // The single-String merge-key overload merges by the given property in the same way.
+    @Test
+    public void testResultExtractorToMergedList_MergesBySingleGivenKey() throws SQLException {
+        insertWidget("Alice", 1);
+        insertWidget("Alice", 2);
+        insertWidget("Bob", 3);
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT id, name, qty FROM widget ORDER BY id");
+             ResultSet rs = stmt.executeQuery()) {
+
+            final List<Widget> merged = Jdbc.ResultExtractor.toMergedList(Widget.class, "name").apply(rs);
+
+            assertEquals(2, merged.size());
+        }
+    }
 }

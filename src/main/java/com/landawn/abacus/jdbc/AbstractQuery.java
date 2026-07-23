@@ -9797,19 +9797,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     }
      * });
      *
-     * // Process multiple result sets
+     * // Log the affected row count after an update
      * preparedQuery.executeThenAccept(stmt -> {
-     *     boolean hasMoreResults = true;
-     *     while (hasMoreResults) {
-     *         if (stmt.getUpdateCount() != -1) {
-     *             System.out.println("Update count: " + stmt.getUpdateCount());
-     *         } else {
-     *             try (ResultSet rs = stmt.getResultSet()) {
-     *                 processResultSet(rs);
-     *             }
-     *         }
-     *         hasMoreResults = stmt.getMoreResults();
-     *     }
+     *     System.out.println("Rows affected: " + stmt.getUpdateCount());
      * });
      * }</pre>
      *

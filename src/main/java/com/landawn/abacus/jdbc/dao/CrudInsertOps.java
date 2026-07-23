@@ -265,6 +265,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     @Beta

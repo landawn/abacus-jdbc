@@ -1680,7 +1680,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                                  to a property of the entity class
      * @throws SQLException if a database access error occurs while binding the parameters
      * @see Beans#getPropNameList(Class)
-     * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
      */
     public CallableQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException {

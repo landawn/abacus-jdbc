@@ -61,7 +61,7 @@ import java.lang.annotation.Target;
  * // addr.street -> address.street, addr.city -> address.city
  * }</pre>
  *
- * <p><b>Multiple prefixes and a one-to-many merge:</b></p>
+ * <p><b>Single prefix with a one-to-many merge:</b></p>
  * <pre>{@code
  * @PrefixFieldMapping("d=devices")
  * @MergedById

@@ -2786,7 +2786,7 @@ public final class JdbcCodeGenerationUtil {
          * Function to convert database column types to Java field types.
          * Parameters: entity/table name, field name, column name, and the resolved column class name.
          * The class name is already normalized before the converter runs: the {@code java.lang.} prefix is
-         * stripped and boxed numeric types are reduced to primitives (for example {@code java.lang.Integer}
+         * stripped and boxed primitive types are reduced to primitives (for example {@code java.lang.Integer}
          * arrives as {@code int} and {@code oracle.sql.TIMESTAMP} as {@code java.sql.Timestamp}).
          * Example: (entity, field, column, className) -> "int".equals(className) ? "Integer" : className
          */

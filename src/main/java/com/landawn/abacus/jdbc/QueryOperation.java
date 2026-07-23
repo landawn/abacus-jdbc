@@ -29,7 +29,7 @@ package com.landawn.abacus.jdbc;
  *
  * <p>Every constant except {@link #DEFAULT} is deliberately spelled in {@code camelCase} to mirror the name of
  * the corresponding {@link AbstractQuery} terminal operation it selects (for example {@link #findFirst},
- * {@link #queryForSingle}). {@code DEFAULT} is upper-cased because it is a meta-sentinel that maps to no single
+ * {@link #findOnlyOne}). {@code DEFAULT} is upper-cased because it is a meta-sentinel that maps to no single
  * terminal method; this casing difference is intentional, not an inconsistency.</p>
  *
  * @see AbstractQuery

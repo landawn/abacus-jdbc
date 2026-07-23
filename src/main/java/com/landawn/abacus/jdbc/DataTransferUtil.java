@@ -218,7 +218,7 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -251,7 +251,7 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -280,7 +280,7 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(columnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -311,7 +311,7 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(columnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -348,7 +348,7 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(columnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -390,7 +390,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -427,7 +427,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -470,7 +470,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -629,7 +629,7 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(columnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -659,7 +659,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(columnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -697,7 +697,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(columnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -826,7 +826,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
-     * String sql = PSC.insert(columnNameList).into(tableName).sql();
+     * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported

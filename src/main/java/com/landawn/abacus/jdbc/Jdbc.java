@@ -1085,7 +1085,7 @@ public final class Jdbc {
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
          * @throws IllegalArgumentException if {@code targetClass} is {@code null} or not a bean/entity class,
          *         or if {@code idPropNamesForMerge} is {@code null} or empty
-         * @see Dataset#toMergedEntities(Collection, Class)
+         * @see Dataset#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, cs.targetClass);
@@ -1094,8 +1094,9 @@ public final class Jdbc {
 
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
+                final Dataset dataset = JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false);
 
-                return JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false).toMergedEntities(idPropNamesForMerge, targetClass);
+                return dataset.toMergedEntities(idPropNamesForMerge, dataset.columnNames(), targetClass);
             };
         }
 

@@ -1691,8 +1691,12 @@ public final class JdbcUtil {
 
             try {
                 currentRow = rs.getRow();
+
+                if (currentRow == 0 && rs.isAfterLast()) {
+                    return 0;
+                }
             } catch (final SQLException e) {
-                logger.warn(e, "Failed to call ResultSet.getRow(); falling back to manual iteration");
+                logger.warn(e, "Failed to call ResultSet.getRow()/isAfterLast(); falling back to manual iteration");
 
                 long skipped = 0;
 
@@ -1701,10 +1705,6 @@ public final class JdbcUtil {
                 }
 
                 return skipped;
-            }
-
-            if (currentRow == 0 && rs.isAfterLast()) {
-                return 0;
             }
 
             long skipped = 0;
@@ -3241,7 +3241,7 @@ public final class JdbcUtil {
      * try (Connection conn = dataSource.getConnection()) {
      *     // If closeAfterExecution(false) is not called,
      *     // there is no need to place the query instance in a try-with-resources block to close it.
-     *     User user = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findOnlyOne(User.class);
+     *     User user = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findOnlyOneOrNull(User.class);
      *     // ...
      * } catch (SQLException e) {
      *     // Handle exceptions

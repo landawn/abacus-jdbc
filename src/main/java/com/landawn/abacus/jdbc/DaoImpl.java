@@ -759,7 +759,7 @@ final class DaoImpl {
         }
 
         // java.util.Optional/OptionalInt/OptionalLong/OptionalDouble return types are rejected unconditionally
-        // at proxy creation before this factory is invoked, so only u.Optional/Nullable can appear here.
+        // at proxy creation before this factory is invoked, so of the Optional family only the u.* optionals/Nullable can appear here.
         if (u.Optional.class.isAssignableFrom(returnType) && !(queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne
                 || queryOperation == QueryOperation.queryForSingle || queryOperation == QueryOperation.queryForUnique
                 || queryOperation == QueryOperation.DEFAULT)) {
