@@ -485,14 +485,14 @@ public final class JdbcCodeGenerationUtil {
 
         final String finalClassName = Strings.isEmpty(className) ? deriveClassName(entityName) : className;
 
-        if (!isValidJavaIdentifier(finalClassName)) {
+        if (!Strings.isValidJavaIdentifier(finalClassName)) {
             throw new IllegalArgumentException(
                     "Generated class name '" + finalClassName + "' is not a valid Java identifier. Configure EntityCodeConfig.className with a valid name");
         }
 
         if (Strings.isNotEmpty(packageName)) {
             for (final String packagePart : packageName.split("\\.", -1)) {
-                if (!isValidJavaIdentifier(packagePart)) {
+                if (!Strings.isValidJavaIdentifier(packagePart)) {
                     throw new IllegalArgumentException("Package name '" + packageName + "' is not a valid Java package name");
                 }
             }
@@ -598,7 +598,7 @@ public final class JdbcCodeGenerationUtil {
                                 : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
                         : mapColumnClassName(ClassUtil.getCanonicalClassName(customFieldMapping.fieldType()), true, configToUse);
 
-                if (!isValidJavaIdentifier(fieldName)) {
+                if (!Strings.isValidJavaIdentifier(fieldName)) {
                     throw new IllegalArgumentException("Generated field name '" + fieldName + "' for column '" + columnName
                             + "' is not a valid Java identifier. Override EntityCodeConfig.fieldNameConverter or customFieldMappings");
                 }
@@ -2589,7 +2589,7 @@ public final class JdbcCodeGenerationUtil {
         for (final String columnLabel : columnLabelList) {
             final String parameterName = Strings.toCamelCase(columnLabel);
 
-            if (!isValidJavaIdentifier(parameterName)) {
+            if (!Strings.isValidJavaIdentifier(parameterName)) {
                 throw new IllegalArgumentException(
                         "Column '" + columnLabel + "' in table '" + tableName + "' does not map to a valid named parameter: " + parameterName);
             }
@@ -2718,33 +2718,6 @@ public final class JdbcCodeGenerationUtil {
         }
 
         return Strings.capitalize(Strings.toCamelCase(simpleEntityName));
-    }
-
-    private static boolean isValidJavaIdentifier(final String identifier) {
-        if (Strings.isEmpty(identifier) || Strings.isJavaKeyword(identifier)) {
-            return false;
-        }
-
-        int offset = 0;
-        int codePoint = identifier.codePointAt(offset);
-
-        if (!Character.isJavaIdentifierStart(codePoint)) {
-            return false;
-        }
-
-        offset += Character.charCount(codePoint);
-
-        while (offset < identifier.length()) {
-            codePoint = identifier.codePointAt(offset);
-
-            if (!Character.isJavaIdentifierPart(codePoint)) {
-                return false;
-            }
-
-            offset += Character.charCount(codePoint);
-        }
-
-        return true;
     }
 
     private static String getTableColumnNameQuoteString(final ProductInfo dbProductInfo) {

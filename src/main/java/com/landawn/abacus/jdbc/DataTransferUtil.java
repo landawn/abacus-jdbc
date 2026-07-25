@@ -61,7 +61,6 @@ import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.SK;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
-import com.landawn.abacus.util.stream.CharStream;
 
 /**
  * Utility class for database import/export operations, CSV processing, and data copying between databases.
@@ -715,7 +714,7 @@ public final class DataTransferUtil {
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(columnNames, "columnNames");
-        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -846,7 +845,7 @@ public final class DataTransferUtil {
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
-        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 //NOSONAR
                 batchSize, batchIntervalInMillis);
@@ -1001,7 +1000,7 @@ public final class DataTransferUtil {
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
-        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, "parameterSetter");
@@ -1242,7 +1241,7 @@ public final class DataTransferUtil {
     private static <T> long importData(final Iterator<? extends T> iter, final Predicate<? super T> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
         N.checkArgNotNull(iter, "iter");
-        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgNotNull(parameterSetter, "parameterSetter");
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -1513,7 +1512,7 @@ public final class DataTransferUtil {
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
             throws SQLException {
         N.checkArgNotNull(file, "file");
-        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgNotNull(parameterSetter, "parameterSetter");
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -1717,7 +1716,7 @@ public final class DataTransferUtil {
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(reader, "reader");
-        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgNotNull(parameterSetter, "parameterSetter");
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
@@ -2054,7 +2053,7 @@ public final class DataTransferUtil {
      *
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
-     * @param output the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if doesn't exist; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
@@ -2230,7 +2229,7 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final Writer output) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(rs, "rs");
+        N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotNull(output, "output");
 
         final Type<Object> strType = N.typeOf(String.class);
@@ -2975,7 +2974,7 @@ public final class DataTransferUtil {
     }
 
     private static String checkTableName(final String tableName, final ProductInfo dbProductInfo) {
-        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
+        final String quote = getTableColumnNameQuoteString(dbProductInfo);
 
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
         final boolean[] explicitlyDelimitedParts = explicitlyDelimitedIdentifierParts(tableName, parts.length);
@@ -3004,7 +3003,7 @@ public final class DataTransferUtil {
     private static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
         N.checkArgNotBlank(columnName, cs.columnName);
 
-        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
+        final String quote = getTableColumnNameQuoteString(dbProductInfo);
 
         if (startsWithIdentifierDelimiter(columnName)) {
             final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(columnName, "columnName");
@@ -3087,14 +3086,24 @@ public final class DataTransferUtil {
             return false;
         }
 
-        return CharStream.of(identifier).skip(1).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_');
+        for (int i = 1, len = identifier.length(); i < len; i++) {
+            final char ch = identifier.charAt(i);
+
+            if (!(Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_')) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static String quoteIdentifier(final String identifier, final String quote) {
+        // Escape any embedded quote character by doubling it, then wrap, so identifiers containing
+        // the active quote char produce valid SQL instead of unbalanced/injectable output.
         return quote + identifier.replace(quote, quote + quote) + quote;
     }
 
-    private static String getTableColumnNameQuoteChar(final ProductInfo dbProductInfo) {
+    private static String getTableColumnNameQuoteString(final ProductInfo dbProductInfo) {
         return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.name(), "MySQL", "MariaDB") ? "`" : "\"";
     }
 
@@ -3994,7 +4003,7 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CsvExportBuilder exportCsvFrom(final PreparedStatement stmt) {
-        N.checkArgNotNull(stmt, "stmt");
+        N.checkArgNotNull(stmt, cs.stmt);
 
         return new CsvExportBuilder(null, null, stmt, null, null);
     }
@@ -4009,7 +4018,7 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CsvExportBuilder exportCsvFrom(final ResultSet rs) {
-        N.checkArgNotNull(rs, "rs");
+        N.checkArgNotNull(rs, cs.rs);
 
         return new CsvExportBuilder(null, null, null, rs, null);
     }

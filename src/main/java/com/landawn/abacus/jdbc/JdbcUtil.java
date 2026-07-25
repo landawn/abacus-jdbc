@@ -348,7 +348,7 @@ public final class JdbcUtil {
 
     static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = ThreadLocal.withInitial(() -> new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH));
 
-    static final ThreadLocal<SqlLogConfig> perfLogThresholdMillis_TL = ThreadLocal
+    static final ThreadLocal<SqlLogConfig> sqlPerfLogThresholdMillis_TL = ThreadLocal
             .withInitial(() -> new SqlLogConfig(DEFAULT_PERF_LOG_THRESHOLD_MILLIS, DEFAULT_MAX_SQL_LOG_LENGTH));
 
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
@@ -6030,7 +6030,7 @@ public final class JdbcUtil {
     }
 
     static ResultSet executeQuery(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -6057,7 +6057,7 @@ public final class JdbcUtil {
     }
 
     static int executeUpdate(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -6080,7 +6080,7 @@ public final class JdbcUtil {
     }
 
     static long executeLargeUpdate(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -6103,7 +6103,7 @@ public final class JdbcUtil {
     }
 
     static int[] executeBatch(final Statement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -6134,7 +6134,7 @@ public final class JdbcUtil {
     }
 
     static long[] executeLargeBatch(final Statement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -6210,7 +6210,7 @@ public final class JdbcUtil {
     }
 
     static boolean execute(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -10308,7 +10308,7 @@ public final class JdbcUtil {
      *        length the truncation marker supports.
      */
     public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
-        final SqlLogConfig config = perfLogThresholdMillis_TL.get();
+        final SqlLogConfig config = sqlPerfLogThresholdMillis_TL.get();
         // synchronized (sqlPerfLogThresholdMillis_TL) {
         if (logger.isDebugEnabled() && config.sqlPerfLogThresholdMillis != sqlPerfLogThresholdMillis) {
             if (sqlPerfLogThresholdMillis >= 0) {
@@ -10335,7 +10335,7 @@ public final class JdbcUtil {
      * @return the minimum execution time in milliseconds (default is 1000ms)
      */
     public static long getSqlPerfLogThresholdMillis() {
-        return perfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis;
+        return sqlPerfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis;
     }
 
     /**
@@ -10597,7 +10597,8 @@ public final class JdbcUtil {
      * @param ds the DataSource for which to begin the transaction
      * @param isolationLevel the isolation level for the transaction
      * @return a SqlTransaction object representing the new transaction
-     * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}
+     * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
+     *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level
      * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
@@ -10640,7 +10641,8 @@ public final class JdbcUtil {
      * @param isolationLevel the isolation level for the transaction
      * @param isForUpdateOnly whether this transaction is only for update operations
      * @return a SqlTransaction object representing the transaction
-     * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}
+     * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
+     *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level
      * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
      * @see JdbcUtil#getConnection(javax.sql.DataSource)
      * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)

@@ -83,8 +83,8 @@ public enum IsolationLevel {
      * Corresponds to {@link Connection#TRANSACTION_NONE}.
      *
      * <p>This is a descriptive value returned by JDBC for a connection that does not support
-     * transactions. It is not a usable isolation level for beginning a transaction and should
-     * not be passed to {@code JdbcUtil.beginTransaction(...)}.</p>
+     * transactions. It is not a usable isolation level for beginning a transaction: passing it to
+     * {@code JdbcUtil.beginTransaction(...)} throws {@link IllegalArgumentException}.</p>
      *
      * @deprecated This isolation level is rarely encountered in modern relational databases and
      *             cannot be used to begin a transaction.

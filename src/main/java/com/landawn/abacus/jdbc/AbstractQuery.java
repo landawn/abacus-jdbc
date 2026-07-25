@@ -2981,7 +2981,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the array of long values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public This setParametersFrom(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
@@ -3008,7 +3008,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the array of String values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public This setParametersFrom(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
@@ -3037,7 +3037,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the array of values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public <T> This setParametersFrom(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
@@ -3075,7 +3075,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param startParameterIndex the starting parameter index (1-based)
      * @param parameters the collection of values to set
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive or {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public This setParametersFrom(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
@@ -3126,7 +3126,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameters the collection of values to set
      * @param type the class type of the parameters
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive, or if {@code parameters} or {@code type} is null
+     * @throws IllegalArgumentException if {@code startParameterIndex} is not positive, or if {@code parameters} or {@code type} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public <T> This setParametersFrom(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)

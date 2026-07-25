@@ -5621,11 +5621,12 @@ final class DaoImpl {
 
                             final Class<?> firstReturnEleType = getFirstReturnEleType(method);
 
+                            // java.util.Optional return types are already rejected unconditionally above,
+                            // so only u.Optional can reach here.
                             if (!(((Collection.class.isAssignableFrom(returnType)
                                     && (queryOperation == QueryOperation.list || queryOperation == QueryOperation.DEFAULT))
-                                    || ((u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType))
-                                            && (queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne
-                                                    || queryOperation == QueryOperation.DEFAULT)))
+                                    || (u.Optional.class.isAssignableFrom(returnType) && (queryOperation == QueryOperation.findFirst
+                                            || queryOperation == QueryOperation.findOnlyOne || queryOperation == QueryOperation.DEFAULT)))
                                     && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
                                 throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
                                         + ") annotated by @MergedById must be: Optional/List/Collection<? super " + ClassUtil.getSimpleClassName(entityClass)
@@ -6015,7 +6016,7 @@ final class DaoImpl {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
                             final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
@@ -6061,7 +6062,7 @@ final class DaoImpl {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
                             final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
@@ -6140,7 +6141,7 @@ final class DaoImpl {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
                                 final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
@@ -6218,7 +6219,7 @@ final class DaoImpl {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.perfLogThresholdMillis_TL.get();
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
                                 final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
