@@ -123,17 +123,17 @@ public @interface MappedByKey {
      * // Maintain insertion order
      * @Query("SELECT * FROM users ORDER BY created_date")
      * @MappedByKey(value = "id", mapClass = LinkedHashMap.class)
-     * LinkedHashMap<Long, User> getUsersInCreationOrder();
+     * LinkedHashMap<Long, User> getUsersInCreationOrder() throws SQLException;
      *
      * // Sorted by key
      * @Query("SELECT * FROM products")
      * @MappedByKey(value = "productCode", mapClass = TreeMap.class)
-     * TreeMap<String, Product> getProductsSortedByCode();
+     * TreeMap<String, Product> getProductsSortedByCode() throws SQLException;
      *
      * // Thread-safe map
      * @Query("SELECT * FROM config")
      * @MappedByKey(value = "key", mapClass = ConcurrentHashMap.class)
-     * ConcurrentHashMap<String, Config> getConfigMap();
+     * ConcurrentHashMap<String, Config> getConfigMap() throws SQLException;
      * }</pre>
      *
      * @return the {@code Map} implementation class to instantiate; defaults to {@link HashMap}

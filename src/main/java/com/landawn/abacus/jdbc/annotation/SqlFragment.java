@@ -49,7 +49,7 @@ import java.lang.annotation.Target;
  *     User findById(
  *         @SqlFragment("schema") String schema,    // e.g., "tenant_a"
  *         @SqlFragment("table")  String table,     // e.g., "users"
- *         @Bind("id")            long id);
+ *         @Bind("id")            long id) throws SQLException;
  * }
  * }</pre>
  *
@@ -59,7 +59,7 @@ import java.lang.annotation.Target;
  *        fragmentsContainNamedParameters = true)
  * List<Promotion> findActive(
  *     @SqlFragment("whereClause") String whereClause,
- *     @Bind("minDiscount")        int    minDiscount);
+ *     @Bind("minDiscount")        int    minDiscount) throws SQLException;
  *
  * // Caller:
  * dao.findActive("discount >= :minDiscount AND status = 'ACTIVE'", 10);
@@ -89,13 +89,13 @@ public @interface SqlFragment {
      *     @SqlFragment("schema") String schemaName,
      *     @SqlFragment("table") String tableName,
      *     @Bind("id") long id
-     * );
+     * ) throws SQLException;
      * }</pre>
      *
      * <p>Using the method parameter name (requires {@code -parameters}):</p>
      * <pre>{@code
      * @Query("SELECT {columns} FROM users")
-     * List<Map<String, Object>> findWithColumns(@SqlFragment String columns);
+     * List<Map<String, Object>> findWithColumns(@SqlFragment String columns) throws SQLException;
      * // The parameter name "columns" is used as the template-variable name
      * }</pre>
      *

@@ -43,7 +43,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, readOnlyDataSource);
  *
  * // Query operations work without checked exception handling:
- * Optional<User> user = userDao.get(userId);
+ * com.landawn.abacus.util.u.Optional<User> user = userDao.get(userId);
  * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
  * boolean exists = userDao.exists(Filters.eq("email", "test@example.com"));
  * int count = userDao.count(Filters.gt("age", 18));
@@ -52,9 +52,9 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
  * List<User> usersFound = userIds.stream()
  *     .map(id -> userDao.get(id))
- *     .filter(Optional::isPresent)
- *     .map(Optional::get)
- *     .collect(Collectors.toList());
+ *     .filter(result -> result.isPresent())
+ *     .map(result -> result.get())
+ *     .toList();
  *
  * // Write operations are absent from the type and do not compile:
  * // userDao.insert(user);     // does not compile

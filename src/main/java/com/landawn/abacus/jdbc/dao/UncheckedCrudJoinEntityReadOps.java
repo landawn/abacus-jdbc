@@ -52,7 +52,7 @@ import com.landawn.abacus.util.u.Optional;
  * Optional<User> user = userDao.get(userId, true);
  *
  * // Get user with specific related entities
- * User user = userDao.gett(userId, Order.class);
+ * User userWithOrders = userDao.gett(userId, Order.class);
  *
  * // Batch get users with their profiles
  * List<User> users = userDao.batchGet(

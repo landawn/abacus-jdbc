@@ -1262,8 +1262,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
-     * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "order", excludedColumns);
-     * // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (?, ?, ?)"
+     * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "orders", excludedColumns);
+     * // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (?, ?, ?)"
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1290,8 +1290,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
-     *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order", excludedColumns);
-     *     // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (?, ?, ?)"
+     *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "orders", excludedColumns);
+     *     // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (?, ?, ?)"
      * }
      * }</pre>
      *
@@ -1406,8 +1406,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
-     * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "order", excludedColumns);
-     * // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
+     * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "orders", excludedColumns);
+     * // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1435,8 +1435,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
-     *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "order", excludedColumns);
-     *     // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
+     *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "orders", excludedColumns);
+     *     // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
      * }
      * }</pre>
      *
@@ -1626,9 +1626,9 @@ public final class JdbcCodeGenerationUtil {
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * List<String> keyColumnNames = Arrays.asList("id", "status");
      * String customWhere = "version > 1";
-     * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "order",
+     * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "orders",
      *                                                            excludedColumns, keyColumnNames, customWhere);
-     * // Returns: "UPDATE order SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND version > 1"
+     * // Returns: "UPDATE orders SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND version > 1"
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1667,9 +1667,9 @@ public final class JdbcCodeGenerationUtil {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      *     List<String> keyColumnNames = Arrays.asList("id", "status");
      *     String customWhere = "version > 1";
-     *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "order",
+     *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "orders",
      *                                                                excludedColumns, keyColumnNames, customWhere);
-     *     // Returns: "UPDATE order SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND version > 1"
+     *     // Returns: "UPDATE orders SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND version > 1"
      * }
      * }</pre>
      *
@@ -1892,8 +1892,8 @@ public final class JdbcCodeGenerationUtil {
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * List<String> keyColumns = Arrays.asList("id", "status");
-     * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "order", excludedColumns, keyColumns, "version > 1");
-     * // Returns: "UPDATE order SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND version > 1"
+     * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "orders", excludedColumns, keyColumns, "version > 1");
+     * // Returns: "UPDATE orders SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND version > 1"
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1932,9 +1932,9 @@ public final class JdbcCodeGenerationUtil {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      *     List<String> keyColumnNames = Arrays.asList("id", "status");
      *     String customWhere = "version > 1";
-     *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order",
+     *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "orders",
      *                                                                      excludedColumns, keyColumnNames, customWhere);
-     *     // Returns: "UPDATE order SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND version > 1"
+     *     // Returns: "UPDATE orders SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND version > 1"
      * }
      * }</pre>
      *
@@ -2160,7 +2160,8 @@ public final class JdbcCodeGenerationUtil {
                     sb.append(", ");
                 }
 
-                sb.append(checkColumnName(stripIdentifierDelimiters(columnNames.get(i)), dbProductInfo));
+                final String columnName = columnNames.get(i);
+                sb.append(checkColumnName(stripIdentifierDelimiters(columnName), dbProductInfo, isDelimitedIdentifier(columnName)));
                 sb.append(" = ").append(values.get(i));
             }
 
@@ -2459,9 +2460,10 @@ public final class JdbcCodeGenerationUtil {
     private static String checkTableName(final String tableName, final ProductInfo dbProductInfo) {
         final String quote = getTableColumnNameQuoteString(dbProductInfo);
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
+        final List<Boolean> explicitlyDelimitedParts = getExplicitlyDelimitedIdentifierParts(tableName);
 
         if (parts.length == 1) {
-            return isSimpleSqlIdentifier(parts[0]) ? parts[0] : quoteIdentifier(parts[0], quote);
+            return !explicitlyDelimitedParts.get(0) && isSimpleSqlIdentifier(parts[0]) ? parts[0] : quoteIdentifier(parts[0], quote);
         }
 
         final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
@@ -2471,20 +2473,70 @@ public final class JdbcCodeGenerationUtil {
                 sb.append('.');
             }
 
-            // Same conditional quoting as the single-part path: unconditional quoting makes plain
-            // qualified names case-exact and breaks resolution on case-folding databases (Oracle/H2/...).
-            sb.append(isSimpleSqlIdentifier(parts[i]) ? parts[i] : quoteIdentifier(parts[i], quote));
+            // Keep plain simple parts unquoted so case-folding databases (Oracle/H2/...) can resolve
+            // them normally. Preserve explicit delimiters and quote non-simple identifier parts.
+            sb.append(!explicitlyDelimitedParts.get(i) && isSimpleSqlIdentifier(parts[i]) ? parts[i] : quoteIdentifier(parts[i], quote));
         }
 
         return sb.toString();
     }
 
     private static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
+        return checkColumnName(columnName, dbProductInfo, false);
+    }
+
+    private static String checkColumnName(final String columnName, final ProductInfo dbProductInfo, final boolean explicitlyDelimited) {
         N.checkArgNotBlank(columnName, cs.columnName);
 
         final String quote = getTableColumnNameQuoteString(dbProductInfo);
 
-        return isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quote);
+        return !explicitlyDelimited && isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quote);
+    }
+
+    private static boolean isDelimitedIdentifier(final String identifier) {
+        final String trimmed = identifier.trim();
+
+        if (trimmed.length() < 2) {
+            return false;
+        }
+
+        final char first = trimmed.charAt(0);
+        final char last = trimmed.charAt(trimmed.length() - 1);
+
+        return (first == '"' && last == '"') || (first == '`' && last == '`') || (first == '[' && last == ']');
+    }
+
+    private static List<Boolean> getExplicitlyDelimitedIdentifierParts(final String qualifiedName) {
+        final List<Boolean> result = new ArrayList<>(3);
+        final String trimmed = qualifiedName.trim();
+        char closingQuote = 0;
+        boolean atPartStart = true;
+        boolean explicitlyDelimited = false;
+
+        for (int i = 0, len = trimmed.length(); i < len; i++) {
+            final char ch = trimmed.charAt(i);
+
+            if (closingQuote == 0) {
+                if (ch == '.') {
+                    result.add(explicitlyDelimited);
+                    atPartStart = true;
+                    explicitlyDelimited = false;
+                } else if (atPartStart && !Character.isWhitespace(ch)) {
+                    explicitlyDelimited = ch == '"' || ch == '`' || ch == '[';
+                    closingQuote = ch == '[' ? ']' : (explicitlyDelimited ? ch : 0);
+                    atPartStart = false;
+                }
+            } else if (ch == closingQuote) {
+                if (i + 1 < len && trimmed.charAt(i + 1) == closingQuote) {
+                    i++;
+                } else {
+                    closingQuote = 0;
+                }
+            }
+        }
+
+        result.add(explicitlyDelimited);
+        return result;
     }
 
     private static boolean isSimpleSqlIdentifier(final String identifier) {

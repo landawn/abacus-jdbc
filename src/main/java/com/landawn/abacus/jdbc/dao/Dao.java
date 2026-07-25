@@ -66,19 +66,19 @@ import com.landawn.abacus.util.Throwables;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
- *     @Query("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+ *     @Query("INSERT INTO users (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
  *     void insertWithId(User user) throws SQLException;
  *
- *     @Query("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+ *     @Query("UPDATE users SET first_name = :firstName, last_name = :lastName WHERE id = :id")
  *     int updateFirstAndLastName(@Bind("firstName") String newFirstName,
  *                                @Bind("lastName") String newLastName,
  *                                @Bind("id") long id) throws SQLException;
  *
- *     @Query("SELECT first_name, last_name FROM user WHERE id = :id")
+ *     @Query("SELECT first_name, last_name FROM users WHERE id = :id")
  *     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
  *
- *     @Query("SELECT id, first_name, last_name, email FROM user")
- *     Stream<User> allUsers(); // Stream-returning methods must not declare 'throws SQLException'
+ *     @Query("SELECT id, first_name, last_name, email FROM users")
+ *     com.landawn.abacus.util.stream.Stream<User> allUsers(); // Must not declare 'throws SQLException'
  * }
  *
  * // Usage
@@ -88,7 +88,8 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p><b>Transaction Example:</b></p>
  * <pre>{@code
- * final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+ * final com.landawn.abacus.jdbc.SqlTransaction tran =
+ *         JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
  *     User user = userDao.gett(id);
  *     userDao.update(user);
@@ -118,8 +119,9 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * PreparedQuery query = dao.prepareQuery("INSERT INTO users (name) VALUES (?)", true);
-     * Optional<Long> generatedId = query.setString(1, "John").insert();
+     * try (PreparedQuery query = dao.prepareQuery("INSERT INTO users (name) VALUES (?)", true)) {
+     *     com.landawn.abacus.util.u.Optional<Long> generatedId = query.setString(1, "John").insert();
+     * }
      * }</pre>
      *
      * @param sql the SQL query string
@@ -154,10 +156,11 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * PreparedQuery query = dao.prepareQuery(
-     *     "INSERT INTO users (name) VALUES (?)",
-     *     new String[] {"id", "created_at"}
-     * );
+     * try (PreparedQuery query = dao.prepareQuery(
+     *         "INSERT INTO users (name) VALUES (?)",
+     *         new String[] {"id", "created_at"})) {
+     *     query.setString(1, "John").insert();
+     * }
      * }</pre>
      *
      * @param sql the SQL query string
@@ -311,10 +314,12 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Jdbc.OutParamResult outParams = dao.prepareCallableQuery("{call get_user_count(?)}")
-     *                                    .registerOutParameter(1, Types.INTEGER)
-     *                                    .executeAndGetOutParameters();
-     * int count = outParams.getOutParamValue(1);
+     * try (CallableQuery query = dao.prepareCallableQuery("{call get_user_count(?)}")) {
+     *     com.landawn.abacus.jdbc.Jdbc.OutParamResult outParams = query
+     *             .registerOutParameter(1, java.sql.Types.INTEGER)
+     *             .executeAndGetOutParameters();
+     *     int count = outParams.getOutParamValue(1);
+     * }
      * }</pre>
      *
      * @param sql the stored procedure call string

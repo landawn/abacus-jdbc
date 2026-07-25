@@ -1041,8 +1041,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * InputStream asciiStream = new FileInputStream("data.txt");
-     * query.setAsciiStream("textData", asciiStream);
+     * try (InputStream asciiStream = new FileInputStream("data.txt")) {
+     *     query.setAsciiStream("textData", asciiStream).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1061,9 +1062,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * InputStream asciiStream = new FileInputStream("data.txt");
-     * long fileLength = new File("data.txt").length();
-     * query.setAsciiStream("textData", asciiStream, fileLength);
+     * File file = new File("data.txt");
+     * try (InputStream asciiStream = new FileInputStream(file)) {
+     *     query.setAsciiStream("textData", asciiStream, file.length()).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1084,8 +1086,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * InputStream binaryStream = new FileInputStream("image.jpg");
-     * query.setBinaryStream("imageData", binaryStream);
+     * try (InputStream binaryStream = new FileInputStream("image.jpg")) {
+     *     query.setBinaryStream("imageData", binaryStream).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1104,9 +1107,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * InputStream binaryStream = new FileInputStream("document.pdf");
-     * long fileLength = new File("document.pdf").length();
-     * query.setBinaryStream("documentData", binaryStream, fileLength);
+     * File file = new File("document.pdf");
+     * try (InputStream binaryStream = new FileInputStream(file)) {
+     *     query.setBinaryStream("documentData", binaryStream, file.length()).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1127,8 +1131,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Reader value = new FileReader("article.txt");
-     * query.setCharacterStream("articleContent", value);
+     * try (Reader value = new FileReader("article.txt", StandardCharsets.UTF_8)) {
+     *     query.setCharacterStream("articleContent", value).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1147,8 +1152,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Reader value = new StringReader("Large text content...");
-     * query.setCharacterStream("description", value, 1000);
+     * String content = "Large text content...";
+     * Reader value = new StringReader(content);
+     * query.setCharacterStream("description", value, content.length()).execute();
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1170,7 +1176,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader value = new StringReader("Unicode text content");
-     * query.setNCharacterStream("unicodeContent", value);
+     * query.setNCharacterStream("unicodeContent", value).execute();
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1189,8 +1195,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Reader value = new StringReader("Unicode text with special characters");
-     * query.setNCharacterStream("unicodeText", value, 100);
+     * String content = "Unicode text with special characters";
+     * Reader value = new StringReader(content);
+     * query.setNCharacterStream("unicodeText", value, content.length()).execute();
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1211,8 +1218,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = connection.createBlob();
-     * blob.setBytes(1, imageBytes);
-     * query.setBlob("photo", blob);
+     * try {
+     *     blob.setBytes(1, imageBytes);
+     *     query.setBlob("photo", blob).execute();
+     * } finally {
+     *     blob.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1232,8 +1243,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * InputStream imageStream = new FileInputStream("photo.jpg");
-     * query.setBlob("photo", imageStream);
+     * try (InputStream imageStream = new FileInputStream("photo.jpg")) {
+     *     query.setBlob("photo", imageStream).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1253,8 +1265,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * File file = new File("document.pdf");
-     * InputStream stream = new FileInputStream(file);
-     * query.setBlob("document", stream, file.length());
+     * try (InputStream stream = new FileInputStream(file)) {
+     *     query.setBlob("document", stream, file.length()).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1275,8 +1288,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = connection.createClob();
-     * clob.setString(1, "Large text content...");
-     * query.setClob("content", clob);
+     * try {
+     *     clob.setString(1, "Large text content...");
+     *     query.setClob("content", clob).execute();
+     * } finally {
+     *     clob.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1296,8 +1313,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Reader value = new FileReader("article.txt");
-     * query.setClob("articleText", value);
+     * try (Reader value = new FileReader("article.txt", StandardCharsets.UTF_8)) {
+     *     query.setClob("articleText", value).execute();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1318,7 +1336,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * String content = "Long article content...";
      * Reader value = new StringReader(content);
-     * query.setClob("article", value, content.length());
+     * query.setClob("article", value, content.length()).execute();
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1340,8 +1358,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * NClob nclob = connection.createNClob();
-     * nclob.setString(1, "Unicode large text");
-     * query.setNClob("unicodeContent", nclob);
+     * try {
+     *     nclob.setString(1, "Unicode large text");
+     *     query.setNClob("unicodeContent", nclob).execute();
+     * } finally {
+     *     nclob.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1362,7 +1384,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader value = new StringReader("Unicode text content");
-     * query.setNClob("unicodeText", value);
+     * query.setNClob("unicodeText", value).execute();
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1383,7 +1405,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * String unicodeContent = "Unicode content with special characters";
      * Reader value = new StringReader(unicodeContent);
-     * query.setNClob("content", value, unicodeContent.length());
+     * query.setNClob("content", value, unicodeContent.length()).execute();
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1425,10 +1447,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLXML xmlData = connection.createSQLXML();
-     * java.io.Writer writer = xmlData.setCharacterStream();
-     * writer.write("<root><data>value</data></root>");
-     * writer.close();
-     * query.setSQLXML("xmlContent", xmlData);
+     * try {
+     *     try (Writer writer = xmlData.setCharacterStream()) {
+     *         writer.write("<root><data>value</data></root>");
+     *     }
+     *     query.setSQLXML("xmlContent", xmlData).execute();
+     * } finally {
+     *     xmlData.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1449,7 +1475,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowId rowId = resultSet.getRowId("ROWID");
-     * query.setRowId("targetRowId", rowId);
+     * query.setRowId("targetRowId", rowId).execute();
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -2500,13 +2526,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * Object result = query.executeThenApply((stmt, isResultSet) -> {
      *     if (isResultSet) {
-     *         ResultSet rs = stmt.getResultSet();
-     *         // Process result set
-     *     } else {
-     *         int updateCount = stmt.getUpdateCount();
-     *         // Process update count
+     *         List<Object> rows = new ArrayList<>();
+     *         try (ResultSet rs = stmt.getResultSet()) {
+     *             while (rs.next()) {
+     *                 rows.add(rs.getObject(1));
+     *             }
+     *         }
+     *         return rows;
      *     }
-     *     return processedResult;
+     *     return stmt.getUpdateCount();
      * });
      * }</pre>
      *
@@ -2543,10 +2571,23 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      *         // Consume result sets first: some drivers finalize OUT parameter
      *         // values only after all results have been processed.
-     *         if (isResultSet) {
-     *             ResultSet rs = stmt.getResultSet();
-     *             // Add result set data to map
+     *         List<List<Object>> resultSets = new ArrayList<>();
+     *         boolean hasResultSet = isResultSet;
+     *         while (true) {
+     *             if (hasResultSet) {
+     *                 List<Object> rows = new ArrayList<>();
+     *                 try (ResultSet rs = stmt.getResultSet()) {
+     *                     while (rs.next()) {
+     *                         rows.add(rs.getObject(1));
+     *                     }
+     *                 }
+     *                 resultSets.add(rows);
+     *             } else if (stmt.getUpdateCount() == -1) {
+     *                 break;
+     *             }
+     *             hasResultSet = stmt.getMoreResults(java.sql.Statement.CLOSE_CURRENT_RESULT);
      *         }
+     *         map.put("resultSets", resultSets);
      *
      *         // Then read OUT parameters
      *         for (Jdbc.OutParam param : outParams) {
@@ -2606,9 +2647,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      *     while (rs != null || stmt.getUpdateCount() != -1) {
      *         if (rs != null) {
-     *             // Process rs
+     *             ResultSet current = rs;
+     *             try (current) {
+     *                 while (current.next()) {
+     *                     System.out.println(current.getObject(1));
+     *                 }
+     *             }
      *         }
-     *         rs = stmt.getMoreResults() ? stmt.getResultSet() : null;
+     *         rs = stmt.getMoreResults(java.sql.Statement.CLOSE_CURRENT_RESULT)
+     *                 ? stmt.getResultSet()
+     *                 : null;
      *     }
      * });
      * }</pre>
@@ -2638,9 +2686,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * query.executeThenAccept((stmt, isResultSet) -> {
      *     if (isResultSet) {
-     *         ResultSet rs = stmt.getResultSet();
-     *         while (rs.next()) {
-     *             System.out.println(rs.getString(1));
+     *         try (ResultSet rs = stmt.getResultSet()) {
+     *             while (rs.next()) {
+     *                 System.out.println(rs.getString(1));
+     *             }
      *         }
      *     } else {
      *         System.out.println("Updated rows: " + stmt.getUpdateCount());
@@ -2675,9 +2724,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * query.executeThenAccept((stmt, outParams, isResultSet) -> {
      *     // Consume result sets first: some drivers finalize OUT parameter
      *     // values only after all results have been processed.
-     *     if (isResultSet) {
-     *         ResultSet rs = stmt.getResultSet();
-     *         // Write results to file or external system
+     *     boolean hasResultSet = isResultSet;
+     *     while (true) {
+     *         if (hasResultSet) {
+     *             try (ResultSet rs = stmt.getResultSet()) {
+     *                 while (rs.next()) {
+     *                     System.out.println(rs.getObject(1));
+     *                 }
+     *             }
+     *         } else if (stmt.getUpdateCount() == -1) {
+     *             break;
+     *         }
+     *         hasResultSet = stmt.getMoreResults(java.sql.Statement.CLOSE_CURRENT_RESULT);
      *     }
      *
      *     // Then log OUT parameters
@@ -3789,10 +3847,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setDate(1, startDate)
      *          .registerOutParameter(2, Types.INTEGER);   // total transactions
      *
-     *     Tuple2<List<List<Transaction>>, Jdbc.OutParamResult> result =
+     *     Tuple2<List<List<PaymentTransaction>>, Jdbc.OutParamResult> result =
      *         query.listAllResultSetsAndGetOutParameters(
      *             rs -> rs.getBigDecimal("amount").compareTo(new BigDecimal("1000")) >= 0,
-     *             rs -> new Transaction(
+     *             rs -> new PaymentTransaction(
      *                 rs.getLong("id"),
      *                 rs.getBigDecimal("amount"),
      *                 rs.getTimestamp("transaction_date")
@@ -3800,9 +3858,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         );
      *
      *     // Each list contains only transactions >= $1000
-     *     List<Transaction> checkingTransactions = result._1.get(0);
-     *     List<Transaction> savingsTransactions = result._1.get(1);
-     *     List<Transaction> creditTransactions = result._1.get(2);
+     *     List<PaymentTransaction> checkingTransactions = result._1.get(0);
+     *     List<PaymentTransaction> savingsTransactions = result._1.get(1);
+     *     List<PaymentTransaction> creditTransactions = result._1.get(2);
      *
      *     int totalTransactions = result._2.getOutParamValue(2);
      * }

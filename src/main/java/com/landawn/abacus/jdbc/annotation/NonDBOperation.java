@@ -31,6 +31,7 @@ import java.lang.annotation.Target;
  *   <li>No {@code Handler} interceptors will be applied</li>
  *   <li>No SQL or performance logging will be performed</li>
  *   <li>No {@code @Transactional} annotations will be processed</li>
+ *   <li>No result-cache lookup or invalidation will be performed</li>
  * </ul>
  *
  * <p>The framework's built-in DAO base interfaces ({@code Dao}, {@code CrudDao},
@@ -48,7 +49,7 @@ import java.lang.annotation.Target;
  *
  * <p>Apply {@code @NonDBOperation} to your own {@code default} DAO methods whenever they should be
  * excluded from the DAO proxy's database-related processing (handlers, SQL/perf logging,
- * transactional weaving). Interface {@code static} methods are invoked on the interface itself and
+ * transaction handling, and caching). Interface {@code static} methods are invoked on the interface itself and
  * never pass through a DAO proxy, so annotating them has no proxy effect.</p>
  *
  * <p>This is a marker annotation: it declares no elements and carries no configuration. Its mere
@@ -60,7 +61,7 @@ import java.lang.annotation.Target;
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // This method will be processed as a database operation
  *     @Query("SELECT * FROM users WHERE status = :status")
- *     List<User> findByStatus(@Bind("status") String status);
+ *     List<User> findByStatus(@Bind("status") String status) throws SQLException;
  *
  *     // This method will NOT be processed as a database operation
  *     @NonDBOperation

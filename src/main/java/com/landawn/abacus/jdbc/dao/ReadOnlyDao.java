@@ -51,10 +51,13 @@ import com.landawn.abacus.annotation.Beta;
  * CustomerViewDao dao = JdbcUtil.createDao(CustomerViewDao.class, dataSource);
  *
  * List<Customer> active = dao.list(Filters.eq("status", "ACTIVE"));   // reads work
- * dao.prepareQuery("SELECT * FROM customers WHERE status = ?").setString(1, "ACTIVE").list(Customer.class);
+ * try (com.landawn.abacus.jdbc.PreparedQuery query =
+ *         dao.prepareQuery("SELECT * FROM customers WHERE status = ?")) {
+ *     List<Customer> activeByQuery = query.setString(1, "ACTIVE").list(Customer.class);
+ * }
  *
  * // dao.save(new Customer());                          // does not compile
- * // dao.prepareQuery("UPDATE customers SET ...");      // throws UnsupportedOperationException
+ * // dao.prepareQuery("UPDATE customers SET status = ? WHERE id = ?"); // throws UnsupportedOperationException
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

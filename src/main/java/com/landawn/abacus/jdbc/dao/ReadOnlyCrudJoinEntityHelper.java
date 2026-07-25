@@ -37,7 +37,7 @@ package com.landawn.abacus.jdbc.dao;
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Get user by ID with join entities loaded
- * Optional<User> user = userDao.get(1L, Order.class);
+ * com.landawn.abacus.util.u.Optional<User> user = userDao.get(1L, Order.class);
  * User userWithAll = userDao.gett(1L, true);   // Load all join entities
  *
  * // Batch get with join entities

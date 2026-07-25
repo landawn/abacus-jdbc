@@ -34,7 +34,7 @@ sealed interface DeleteOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * int deleted = dao.delete(Filters.lt("expiryDate", new Date()));
+     * int deleted = dao.delete(Filters.lt("expiryDate", new java.util.Date()));
      * System.out.println("Deleted " + deleted + " expired records");
      * }</pre>
      *

@@ -42,20 +42,20 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * @Entity
+ * @jakarta.persistence.Entity
  * public class User {
- *     @Id
+ *     @jakarta.persistence.Id
  *     private Long id;
  *     private String name;
  *
- *     @JoinedBy("id=Order.userId")
+ *     @com.landawn.abacus.annotation.JoinedBy("id=Order.userId")
  *     private List<Order> orders;
  *
- *     @JoinedBy("id=UserProfile.userId")
+ *     @com.landawn.abacus.annotation.JoinedBy("id=UserProfile.userId")
  *     private UserProfile profile;
  *
  *     // many-to-many through join table
- *     @JoinedBy({"id=UserRole.userId", "UserRole.roleId=id"})
+ *     @com.landawn.abacus.annotation.JoinedBy({"id=UserRole.userId", "UserRole.roleId=id"})
  *     private List<Role> roles;
  * }
  *

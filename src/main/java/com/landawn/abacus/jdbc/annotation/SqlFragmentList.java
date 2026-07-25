@@ -54,7 +54,7 @@ import java.lang.annotation.Target;
  *
  *     @Query("SELECT {cols} FROM users WHERE active = TRUE")
  *     List<Map<String, Object>> projectActive(
- *         @SqlFragmentList("cols") List<String> cols);
+ *         @SqlFragmentList("cols") List<String> cols) throws SQLException;
  *
  *     // dao.projectActive(List.of("id", "email", "created_at"))
  *     //   -> "SELECT id, email, created_at FROM users WHERE active = TRUE"
@@ -64,7 +64,7 @@ import java.lang.annotation.Target;
  * <p><b>Dynamic ORDER BY:</b></p>
  * <pre>{@code
  * @Query("SELECT * FROM products ORDER BY {sortKeys}")
- * List<Product> sorted(@SqlFragmentList("sortKeys") List<String> sortKeys);
+ * List<Product> sorted(@SqlFragmentList("sortKeys") List<String> sortKeys) throws SQLException;
  *
  * // dao.sorted(List.of("category ASC", "price DESC"))
  * //   -> "SELECT * FROM products ORDER BY category ASC, price DESC"
@@ -92,11 +92,11 @@ public @interface SqlFragmentList {
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT {cols} FROM users")
-     * List<User> findWithColumns(@SqlFragmentList("cols") List<String> columnList);
+     * List<User> findWithColumns(@SqlFragmentList("cols") List<String> columnList) throws SQLException;
      *
      * // Using the method parameter name (requires '-parameters')
      * @Query("SELECT {columns} FROM users")
-     * List<User> findWithColumns(@SqlFragmentList List<String> columns);
+     * List<User> findWithColumns(@SqlFragmentList List<String> columns) throws SQLException;
      * }</pre>
      *
      * <p>The resolved name must correspond to a {@code {name}} token in the surrounding

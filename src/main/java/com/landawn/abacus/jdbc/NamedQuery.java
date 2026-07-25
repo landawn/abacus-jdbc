@@ -1870,11 +1870,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * try (InputStream fis = new FileInputStream("large_text.txt")) {
      *     query.setAsciiStream("textData", fis).update();
      * }
-     *
-     * // From string
-     * String text = "Large ASCII text content...";
-     * InputStream stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.US_ASCII));
-     * query.setAsciiStream("content", stream);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -1941,11 +1936,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * try (InputStream fis = new FileInputStream(file)) {
      *     query.setAsciiStream("fileContent", fis, file.length()).update();
      * }
-     *
-     * // With ByteArrayInputStream
-     * byte[] data = "ASCII content".getBytes(StandardCharsets.US_ASCII);
-     * ByteArrayInputStream bais = new ByteArrayInputStream(data);
-     * query.setAsciiStream("content", bais, data.length);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2013,11 +2003,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * try (InputStream imageStream = new FileInputStream("photo.jpg")) {
      *     query.setBinaryStream("photo", imageStream).update();
      * }
-     *
-     * // From byte array
-     * byte[] documentData = getDocumentBytes();
-     * ByteArrayInputStream bais = new ByteArrayInputStream(documentData);
-     * query.setBinaryStream("document", bais);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2085,11 +2070,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * try (InputStream fis = new FileInputStream(file)) {
      *     query.setBinaryStream("pdfData", fis, file.length()).update();
      * }
-     *
-     * // From byte array with specific length
-     * byte[] data = getLargeData();
-     * ByteArrayInputStream bais = new ByteArrayInputStream(data);
-     * query.setBinaryStream("binaryData", bais, data.length);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2157,11 +2137,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * try (Reader value = new FileReader("large_text.txt", StandardCharsets.UTF_8)) {
      *     query.setCharacterStream("content", value).update();
      * }
-     *
-     * // From string
-     * String largeText = getLargeTextContent();
-     * StringReader stringReader = new StringReader(largeText);
-     * query.setCharacterStream("description", stringReader);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2224,15 +2199,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // From file with known character count
+     * // Bind a known number of characters.
      * String content = readFileContent();
-     * StringReader value = new StringReader(content);
-     * query.setCharacterStream("largeText", value, content.length());
-     *
-     * // Limited portion of text
-     * String fullText = getFullText();
-     * StringReader value = new StringReader(fullText);
-     * query.setCharacterStream("summary", value, 1000);   // First 1000 characters
+     * StringReader contentReader = new StringReader(content);
+     * query.setCharacterStream("largeText", contentReader, content.length()).update();
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2296,11 +2266,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Unicode text with special characters
-     * String unicodeText = "Hello 世界 🌍";
-     * StringReader value = new StringReader(unicodeText);
-     * query.setNCharacterStream("unicodeContent", value);
-     *
      * // From file containing unicode data
      * try (Reader fileReader = new FileReader("unicode_text.txt", StandardCharsets.UTF_8)) {
      *     query.setNCharacterStream("content", fileReader).update();
@@ -2370,11 +2335,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * // Unicode content with known length
      * String unicodeContent = getUnicodeContent();
      * StringReader value = new StringReader(unicodeContent);
-     * query.setNCharacterStream("description", value, unicodeContent.length());
-     *
-     * // Partial content
-     * String fullText = "Large unicode text with emojis 😀😃😄...";
-     * query.setNCharacterStream("preview", new StringReader(fullText), 100);
+     * query.setNCharacterStream("description", value, unicodeContent.length()).update();
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2440,15 +2401,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <pre>{@code
      * // Creating a Blob from connection
      * Blob blob = connection.createBlob();
-     * blob.setBytes(1, imageBytes);
-     * query.setBlob("image", blob);
+     * try {
+     *     blob.setBytes(1, imageBytes);
      *
-     * // Setting existing Blob
-     * Blob existingBlob = resultSet.getBlob("data");
-     * query.setBlob("binaryData", existingBlob);
-     *
-     * // Setting null
-     * query.setBlob("attachment", null);
+     *     // Keep an existing Blob valid through execution as well.
+     *     Blob existingBlob = resultSet.getBlob("data");
+     *     try {
+     *         query.setBlob("image", blob)
+     *              .setBlob("binaryData", existingBlob)
+     *              .setNull("attachment", Types.BLOB)
+     *              .update();
+     *     } finally {
+     *         if (existingBlob != null) {
+     *             existingBlob.free();
+     *         }
+     *     }
+     * } finally {
+     *     blob.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2514,11 +2484,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * try (InputStream fis = new FileInputStream("image.jpg")) {
      *     query.setBlob("photo", fis).update();
      * }
-     *
-     * // From byte array
-     * byte[] pdfData = generatePDF();
-     * ByteArrayInputStream bais = new ByteArrayInputStream(pdfData);
-     * query.setBlob("document", bais);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2585,11 +2550,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * try (InputStream fis = new FileInputStream(imageFile)) {
      *     query.setBlob("image", fis, imageFile.length()).update();
      * }
-     *
-     * // Partial data from stream
-     * byte[] fullData = getFullData();
-     * ByteArrayInputStream bais = new ByteArrayInputStream(fullData);
-     * query.setBlob("preview", bais, 1024);   // First 1KB only
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2654,15 +2614,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <pre>{@code
      * // Creating a Clob from connection
      * Clob clob = connection.createClob();
-     * clob.setString(1, largeTextContent);
-     * query.setClob("content", clob);
+     * try {
+     *     clob.setString(1, largeTextContent);
      *
-     * // Setting existing Clob
-     * Clob existingClob = resultSet.getClob("description");
-     * query.setClob("textData", existingClob);
-     *
-     * // Setting null
-     * query.setClob("notes", null);
+     *     // Keep an existing Clob valid through execution as well.
+     *     Clob existingClob = resultSet.getClob("description");
+     *     try {
+     *         query.setClob("content", clob)
+     *              .setClob("textData", existingClob)
+     *              .setNull("notes", Types.CLOB)
+     *              .update();
+     *     } finally {
+     *         if (existingClob != null) {
+     *             existingClob.free();
+     *         }
+     *     }
+     * } finally {
+     *     clob.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2789,7 +2758,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setClob("description", new StringReader(longText), longText.length());
+     * query.setClob("description", new StringReader(longText), longText.length()).update();
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2852,8 +2821,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * NClob nclob = connection.createNClob();
-     * nclob.setString(1, unicodeText);
-     * query.setNClob("unicode_content", nclob);
+     * try {
+     *     nclob.setString(1, unicodeText);
+     *     query.setNClob("unicode_content", nclob).update();
+     * } finally {
+     *     nclob.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2980,7 +2953,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String unicodeText = "Unicode content...";
-     * query.setNClob("description", new StringReader(unicodeText), unicodeText.length());
+     * query.setNClob("description", new StringReader(unicodeText), unicodeText.length()).update();
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -3104,10 +3077,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLXML xmlData = connection.createSQLXML();
-     * try (Writer writer = xmlData.setCharacterStream()) {
-     *     writer.write("<root><item>value</item></root>");
+     * try {
+     *     try (Writer writer = xmlData.setCharacterStream()) {
+     *         writer.write("<root><item>value</item></root>");
+     *     }
+     *     query.setSQLXML("xml_data", xmlData).update();
+     * } finally {
+     *     xmlData.free();
      * }
-     * query.setSQLXML("xml_data", xmlData);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -3169,7 +3146,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowId rowId = resultSet.getRowId("ROWID");
-     * query.setRowId("row_identifier", rowId);
+     * query.setRowId("row_identifier", rowId).update();
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -3231,7 +3208,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Ref ref = resultSet.getRef("employee_ref");
-     * query.setRef("manager_ref", ref);
+     * query.setRef("manager_ref", ref).update();
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -3294,7 +3271,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <pre>{@code
      * Integer[] numbers = {1, 2, 3, 4, 5};
      * Array sqlArray = connection.createArrayOf("INTEGER", numbers);
-     * query.setArray("number_list", sqlArray);
+     * try {
+     *     query.setArray("number_list", sqlArray).update();
+     * } finally {
+     *     sqlArray.free();
+     * }
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -4127,8 +4108,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * paramMaps.add(Map.of("id", 1, "status", "ACTIVE"));
      * paramMaps.add(Map.of("id", 2, "status", "INACTIVE"));
      *
-     * query.addBatchParameters(paramMaps)
-     *      .batchUpdate();
+     * String updateSql = "UPDATE users SET status = :status WHERE id = :id";
+     * try (NamedQuery updateQuery = JdbcUtil.prepareNamedQuery(connection, updateSql)) {
+     *     updateQuery.addBatchParameters(paramMaps)
+     *                .batchUpdate();
+     * }
      * }</pre>
      *
      * @param batchParameters a collection of parameter objects for batch processing
@@ -4162,14 +4146,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>Arrays or Collections for positional parameters</li>
      * </ul>
      *
-     * <p>The runtime type of the <i>first</i> element determines how every element is interpreted; all
-     * remaining elements are assumed to be of the same kind. If the iterator is empty, this is a no-op
-     * and no batch is added. A {@code null} element is only supported when the SQL has exactly one
+     * <p>The runtime type of the first non-null element normally determines how the remaining non-null
+     * elements are interpreted, so they should have the same parameter shape. If the iterator is empty,
+     * this is a no-op and no batch is added. A {@code null} element is only supported when the SQL has exactly one
      * parameter placeholder — a single named parameter appearing exactly once (it is bound as SQL
      * {@code NULL}); otherwise an {@link IllegalArgumentException} is thrown.
-     * Note that when the <i>first</i> element is {@code null}, no type-based classification is possible:
-     * every remaining element is then bound as a plain single value (bean/Map/Collection/array
-     * interpretation is skipped), which also requires the SQL to have exactly one parameter placeholder.
+     * When the first element is {@code null}, each later non-null element is interpreted through
+     * {@link #setParameters(Object)} rather than being forced to a scalar value.
      * For bean elements, a named parameter without a matching property is only tolerated for the reserved
      * system date/time names ({@code now}, {@code sysTime}, {@code sysDate}) — such parameters keep whatever
      * value was previously bound (or stay unbound); any other missing property causes an
@@ -4228,7 +4211,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addNullBatchParameter();
                     } else {
                         stmt.clearParameters();
-                        setObject(1, params); // typed binding via the Abacus type system, like the non-batch path
+                        setParameters(params);
                         addBatch();
                     }
                 }

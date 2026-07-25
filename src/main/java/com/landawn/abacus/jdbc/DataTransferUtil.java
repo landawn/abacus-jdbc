@@ -389,7 +389,6 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
@@ -426,7 +425,6 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
@@ -469,7 +467,6 @@ public final class DataTransferUtil {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
@@ -601,8 +598,9 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, stmt);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, stmt);
+     * }
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -622,8 +620,9 @@ public final class DataTransferUtil {
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("id", "name", "age", "email"), new Object[][] {{1, "John", 25, "john@email.com"}});
      * List<String> columnNames = Arrays.asList("name", "age");
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, columnNames, stmt);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, columnNames, stmt);
+     * }
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
@@ -651,14 +650,14 @@ public final class DataTransferUtil {
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
      * List<String> columns = Arrays.asList("name", "age");
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, columns, stmt, 1000, 100);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, columns, stmt, 1000, 100);
+     * }
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(columnNames);
+     * List<String> columnNameList = new ArrayList<>(columns);
      * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
@@ -689,14 +688,14 @@ public final class DataTransferUtil {
      * List<String> columns = Arrays.asList("name", "age");
      * // Only import active users
      * Predicate<Object[]> filter = row -> "active".equals(row[2]);
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age) VALUES (?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, columns, filter, stmt, 500, 0);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age) VALUES (?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, columns, filter, stmt, 500, 0);
+     * }
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(columnNames);
+     * List<String> columnNameList = new ArrayList<>(columns);
      * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
@@ -755,8 +754,9 @@ public final class DataTransferUtil {
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, birthdate) VALUES (?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, stmt, columnTypes);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, birthdate) VALUES (?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, stmt, columnTypes);
+     * }
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -783,8 +783,9 @@ public final class DataTransferUtil {
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
      * columnTypes.put("score", Type.of(Double.class));
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO students (name, birthdate, score) VALUES (?, ?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, stmt, 1000, 0, columnTypes);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO students (name, birthdate, score) VALUES (?, ?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, stmt, 1000, 0, columnTypes);
+     * }
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -818,14 +819,14 @@ public final class DataTransferUtil {
      * columnTypes.put("status", Type.of(String.class));
      * // Only import active users
      * Predicate<Object[]> filter = row -> "active".equals(row[2]);
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)");
-     * int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 50, columnTypes);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, status) VALUES (?, ?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 50, columnTypes);
+     * }
      * }</pre>
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).build().query();
      * }</pre>
      *
@@ -911,13 +912,14 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)");
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (query, row) -> {
      *     query.setString(1, (String) row[0]);
      *     query.setInt(2, (Integer) row[1]);
      *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = DataTransferUtil.importData(dataset, stmt, setter);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, stmt, setter);
+     * }
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -939,13 +941,14 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "age"), new Object[][] {{"John", 25}, {"Jane", 30}});
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)");
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (query, row) -> {
      *     query.setString(1, (String) row[0]);
      *     query.setInt(2, (Integer) row[1]);
      *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = DataTransferUtil.importData(dataset, stmt, 1000, 100, setter);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, stmt, 1000, 100, setter);
+     * }
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -971,7 +974,6 @@ public final class DataTransferUtil {
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
      *     new Object[][] {{"John", 25, "active"}, {"Jane", 30, "inactive"}});
-     * PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)");
      * // Only import active users
      * Predicate<Object[]> filter = row -> "active".equals(row[2]);
      * Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> setter = (query, row) -> {
@@ -979,7 +981,9 @@ public final class DataTransferUtil {
      *     query.setInt(2, (Integer) row[1]);
      *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
-     * int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 0, setter);
+     * try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO active_users (name, age, last_login) VALUES (?, ?, ?)")) {
+     *     int rowsImported = DataTransferUtil.importData(dataset, filter, stmt, 500, 0, setter);
+     * }
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
@@ -1387,20 +1391,23 @@ public final class DataTransferUtil {
      * <pre>{@code
      * // Import with custom prepared statement configuration
      * File csvFile = new File("transactions.csv");
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)",
-     *     Statement.RETURN_GENERATED_KEYS);
+     * try (PreparedStatement stmt = conn.prepareStatement(
+     *         "INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)",
+     *         Statement.RETURN_GENERATED_KEYS)) {
+     *     long rowsImported = DataTransferUtil.importCsv(csvFile, stmt,
+     *         (query, row) -> {
+     *             query.setLong(1, Long.parseLong(row[0]));
+     *             query.setBigDecimal(2, new BigDecimal(row[1]));
+     *             query.setString(3, row[2]);
+     *             query.setDate(4, Date.valueOf(row[3]));
+     *         });
      *
-     * long rowsImported = DataTransferUtil.importCsv(csvFile, stmt,
-     *     (query, row) -> {
-     *         query.setLong(1, Long.parseLong(row[0]));
-     *         query.setBigDecimal(2, new BigDecimal(row[1]));
-     *         query.setString(3, row[2]);
-     *         query.setDate(4, Date.valueOf(row[3]));
-     *     });
-     *
-     * // Can retrieve generated keys if needed
-     * ResultSet generatedKeys = stmt.getGeneratedKeys();
+     *     try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+     *         while (generatedKeys.next()) {
+     *             processGeneratedKey(generatedKeys.getObject(1));
+     *         }
+     *     }
+     * }
      * }</pre>
      *
      * @param file the CSV file containing the data to be imported
@@ -1429,24 +1436,22 @@ public final class DataTransferUtil {
      * <pre>{@code
      * // Import large dataset with progress tracking
      * File csvFile = new File("large_dataset.csv");
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "INSERT INTO records (id, data, timestamp) VALUES (?, ?, ?)");
-     *
      * AtomicLong processedRows = new AtomicLong(0);
+     * try (PreparedStatement stmt = conn.prepareStatement(
+     *         "INSERT INTO records (id, data, timestamp) VALUES (?, ?, ?)")) {
+     *     long totalRows = DataTransferUtil.importCsv(csvFile, stmt, 5000, 100,
+     *         (query, row) -> {
+     *             query.setLong(1, Long.parseLong(row[0]));
+     *             query.setString(2, row[1]);
+     *             query.setTimestamp(3, Timestamp.valueOf(row[2]));
      *
-     * long totalRows = DataTransferUtil.importCsv(csvFile, stmt, 5000, 100,
-     *     (query, row) -> {
-     *         query.setLong(1, Long.parseLong(row[0]));
-     *         query.setString(2, row[1]);
-     *         query.setTimestamp(3, Timestamp.valueOf(row[2]));
-     *
-     *         long processed = processedRows.incrementAndGet();
-     *         if (processed % 10000 == 0) {
-     *             System.out.println("Processed " + processed + " rows...");
-     *         }
-     *     });
-     *
-     * System.out.println("Import completed. Total rows: " + totalRows);
+     *             long processed = processedRows.incrementAndGet();
+     *             if (processed % 10000 == 0) {
+     *                 System.out.println("Processed " + processed + " rows...");
+     *             }
+     *         });
+     *     System.out.println("Import completed. Total rows: " + totalRows);
+     * }
      * }</pre>
      *
      * @param file the CSV file containing the data to be imported
@@ -1477,21 +1482,19 @@ public final class DataTransferUtil {
      * <pre>{@code
      * // Import only active users from CSV
      * File csvFile = new File("all_users.csv");
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "INSERT INTO active_users (id, name, email, status) VALUES (?, ?, ?, ?)");
-     *
      * // Filter to import only users with "ACTIVE" status (assuming status is in column 3)
      * Predicate<String[]> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
-     *
-     * long rowsImported = DataTransferUtil.importCsv(csvFile, activeUsersFilter, stmt, 1000, 0,
-     *     (query, row) -> {
-     *         query.setLong(1, Long.parseLong(row[0]));
-     *         query.setString(2, row[1]);
-     *         query.setString(3, row[2]);
-     *         query.setString(4, row[3]);
-     *     });
-     *
-     * System.out.println("Imported " + rowsImported + " active users");
+     * try (PreparedStatement stmt = conn.prepareStatement(
+     *         "INSERT INTO active_users (id, name, email, status) VALUES (?, ?, ?, ?)")) {
+     *     long rowsImported = DataTransferUtil.importCsv(csvFile, activeUsersFilter, stmt, 1000, 0,
+     *         (query, row) -> {
+     *             query.setLong(1, Long.parseLong(row[0]));
+     *             query.setString(2, row[1]);
+     *             query.setString(3, row[2]);
+     *             query.setString(4, row[3]);
+     *         });
+     *     System.out.println("Imported " + rowsImported + " active users");
+     * }
      * }</pre>
      *
      * @param file the CSV file containing the data to be imported
@@ -1579,18 +1582,17 @@ public final class DataTransferUtil {
      * <pre>{@code
      * // Import CSV data from an HTTP response
      * URL url = new URL("https://example.com/data.csv");
-     * Reader reader = new InputStreamReader(url.openStream());
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "INSERT INTO data (col1, col2, col3) VALUES (?, ?, ?)");
-     *
-     * long rowsImported = DataTransferUtil.importCsv(reader, stmt,
-     *     (query, row) -> {
-     *         query.setString(1, row[0]);
-     *         query.setString(2, row[1]);
-     *         query.setString(3, row[2]);
-     *     });
-     *
-     * System.out.println("Imported " + rowsImported + " rows from remote CSV");
+     * try (Reader reader = new InputStreamReader(url.openStream());
+     *      PreparedStatement stmt = conn.prepareStatement(
+     *          "INSERT INTO data (col1, col2, col3) VALUES (?, ?, ?)")) {
+     *     long rowsImported = DataTransferUtil.importCsv(reader, stmt,
+     *         (query, row) -> {
+     *             query.setString(1, row[0]);
+     *             query.setString(2, row[1]);
+     *             query.setString(3, row[2]);
+     *         });
+     *     System.out.println("Imported " + rowsImported + " rows from remote CSV");
+     * }
      * }</pre>
      *
      * @param reader the Reader to read the CSV data from
@@ -1618,20 +1620,19 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import large CSV data with batch optimization
-     * Reader reader = new InputStreamReader(largeInputStream);
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "INSERT INTO large_table (id, data, timestamp) VALUES (?, ?, ?)");
-     *
      * long startTime = System.nanoTime();
-     * long rowsImported = DataTransferUtil.importCsv(reader, stmt, 10000, 200,
-     *     (query, row) -> {
-     *         query.setLong(1, Long.parseLong(row[0]));
-     *         query.setString(2, row[1]);
-     *         query.setTimestamp(3, Timestamp.valueOf(row[2]));
-     *     });
-     *
-     * long durationMillis = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-     * System.out.println("Imported " + rowsImported + " rows in " + durationMillis + "ms");
+     * try (Reader reader = new InputStreamReader(largeInputStream);
+     *      PreparedStatement stmt = conn.prepareStatement(
+     *          "INSERT INTO large_table (id, data, timestamp) VALUES (?, ?, ?)")) {
+     *     long rowsImported = DataTransferUtil.importCsv(reader, stmt, 10000, 200,
+     *         (query, row) -> {
+     *             query.setLong(1, Long.parseLong(row[0]));
+     *             query.setString(2, row[1]);
+     *             query.setTimestamp(3, Timestamp.valueOf(row[2]));
+     *         });
+     *     long durationMillis = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+     *     System.out.println("Imported " + rowsImported + " rows in " + durationMillis + "ms");
+     * }
      * }</pre>
      *
      * @param reader the Reader to read the CSV data from
@@ -1668,10 +1669,6 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import CSV data with complex filtering and validation
-     * Reader reader = new FileReader("user_data.csv");
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)");
-     *
      * // Complex filter: valid email, age >= 18, allowed countries
      * Set<String> allowedCountries = Set.of("US", "CA", "UK", "AU");
      * Predicate<String[]> complexFilter = row -> {
@@ -1689,15 +1686,18 @@ public final class DataTransferUtil {
      *     return allowedCountries.contains(row[3]);
      * };
      *
-     * long rowsImported = DataTransferUtil.importCsv(reader, complexFilter, stmt, 2000, 0,
-     *     (query, row) -> {
-     *         query.setLong(1, Long.parseLong(row[0]));
-     *         query.setString(2, row[1].toLowerCase());   // normalize email
-     *         query.setInt(3, Integer.parseInt(row[2]));
-     *         query.setString(4, row[3]);
-     *     });
-     *
-     * System.out.println("Imported " + rowsImported + " valid users");
+     * try (Reader reader = new FileReader("user_data.csv");
+     *      PreparedStatement stmt = conn.prepareStatement(
+     *          "INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)")) {
+     *     long rowsImported = DataTransferUtil.importCsv(reader, complexFilter, stmt, 2000, 0,
+     *         (query, row) -> {
+     *             query.setLong(1, Long.parseLong(row[0]));
+     *             query.setString(2, row[1].toLowerCase());   // normalize email
+     *             query.setInt(3, Integer.parseInt(row[2]));
+     *             query.setString(4, row[3]);
+     *         });
+     *     System.out.println("Imported " + rowsImported + " valid users");
+     * }
      * }</pre>
      *
      * @param reader the Reader to read the CSV data from
@@ -1922,16 +1922,16 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export data with parameterized query
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "SELECT * FROM orders WHERE order_date BETWEEN ? AND ? AND status = ?");
-     * stmt.setDate(1, Date.valueOf("2023-01-01"));
-     * stmt.setDate(2, Date.valueOf("2023-12-31"));
-     * stmt.setString(3, "COMPLETED");
+     * try (PreparedStatement stmt = conn.prepareStatement(
+     *         "SELECT * FROM orders WHERE order_date BETWEEN ? AND ? AND status = ?")) {
+     *     stmt.setDate(1, Date.valueOf("2023-01-01"));
+     *     stmt.setDate(2, Date.valueOf("2023-12-31"));
+     *     stmt.setString(3, "COMPLETED");
      *
-     * File outputFile = new File("completed_orders_2023.csv");
-     * long rowsExported = DataTransferUtil.exportCsv(stmt, outputFile);
-     *
-     * System.out.println("Exported " + rowsExported + " completed orders for 2023");
+     *     File outputFile = new File("completed_orders_2023.csv");
+     *     long rowsExported = DataTransferUtil.exportCsv(stmt, outputFile);
+     *     System.out.println("Exported " + rowsExported + " completed orders for 2023");
+     * }
      * }</pre>
      *
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
@@ -1954,16 +1954,18 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export filtered data with specific columns
-     * PreparedStatement stmt = conn.prepareStatement(
-     *     "SELECT u.*, p.* FROM users u JOIN profiles p ON u.id = p.user_id WHERE u.country = ?");
-     * stmt.setString(1, "US");
+     * try (PreparedStatement stmt = conn.prepareStatement(
+     *         "SELECT u.id, u.name, u.email, u.country, p.avatar_url " +
+     *         "FROM users u JOIN profiles p ON u.id = p.user_id WHERE u.country = ?")) {
+     *     stmt.setString(1, "US");
      *
-     * // Only export user information, not profile data
-     * Set<String> userColumns = Set.of("id", "name", "email", "country");
-     * File outputFile = new File("us_users.csv");
+     *     // Only export user information, not profile data
+     *     Set<String> userColumns = Set.of("id", "name", "email", "country");
+     *     File outputFile = new File("us_users.csv");
      *
-     * long rowsExported = DataTransferUtil.exportCsv(stmt, userColumns, outputFile);
-     * System.out.println("Exported " + rowsExported + " US users");
+     *     long rowsExported = DataTransferUtil.exportCsv(stmt, userColumns, outputFile);
+     *     System.out.println("Exported " + rowsExported + " US users");
+     * }
      * }</pre>
      *
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
@@ -2001,17 +2003,17 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export from a scrollable ResultSet with preprocessing
-     * Statement stmt = conn.createStatement(
-     *     ResultSet.TYPE_SCROLL_INSENSITIVE,
-     *     ResultSet.CONCUR_READ_ONLY);
-     * ResultSet rs = stmt.executeQuery("SELECT * FROM products");
+     * try (Statement stmt = conn.createStatement(
+     *         ResultSet.TYPE_SCROLL_INSENSITIVE,
+     *         ResultSet.CONCUR_READ_ONLY);
+     *      ResultSet rs = stmt.executeQuery("SELECT * FROM products")) {
+     *     rs.absolute(100); // position on row 100; export begins with row 101
      *
-     * rs.absolute(100); // position on row 100; export begins with row 101
+     *     File outputFile = new File("products_from_101.csv");
+     *     long rowsExported = DataTransferUtil.exportCsv(rs, outputFile);
      *
-     * File outputFile = new File("products_from_101.csv");
-     * long rowsExported = DataTransferUtil.exportCsv(rs, outputFile);
-     *
-     * System.out.println("Exported " + rowsExported + " products (skipped first 100)");
+     *     System.out.println("Exported " + rowsExported + " products (skipped first 100)");
+     * }
      * }</pre>
      *
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
@@ -2035,18 +2037,19 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export specific columns from a complex join result
-     * Statement stmt = conn.createStatement();
-     * ResultSet rs = stmt.executeQuery(
-     *     "SELECT o.*, c.*, p.* FROM orders o " +
-     *     "JOIN customers c ON o.customer_id = c.id " +
-     *     "JOIN products p ON o.product_id = p.id");
+     * try (Statement stmt = conn.createStatement();
+     *      ResultSet rs = stmt.executeQuery(
+     *          "SELECT o.id AS order_id, o.order_date, c.name AS customer_name, " +
+     *          "o.total, p.name AS product_name FROM orders o " +
+     *          "JOIN customers c ON o.customer_id = c.id " +
+     *          "JOIN products p ON o.product_id = p.id")) {
+     *     // Only export order and customer data, not product details
+     *     Set<String> exportColumns = Set.of("order_id", "order_date", "customer_name", "total");
+     *     File outputFile = new File("order_summary.csv");
      *
-     * // Only export order and customer names, not product details
-     * Set<String> exportColumns = Set.of("order_id", "order_date", "customer_name", "total");
-     * File outputFile = new File("order_summary.csv");
-     *
-     * long rowsExported = DataTransferUtil.exportCsv(rs, exportColumns, outputFile);
-     * System.out.println("Exported " + rowsExported + " order summaries");
+     *     long rowsExported = DataTransferUtil.exportCsv(rs, exportColumns, outputFile);
+     *     System.out.println("Exported " + rowsExported + " order summaries");
+     * }
      * }</pre>
      *
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
@@ -2171,9 +2174,8 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream large result set to compressed file
-     * ResultSet rs = stmt.executeQuery("SELECT * FROM large_table");
-     *
-     * try (FileOutputStream fos = new FileOutputStream("data.csv.gz");
+     * try (ResultSet rs = stmt.executeQuery("SELECT * FROM large_table");
+     *      FileOutputStream fos = new FileOutputStream("data.csv.gz");
      *      GZIPOutputStream gzos = new GZIPOutputStream(fos);
      *      Writer writer = new OutputStreamWriter(gzos, StandardCharsets.UTF_8)) {
      *
@@ -2211,8 +2213,8 @@ public final class DataTransferUtil {
      * // Export only specific columns to CSV
      * Set<String> columns = Set.of("name", "email", "created_date");
      *
-     * try (Writer writer = new FileWriter("users_export.csv")) {
-     *     ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+     * try (ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+     *      Writer writer = new FileWriter("users_export.csv")) {
      *     long exported = DataTransferUtil.exportCsv(rs, columns, writer);
      *     System.out.println("Exported " + exported + " rows");
      * }
@@ -2511,6 +2513,14 @@ public final class DataTransferUtil {
             final String targetTableName, final Collection<String> columnNames, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
+        if (N.isEmpty(columnNames)) {
+            return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, batchSize);
+        }
+
+        // Snapshot once so SELECT and INSERT use exactly the same column order even if the
+        // caller supplies a collection whose iterator can change between traversals.
+        final List<String> copiedColumnNames = new ArrayList<>(columnNames);
+
         String selectSql = null;
         String insertSql = null;
         Connection sourceConn = null;
@@ -2520,8 +2530,8 @@ public final class DataTransferUtil {
             sourceConn = JdbcUtil.getConnection(sourceDataSource);
             targetConn = JdbcUtil.getConnection(targetDataSource);
 
-            selectSql = generateSelectSql(sourceConn, sourceTableName, columnNames);
-            insertSql = generateInsertSql(targetConn, targetTableName, columnNames);
+            selectSql = generateSelectSql(sourceConn, sourceTableName, copiedColumnNames);
+            insertSql = generateInsertSql(targetConn, targetTableName, copiedColumnNames);
         } finally {
             // Release both connections even if one release throws (avoid leaking the second).
             try {
@@ -2895,8 +2905,16 @@ public final class DataTransferUtil {
             final Collection<String> columnNames, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final String selectSql = generateSelectSql(sourceConn, sourceTableName, columnNames);
-        final String insertSql = generateInsertSql(targetConn, targetTableName, columnNames);
+        if (N.isEmpty(columnNames)) {
+            return copy(sourceConn, targetConn, sourceTableName, targetTableName, batchSize);
+        }
+
+        // Snapshot once so SELECT and INSERT use exactly the same column order even if the
+        // caller supplies a collection whose iterator can change between traversals.
+        final List<String> copiedColumnNames = new ArrayList<>(columnNames);
+
+        final String selectSql = generateSelectSql(sourceConn, sourceTableName, copiedColumnNames);
+        final String insertSql = generateInsertSql(targetConn, targetTableName, copiedColumnNames);
 
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetConn, insertSql, batchSize);
     }
@@ -3272,21 +3290,20 @@ public final class DataTransferUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * PreparedStatement selectStmt = sourceConn.prepareStatement(
-     *     "SELECT * FROM source_table WHERE created > ?");
-     * selectStmt.setDate(1, cutoffDate);
-     *
-     * PreparedStatement insertStmt = targetConn.prepareStatement(
-     *     "INSERT INTO target_table VALUES (?, ?, ?)");
-     *
      * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
      *     pq.setLong(1, rs.getLong(1));
      *     pq.setString(2, rs.getString(2));
      *     pq.setTimestamp(3, rs.getTimestamp(3));
      * };
      *
-     * long rowsCopied = DataTransferUtil.copy(selectStmt, insertStmt, 1000, 0, setter);
-     * System.out.println("Copied " + rowsCopied + " recent records");
+     * try (PreparedStatement selectStmt = sourceConn.prepareStatement(
+     *         "SELECT id, name, created FROM source_table WHERE created > ?");
+     *      PreparedStatement insertStmt = targetConn.prepareStatement(
+     *          "INSERT INTO target_table (id, name, created) VALUES (?, ?, ?)")) {
+     *     selectStmt.setDate(1, cutoffDate);
+     *     long rowsCopied = DataTransferUtil.copy(selectStmt, insertStmt, 1000, 0, setter);
+     *     System.out.println("Copied " + rowsCopied + " recent records");
+     * }
      * }</pre>
      *
      * @param selectStmt the PreparedStatement used to select data from the source

@@ -112,7 +112,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * <pre>{@code
      * User user = new User();
      * user.setEmail("john@example.com");
-     * user.setCreatedDate(new Date());
+     * user.setCreatedDate(new java.util.Date());
      * Long userId = userDao.insert(user, Arrays.asList("email", "createdDate"));
      * }</pre>
      *

@@ -56,7 +56,8 @@ import com.landawn.abacus.util.Throwables;
  * underlying JDBC {@code COMMIT}/{@code ROLLBACK} is issued only when the outermost scope completes
  * (the reference count reaches zero). If any inner scope rolls back, the transaction is marked
  * rollback-only and the outermost commit is converted into a rollback. A nested scope may request a
- * different isolation level; the previous level is pushed onto a stack and restored when that scope exits.</p>
+ * different isolation level; the previous level is pushed onto a stack and restored when that scope exits.
+ * {@link IsolationLevel#DEFAULT} inherits the currently effective level in a nested scope.</p>
  *
  * <p>This class implements {@link AutoCloseable}; {@link #close()} simply delegates to
  * {@link #rollbackIfNotCommitted()}, making it safe to use in a try-with-resources block.</p>
@@ -253,9 +254,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * String transactionId = tran.id();
-     * logger.info("Starting transaction: {}", transactionId);
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+     *     String transactionId = tran.id();
+     *     logger.info("Starting transaction: {}", transactionId);
+     * }
      * }</pre>
      *
      * @return the unique transaction identifier, never {@code null}
@@ -303,10 +305,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
-     * IsolationLevel level = tran.isolationLevel();
-     * if (level == IsolationLevel.SERIALIZABLE) {
-     *     // Handle high isolation scenario
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE)) {
+     *     IsolationLevel level = tran.isolationLevel();
+     *     if (level == IsolationLevel.SERIALIZABLE) {
+     *         // Handle high isolation scenario
+     *     }
      * }
      * }</pre>
      *
@@ -325,10 +328,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * Transaction.Status status = tran.status();
-     * if (status == Transaction.Status.ACTIVE) {
-     *     // Transaction is still active and can be committed or rolled back
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+     *     Transaction.Status status = tran.status();
+     *     if (status == Transaction.Status.ACTIVE) {
+     *         // Transaction is still active and can be committed or rolled back
+     *     }
      * }
      * }</pre>
      *
@@ -351,10 +355,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * if (tran.isActive()) {
-     *     // Safe to perform operations within this transaction
-     *     performDatabaseOperations();
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+     *     if (tran.isActive()) {
+     *         // Safe to perform operations within this transaction
+     *         performDatabaseOperations();
+     *     }
      * }
      * }</pre>
      *
@@ -394,7 +399,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *     dao.save(entity);
      *     dao.update(anotherEntity);
      *     tran.commit();
-     * } catch (Exception e) {
+     * } finally {
      *     tran.rollbackIfNotCommitted();
      * }
      * }</pre>
@@ -826,12 +831,18 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         _isMarkedByCommitOrRollbackPreviously = false;
 
+        final boolean shouldPushStacks = _refCount.get() > 0;
+        // DEFAULT means do not change the connection. In a nested scope that means inheriting
+        // the currently effective level, not replacing the in-memory value with DEFAULT. Otherwise,
+        // after a still-deeper explicit level exits, decrementAndGetRef() would interpret DEFAULT as
+        // the connection's original level and restore the wrong isolation for the active outer scope.
+        final IsolationLevel effectiveIsolationLevel = shouldPushStacks && isolationLevel == IsolationLevel.DEFAULT ? _isolationLevel : isolationLevel;
+
         // Push recovery state BEFORE mutating the connection so a setTransactionIsolation failure
         // doesn't leave the stacks/fields inconsistent with the actual connection state. Pre-fix the
         // ordering was conn-mutate → stack-push → field-update → refcount-increment, so a throw at
         // the conn-mutate step left _refCount and _isolationLevel reflecting the outer scope but
         // potentially with a half-applied connection isolation.
-        final boolean shouldPushStacks = _refCount.get() > 0;
         if (shouldPushStacks) {
             _isolationLevelStack.push(_isolationLevel);
             _isForUpdateOnlyStack.push(_isForUpdateOnly);
@@ -840,9 +851,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         // Skip the connection mutation when the effective level is unchanged: the constructor already
         // applied the requested isolation for the outermost scope (where _isolationLevel equals the
         // requested level), and a nested scope re-requesting the current level needs no JDBC call.
-        if (_conn != null && isolationLevel != IsolationLevel.DEFAULT && isolationLevel != _isolationLevel) {
+        if (_conn != null && effectiveIsolationLevel != IsolationLevel.DEFAULT && effectiveIsolationLevel != _isolationLevel) {
             try {
-                _conn.setTransactionIsolation(isolationLevel.intValue());
+                _conn.setTransactionIsolation(effectiveIsolationLevel.intValue());
             } catch (final SQLException e) {
                 final UncheckedSQLException failure = new UncheckedSQLException(e);
 
@@ -883,7 +894,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             }
         }
 
-        _isolationLevel = isolationLevel;
+        _isolationLevel = effectiveIsolationLevel;
         _isForUpdateOnly = forUpdateOnly;
 
         final int refCount = _refCount.incrementAndGet();
@@ -1199,12 +1210,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource1);
-     * SqlTransaction tran2 = JdbcUtil.beginTransaction(dataSource2);
-     *
-     * Set<SqlTransaction> transactions = new HashSet<>();
-     * transactions.add(tran1);
-     * transactions.add(tran2);
+     * try (SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource1);
+     *         SqlTransaction tran2 = JdbcUtil.beginTransaction(dataSource2)) {
+     *     Set<SqlTransaction> transactions = new HashSet<>();
+     *     transactions.add(tran1);
+     *     transactions.add(tran2);
+     * }
      * }</pre>
      *
      * @return the hash code value for this transaction
@@ -1220,11 +1231,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource);
-     * SqlTransaction tran2 = tran1;
-     *
-     * if (tran1.equals(tran2)) {
-     *     // Same transaction instance
+     * try (SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource)) {
+     *     SqlTransaction tran2 = tran1;
+     *     if (tran1.equals(tran2)) {
+     *         // Same transaction instance
+     *     }
      * }
      * }</pre>
      *
@@ -1242,9 +1253,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * logger.debug("Transaction details: {}", tran);
-     * // Output: SqlTransaction={id=...}
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+     *     logger.debug("Transaction details: {}", tran);
+     *     // Output: SqlTransaction={id=...}
+     * }
      * }</pre>
      *
      * @return a string representation of this transaction

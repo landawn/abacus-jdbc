@@ -50,10 +50,13 @@ import com.landawn.abacus.annotation.Beta;
  * AuditLogDao dao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
  *
  * dao.save(new AuditLog("LOGIN", userId));                            // reads + inserts work
- * dao.prepareNamedQuery("INSERT INTO audit_log(action) VALUES (:a)").setString("a", "LOGOUT").execute();
+ * try (com.landawn.abacus.jdbc.NamedQuery query =
+ *         dao.prepareNamedQuery("INSERT INTO audit_log(action) VALUES (:a)")) {
+ *     query.setString("a", "LOGOUT").execute();
+ * }
  *
  * // dao.update("status", "X", Filters.eq("id", 1L));                 // does not compile
- * // dao.prepareQuery("UPDATE audit_log SET ...");                    // throws UnsupportedOperationException
+ * // dao.prepareQuery("UPDATE audit_log SET action = ? WHERE id = ?"); // throws UnsupportedOperationException
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

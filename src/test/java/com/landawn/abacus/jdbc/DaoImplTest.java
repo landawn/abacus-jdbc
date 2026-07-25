@@ -305,6 +305,8 @@ public class DaoImplTest extends TestBase {
         boolean existsWithMapper(Jdbc.RowMapper<TestEntity> mapper);
 
         boolean notifyExists();
+
+        boolean notExistsExplicit();
     }
 
     interface RollbackMaskDao extends Dao<TestEntity, RollbackMaskDao> {
@@ -314,6 +316,11 @@ public class DaoImplTest extends TestBase {
         default void failInTransaction() {
             throw PRIMARY_FAILURE;
         }
+    }
+
+    interface PreparationFailureDao extends Dao<TestEntity, PreparationFailureDao> {
+        @Query("SELECT id, name FROM test")
+        List<TestEntity> listAfterPreparationFailure() throws SQLException;
     }
 
     // Interface with a method returning List<T> (TypeVariable) — triggers the ClassCastException bug before fix.
@@ -849,6 +856,24 @@ public class DaoImplTest extends TestBase {
         org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).notExists();
     }
 
+    @Test
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void testExplicitExistsOperationOverridesNotExistsMethodName() throws Exception {
+        final Method method = QueryClassifierDao.class.getMethod("notExistsExplicit");
+        final Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
+        factory.setAccessible(true);
+        final Throwables.BiFunction<AbstractQuery, Object[], Boolean, SQLException> function = (Throwables.BiFunction<AbstractQuery, Object[], Boolean, SQLException>) factory
+                .invoke(null, TestEntity.class, method, null, null, null, false, false, false, QueryOperation.exists, false,
+                        "QueryClassifierDao.notExistsExplicit");
+        final AbstractQuery query = mock(AbstractQuery.class);
+        org.mockito.Mockito.when(query.exists()).thenReturn(true);
+
+        assertTrue(function.apply(query, new Object[0]));
+        org.mockito.Mockito.verify(query).exists();
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).notExists();
+    }
+
     // QueryInfo: sql ends with ";" - trims it (L6536 branch)
     @Test
     void testQueryInfo_SqlWithTrailingSemicolon() {
@@ -877,6 +902,32 @@ public class DaoImplTest extends TestBase {
     void testQueryInfo_FragmentContainsNamedParameters_PositionalSql_Throws() {
         assertThrows(IllegalArgumentException.class, () -> new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = ?", null, 0, 0, false, 0, QueryOperation.DEFAULT,
                 false, false, true, false, false, true));
+    }
+
+    @Test
+    void testNamedDslPreservesCustomDialectHandlerAndTokenizer() throws Exception {
+        final java.util.function.BiConsumer<StringBuilder, String> namedParameterHandler = (sql, name) -> sql.append('@').append(name);
+        final com.landawn.abacus.query.SqlParser.TokenizerConfig tokenizerConfig = com.landawn.abacus.query.SqlParser.TokenizerConfig.builder()
+                .withSeparator('~')
+                .build();
+        final com.landawn.abacus.query.SqlDialect customDialect = PSC.sqlDialect()
+                .toBuilder()
+                .sqlPolicy(com.landawn.abacus.query.SqlDialect.SqlPolicy.RAW_SQL)
+                .namedParameterHandler(namedParameterHandler)
+                .tokenizerConfig(tokenizerConfig)
+                .build();
+        final com.landawn.abacus.query.Dsl customDsl = com.landawn.abacus.query.Dsl.forDialect(customDialect);
+        final Method namedDslMethod = DaoImpl.class.getDeclaredMethod("namedDsl", com.landawn.abacus.query.Dsl.class);
+        namedDslMethod.setAccessible(true);
+
+        final com.landawn.abacus.query.Dsl convertedDsl = (com.landawn.abacus.query.Dsl) namedDslMethod.invoke(null, customDsl);
+
+        assertEquals(com.landawn.abacus.query.SqlDialect.SqlPolicy.NAMED_SQL, convertedDsl.sqlDialect().sqlPolicy());
+        assertSame(namedParameterHandler, convertedDsl.sqlDialect().namedParameterHandler());
+        assertEquals(tokenizerConfig, convertedDsl.sqlDialect().tokenizerConfig());
+        assertEquals(customDialect.productInfo(), convertedDsl.sqlDialect().productInfo());
+        assertEquals(customDialect.namingPolicy(), convertedDsl.sqlDialect().namingPolicy());
+        assertEquals(customDialect.identifierQuote(), convertedDsl.sqlDialect().identifierQuote());
     }
 
     /**
@@ -1585,6 +1636,29 @@ public class DaoImplTest extends TestBase {
 
         org.mockito.Mockito.verify(query, org.mockito.Mockito.never())
                 .configureStatement(org.mockito.ArgumentMatchers.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any());
+    }
+
+    @Test
+    public void testPrepareQueryClosesAllocatedQueryAfterCheckedConfigurationFailure() throws SQLException {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final PreparationFailureDao dao = DaoImpl.createDao(PreparationFailureDao.class, null, ds, PSC, null, null, null);
+        final PreparedQuery query = mock(PreparedQuery.class);
+        final SQLException primaryFailure = new SQLException("setFetchDirection failed");
+        final IllegalStateException closeFailure = new IllegalStateException("close failed");
+
+        org.mockito.Mockito.when(query.setFetchDirection(FetchDirection.FORWARD)).thenThrow(primaryFailure);
+        org.mockito.Mockito.doThrow(closeFailure).when(query).close();
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = org.mockito.Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareQuery(org.mockito.ArgumentMatchers.same(ds), org.mockito.ArgumentMatchers.anyString())).thenReturn(query);
+
+            final SQLException thrown = assertThrows(SQLException.class, dao::listAfterPreparationFailure);
+
+            assertSame(primaryFailure, thrown);
+            assertEquals(List.of(closeFailure), List.of(thrown.getSuppressed()));
+        }
+
+        org.mockito.Mockito.verify(query).close();
     }
 
     @Test

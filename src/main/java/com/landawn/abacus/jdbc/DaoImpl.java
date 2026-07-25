@@ -484,18 +484,10 @@ final class DaoImpl {
         return dslWithPolicy(dsl, SqlPolicy.NAMED_SQL);
     }
 
-    @SuppressWarnings({ "unchecked" })
     private static Dsl dslWithPolicy(final Dsl dsl, final SqlPolicy sqlPolicy) {
-        final SqlDialect sqlDialect = dsl.sqlDialect();
-
-        final SqlDialect newSqlDialect = SqlDialect.builder()
-                .productInfo(sqlDialect.productInfo())
-                .namingPolicy(sqlDialect.namingPolicy())
-                .identifierQuote(sqlDialect.identifierQuote())
-                .sqlPolicy(sqlPolicy)
-                .build();
-
-        return Dsl.forDialect(newSqlDialect);
+        // Preserve all dialect customizations (including the named-parameter handler and tokenizer configuration)
+        // when only the rendering policy needs to change.
+        return Dsl.forDialect(dsl.sqlDialect().toBuilder().sqlPolicy(sqlPolicy).build());
     }
 
     /**
@@ -1208,7 +1200,7 @@ final class DaoImpl {
                         + " is not supported by method annotated with @MergedById. Only Optional/List/Collection are supported at present");
             }
         } else if (isExists) {
-            if (isNotExistsMethodName(method.getName())) {
+            if (queryOperation == QueryOperation.DEFAULT && isNotExistsMethodName(method.getName())) {
                 return (preparedQuery, args) -> (R) (Boolean) preparedQuery.notExists();
             } else {
                 return (preparedQuery, args) -> (R) (Boolean) preparedQuery.exists();
@@ -1677,7 +1669,6 @@ final class DaoImpl {
         }
 
         AbstractQuery preparedQuery = null;
-        boolean noException = false;
 
         try {
             preparedQuery = queryInfo.isProcedure ? JdbcUtil.prepareCallableQuery(proxy.dataSource(), query)
@@ -1756,14 +1747,20 @@ final class DaoImpl {
                 preparedQuery.settParameters(args, parametersSetter);
             }
 
-            noException = true;
-        } finally {
-            if (!noException && preparedQuery != null) {
-                preparedQuery.close();
+            return preparedQuery;
+        } catch (final SQLException | RuntimeException | Error e) {
+            if (preparedQuery != null) {
+                try {
+                    preparedQuery.close();
+                } catch (final RuntimeException | Error closeFailure) {
+                    if (closeFailure != e) {
+                        e.addSuppressed(closeFailure);
+                    }
+                }
             }
-        }
 
-        return preparedQuery;
+            throw e;
+        }
     }
 
     private static Condition handleLimit(final Condition cond, final int count, final boolean skipLimitWithoutOrderBy) {
@@ -2248,7 +2245,7 @@ final class DaoImpl {
 
         final Class<?> idClass = isCrudDao ? (Class) typeArguments[1] : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
-        final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
+        final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 
         final Function<Condition, SqlBuilder.SP> selectFromSqlBuilderFunc = cond -> hasJoinedByProperties
                 ? parameterizedDsl.select(defaultSelectPropNames).from(tableName, entityClass).append(cond).build()

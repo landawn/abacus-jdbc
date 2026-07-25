@@ -229,8 +229,8 @@ public final class DaoUtil {
      * OrderLine orderLine = new OrderLine();
      * orderLine.setOrderId(100);
      * orderLine.setLineNumber(5);
-     * List<String> idPropNames = Arrays.asList("orderId", "lineNumber");
-     * Seid compositeId = DaoUtil.extractId(orderLine, idPropNames, orderLineBeanInfo);
+     * List<String> compositeIdPropNames = Arrays.asList("orderId", "lineNumber");
+     * Seid compositeId = DaoUtil.extractId(orderLine, compositeIdPropNames, orderLineBeanInfo);
      * // compositeId contains both orderId=100 and lineNumber=5
      * }</pre>
      *
@@ -279,7 +279,7 @@ public final class DaoUtil {
      *
      * // Use the extractor on multiple entities
      * List<User> users = Arrays.asList(user1, user2, user3);
-     * List<Long> ids = users.stream().map(idExtractor).collect(Collectors.toList());
+     * List<Long> ids = users.stream().map(idExtractor).toList();
      *
      * // Create an extractor for composite ID
      * List<String> compositeIdPropNames = Arrays.asList("orderId", "lineNumber");
@@ -402,10 +402,10 @@ public final class DaoUtil {
      * // result == propsToRefresh (same reference)
      *
      * // ID properties not included - creates a new HashSet containing the union
-     * Collection<String> propsToRefresh = Arrays.asList("name", "email");
-     * List<String> idProps = Arrays.asList("id");
-     * Collection<String> result = DaoUtil.getRefreshSelectPropNames(propsToRefresh, idProps);
-     * // result contains: "name", "email", "id" (HashSet, iteration order not guaranteed)
+     * Collection<String> propsMissingId = Arrays.asList("name", "email");
+     * List<String> requiredIdProps = Arrays.asList("id");
+     * Collection<String> augmentedResult = DaoUtil.getRefreshSelectPropNames(propsMissingId, requiredIdProps);
+     * // augmentedResult contains: "name", "email", "id" (HashSet, iteration order not guaranteed)
      * }</pre>
      *
      * @param propNamesToRefresh the collection of property names to refresh; may be {@code null}
@@ -439,13 +439,12 @@ public final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class UserDaoImpl implements CrudDao<User, Long, UserDaoImpl>,
-     *                              CrudJoinEntityHelper<User, Long, UserDaoImpl> {
-     *     // ... implementation
+     * interface UserDao extends CrudDao<User, Long, UserDao>,
+     *                           CrudJoinEntityHelper<User, Long, UserDao> {
      * }
      *
-     * UserDaoImpl dao = new UserDaoImpl();
-     * CrudReadOps<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudReadOps(dao);
+     * UserDao dao = JdbcUtil.createDao(UserDao.class, dataSource);
+     * CrudReadOps<User, Long, UserDao> crudDao = DaoUtil.getCrudReadOps(dao);
      * // Successfully casts to CrudReadOps
      * }</pre>
      *
@@ -475,13 +474,12 @@ public final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class ProductDaoImpl implements Dao<Product, ProductDaoImpl>,
-     *                                 JoinEntityHelper<Product, ProductDaoImpl> {
-     *     // ... implementation
+     * interface ProductDao extends Dao<Product, ProductDao>,
+     *                              JoinEntityHelper<Product, ProductDao> {
      * }
      *
-     * ProductDaoImpl dao = new ProductDaoImpl();
-     * ReadOps<Product, ProductDaoImpl> daoInstance = DaoUtil.getReadOps(dao);
+     * ProductDao dao = JdbcUtil.createDao(ProductDao.class, dataSource);
+     * ReadOps<Product, ProductDao> daoInstance = DaoUtil.getReadOps(dao);
      * // Successfully casts to ReadOps
      * }</pre>
      *
@@ -510,13 +508,12 @@ public final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class ProductDaoImpl implements UncheckedDao<Product, ProductDaoImpl>,
-     *                                 UncheckedJoinEntityHelper<Product, ProductDaoImpl> {
-     *     // ... implementation
+     * interface ProductDao extends UncheckedDao<Product, ProductDao>,
+     *                              UncheckedJoinEntityHelper<Product, ProductDao> {
      * }
      *
-     * ProductDaoImpl dao = new ProductDaoImpl();
-     * UncheckedReadOps<Product, ProductDaoImpl> daoInstance = DaoUtil.getReadOps(dao);
+     * ProductDao dao = JdbcUtil.createDao(ProductDao.class, dataSource);
+     * UncheckedReadOps<Product, ProductDao> daoInstance = DaoUtil.getReadOps(dao);
      * // Successfully casts to UncheckedReadOps
      * }</pre>
      *
@@ -545,13 +542,12 @@ public final class DaoUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Typical usage in internal DAO operations
-     * class UserDaoImpl implements UncheckedCrudDao<User, Long, UserDaoImpl>,
-     *                              UncheckedCrudJoinEntityHelper<User, Long, UserDaoImpl> {
-     *     // ... implementation
+     * interface UserDao extends UncheckedCrudDao<User, Long, UserDao>,
+     *                           UncheckedCrudJoinEntityHelper<User, Long, UserDao> {
      * }
      *
-     * UserDaoImpl dao = new UserDaoImpl();
-     * UncheckedCrudReadOps<User, Long, UserDaoImpl> crudDao = DaoUtil.getCrudReadOps(dao);
+     * UserDao dao = JdbcUtil.createDao(UserDao.class, dataSource);
+     * UncheckedCrudReadOps<User, Long, UserDao> crudDao = DaoUtil.getCrudReadOps(dao);
      * // Successfully casts to UncheckedCrudReadOps
      * }</pre>
      *

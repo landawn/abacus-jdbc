@@ -42,7 +42,7 @@ package com.landawn.abacus.jdbc.dao;
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Fetch a user with their orders - no checked exceptions
- * Optional<User> userWithOrders = userDao.get(123L, Order.class);
+ * com.landawn.abacus.util.u.Optional<User> userWithOrders = userDao.get(123L, Order.class);
  * User userWithAll = userDao.gett(123L, true);   // Load all join entities
  *
  * // Batch get with join entities

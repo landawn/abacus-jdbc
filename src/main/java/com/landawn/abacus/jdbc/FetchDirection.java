@@ -40,12 +40,12 @@ import java.sql.ResultSet;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Example: Setting fetch direction for a Statement
- * try (Connection conn = dataSource.getConnection()) {
- *     // Create a scrollable ResultSet to support reverse fetching
- *     Statement stmt = conn.createStatement(
+ * try (Connection conn = dataSource.getConnection();
+ *      // Create a scrollable ResultSet to support reverse traversal
+ *      Statement stmt = conn.createStatement(
  *         ResultSet.TYPE_SCROLL_INSENSITIVE,
  *         ResultSet.CONCUR_READ_ONLY
- *     );
+ *      )) {
  *
  *     // Hint that the application will traverse this result set backwards
  *     stmt.setFetchDirection(FetchDirection.REVERSE.intValue());
@@ -168,11 +168,11 @@ public enum FetchDirection {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
-     *     Statement stmt = conn.createStatement(
+     * try (Connection conn = dataSource.getConnection();
+     *      Statement stmt = conn.createStatement(
      *         ResultSet.TYPE_SCROLL_INSENSITIVE, // Example: requires scrollable ResultSet
      *         ResultSet.CONCUR_READ_ONLY
-     *     );
+     *      )) {
      *     stmt.setFetchDirection(FetchDirection.REVERSE.intValue());
      *     // ... execute query and process ResultSet ...
      * } catch (SQLException e) {

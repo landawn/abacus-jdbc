@@ -1602,8 +1602,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream asciiStream = new FileInputStream("data.txt");
-     * query.setAsciiStream(1, asciiStream);
+     * try (InputStream asciiStream = new FileInputStream("data.txt")) {
+     *     query.setAsciiStream(1, asciiStream).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1622,8 +1623,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream asciiStream = new FileInputStream("data.txt");
-     * query.setAsciiStream(1, asciiStream, 1024);
+     * File file = new File("data.txt");
+     * int length = Math.toIntExact(file.length());
+     * try (InputStream asciiStream = new FileInputStream(file)) {
+     *     query.setAsciiStream(1, asciiStream, length).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1643,8 +1647,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream asciiStream = new FileInputStream("large_file.txt");
-     * query.setAsciiStream(1, asciiStream, file.length());
+     * File file = new File("large_file.txt");
+     * try (InputStream asciiStream = new FileInputStream(file)) {
+     *     query.setAsciiStream(1, asciiStream, file.length()).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1665,8 +1671,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream binaryStream = new FileInputStream("image.jpg");
-     * query.setBinaryStream(1, binaryStream);
+     * try (InputStream binaryStream = new FileInputStream("image.jpg")) {
+     *     query.setBinaryStream(1, binaryStream).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1685,8 +1692,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream binaryStream = new FileInputStream("document.pdf");
-     * query.setBinaryStream(1, binaryStream, 2048);
+     * File file = new File("document.pdf");
+     * int length = Math.toIntExact(file.length());
+     * try (InputStream binaryStream = new FileInputStream(file)) {
+     *     query.setBinaryStream(1, binaryStream, length).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1706,8 +1716,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream binaryStream = new FileInputStream("large_file.bin");
-     * query.setBinaryStream(1, binaryStream, file.length());
+     * File file = new File("large_file.bin");
+     * try (InputStream binaryStream = new FileInputStream(file)) {
+     *     query.setBinaryStream(1, binaryStream, file.length()).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1728,8 +1740,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileReader reader = new FileReader("text.txt");
-     * query.setCharacterStream(1, reader);
+     * try (Reader reader = new FileReader("text.txt", StandardCharsets.UTF_8)) {
+     *     query.setCharacterStream(1, reader).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1749,7 +1762,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader reader = new StringReader("Hello World");
-     * query.setCharacterStream(1, reader, 11);
+     * query.setCharacterStream(1, reader, 11).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1769,8 +1782,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileReader reader = new FileReader("large_text.txt");
-     * query.setCharacterStream(1, reader, file.length());
+     * String text = Files.readString(Path.of("large_text.txt"), StandardCharsets.UTF_8);
+     * try (Reader reader = new StringReader(text)) {
+     *     query.setCharacterStream(1, reader, text.length()).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1792,7 +1807,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader reader = new StringReader("Unicode テキスト");
-     * query.setNCharacterStream(1, reader);
+     * query.setNCharacterStream(1, reader).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1812,8 +1827,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * StringReader reader = new StringReader("Unicode 文字列");
-     * query.setNCharacterStream(1, reader, text.length());
+     * String text = "Unicode 文字列";
+     * StringReader reader = new StringReader(text);
+     * query.setNCharacterStream(1, reader, text.length()).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1834,8 +1850,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = connection.createBlob();
-     * blob.setBytes(1, imageData);
-     * query.setBlob(1, blob);
+     * try {
+     *     blob.setBytes(1, imageData);
+     *     query.setBlob(1, blob).execute();
+     * } finally {
+     *     blob.free();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1855,8 +1875,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream imageStream = new FileInputStream("photo.jpg");
-     * query.setBlob(1, imageStream);
+     * try (InputStream imageStream = new FileInputStream("photo.jpg")) {
+     *     query.setBlob(1, imageStream).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1875,8 +1896,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileInputStream videoStream = new FileInputStream("video.mp4");
-     * query.setBlob(1, videoStream, file.length());
+     * File file = new File("video.mp4");
+     * try (InputStream videoStream = new FileInputStream(file)) {
+     *     query.setBlob(1, videoStream, file.length()).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1897,8 +1920,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = connection.createClob();
-     * clob.setString(1, largeText);
-     * query.setClob(1, clob);
+     * try {
+     *     clob.setString(1, largeText);
+     *     query.setClob(1, clob).execute();
+     * } finally {
+     *     clob.free();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1917,8 +1944,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * FileReader textReader = new FileReader("document.txt");
-     * query.setClob(1, textReader);
+     * try (Reader textReader = new FileReader("document.txt", StandardCharsets.UTF_8)) {
+     *     query.setClob(1, textReader).execute();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1937,7 +1965,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader textReader = new StringReader(largeText);
-     * query.setClob(1, textReader, largeText.length());
+     * query.setClob(1, textReader, largeText.length()).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1959,8 +1987,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * NClob nclob = connection.createNClob();
-     * nclob.setString(1, unicodeText);
-     * query.setNClob(1, nclob);
+     * try {
+     *     nclob.setString(1, unicodeText);
+     *     query.setNClob(1, nclob).execute();
+     * } finally {
+     *     nclob.free();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -1980,7 +2012,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader unicodeReader = new StringReader("大きなテキスト");
-     * query.setNClob(1, unicodeReader);
+     * query.setNClob(1, unicodeReader).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -2000,7 +2032,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader unicodeReader = new StringReader(largeUnicodeText);
-     * query.setNClob(1, unicodeReader, largeUnicodeText.length());
+     * query.setNClob(1, unicodeReader, largeUnicodeText.length()).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -2041,7 +2073,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Array array = connection.createArrayOf("VARCHAR", new String[] {"A", "B", "C"});
-     * query.setArray(1, array);
+     * try {
+     *     query.setArray(1, array).execute();
+     * } finally {
+     *     array.free();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -2061,8 +2097,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLXML xml = connection.createSQLXML();
-     * xml.setString("<data>value</data>");
-     * query.setSQLXML(1, xml);
+     * try {
+     *     xml.setString("<data>value</data>");
+     *     query.setSQLXML(1, xml).execute();
+     * } finally {
+     *     xml.free();
+     * }
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -2083,7 +2123,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Ref ref = resultSet.getRef("ref_column");
-     * query.setRef(1, ref);
+     * query.setRef(1, ref).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -2104,7 +2144,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowId rowId = resultSet.getRowId("ROWID");
-     * query.setRowId(1, rowId);
+     * query.setRowId(1, rowId).execute();
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
@@ -4001,12 +4041,21 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Iterator<DataRecord> records = getBigDataIterator();
-     * query.addBatchParameters(records, (q, stmt, record) -> {
-     *     // Mix query convenience methods with direct statement access
-     *     q.setString(1, record.getId());
-     *     stmt.setArray(2, createSqlArray(record.getTags()));
-     *     q.setTimestamp(3, record.getCreatedAt());
-     * }).batchUpdate();
+     * List<java.sql.Array> arrays = new ArrayList<>();
+     * try {
+     *     query.addBatchParameters(records, (q, stmt, record) -> {
+     *         // Keep every driver-created Array alive until the batch has executed.
+     *         java.sql.Array tags = createSqlArray(record.getTags());
+     *         arrays.add(tags);
+     *         q.setString(1, record.getId());
+     *         stmt.setArray(2, tags);
+     *         q.setTimestamp(3, record.getCreatedAt());
+     *     }).batchUpdate();
+     * } finally {
+     *     for (java.sql.Array array : arrays) {
+     *         array.free();
+     *     }
+     * }
      * }</pre>
      *
      * @param <T> the type of elements in the batch parameters collection
@@ -4120,9 +4169,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setFetchDirection(FetchDirection.FORWARD)
-     *      .setFetchSize(1000)
-     *      .stream();
+     * try (Stream<Map<String, Object>> rows = query
+     *         .setFetchDirection(FetchDirection.FORWARD)
+     *         .setFetchSize(1000)
+     *         .stream()) {
+     *     rows.forEach(this::processRow);
+     * }
      * }</pre>
      *
      * @param direction one of {@link FetchDirection#FORWARD}, {@link FetchDirection#REVERSE},
@@ -4173,9 +4225,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For large result sets
-     * query.setFetchSize(1000)
-     *      .stream()  // Process rows in batches of 1000
-     *      .forEach(row -> processRow(row));
+     * try (Stream<Map<String, Object>> rows = query.setFetchSize(1000).stream()) {
+     *     rows.forEach(this::processRow); // 1000 is a driver fetch-size hint
+     * }
      * }</pre>
      *
      * @param fetchSize the number of rows to fetch. Use 0 to let the JDBC driver choose. Most drivers reject a
@@ -4253,8 +4305,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setLargeMaxRows(1_000_000L)  // Return at most 1 million rows
-     *      .stream();
+     * try (Stream<Map<String, Object>> rows = query
+     *         .setLargeMaxRows(1_000_000L)
+     *         .stream()) {
+     *     rows.forEach(this::processRow); // Return at most 1 million rows
+     * }
      * }</pre>
      *
      * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
@@ -6213,7 +6268,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated Use {@code stream(RowFilter, RowMapper).findFirst()} instead
+     * @deprecated Use {@code stream(RowFilter, RowMapper).findFirst()} in try-with-resources instead
      */
     @Deprecated
     public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
@@ -6277,7 +6332,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).findFirst()} instead
+     * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).findFirst()} in try-with-resources instead
      */
     @Deprecated
     public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
@@ -6406,7 +6461,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated Use {@code stream(RowFilter, RowMapper).findFirst().orElseNull()} instead
+     * @deprecated Use {@code stream(RowFilter, RowMapper).findFirst().orElseNull()} in try-with-resources instead
      */
     @Deprecated
     public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
@@ -6487,7 +6542,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).findFirst().orElseNull()} instead
+     * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).findFirst().orElseNull()} in try-with-resources instead
      */
     @Deprecated
     public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
@@ -6954,17 +7009,19 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Call a stored procedure that returns multiple result sets
-     * CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call getOrdersAndCustomers(?)}");
-     * query.setInt(1, regionId);
-     *
      * // Use specific type when all result sets share the same type
-     * List<List<Order>> orderResults = query.listAllResultSets(Order.class);
+     * try (CallableQuery orderQuery = JdbcUtil.prepareCallableQuery(connection, "{call getRegionalOrders(?)}")) {
+     *     List<List<Order>> orderResults = orderQuery.setInt(1, regionId)
+     *             .listAllResultSets(Order.class);
+     * }
      *
      * // Use Map for heterogeneous result sets
-     * List<List<Map>> allResults = query.listAllResultSets(Map.class);
-     * List<Map> orderMaps = allResults.get(0);
-     * List<Map> customerMaps = allResults.get(1);
+     * try (CallableQuery mixedQuery = JdbcUtil.prepareCallableQuery(connection, "{call getOrdersAndCustomers(?)}")) {
+     *     List<List<Map>> allResults = mixedQuery.setInt(1, regionId)
+     *             .listAllResultSets(Map.class);
+     *     List<Map> orderMaps = allResults.get(0);
+     *     List<Map> customerMaps = allResults.get(1);
+     * }
      * }</pre>
      *
      * @param <T> the type of entities extracted from each result set
@@ -7503,9 +7560,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         .forEach(this::sendNewsletter);
      * }
      *
-     * long activeCount = preparedQuery.stream()
-     *     .filter(row -> "active".equals(row.get("status")))
-     *     .count();
+     * // With a separately prepared query:
+     * long activeCount;
+     * try (Stream<Map<String, Object>> rows = countQuery.stream()) {
+     *     activeCount = rows.filter(row -> "active".equals(row.get("status"))).count();
+     * }
      * }</pre>
      *
      * @return a lazy {@code Stream} of {@code Map<String, Object>} rows from the first result set
@@ -7539,11 +7598,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *               .forEach(email -> emailService.send(email));
      * }
      *
-     * // Collect filtered results
-     * List<Customer> premiumCustomers = preparedQuery
-     *     .stream(Customer.class)
-     *     .filter(c -> c.getTier() == CustomerTier.PREMIUM)
-     *     .collect(Collectors.toList());
+     * // Collect results from a separate customer query
+     * List<Customer> premiumCustomers;
+     * try (Stream<Customer> customers = customerQuery.stream(Customer.class)) {
+     *     premiumCustomers = customers
+     *         .filter(c -> c.getTier() == CustomerTier.PREMIUM)
+     *         .collect(Collectors.toList());
+     * }
      * }</pre>
      *
      * @param <T> the type of entities in the stream result
@@ -7585,11 +7646,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *           .forEach(System.out::println);
      * }
      *
-     * // Parallel processing for CPU-intensive operations
-     * preparedQuery.stream(rowMapper)
-     *     .parallel()
-     *     .map(this::enrichWithExternalData)
-     *     .forEach(this::process);
+     * // Stop a separate query early while still releasing its cursor
+     * try (Stream<CustomerDTO> stream = anotherPreparedQuery.stream(rowMapper)) {
+     *     Optional<CustomerDTO> firstMatch = stream
+     *         .filter(this::matchesCriteria)
+     *         .findFirst();
+     * }
      * }</pre>
      *
      * @param <T> the type of entities in the stream result
@@ -7794,13 +7856,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract summary information from each result set
-     * Stream<List<Summary>> summaries = callableQuery.streamAllResultSets(
-     *     ResultExtractor.toList(rs -> new Summary(
-     *         rs.getString("name"),
-     *         rs.getInt("count"),
-     *         rs.getDouble("total")
-     *     ))
-     * );
+     * try (Stream<List<Summary>> summaries = callableQuery.streamAllResultSets(
+     *         ResultExtractor.toList(rs -> new Summary(
+     *             rs.getString("name"),
+     *             rs.getInt("count"),
+     *             rs.getDouble("total")
+     *         )))) {
+     *     summaries.forEach(this::processSummaries);
+     * }
      * }</pre>
      *
      * @param <R> the type of result extracted from each ResultSet
@@ -7853,8 +7916,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract data with column-aware processing
-     * Stream<List<Report>> reports = callableQuery.streamAllResultSets(
-     *     (rs, columnLabels) -> {
+     * try (Stream<List<Report>> reports = callableQuery.streamAllResultSets(
+     *         (rs, columnLabels) -> {
      *         List<Report> list = new ArrayList<>();
      *         while (rs.next()) {
      *             Report report = new Report();
@@ -7865,8 +7928,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *             list.add(report);
      *         }
      *         return list;
-     *     }
-     * );
+     *     })) {
+     *     reports.forEach(this::processReports);
+     * }
      * }</pre>
      *
      * @param <R> the type of result extracted from each ResultSet
@@ -8203,7 +8267,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .orElse(0);
      *
      * // Instead of:
-     * int count = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE status = ?")
+     * int materializedCount = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE status = ?")
      *     .setString(1, "active")
      *     .count();   // Inefficient!
      * }</pre>
@@ -9931,15 +9995,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
+     * try {
+     *     ContinuableFuture<Integer> future = preparedQuery
+     *         .setString(1, "INACTIVE")
+     *         .setDate(2, sixMonthsAgo)
+     *         .callAsync(query -> query.update(), customExecutor);
      *
-     * ContinuableFuture<Integer> future = preparedQuery
-     *     .setString(1, "INACTIVE")
-     *     .setDate(2, sixMonthsAgo)
-     *     .callAsync(query -> query.update(), customExecutor);
-     *
-     * future.thenAccept(count ->
-     *     System.out.println("Updated " + count + " inactive users")
-     * );
+     *     int count = future.get();
+     *     System.out.println("Updated " + count + " inactive users");
+     * } finally {
+     *     customExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param <R> the type of result produced by the SQL operation
@@ -9989,7 +10055,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      *
      * // Continue with other work while update runs
-     * future.thenRunAsync(() -> System.out.println("Batch update completed"));
+     * future.thenRunAsync(() -> System.out.println("Batch update completed")).get();
      * }</pre>
      *
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
@@ -10030,14 +10096,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
-     *
-     * ContinuableFuture<Void> future = preparedQuery
-     *     .setTimestamp(1, new Timestamp(System.currentTimeMillis()))
-     *     .runAsync(query -> {
-     *         query.batchUpdate();
-     *         // Send notification after batch completes
-     *         notificationService.sendBatchComplete();
-     *     }, scheduler);
+     * try {
+     *     ContinuableFuture<Void> future = preparedQuery
+     *         .setTimestamp(1, new Timestamp(System.currentTimeMillis()))
+     *         .runAsync(query -> {
+     *             query.batchUpdate();
+     *             // Send notification after batch completes
+     *             notificationService.sendBatchComplete();
+     *         }, scheduler);
+     *     future.get();
+     * } finally {
+     *     scheduler.shutdown();
+     * }
      * }</pre>
      *
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
@@ -10185,8 +10255,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }
      *
      * // Or use try-with-resources:
-     * try (AbstractQuery<?, ?> query = JdbcUtil.prepareQuery(conn, sql)) {
-     *     // Use query...
+     * try (AbstractQuery<?, ?> autoClosingQuery = JdbcUtil.prepareQuery(conn, sql)) {
+     *     // Use autoClosingQuery...
      * } // Automatically closed
      * }</pre>
      *

@@ -243,6 +243,28 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testGenerateSelectSql_PreservesExplicitDelimiterOnSimpleQualifiedPart() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM sales.`order` WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(1);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+
+        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "sales.\"order\"");
+
+        assertEquals("SELECT id FROM sales.`order`", sql);
+    }
+
+    @Test
     public void testGenerateSelectSql_QuotesSinglePartIdentifierStartingWithDigit() throws SQLException {
         final Connection conn = Mockito.mock(Connection.class);
         final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
@@ -2382,6 +2404,14 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(\"a\"\"b\") VALUES (1)");
         // MySQL re-quotes with backticks; the embedded double-quote in the identifier is preserved.
         assertEquals("UPDATE t SET `a\"b` = 1", updateSql);
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_PreservesExplicitSimpleIdentifiers() throws SQLException {
+        final DataSource ds = dataSourceReturningConnection();
+        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO \"order\"(\"select\") VALUES (1)");
+
+        assertEquals("UPDATE `order` SET `select` = 1", updateSql);
     }
 
     // A bracket-delimited identifier with an escaped (doubled) bracket exercises the bracket-identifier

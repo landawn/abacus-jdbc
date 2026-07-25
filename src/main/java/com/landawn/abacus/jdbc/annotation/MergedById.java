@@ -63,7 +63,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Query returns multiple rows per user (one per device)
  *     @Query("SELECT u.id, u.first_name as firstName, u.last_name as lastName, " +
- *             "d.id as 'devices.id', d.model as 'devices.model' " +
+ *             "d.id as \"devices.id\", d.model as \"devices.model\" " +
  *             "FROM users u LEFT JOIN devices d ON u.id = d.user_id " +
  *             "WHERE u.id IN ({ids})")
  *     @MergedById
@@ -79,7 +79,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  *
  * <p>Column naming conventions for nested properties:</p>
  * <ul>
- *   <li>Use dot notation: {@code 'devices.id'}, {@code 'devices.model'}</li>
+ *   <li>Use dot notation in a quoted identifier: {@code "devices.id"}, {@code "devices.model"}</li>
  *   <li>Or use nested aliases in query results</li>
  * </ul>
  *

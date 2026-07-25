@@ -58,19 +58,19 @@ import com.landawn.abacus.annotation.Beta;
  *
  * // These operations work - note no checked exception handling needed:
  * List<Report> reports = dao.list(Filters.between("date", startDate, endDate));
- * Optional<Report> report = dao.findFirst(Filters.eq("id", reportId));
+ * com.landawn.abacus.util.u.Optional<Report> report = dao.findFirst(Filters.eq("id", reportId));
  * Dataset results = dao.query(Filters.eq("status", "PUBLISHED"));
  *
  * // Can be used directly in streams without checked exceptions:
- * Stream.of(reportId1, reportId2, reportId3)
+ * java.util.stream.Stream.of(reportId1, reportId2, reportId3)
  *       .map(id -> dao.findFirst(Filters.eq("id", id)))
- *       .filter(Optional::isPresent)
+ *       .filter(result -> result.isPresent())
  *       .forEach(report -> System.out.println(report.get()));
  *
  * // All write operations are absent from the type and do not compile:
  * // dao.save(report);          // does not compile
- * // dao.update(...);           // does not compile
- * // dao.delete(...);           // does not compile
+ * // dao.update("status", "ARCHIVED", Filters.eq("id", reportId)); // does not compile
+ * // dao.delete(Filters.eq("id", reportId));                        // does not compile
  * // dao.batchSave(reports);    // does not compile
  * }</pre>
  *

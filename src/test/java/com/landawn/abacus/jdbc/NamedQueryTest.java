@@ -3567,6 +3567,30 @@ public class NamedQueryTest extends TestBase {
         verify(mockPreparedStatement, times(2)).clearParameters();
     }
 
+    @Test
+    public void testAddBatchParameters_NullFirstThenStructuredRows() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        final Map<String, Object> mapRow = Map.of("param1", "map-value");
+        final TestEntity beanRow = new TestEntity();
+        beanRow.setParam1("bean-value");
+
+        final List<Object> batch = new ArrayList<>();
+        batch.add(null);
+        batch.add(mapRow);
+        batch.add(beanRow);
+
+        q.addBatchParameters(batch.iterator());
+
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement).setString(1, "map-value");
+        verify(mockPreparedStatement).setString(1, "bean-value");
+        verify(mockPreparedStatement, times(3)).clearParameters();
+        verify(mockPreparedStatement, times(3)).addBatch();
+    }
+
     // setNullTypeName map branch - 1 occurrence (L235-236)
     @Test
     public void testSetNullTypeName_MapBranch_OneOccurrence() throws SQLException {
@@ -3854,8 +3878,8 @@ public class NamedQueryTest extends TestBase {
 
     // --- addBatchParameters(Iterator) null-element handling branches (paramCount==1) ---
 
-    // null first then a non-null follower hits the else branch L4286-4288:
-    // clearParameters(); setObject(1, params); addBatch().
+    // null first then a non-null follower exercises the continuation's setParameters(Object)
+    // dispatch after clearParameters().
     @Test
     public void testAddBatchParameters_Iterator_NullFirst_NonNullSubsequent() throws SQLException {
         when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));

@@ -48,17 +48,17 @@ import java.lang.annotation.Target;
  *
  *     @SqlScript
  *     String sql_listUserWithBiggerId =
- *             PSC.selectFrom(User.class).where(Filters.gt("id")).sql();
+ *             Dsl.PSC.selectFrom(User.class).where(Filters.gt("id")).build().query();
  *
  *     @SqlScript(id = "sql_softDeleteById")          // explicit id overrides field name
  *     String softDeleteByIdSql =
  *             "UPDATE user SET deleted = 1, deleted_at = NOW() WHERE id = :id";
  *
  *     @Query(id = "sql_listUserWithBiggerId")
- *     List<User> listUserWithBiggerId(@Bind("id") long minId);
+ *     List<User> listUserWithBiggerId(@Bind("id") long minId) throws SQLException;
  *
  *     @Query(id = "sql_softDeleteById")
- *     int softDeleteById(@Bind("id") long id);
+ *     int softDeleteById(@Bind("id") long id) throws SQLException;
  * }
  * }</pre>
  *
@@ -80,7 +80,7 @@ public @interface SqlScript {
      * <pre>{@code
      * @SqlScript(id = "sql_listUserWithBiggerId")
      * static final String listUserWithBiggerId =
-     *         PSC.selectFrom(User.class).where(Filters.gt("id")).sql();
+     *         Dsl.PSC.selectFrom(User.class).where(Filters.gt("id")).build().query();
      * }</pre>
      *
      * <p>When supplied, the id must be a non-empty, valid Java identifier, unique among all

@@ -68,24 +68,36 @@ import com.landawn.abacus.jdbc.Propagation;
  * <pre>{@code
  * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
  *
+ *     @Query(value = "INSERT INTO order_item (order_id, product_id, quantity) " +
+ *                    "VALUES (:orderId, :productId, :quantity)", batch = true)
+ *     void insertItems(List<OrderItem> items) throws SQLException;
+ *
  *     // Default: REQUIRED + database-default isolation.
  *     @Transactional
  *     default void placeOrder(Order order, List<OrderItem> items) throws SQLException {
  *         insert(order);
- *         itemDao().batchInsert(items);          // joins the same transaction.
+ *         insertItems(items);                    // joins the same transaction
  *     }
  *
  *     // Independent audit record — survives even if the outer transaction rolls back.
  *     @Transactional(propagation = Propagation.REQUIRES_NEW)
  *     @Query("INSERT INTO audit_log (event, ts) VALUES (:event, :ts)")
- *     int logAudit(@Bind("event") String event, @Bind("ts") Instant ts) throws SQLException;
+ *     void logAudit(@Bind("event") String event, @Bind("ts") Instant ts) throws SQLException;
+ * }
+ *
+ * public interface AccountDao extends CrudDao<Account, Long, AccountDao> {
+ *     @Query("UPDATE account SET balance = balance - :amount WHERE id = :id")
+ *     int debit(@Bind("id") long id, @Bind("amount") BigDecimal amount) throws SQLException;
+ *
+ *     @Query("UPDATE account SET balance = balance + :amount WHERE id = :id")
+ *     int credit(@Bind("id") long id, @Bind("amount") BigDecimal amount) throws SQLException;
  *
  *     // Money transfer needs the strictest isolation.
  *     @Transactional(propagation = Propagation.REQUIRED,
  *                    isolationLevel = IsolationLevel.SERIALIZABLE)
- *     default void transfer(long from, long to, BigDecimal amount) {
- *         decrement(from, amount);
- *         increment(to, amount);
+ *     default void transfer(long from, long to, BigDecimal amount) throws SQLException {
+ *         debit(from, amount);
+ *         credit(to, amount);
  *     }
  * }
  * }</pre>
@@ -118,15 +130,18 @@ public @interface Transactional {
      * <pre>{@code
      * // Main business operation - needs transaction
      * @Transactional(propagation = Propagation.REQUIRED)
-     * void processOrder(Order order) { ... }
+     * @Query("UPDATE orders SET status = :status WHERE id = :id")
+     * int processOrder(@Bind("id") long id, @Bind("status") String status) throws SQLException;
      *
      * // Audit logging - independent transaction
      * @Transactional(propagation = Propagation.REQUIRES_NEW)
-     * void logActivity(String activity) { ... }
+     * @Query("INSERT INTO activity_log (activity) VALUES (:activity)")
+     * void logActivity(@Bind("activity") String activity) throws SQLException;
      *
      * // Read operation - works with or without transaction
      * @Transactional(propagation = Propagation.SUPPORTS)
-     * User getUser(long id) { ... }
+     * @Query("SELECT * FROM users WHERE id = :id")
+     * User getUser(@Bind("id") long id) throws SQLException;
      * }</pre>
      *
      * @return the configured propagation behavior; defaults to {@link Propagation#REQUIRED}
@@ -140,26 +155,30 @@ public @interface Transactional {
      *
      * <p>Isolation levels (from least to most restrictive):</p>
      * <ul>
-     *   <li>{@link IsolationLevel#DEFAULT} - Use database default (usually READ_COMMITTED)</li>
-     *   <li>{@link IsolationLevel#READ_UNCOMMITTED} - Lowest isolation, highest performance</li>
+     *   <li>{@link IsolationLevel#DEFAULT} - Leave the connection at its configured/default isolation</li>
+     *   <li>{@link IsolationLevel#READ_UNCOMMITTED} - Allows dirty, non-repeatable, and phantom reads</li>
      *   <li>{@link IsolationLevel#READ_COMMITTED} - Prevents dirty reads</li>
      *   <li>{@link IsolationLevel#REPEATABLE_READ} - Prevents dirty and non-repeatable reads</li>
-     *   <li>{@link IsolationLevel#SERIALIZABLE} - Highest isolation, prevents all phenomena</li>
+     *   <li>{@link IsolationLevel#SERIALIZABLE} - Prevents the standard dirty-read,
+     *       non-repeatable-read, and phantom-read phenomena</li>
      * </ul>
      *
      * <p>Choose isolation level based on your consistency requirements:</p>
      * <pre>{@code
      * // Financial transactions need high isolation
      * @Transactional(isolationLevel = IsolationLevel.SERIALIZABLE)
-     * void transferFunds(Account from, Account to, BigDecimal amount) { ... }
+     * @Query("UPDATE account SET balance = balance + :amount WHERE id = :id")
+     * int adjustBalance(@Bind("id") long id, @Bind("amount") BigDecimal amount) throws SQLException;
      *
      * // Reporting can tolerate some inconsistency
      * @Transactional(isolationLevel = IsolationLevel.READ_UNCOMMITTED)
-     * List<Report> generateReports() { ... }
+     * @Query("SELECT * FROM report_data")
+     * List<Report> generateReports() throws SQLException;
      *
      * // Most business operations use default
      * @Transactional(isolationLevel = IsolationLevel.DEFAULT)
-     * void updateUserProfile(User user) { ... }
+     * @Query("UPDATE users SET display_name = :displayName WHERE id = :id")
+     * int updateUserProfile(User user) throws SQLException;
      * }</pre>
      *
      * <p><strong>Note:</strong> Higher isolation levels may impact performance due to

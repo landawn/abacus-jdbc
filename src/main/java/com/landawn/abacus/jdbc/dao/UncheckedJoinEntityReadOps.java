@@ -640,9 +640,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * // Load orders for all users without try-catch (UncheckedSQLException is unchecked)
      * userDao.loadJoinEntities(users, "orders", null);
-     * users.stream()
+     * List<User> usersWithManyOrders = users.stream()
      *     .filter(u -> u.getOrders().size() > 5)
-     *     .collect(Collectors.toList());
+     *     .toList();
      * }</pre>
      *
      * @param entities the collection of entities to load join entities for.
@@ -729,14 +729,18 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
      * User user = userDao.gett(userId);
-     *
-     * userDao.loadJoinEntities(
-     *     user,
-     *     Arrays.asList("orders", "reviews", "addresses", "payments"),
-     *     customExecutor
-     * );
+     * java.util.concurrent.ExecutorService customExecutor =
+     *     java.util.concurrent.Executors.newFixedThreadPool(4);
+     * try {
+     *     userDao.loadJoinEntities(
+     *         user,
+     *         Arrays.asList("orders", "reviews", "addresses", "payments"),
+     *         customExecutor
+     *     );
+     * } finally {
+     *     customExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity to load join entities for
@@ -830,14 +834,18 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService batchExecutor = Executors.newCachedThreadPool();
      * List<User> users = userDao.list(Filters.isNotNull("premiumAccount"));
-     *
-     * userDao.loadJoinEntities(
-     *     users,
-     *     Arrays.asList("orders", "subscriptions", "invoices"),
-     *     batchExecutor
-     * );
+     * java.util.concurrent.ExecutorService batchExecutor =
+     *     java.util.concurrent.Executors.newCachedThreadPool();
+     * try {
+     *     userDao.loadJoinEntities(
+     *         users,
+     *         Arrays.asList("orders", "subscriptions", "invoices"),
+     *         batchExecutor
+     *     );
+     * } finally {
+     *     batchExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities to load join entities for
@@ -916,11 +924,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ForkJoinPool customPool = new ForkJoinPool(8);
      * User user = userDao.gett(userId);
-     *
-     * // Load all join entities with custom thread pool
-     * userDao.loadAllJoinEntities(user, customPool);
+     * java.util.concurrent.ExecutorService customPool =
+     *     new java.util.concurrent.ForkJoinPool(8);
+     * try {
+     *     // Load all join entities with custom thread pool
+     *     userDao.loadAllJoinEntities(user, customPool);
+     * } finally {
+     *     customPool.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity to load all join entities for
@@ -993,11 +1005,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService loadingPool = Executors.newWorkStealingPool();
      * List<User> users = userDao.list(Filters.isNotNull("vipStatus"));
-     *
-     * // Load all relationships with custom executor
-     * userDao.loadAllJoinEntities(users, loadingPool);
+     * java.util.concurrent.ExecutorService loadingPool =
+     *     java.util.concurrent.Executors.newWorkStealingPool();
+     * try {
+     *     // Load all relationships with custom executor
+     *     userDao.loadAllJoinEntities(users, loadingPool);
+     * } finally {
+     *     loadingPool.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
@@ -1325,14 +1341,18 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService lazyLoader = Executors.newCachedThreadPool();
      * User user = getUser();
-     *
-     * userDao.loadJoinEntitiesIfAbsent(
-     *     user,
-     *     Arrays.asList("heavyData1", "heavyData2", "heavyData3"),
-     *     lazyLoader
-     * );
+     * java.util.concurrent.ExecutorService lazyLoader =
+     *     java.util.concurrent.Executors.newCachedThreadPool();
+     * try {
+     *     userDao.loadJoinEntitiesIfAbsent(
+     *         user,
+     *         Arrays.asList("heavyData1", "heavyData2", "heavyData3"),
+     *         lazyLoader
+     *     );
+     * } finally {
+     *     lazyLoader.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
@@ -1427,14 +1447,18 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ForkJoinPool fjPool = new ForkJoinPool(16);
      * List<User> users = getThousandsOfUsers();
-     *
-     * userDao.loadJoinEntitiesIfAbsent(
-     *     users,
-     *     Arrays.asList("transactions", "analytics", "recommendations"),
-     *     fjPool
-     * );
+     * java.util.concurrent.ExecutorService fjPool =
+     *     new java.util.concurrent.ForkJoinPool(16);
+     * try {
+     *     userDao.loadJoinEntitiesIfAbsent(
+     *         users,
+     *         Arrays.asList("transactions", "analytics", "recommendations"),
+     *         fjPool
+     *     );
+     * } finally {
+     *     fjPool.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
@@ -1512,10 +1536,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
      * User user = getUser();
-     *
-     * userDao.loadAllJoinEntitiesIfAbsent(user, scheduler);
+     * java.util.concurrent.ScheduledExecutorService scheduler =
+     *     java.util.concurrent.Executors.newScheduledThreadPool(4);
+     * try {
+     *     userDao.loadAllJoinEntitiesIfAbsent(user, scheduler);
+     * } finally {
+     *     scheduler.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity to conditionally load all join entities for
@@ -1587,10 +1615,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService batchLoader = Executors.newWorkStealingPool();
      * List<User> users = getLargeUserCollection();
-     *
-     * userDao.loadAllJoinEntitiesIfAbsent(users, batchLoader);
+     * java.util.concurrent.ExecutorService batchLoader =
+     *     java.util.concurrent.Executors.newWorkStealingPool();
+     * try {
+     *     userDao.loadAllJoinEntitiesIfAbsent(users, batchLoader);
+     * } finally {
+     *     batchLoader.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load all join entities for

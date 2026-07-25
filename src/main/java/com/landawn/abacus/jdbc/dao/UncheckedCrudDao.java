@@ -59,7 +59,7 @@ import com.landawn.abacus.util.N;
  * User user = new User("John", "Doe");
  * Long id = userDao.insert(user);
  *
- * Optional<User> found = userDao.get(id);
+ * com.landawn.abacus.util.u.Optional<User> found = userDao.get(id);
  * userDao.update("email", "john@example.com", id);
  * userDao.deleteById(id);
  * }</pre>
@@ -87,7 +87,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * User user = new User();
      * user.setId(123L);
      * user.setEmail("john@example.com");
-     * user.setLastSeen(new Date());
+     * user.setLastSeen(new java.util.Date());
      *
      * User result = userDao.upsert(user);
      * // Result will be either the newly inserted or updated user
@@ -151,7 +151,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * User user = new User();
      * user.setEmail("john@example.com");
      * user.setDepartment("IT");
-     * user.setLastUpdated(new Date());
+     * user.setLastUpdated(new java.util.Date());
      *
      * // Custom condition for upsert
      * Condition cond = Filters.and(

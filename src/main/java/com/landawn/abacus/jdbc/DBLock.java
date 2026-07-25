@@ -85,41 +85,40 @@ import com.landawn.abacus.util.Strings;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Initialize DBLock with a DataSource and a table name
- * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "app_distributed_locks");
+ * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "app_distributed_locks")) {
  *
- * String resourceId = "inventory_item_123";
- * long lockLiveTimeMillis = 60 * 1000;       // Lock for 1 minute
- * long acquisitionTimeoutMillis = 5 * 1000;  // Try to acquire for up to 5 seconds
+ *     String resourceId = "inventory_item_123";
+ *     long lockLiveTimeMillis = 60 * 1000;       // Lock for 1 minute
+ *     long acquisitionTimeoutMillis = 5 * 1000;  // Try to acquire for up to 5 seconds
  *
- * String lockCode = dbLock.lock(resourceId, lockLiveTimeMillis, acquisitionTimeoutMillis);
+ *     String lockCode = dbLock.lock(resourceId, lockLiveTimeMillis, acquisitionTimeoutMillis);
  *
- * if (lockCode != null) {
- *     try {
- *         // Successfully acquired the lock. Perform the critical section operations.
- *         System.out.println("Lock acquired for resource: " + resourceId + " with code: " + lockCode);
- *         // simulate work
- *         Thread.sleep(20000);
- *     } catch (InterruptedException e) {
- *         Thread.currentThread().interrupt();
- *         System.err.println("Operation interrupted: " + e.getMessage());
- *     } finally {
- *         // Always release the lock in a finally block
- *         boolean released = dbLock.unlock(resourceId, lockCode);
- *         System.out.println("Lock released: " + released);
+ *     if (lockCode != null) {
+ *         try {
+ *             // Successfully acquired the lock. Perform the critical section operations.
+ *             System.out.println("Lock acquired for resource: " + resourceId + " with code: " + lockCode);
+ *             // simulate work
+ *             Thread.sleep(20000);
+ *         } catch (InterruptedException e) {
+ *             Thread.currentThread().interrupt();
+ *             System.err.println("Operation interrupted: " + e.getMessage());
+ *         } finally {
+ *             // Always release the lock in a finally block
+ *             boolean released = dbLock.unlock(resourceId, lockCode);
+ *             System.out.println("Lock released: " + released);
+ *         }
+ *     } else {
+ *         System.out.println("Failed to acquire lock for resource: " + resourceId + " within the timeout.");
  *     }
- * } else {
- *     System.out.println("Failed to acquire lock for resource: " + resourceId + " within the timeout.");
  * }
- *
- * // Close the DBLock instance when the application shuts down
- * dbLock.close();
  * }</pre>
  *
  * @see DataSource
  * @see JdbcUtil
  * @see ScheduledExecutorService
+ * @see AutoCloseable
  */
-public final class DBLock {
+public final class DBLock implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(DBLock.class);
 
@@ -316,23 +315,24 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
-     * String resourceIdentifier = "report_generation_task";
+     * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
+     *     String resourceIdentifier = "report_generation_task";
      *
-     * String lockCode = dbLock.lock(resourceIdentifier);
+     *     String lockCode = dbLock.lock(resourceIdentifier);
      *
-     * if (lockCode != null) {
-     *     try {
-     *         System.out.println("Lock acquired for: " + resourceIdentifier);
-     *         // Perform the critical operation that requires exclusive access
-     *         // ...
-     *     } finally {
-     *         // Ensure the lock is released, even if an error occurs
-     *         dbLock.unlock(resourceIdentifier, lockCode);
-     *         System.out.println("Lock released for: " + resourceIdentifier);
+     *     if (lockCode != null) {
+     *         try {
+     *             System.out.println("Lock acquired for: " + resourceIdentifier);
+     *             // Perform the critical operation that requires exclusive access
+     *             // ...
+     *         } finally {
+     *             // Ensure the lock is released, even if an error occurs
+     *             dbLock.unlock(resourceIdentifier, lockCode);
+     *             System.out.println("Lock released for: " + resourceIdentifier);
+     *         }
+     *     } else {
+     *         System.out.println("Failed to acquire lock for: " + resourceIdentifier + " within default timeout.");
      *     }
-     * } else {
-     *     System.out.println("Failed to acquire lock for: " + resourceIdentifier + " within default timeout.");
      * }
      * }</pre>
      *
@@ -359,23 +359,24 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
-     * String resourceIdentifier = "data_export_job";
-     * long customTimeout = 15 * 1000;  // Wait up to 15 seconds
+     * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
+     *     String resourceIdentifier = "data_export_job";
+     *     long customTimeout = 15 * 1000;  // Wait up to 15 seconds
      *
-     * String lockCode = dbLock.lock(resourceIdentifier, customTimeout);
+     *     String lockCode = dbLock.lock(resourceIdentifier, customTimeout);
      *
-     * if (lockCode != null) {
-     *     try {
-     *         System.out.println("Lock acquired for: " + resourceIdentifier);
-     *         // Execute the data export logic
-     *         // ...
-     *     } finally {
-     *         dbLock.unlock(resourceIdentifier, lockCode);
-     *         System.out.println("Lock released for: " + resourceIdentifier);
+     *     if (lockCode != null) {
+     *         try {
+     *             System.out.println("Lock acquired for: " + resourceIdentifier);
+     *             // Execute the data export logic
+     *             // ...
+     *         } finally {
+     *             dbLock.unlock(resourceIdentifier, lockCode);
+     *             System.out.println("Lock released for: " + resourceIdentifier);
+     *         }
+     *     } else {
+     *         System.out.println("Failed to acquire lock for: " + resourceIdentifier + " within " + customTimeout + "ms.");
      *     }
-     * } else {
-     *     System.out.println("Failed to acquire lock for: " + resourceIdentifier + " within " + customTimeout + "ms.");
      * }
      * }</pre>
      *
@@ -404,24 +405,25 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
-     * String resourceIdentifier = "batch_processing_queue";
-     * long lockDuration = 10 * 60 * 1000;  // Lock for 10 minutes
-     * long waitTimeout = 30 * 1000;        // Wait up to 30 seconds to acquire
+     * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
+     *     String resourceIdentifier = "batch_processing_queue";
+     *     long lockDuration = 10 * 60 * 1000;  // Lock for 10 minutes
+     *     long waitTimeout = 30 * 1000;        // Wait up to 30 seconds to acquire
      *
-     * String lockCode = dbLock.lock(resourceIdentifier, lockDuration, waitTimeout);
+     *     String lockCode = dbLock.lock(resourceIdentifier, lockDuration, waitTimeout);
      *
-     * if (lockCode != null) {
-     *     try {
-     *         System.out.println("Lock acquired for: " + resourceIdentifier);
-     *         // Execute the batch processing logic
-     *         // ...
-     *     } finally {
-     *         dbLock.unlock(resourceIdentifier, lockCode);
-     *         System.out.println("Lock released for: " + resourceIdentifier);
+     *     if (lockCode != null) {
+     *         try {
+     *             System.out.println("Lock acquired for: " + resourceIdentifier);
+     *             // Execute the batch processing logic
+     *             // ...
+     *         } finally {
+     *             dbLock.unlock(resourceIdentifier, lockCode);
+     *             System.out.println("Lock released for: " + resourceIdentifier);
+     *         }
+     *     } else {
+     *         System.out.println("Failed to acquire lock for: " + resourceIdentifier + " within " + waitTimeout + "ms.");
      *     }
-     * } else {
-     *     System.out.println("Failed to acquire lock for: " + resourceIdentifier + " within " + waitTimeout + "ms.");
      * }
      * }</pre>
      *
@@ -460,25 +462,26 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
-     * String resourceIdentifier = "inventory_update_process";
-     * long lockDuration = 5 * 60 * 1000;    // Lock for 5 minutes
-     * long acquisitionTimeout = 10 * 1000;  // Wait up to 10 seconds
-     * long retryInterval = 500;             // Retry every 500 milliseconds
+     * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
+     *     String resourceIdentifier = "inventory_update_process";
+     *     long lockDuration = 5 * 60 * 1000;    // Lock for 5 minutes
+     *     long acquisitionTimeout = 10 * 1000;  // Wait up to 10 seconds
+     *     long retryInterval = 500;             // Retry every 500 milliseconds
      *
-     * String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval);
+     *     String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval);
      *
-     * if (lockCode != null) {
-     *     try {
-     *         System.out.println("Lock acquired for: " + resourceIdentifier);
-     *         // Perform the inventory update
-     *         // ...
-     *     } finally {
-     *         dbLock.unlock(resourceIdentifier, lockCode);
-     *         System.out.println("Lock released for: " + resourceIdentifier);
+     *     if (lockCode != null) {
+     *         try {
+     *             System.out.println("Lock acquired for: " + resourceIdentifier);
+     *             // Perform the inventory update
+     *             // ...
+     *         } finally {
+     *             dbLock.unlock(resourceIdentifier, lockCode);
+     *             System.out.println("Lock released for: " + resourceIdentifier);
+     *         }
+     *     } else {
+     *         System.out.println("Failed to acquire lock for: " + resourceIdentifier + " after " + acquisitionTimeout + "ms.");
      *     }
-     * } else {
-     *     System.out.println("Failed to acquire lock for: " + resourceIdentifier + " after " + acquisitionTimeout + "ms.");
      * }
      * }</pre>
      *
@@ -632,25 +635,26 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
-     * String resourceIdentifier = "configuration_update";
-     * String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000);   // Acquire lock for 30s, wait 5s
+     * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
+     *     String resourceIdentifier = "configuration_update";
+     *     String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000);   // Acquire lock for 30s, wait 5s
      *
-     * if (lockCode != null) {
-     *     try {
-     *         System.out.println("Lock acquired for: " + resourceIdentifier);
-     *         // Perform configuration update
-     *         // ...
-     *     } finally {
-     *         boolean released = dbLock.unlock(resourceIdentifier, lockCode);
-     *         if (released) {
-     *             System.out.println("Lock successfully released for: " + resourceIdentifier);
-     *         } else {
-     *             System.err.println("Failed to release lock for: " + resourceIdentifier + ". It might have expired or been released by another process.");
+     *     if (lockCode != null) {
+     *         try {
+     *             System.out.println("Lock acquired for: " + resourceIdentifier);
+     *             // Perform configuration update
+     *             // ...
+     *         } finally {
+     *             boolean released = dbLock.unlock(resourceIdentifier, lockCode);
+     *             if (released) {
+     *                 System.out.println("Lock successfully released for: " + resourceIdentifier);
+     *             } else {
+     *                 System.err.println("Failed to release lock for: " + resourceIdentifier + ". It might have expired or been released by another process.");
+     *             }
      *         }
+     *     } else {
+     *         System.out.println("Failed to acquire lock for: " + resourceIdentifier);
      *     }
-     * } else {
-     *     System.out.println("Failed to acquire lock for: " + resourceIdentifier);
      * }
      * }</pre>
      *
@@ -709,8 +713,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table");
-     * try {
+     * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
      *     // Perform operations using the DBLock instance
      *     String lockCode = dbLock.lock("some_resource");
      *     if (lockCode != null) {
@@ -720,13 +723,11 @@ public final class DBLock {
      *             dbLock.unlock("some_resource", lockCode);
      *         }
      *     }
-     * } finally {
-     *     // Ensure the DBLock instance is always closed to release resources
-     *     dbLock.close();
      * }
      * }</pre>
      *
      */
+    @Override
     public synchronized void close() {
         if (isClosed) {
             logger.debug("DBLock is already closed");

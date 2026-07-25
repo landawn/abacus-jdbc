@@ -104,11 +104,11 @@ public @interface Bind {
      * <pre>{@code
      * // Explicit parameter name
      * @Query("SELECT * FROM users WHERE id = :userId")
-     * User findById(@Bind("userId") Long id);
+     * User findById(@Bind("userId") Long id) throws SQLException;
      *
      * // Multiple scalar parameters, each bound by an explicit name
      * @Query("SELECT * FROM orders WHERE customer_id = :customerId AND status = :orderStatus")
-     * List<Order> findOrders(@Bind("customerId") Long customerId, @Bind("orderStatus") String status);
+     * List<Order> findOrders(@Bind("customerId") Long customerId, @Bind("orderStatus") String status) throws SQLException;
      * }</pre>
      *
      * <p><b>Empty value:</b> an empty {@code value} (the default) is effectively invalid outside stored

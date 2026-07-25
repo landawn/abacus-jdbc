@@ -1365,16 +1365,18 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Stream<Dataset> pages = dao.paginate(
-     *     Criteria.builder().where(Filters.gt("id", 0)).orderBy("id").build(),
-     *     100,
-     *     (query, lastPageResult) -> {
-     *         if (lastPageResult != null && lastPageResult.size() > 0) {
-     *             long lastId = (Long) N.lastOrNullIfEmpty(lastPageResult.getColumn("id"));
-     *             query.setLong(1, lastId);
+     * try (Stream<Dataset> pages = dao.paginate(
+     *         Criteria.builder().where(Filters.gt("id", 0)).orderBy("id").build(),
+     *         100,
+     *         (query, lastPageResult) -> {
+     *             if (lastPageResult != null && lastPageResult.size() > 0) {
+     *                 long lastId = (Long) N.lastOrNullIfEmpty(lastPageResult.getColumn("id"));
+     *                 query.setLong(1, lastId);
+     *             }
      *         }
-     *     }
-     * );
+     *     )) {
+     *     pages.forEach(page -> processPage(page));
+     * }
      * }</pre>
      *
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination

@@ -279,8 +279,8 @@ public @interface CacheResult {
      * }
      *
      * // Inherited built-in reads also match the filter and are cached, for example:
-     * //     User user = userDao.gett(userId);                      // matches "get.*"
-     * //     Optional<User> first = userDao.findFirst(cond);        // matches "find.*"
+     * //     User user = userDao.get(userId);                       // matches "get.*"
+     * //     com.landawn.abacus.util.u.Optional<User> first = userDao.findFirst(cond); // matches "find.*"
      * }</pre>
      *
      * @return array of method name patterns to cache; the default targets common read methods:

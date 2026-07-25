@@ -31,15 +31,16 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * elapsed time is measured with the monotonic {@code System.nanoTime()} clock and reported in
  * milliseconds. A log entry is emitted only when:</p>
  * <ul>
- *   <li>The SQL portion of the call exceeded {@link #sqlPerfLogThresholdMillis()} milliseconds — the
+ *   <li>The SQL portion of the call met or exceeded {@link #sqlPerfLogThresholdMillis()} milliseconds — the
  *       statement text (capped at {@link #maxSqlLogLength()} characters) is logged at INFO level
  *       (as a {@code [SQL-PERF]} entry on the SQL logger).</li>
- *   <li>The whole DAO-method invocation exceeded {@link #daoMethodPerfLogThresholdMillis()} ms —
+ *   <li>The whole DAO-method invocation met or exceeded {@link #daoMethodPerfLogThresholdMillis()} ms —
  *       the method name and total elapsed time are logged.</li>
  * </ul>
  *
  * <p><b>Lookup precedence:</b> a method-level {@code @PerfLog} overrides a type-level one. When
- * neither is present, the global defaults configured on {@link JdbcUtil} are used.</p>
+ * neither is present, SQL execution follows the current global/thread-local performance-logging
+ * settings on {@link JdbcUtil}; the DAO proxy does not add whole-method timing for that invocation.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each entry matches when the method name starts with
  * it (case-insensitive) or matches the full method name as a regular expression. The
@@ -65,7 +66,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Filter only the read paths at the type level.
  * @PerfLog(filter = { "find", "get", "query", "list", "count" })
- * public interface ReportDao { ... }
+ * public interface ReportDao extends Dao<Report, ReportDao> { ... }
  * }</pre>
  *
  * @see SqlLogEnabled
@@ -88,7 +89,8 @@ public @interface PerfLog {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(maxSqlLogLength = 500) // Truncate SQL to 500 characters
-     * void executeLargeQuery(String complexQuery);
+     * @Query("SELECT * FROM audit_event ORDER BY created_at")
+     * List<AuditEvent> executeLargeQuery() throws SQLException;
      * }</pre>
      *
      * @return the maximum number of characters to include from SQL statements in logs; defaults to
@@ -107,7 +109,8 @@ public @interface PerfLog {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(sqlPerfLogThresholdMillis = 200) // Log SQLs taking 200ms or more
-     * List<User> findActiveUsers();
+     * @Query("SELECT * FROM users WHERE active = TRUE")
+     * List<User> findActiveUsers() throws SQLException;
      * }</pre>
      *
      * @return the minimum execution time in milliseconds for SQL logging; defaults to
@@ -126,7 +129,8 @@ public @interface PerfLog {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(daoMethodPerfLogThresholdMillis = 5000) // Log operations taking 5 seconds or more
-     * void processLargeBatchUpdate(List<Order> orders);
+     * @Query(value = "UPDATE orders SET status = :status WHERE id = :id", batch = true)
+     * int processLargeBatchUpdate(List<Order> orders) throws SQLException;
      * }</pre>
      *
      * @return the minimum execution time in milliseconds for DAO operation logging; defaults to

@@ -66,7 +66,7 @@ import com.landawn.abacus.annotation.Beta;
  *     // High-frequency insert that is intentionally exempt from cache invalidation.
  *     @RefreshCache(enabled = false)
  *     @Query("INSERT INTO product_view_log (product_id) VALUES (:id)")
- *     void logView(@Bind("id") Long id) throws SQLException;
+ *     void addProductViewLog(@Bind("id") Long id) throws SQLException;
  * }
  * }</pre>
  *
@@ -98,7 +98,7 @@ public @interface RefreshCache {
      * public interface UserDao extends NonUpdateCrudDao<User, Long, UserDao> {
      *     @Query("INSERT INTO user_activity_log (user_id) VALUES (:id)")
      *     @RefreshCache(enabled = false) // Don't refresh cache for this frequent insert
-     *     void logActivity(@Bind("id") long id) throws SQLException;
+     *     void addActivity(@Bind("id") long id) throws SQLException;
      *
      *     @Query("INSERT INTO users (email) VALUES (:email)")
      *     void addUser(@Bind("email") String email) throws SQLException;   // Will refresh cache

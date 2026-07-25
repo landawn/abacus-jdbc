@@ -39,8 +39,9 @@ import com.landawn.abacus.util.RegExUtil;
  * ({@link #op()}), flag a stored-procedure call ({@link #procedure()}), enable batching
  * ({@link #batch()} / {@link #batchSize()}), and supply runtime hints such as {@link #fetchSize()}
  * and {@link #queryTimeoutSeconds()}. The method's return type still participates in the final execution
- * strategy: for example, with {@link QueryOperation#DEFAULT} a {@code Stream} return type triggers lazy streaming
- * while an {@code Optional} return type triggers "find first" semantics.</p>
+ * strategy: for example, with {@link QueryOperation#DEFAULT} a
+ * {@link com.landawn.abacus.util.stream.Stream} return type triggers lazy streaming while a
+ * {@link com.landawn.abacus.util.u.Optional} return type triggers "find first" semantics.</p>
  *
  * <p>INSERT statements use the generated-key path regardless of {@link #op()}. A non-batch INSERT
  * method may return {@code void}, the DAO ID type (or a supertype capable of holding that ID), or
@@ -48,10 +49,11 @@ import com.landawn.abacus.util.RegExUtil;
  * type is rejected during DAO creation because a generated ID could not be returned safely. A batch
  * INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible element types are rejected.</p>
  *
- * <p>Method parameters are bound to named parameters in the SQL through {@link Bind} (and
- * {@link BindList} for {@code IN}-clause expansion); stored-procedure {@code OUT} parameters are
- * declared with {@link OutParameter} / {@link OutParameters}; and template placeholders are filled
- * with {@link SqlFragment} / {@link SqlFragmentList}.</p>
+ * <p>Method parameters are bound to named parameters in the SQL through {@link Bind}.
+ * Variable-length lists use the separate {@link BindList} curly-brace template expansion and cannot
+ * be mixed with the named-parameter binding rules. Stored-procedure {@code OUT} parameters are
+ * declared with {@link OutParameter} / {@link OutParameters}; template placeholders are filled with
+ * {@link SqlFragment} / {@link SqlFragmentList}.</p>
  *
  * <p><b>&#9888; Warning:</b> A method returning a stream transfers ownership of its JDBC resources to
  * the caller. Consume it in try-with-resources or close it explicitly. Database failures raised while
@@ -69,7 +71,7 @@ import com.landawn.abacus.util.RegExUtil;
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *     // Inline SQL with a named parameter
  *     @Query("SELECT * FROM users WHERE email = :email")
- *     Optional<User> findByEmail(@Bind("email") String email) throws SQLException;
+ *     com.landawn.abacus.util.u.Optional<User> findByEmail(@Bind("email") String email) throws SQLException;
  *
  *     // Scalar aggregate via an explicit execution mode
  *     @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = QueryOperation.queryForSingle)
@@ -78,7 +80,7 @@ import com.landawn.abacus.util.RegExUtil;
  *     // Streaming a large result set with a fetch-size hint
  *     // (Stream-returning methods must NOT declare 'throws SQLException')
  *     @Query(value = "SELECT * FROM users ORDER BY id", fetchSize = 1000)
- *     Stream<User> streamAllUsers();
+ *     com.landawn.abacus.util.stream.Stream<User> streamAllUsers();
  *
  *     // Batch insert with a custom batch size: the single Collection parameter supplies the batch
  *     // rows; a batch INSERT may return void or List<ID> (the generated keys)
@@ -132,11 +134,11 @@ public @interface Query {
      * <pre>{@code
      * // Simple parameter binding
      * @Query("SELECT * FROM users WHERE age > :minAge")
-     * List<User> findByAge(@Bind("minAge") int minAge);
+     * List<User> findByAge(@Bind("minAge") int minAge) throws SQLException;
      *
      * // Multiple parameters
      * @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge")
-     * List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max);
+     * List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max) throws SQLException;
      *
      * // Nested property paths require a single unannotated bean parameter
      * // (filter.getUser().getId() and filter.getStatus() supply the values)
@@ -145,7 +147,7 @@ public @interface Query {
      *
      * // IN clause with collection (uses {ids} template variable expanded via @BindList)
      * @Query("SELECT * FROM users WHERE id IN ({ids})")
-     * List<User> findByIds(@BindList("ids") List<Long> ids);
+     * List<User> findByIds(@BindList("ids") List<Long> ids) throws SQLException;
      * }</pre>
      *
      * <p>Complex SQL examples:</p>
@@ -156,7 +158,7 @@ public @interface Query {
      *               "WHERE u.created_date > :startDate " +
      *               "GROUP BY u.id HAVING COUNT(o.id) > :minOrders")
      * List<UserStats> findUserStats(@Bind("startDate") Date startDate,
-     *                               @Bind("minOrders") int minOrders);
+     *                               @Bind("minOrders") int minOrders) throws SQLException;
      *
      * // Common Table Expression (CTE)
      * @Query("WITH recent_orders AS ( " +
@@ -166,12 +168,12 @@ public @interface Query {
      *               ") " +
      *               "SELECT u.*, ro.order_count " +
      *               "FROM users u JOIN recent_orders ro ON u.id = ro.user_id")
-     * List<UserOrderSummary> findActiveUserSummary(@Bind("since") Date since);
+     * List<UserOrderSummary> findActiveUserSummary(@Bind("since") Date since) throws SQLException;
      *
      * // Window function
      * @Query("SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank " +
      *               "FROM employees WHERE department = :dept")
-     * List<Employee> rankEmployeesByDepartment(@Bind("dept") String department);
+     * List<Employee> rankEmployeesByDepartment(@Bind("dept") String department) throws SQLException;
      * }</pre>
      *
      * <p>Note: Exactly one of {@code value} or {@link #id()} must be non-empty; specifying both
@@ -213,13 +215,13 @@ public @interface Query {
      * @SqlSource("user-queries.xml")
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
      *     @Query(id = "findUsersByComplexCriteria")
-     *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria);
+     *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria) throws SQLException;
      *
      *     @Query(id = "updateUserStatus")
-     *     int updateStatus(@Bind("userId") Long userId, @Bind("status") String status);
+     *     int updateStatus(@Bind("userId") Long userId, @Bind("status") String status) throws SQLException;
      *
      *     @Query(id = "getUserStatistics")
-     *     UserStats getStatistics(@Bind("startDate") Date start, @Bind("endDate") Date end);
+     *     UserStats getStatistics(@Bind("startDate") Date start, @Bind("endDate") Date end) throws SQLException;
      * }
      *
      * // In user-queries.xml or similar SQL mapper file:
@@ -257,9 +259,14 @@ public @interface Query {
      * <ul>
      *   <li>{@link QueryOperation#DEFAULT} - Framework determines operation based on SQL and return type (recommended for most cases)</li>
      *   <li>{@link QueryOperation#list} - Returns all results as a List</li>
-     *   <li>{@link QueryOperation#stream} - (Deprecated) Returns results as a Stream; prefer {@link QueryOperation#DEFAULT} with a {@code Stream} return type</li>
-     *   <li>{@link QueryOperation#findFirst} - Returns the first result wrapped in Optional</li>
-     *   <li>{@link QueryOperation#findOnlyOne} - Returns at most one result (wrapped in {@code Optional} when the method return type is {@code Optional}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
+     *   <li>{@link QueryOperation#stream} - (Deprecated) Returns results as an Abacus
+     *       {@link com.landawn.abacus.util.stream.Stream}; prefer {@link QueryOperation#DEFAULT} with that return type</li>
+     *   <li>{@link QueryOperation#findFirst} - Returns the first result (wrapped in an Abacus
+     *       {@link com.landawn.abacus.util.u.Optional} when the method has that return type, otherwise the bare value or the return
+     *       type's empty/default value when none)</li>
+     *   <li>{@link QueryOperation#findOnlyOne} - Returns at most one result (wrapped in an Abacus
+     *       {@link com.landawn.abacus.util.u.Optional} when the method has that return type, otherwise the bare value or {@code null} when none);
+     *       throws {@code DuplicateResultException} if more than one is found</li>
      *   <li>{@link QueryOperation#exists} - Returns boolean indicating if any results exist</li>
      *   <li>{@link QueryOperation#queryForSingle} - Returns a single scalar value</li>
      *   <li>{@link QueryOperation#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
@@ -271,27 +278,27 @@ public @interface Query {
      * <pre>{@code
      * // Existence check
      * @Query(value = "SELECT 1 FROM users WHERE email = :email", op = QueryOperation.exists)
-     * boolean emailExists(@Bind("email") String email);
+     * boolean emailExists(@Bind("email") String email) throws SQLException;
      *
      * // Single scalar value
      * @Query(value = "SELECT COUNT(*) FROM users WHERE active = true", op = QueryOperation.queryForSingle)
-     * long countActiveUsers();
+     * long countActiveUsers() throws SQLException;
      *
      * // First result from ordered query
      * @Query(value = "SELECT * FROM users ORDER BY created_date DESC", op = QueryOperation.findFirst)
-     * Optional<User> findLatestUser();
+     * com.landawn.abacus.util.u.Optional<User> findLatestUser() throws SQLException;
      *
      * // At most one match (throws DuplicateResultException if more than one matches; null if none)
      * @Query(value = "SELECT * FROM users WHERE id = :id", op = QueryOperation.findOnlyOne)
-     * User getUserById(@Bind("id") Long id);
+     * User getUserById(@Bind("id") Long id) throws SQLException;
      *
-     * // Stream for large result sets (a Stream return type makes the framework stream automatically)
+     * // An Abacus Stream return type makes the framework stream automatically
      * @Query(value = "SELECT * FROM large_table", fetchSize = 1000)
-     * Stream<Record> streamAllRecords();
+     * com.landawn.abacus.util.stream.Stream<AuditRecord> streamAllRecords();
      *
      * // Explicit update operation
      * @Query(value = "DELETE FROM audit_logs WHERE created_date < :cutoff", op = QueryOperation.update)
-     * int purgeOldLogs(@Bind("cutoff") Date cutoff);
+     * int purgeOldLogs(@Bind("cutoff") Date cutoff) throws SQLException;
      * }</pre>
      *
      * <p>When to specify explicitly:</p>
@@ -299,7 +306,8 @@ public @interface Query {
      *   <li>For existence checks: use {@code QueryOperation.exists} for performance</li>
      *   <li>For scalar aggregates: use {@code QueryOperation.queryForSingle}</li>
      *   <li>When you need strict validation: use {@code QueryOperation.findOnlyOne}</li>
-     *   <li>For large result sets: return a {@code Stream} with an appropriate fetch size (the framework streams automatically)</li>
+     *   <li>For large result sets: return an Abacus {@link com.landawn.abacus.util.stream.Stream}
+     *       with an appropriate fetch size (the framework streams automatically)</li>
      * </ul>
      *
      * <p>Note: In most cases, {@link QueryOperation#DEFAULT} is sufficient as the framework intelligently
@@ -433,7 +441,8 @@ public @interface Query {
      *
      * <p>Error handling:</p>
      * <ul>
-     *   <li>If any batch item fails, the entire batch typically fails (depends on database/driver)</li>
+     *   <li>If a batch item fails, the driver may report partial execution; earlier statements or
+     *       completed chunks may already have succeeded unless the call is transactional</li>
      *   <li>Consider wrapping batch operations in transactions for atomicity</li>
      *   <li>Validate data before batching to minimize mid-batch failures</li>
      * </ul>
@@ -467,10 +476,9 @@ public @interface Query {
      *
      * <p>When {@code collectionAsSingleParameter = true}:</p>
      * <ul>
-     *   <li>The collection/array is passed as a single value to the database</li>
-     *   <li>Useful for database-native array types (e.g., PostgreSQL arrays)</li>
-     *   <li>Useful for JSON array columns</li>
-     *   <li>Useful for blob/clob data that happens to be an array</li>
+     *   <li>The collection/array is passed once through {@code PreparedStatement.setObject}</li>
+     *   <li>The JDBC driver must accept that Java value as one database value, commonly for a
+     *       database-native array or another driver-specific type</li>
      * </ul>
      *
      * <p>Common use cases:</p>
@@ -478,35 +486,35 @@ public @interface Query {
      * // PostgreSQL array containment operator using one positional JDBC value
      * @Query(value = "SELECT * FROM products WHERE tags @> ?",
      *        collectionAsSingleParameter = true)
-     * List<Product> findByTags(String[] tags);
+     * List<Product> findByTags(String[] tags) throws SQLException;
      *
      * // PostgreSQL array equality
      * @Query(value = "SELECT * FROM events WHERE participants = ?",
      *        collectionAsSingleParameter = true)
-     * List<Event> findByExactParticipants(Long[] participants);
+     * List<Event> findByExactParticipants(Long[] participants) throws SQLException;
      *
-     * // JSON/array column (collectionAsSingleParameter requires exactly one statement parameter)
+     * // A driver-supported native array/custom type (exact conversion is driver-specific)
      * @Query(value = "UPDATE configs SET options = ? WHERE name = 'default'",
      *        collectionAsSingleParameter = true)
-     * int updateDefaultConfigOptions(String[] options);
+     * int updateDefaultConfigOptions(String[] options) throws SQLException;
      *
      * // Array intersection
      * @Query(value = "SELECT * FROM items WHERE categories && ?",
      *        collectionAsSingleParameter = true)
-     * List<Item> findByCategoryOverlap(String[] categories);
+     * List<Item> findByCategoryOverlap(String[] categories) throws SQLException;
      * }</pre>
      *
      * <p>Contrast with default behavior:</p>
      * <pre>{@code
      * // Variable-length IN expansion is a separate @BindList feature
      * @Query(value = "SELECT * FROM users WHERE id IN ({ids})")
-     * List<User> findByIds(@BindList("ids") List<Long> ids);
+     * List<User> findByIds(@BindList("ids") List<Long> ids) throws SQLException;
      * // Becomes: SELECT * FROM users WHERE id IN (?, ?, ?, ...)
      *
      * // With collectionAsSingleParameter: the array is passed once to one positional placeholder
      * @Query(value = "SELECT * FROM users WHERE id = ANY(?)",
      *        collectionAsSingleParameter = true)
-     * List<User> findByIdsArray(Long[] ids);
+     * List<User> findByIdsArray(Long[] ids) throws SQLException;
      * // PostgreSQL: id = ANY($1) where $1 is an array parameter
      * }</pre>
      *
@@ -514,7 +522,8 @@ public @interface Query {
      * <ul>
      *   <li>The collection/array must be the method's only statement/query parameter; fragment and
      *       other framework-recognized auxiliary parameters are not statement parameters</li>
-     *   <li>Database must support the native array or collection type being used</li>
+     *   <li>The JDBC driver and database must support binding the supplied Java collection/array
+     *       as one value; this option does not call {@code Connection.createArrayOf}</li>
      *   <li>Not commonly needed for standard SQL; primarily for database-specific features</li>
      * </ul>
      *
@@ -536,8 +545,9 @@ public @interface Query {
      * <pre>{@code
      * // Finding records with dynamic conditions containing named parameters
      * @Query(value = "SELECT * FROM promotions WHERE {whereClause}", fragmentsContainNamedParameters = true)
-     * List<Promotion> findActivePromotions(@SqlFragment("whereClause") String whereClause, @Bind("minDiscount") int minDiscount);
-     * findActivePromotions("discount >= :minDiscount AND status = 'ACTIVE'", 10);
+     * List<Promotion> findActivePromotions(@SqlFragment("whereClause") String whereClause,
+     *                                      @Bind("minDiscount") int minDiscount) throws SQLException;
+     * // Call: dao.findActivePromotions("discount >= :minDiscount AND status = 'ACTIVE'", 10);
      * }</pre>
      *
      * @return {@code true} if template variables defined by {@link SqlFragment} or {@link SqlFragmentList} will be replaced with query fragments
@@ -571,19 +581,19 @@ public @interface Query {
      * @Query(value = "SELECT * FROM promotions " +
      *               "WHERE start_date <= :sysTime AND end_date >= :sysDate",
      *        injectCurrentTimeParameters = true)
-     * List<Promotion> findActivePromotions();
+     * List<Promotion> findActivePromotions() throws SQLException;
      * // :sysTime and :sysDate are automatically set to current timestamp and date
      *
      * // Audit logging
      * @Query(value = "INSERT INTO audit_log (action, user_id, timestamp) " +
      *               "VALUES (:action, :userId, :sysTime)",
      *        injectCurrentTimeParameters = true)
-     * int logAction(@Bind("action") String action, @Bind("userId") Long userId);
+     * void logAction(@Bind("action") String action, @Bind("userId") Long userId) throws SQLException;
      *
      * // Updating with timestamp
      * @Query(value = "UPDATE users SET last_login = :sysTime WHERE id = :id",
      *        injectCurrentTimeParameters = true)
-     * int updateLastLogin(@Bind("id") Long id);
+     * int updateLastLogin(@Bind("id") Long id) throws SQLException;
      * }</pre>
      *
      * <p>Advanced examples:</p>
@@ -594,7 +604,7 @@ public @interface Query {
      *               "  AND e.end_time >= :sysTime " +
      *               "  AND e.category = :category",
      *        injectCurrentTimeParameters = true)
-     * List<Event> findCurrentEvents(@Bind("category") String category);
+     * List<Event> findCurrentEvents(@Bind("category") String category) throws SQLException;
      *
      * // Combining with other parameters
      * @Query(value = "SELECT * FROM subscriptions " +
@@ -602,22 +612,21 @@ public @interface Query {
      *               "  AND start_date <= :sysTime " +
      *               "  AND (end_date IS NULL OR end_date >= :sysTime)",
      *        injectCurrentTimeParameters = true)
-     * List<Subscription> findActiveSubscriptions(@Bind("userId") Long userId);
+     * List<Subscription> findActiveSubscriptions(@Bind("userId") Long userId) throws SQLException;
      *
      * // Data archival based on current time
      * @Query(value = "INSERT INTO archive_logs " +
      *               "SELECT *, :sysTime as archived_at FROM logs " +
      *               "WHERE created_date < :cutoffDate",
      *        injectCurrentTimeParameters = true)
-     * int archiveOldLogs(@Bind("cutoffDate") Date cutoffDate);
+     * void archiveOldLogs(@Bind("cutoffDate") Date cutoffDate) throws SQLException;
      *
      * // Scheduled task execution tracking
      * @Query(value = "UPDATE scheduled_tasks " +
-     *               "SET last_run = :sysTime, next_run = :sysTime + INTERVAL :intervalMinutes MINUTE " +
+     *               "SET last_run = :sysTime, run_count = run_count + 1 " +
      *               "WHERE task_id = :taskId",
      *        injectCurrentTimeParameters = true)
-     * int updateTaskExecution(@Bind("taskId") String taskId,
-     *                        @Bind("intervalMinutes") int interval);
+     * int updateTaskExecution(@Bind("taskId") String taskId) throws SQLException;
      * }</pre>
      *
      * <p>Multiple timestamp usage:</p>
@@ -626,14 +635,14 @@ public @interface Query {
      * @Query(value = "INSERT INTO user_sessions (user_id, created_at, last_activity) " +
      *               "VALUES (:userId, :sysTime, :sysTime)",
      *        injectCurrentTimeParameters = true)
-     * int createSession(@Bind("userId") Long userId);
+     * void createSession(@Bind("userId") Long userId) throws SQLException;
      *
      * // Combining automatic and manual timestamps
      * @Query(value = "SELECT * FROM bookings " +
      *               "WHERE booking_date >= :startDate " +
      *               "  AND booking_date <= :sysDate",
      *        injectCurrentTimeParameters = true)
-     * List<Booking> findBookingsSince(@Bind("startDate") Date startDate);
+     * List<Booking> findBookingsSince(@Bind("startDate") Date startDate) throws SQLException;
      * }</pre>
      *
      * <p>Important considerations:</p>
@@ -662,7 +671,8 @@ public @interface Query {
 
     /**
      * Specifies the query timeout in seconds.
-     * If the query execution exceeds this timeout, it will be cancelled and a timeout exception will be thrown.
+     * Positive values are passed to {@link java.sql.Statement#setQueryTimeout(int)}. The driver
+     * determines the exact cancellation timing and the {@link java.sql.SQLException} it reports.
      *
      * <p>Setting an appropriate timeout is important for:</p>
      * <ul>
@@ -686,20 +696,20 @@ public @interface Query {
      * <pre>{@code
      * // Quick lookup that should complete fast
      * @Query(value = "SELECT * FROM users WHERE id = :id", queryTimeoutSeconds = 2)
-     * User getUserById(@Bind("id") Long id);
+     * User getUserById(@Bind("id") Long id) throws SQLException;
      *
      * // Complex reporting query
-     * @Query(value = "SELECT ... complex join and aggregation ...", queryTimeoutSeconds = 60)
-     * Report generateMonthlyReport(@Bind("month") int month);
+     * @Query(value = "SELECT SUM(amount) FROM sales WHERE sale_month = :month", queryTimeoutSeconds = 60)
+     * double getMonthlySalesTotal(@Bind("month") int month) throws SQLException;
      *
      * // Batch operation with generous timeout
      * @Query(value = "INSERT INTO archive SELECT * FROM data WHERE year = :year",
      *        queryTimeoutSeconds = 300)
-     * int archiveYearData(@Bind("year") int year);
+     * void archiveYearData(@Bind("year") int year) throws SQLException;
      *
      * // External API call timeout
      * @Query(value = "SELECT get_external_data(:param)", queryTimeoutSeconds = 10)
-     * String callExternalService(@Bind("param") String param);
+     * String callExternalService(@Bind("param") String param) throws SQLException;
      * }</pre>
      *
      * <p>Best practices:</p>
@@ -733,7 +743,7 @@ public @interface Query {
      *   <li><strong>Memory:</strong> Higher fetch size means more rows buffered in memory</li>
      *   <li><strong>Latency:</strong> Smaller fetch sizes may increase latency for large result sets</li>
      *   <li><strong>Streaming:</strong> Can influence driver buffering while a lazy
-     *       {@link java.util.stream.Stream} is consumed, but does not by itself guarantee
+     *       {@link com.landawn.abacus.util.stream.Stream} is consumed, but does not by itself guarantee
      *       server-side cursor streaming</li>
      * </ul>
      *
@@ -751,15 +761,15 @@ public @interface Query {
      * <pre>{@code
      * // Small lookup query (default is fine)
      * @Query(value = "SELECT * FROM users WHERE id = :id")
-     * User getUserById(@Bind("id") Long id);
+     * User getUserById(@Bind("id") Long id) throws SQLException;
      *
      * // Large result set with streaming
      * @Query(value = "SELECT * FROM large_table", fetchSize = 1000)
-     * Stream<Record> streamLargeTable();
+     * com.landawn.abacus.util.stream.Stream<AuditRecord> streamLargeTable();
      *
      * // Batch processing with optimal fetch size
      * @Query(value = "SELECT * FROM orders WHERE status = 'PENDING'", fetchSize = 500)
-     * List<Order> getPendingOrders();
+     * List<Order> getPendingOrders() throws SQLException;
      * }</pre>
      *
      * <p>Advanced examples:</p>
@@ -767,36 +777,36 @@ public @interface Query {
      * // Processing millions of records with minimal memory
      * @Query(value = "SELECT * FROM transaction_history WHERE date >= :startDate",
      *        fetchSize = 5000)
-     * Stream<Transaction> streamTransactions(@Bind("startDate") Date startDate);
+     * com.landawn.abacus.util.stream.Stream<Transaction> streamTransactions(@Bind("startDate") Date startDate);
      * // Use with try-with-resources to ensure stream is closed
      *
      * // Large export operation
      * @Query(value = "SELECT * FROM users ORDER BY id", fetchSize = 10000)
-     * Stream<User> exportAllUsers();
+     * com.landawn.abacus.util.stream.Stream<User> exportAllUsers();
      *
      * // Memory-constrained environment with small fetch size
      * @Query(value = "SELECT * FROM large_documents", fetchSize = 10)
-     * Stream<Document> streamDocuments();   // Smaller batches, more round trips
+     * com.landawn.abacus.util.stream.Stream<Document> streamDocuments();   // Smaller batches, more round trips
      *
      * // Balancing memory and performance for reporting
      * @Query(value = "SELECT date, SUM(amount) as total FROM sales " +
      *               "GROUP BY date ORDER BY date", fetchSize = 100)
-     * List<DailySales> getDailySalesReport();
+     * List<DailySales> getDailySalesReport() throws SQLException;
      * }</pre>
      *
      * <p>Performance tuning considerations:</p>
      * <pre>{@code
      * // For small, frequent queries - use default or small fetch size
      * @Query(value = "SELECT * FROM products WHERE category = :cat", fetchSize = 50)
-     * List<Product> findByCategory(@Bind("cat") String category);
+     * List<Product> findByCategory(@Bind("cat") String category) throws SQLException;
      *
      * // For batch processing - larger fetch size for efficiency
      * @Query(value = "SELECT * FROM orders WHERE status = 'NEW'", fetchSize = 2000)
-     * List<Order> getNewOrders();
+     * List<Order> getNewOrders() throws SQLException;
      *
      * // For streaming large datasets - very large fetch size
      * @Query(value = "SELECT * FROM event_log WHERE date = :date", fetchSize = 10000)
-     * Stream<Event> streamDailyEvents(@Bind("date") Date date);
+     * com.landawn.abacus.util.stream.Stream<Event> streamDailyEvents(@Bind("date") Date date);
      * }</pre>
      *
      * <p>Database-specific behavior:</p>
@@ -814,7 +824,7 @@ public @interface Query {
      *   <li>Fetch size is a hint; drivers may ignore or adjust it</li>
      *   <li>Very large fetch sizes can cause OutOfMemoryError if rows are large</li>
      *   <li>Optimal fetch size depends on network latency, row size, and available memory</li>
-     *   <li>For {@code Stream} return types, fetch size is a buffering hint; actual cursor and
+     *   <li>For Abacus {@link com.landawn.abacus.util.stream.Stream} return types, fetch size is a buffering hint; actual cursor and
      *       prefetch behavior remains driver-specific</li>
      *   <li>Profile and test with realistic data to find optimal values</li>
      *   <li>Consider using different fetch sizes for different environments (dev vs. production)</li>
@@ -900,7 +910,8 @@ public @interface Query {
      * <p>Advanced configuration examples:</p>
      * <pre>{@code
      * // Batch with timeout for very large operations
-     * @Query(value = "INSERT INTO archive_data SELECT * FROM staging WHERE batch_id = :batchId",
+     * // A scalar batch collection uses positional SQL: each element supplies the single '?'.
+     * @Query(value = "INSERT INTO archive_data SELECT * FROM staging WHERE batch_id = ?",
      *        batch = true, batchSize = 1000, queryTimeoutSeconds = 600)
      * void archiveData(List<String> batchIds) throws SQLException;
      *

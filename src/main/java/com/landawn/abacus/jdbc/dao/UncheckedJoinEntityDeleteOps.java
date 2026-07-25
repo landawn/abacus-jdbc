@@ -206,7 +206,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * int deleted = userDao.deleteJoinEntities(user, "addresses");
      *
      * // Use in functional context without try-catch
-     * Optional.ofNullable(user)
+     * java.util.Optional.ofNullable(user)
      *     .map(u -> userDao.deleteJoinEntities(u, "temporaryData"))
      *     .ifPresent(count -> System.out.println("Deleted " + count + " records"));
      * }</pre>
@@ -257,12 +257,10 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * int totalDeleted = userDao.deleteJoinEntities(users, "paymentMethods");
      *
      * // Use in stream context
-     * int deletedOrders = userDao.list(Filters.eq("status", "INACTIVE"))
+     * List<User> inactiveUsers = userDao.list(Filters.eq("status", "INACTIVE"))
      *     .stream()
-     *     .collect(Collectors.collectingAndThen(
-     *         Collectors.toList(),
-     *         list -> userDao.deleteJoinEntities(list, "orders")
-     *     ));
+     *     .toList();
+     * int deletedOrders = userDao.deleteJoinEntities(inactiveUsers, "orders");
      * }</pre>
      *
      * @param entities the collection of entities whose join entities should be deleted. Can be empty
@@ -344,14 +342,19 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService executor = Executors.newFixedThreadPool(4);
      * User user = userDao.gett(userId);
-     * // Delete multiple related entities in parallel
-     * int deleted = userDao.deleteJoinEntities(
-     *     user,
-     *     Arrays.asList("orders", "reviews", "wishlistItems"),
-     *     executor
-     * );
+     * java.util.concurrent.ExecutorService executor =
+     *     java.util.concurrent.Executors.newFixedThreadPool(4);
+     * try {
+     *     // Delete multiple related entities in parallel
+     *     int deleted = userDao.deleteJoinEntities(
+     *         user,
+     *         Arrays.asList("orders", "reviews", "wishlistItems"),
+     *         executor
+     *     );
+     * } finally {
+     *     executor.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
@@ -519,14 +522,18 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ForkJoinPool cleanupPool = new ForkJoinPool(8);
      * List<User> users = getUsersToCleanup();
-     *
-     * int deleted = userDao.deleteJoinEntities(
-     *     users,
-     *     Arrays.asList("logs", "sessions", "tempData"),
-     *     cleanupPool
-     * );
+     * java.util.concurrent.ExecutorService cleanupPool =
+     *     new java.util.concurrent.ForkJoinPool(8);
+     * try {
+     *     int deleted = userDao.deleteJoinEntities(
+     *         users,
+     *         Arrays.asList("logs", "sessions", "tempData"),
+     *         cleanupPool
+     *     );
+     * } finally {
+     *     cleanupPool.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities whose join entities should be deleted. If {@code null} or empty, 0 is returned
@@ -616,10 +623,14 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService cleanupService = Executors.newCachedThreadPool();
      * User user = userDao.gett(userId);
-     *
-     * int deleted = userDao.deleteAllJoinEntities(user, cleanupService);
+     * java.util.concurrent.ExecutorService cleanupService =
+     *     java.util.concurrent.Executors.newCachedThreadPool();
+     * try {
+     *     int deleted = userDao.deleteAllJoinEntities(user, cleanupService);
+     * } finally {
+     *     cleanupService.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity whose all join entities should be deleted
@@ -702,10 +713,14 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ThreadPoolExecutor massDeleteExecutor = new ThreadPoolExecutor(...);
      * List<User> users = getUsersForMassCleanup();
-     *
-     * int deleted = userDao.deleteAllJoinEntities(users, massDeleteExecutor);
+     * java.util.concurrent.ExecutorService massDeleteExecutor =
+     *     java.util.concurrent.Executors.newFixedThreadPool(8);
+     * try {
+     *     int deleted = userDao.deleteAllJoinEntities(users, massDeleteExecutor);
+     * } finally {
+     *     massDeleteExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities whose all join entities should be deleted. If {@code null} or empty, 0 is returned

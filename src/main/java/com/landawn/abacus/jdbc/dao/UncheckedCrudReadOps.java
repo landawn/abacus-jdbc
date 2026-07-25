@@ -677,7 +677,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * <pre>{@code
      * if (userDao.exists(userId)) {
      *     // User exists, proceed with update
-     *     userDao.update("lastAccess", new Date(), userId);
+     *     userDao.update("lastAccess", new java.util.Date(), userId);
      * } else {
      *     // User doesn't exist, create new
      *     userDao.insert(new User(userId));

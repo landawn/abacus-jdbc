@@ -123,8 +123,9 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * PreparedQuery query = dao.prepareQuery("SELECT * FROM users WHERE age > ?");
-     * List<User> users = query.setInt(1, 18).list(User.class);
+     * try (PreparedQuery query = dao.prepareQuery("SELECT * FROM users WHERE age > ?")) {
+     *     List<User> users = query.setInt(1, 18).list(User.class);
+     * }
      * }</pre>
      *
      * @param sql the SQL query string
@@ -145,8 +146,9 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * PreparedQuery query = dao.prepareQuery(Filters.eq("status", "ACTIVE"));
-     * List<User> activeUsers = query.list(User.class);
+     * try (PreparedQuery query = dao.prepareQuery(Filters.eq("status", "ACTIVE"))) {
+     *     List<User> activeUsers = query.list(User.class);
+     * }
      * }</pre>
      *
      * @param cond the condition appended to the generated SELECT statement
@@ -168,10 +170,11 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * PreparedQuery query = dao.prepareQuery(
-     *     Arrays.asList("id", "name", "email"),
-     *     Filters.eq("status", "ACTIVE")
-     * );
+     * try (PreparedQuery query = dao.prepareQuery(
+     *         Arrays.asList("id", "name", "email"),
+     *         Filters.eq("status", "ACTIVE"))) {
+     *     List<User> activeUsers = query.list(User.class);
+     * }
      * }</pre>
      *
      * @param selectPropNames the property names to select, or {@code null} to select all
@@ -242,12 +245,12 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * NamedQuery query = dao.prepareNamedQuery(
-     *     "SELECT * FROM users WHERE age > :minAge AND status = :status"
-     * );
-     * List<User> users = query.setInt("minAge", 18)
-     *                         .setString("status", "ACTIVE")
-     *                         .list(User.class);
+     * try (NamedQuery query = dao.prepareNamedQuery(
+     *         "SELECT * FROM users WHERE age > :minAge AND status = :status")) {
+     *     List<User> users = query.setInt("minAge", 18)
+     *                             .setString("status", "ACTIVE")
+     *                             .list(User.class);
+     * }
      * }</pre>
      *
      * @param namedSql the named SQL query string with :paramName placeholders
@@ -384,9 +387,10 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *     d.list(Filters.eq("status", "ACTIVE"))
      * );
      *
-     * future.thenRunAsync(users ->
+     * ContinuableFuture<Void> printFuture = future.thenRunAsync(users ->
      *     users.forEach(System.out::println)
      * );
+     * printFuture.get();
      * }</pre>
      *
      * @param <R> the result type
@@ -408,12 +412,17 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
-     *
-     * ContinuableFuture<Boolean> future = dao.callAsync(
-     *     d -> d.exists(Filters.eq("status", "PENDING")),
-     *     customExecutor
-     * );
+     * java.util.concurrent.ExecutorService customExecutor =
+     *     java.util.concurrent.Executors.newFixedThreadPool(10);
+     * try {
+     *     ContinuableFuture<Boolean> future = dao.callAsync(
+     *         d -> d.exists(Filters.eq("status", "PENDING")),
+     *         customExecutor
+     *     );
+     *     boolean pendingExists = future.get();
+     * } finally {
+     *     customExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param <R> the result type
@@ -440,10 +449,11 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * dao.runAsync(d -> {
+     * ContinuableFuture<Void> future = dao.runAsync(d -> {
      *     List<User> stale = d.list(Filters.lt("lastAccess", sixMonthsAgo));
      *     System.out.println("stale accounts: " + stale.size());
      * });
+     * future.get();
      * }</pre>
      *
      * @param sqlAction consumer that performs database operations
@@ -464,17 +474,22 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
-     *
-     * dao.runAsync(
-     *     d -> {
-     *         long highValue = d.list(Filters.gt("amount", 1000)).size();
-     *         System.out.println("high-value rows: " + highValue);
-     *     },
-     *     scheduler
-     * ).thenRunAsync(() ->
-     *     System.out.println("Report generated")
-     * );
+     * java.util.concurrent.ScheduledExecutorService scheduler =
+     *     java.util.concurrent.Executors.newScheduledThreadPool(5);
+     * try {
+     *     ContinuableFuture<Void> reportFuture = dao.runAsync(
+     *         d -> {
+     *             long highValue = d.list(Filters.gt("amount", 1000)).size();
+     *             System.out.println("high-value rows: " + highValue);
+     *         },
+     *         scheduler
+     *     ).thenRunAsync(() ->
+     *         System.out.println("Report generated")
+     *     );
+     *     reportFuture.get();
+     * } finally {
+     *     scheduler.shutdown();
+     * }
      * }</pre>
      *
      * @param sqlAction consumer that performs database operations

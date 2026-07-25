@@ -67,7 +67,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("status", "VERIFIED");
-     * updates.put("verifiedDate", new Date());
+     * updates.put("verifiedDate", new java.util.Date());
      * int updated = userDao.update(updates, Filters.eq("pendingVerification", true));
      * }</pre>
      *
@@ -90,7 +90,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * <pre>{@code
      * User template = new User();
      * template.setStatus("MIGRATED");
-     * template.setMigratedDate(new Date());
+     * template.setMigratedDate(new java.util.Date());
      * int updated = userDao.update(template, Filters.eq("legacySystem", true));
      * }</pre>
      *

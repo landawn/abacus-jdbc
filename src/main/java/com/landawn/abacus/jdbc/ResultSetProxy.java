@@ -84,14 +84,14 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * ResultSet rs = stmt.executeQuery("SELECT id, created_ts, photo FROM account");
- * ResultSet proxy = ResultSetProxy.wrap(rs);
- *
- * while (proxy.next()) {
- *     long id = proxy.getLong("id");
- *     // getObject(...) applies Oracle type normalization and LOB materialization
- *     Object ts = proxy.getObject("created_ts"); // java.sql.Timestamp
- *     Object photo = proxy.getObject("photo");   // byte[] (Blob materialized)
+ * try (ResultSet proxy = ResultSetProxy.wrap(
+ *         stmt.executeQuery("SELECT id, created_ts, photo FROM account"))) {
+ *     while (proxy.next()) {
+ *         long id = proxy.getLong("id");
+ *         // getObject(...) applies Oracle type normalization and LOB materialization
+ *         Object ts = proxy.getObject("created_ts"); // java.sql.Timestamp
+ *         Object photo = proxy.getObject("photo");   // byte[] (Blob materialized)
+ *     }
  * }
  * }</pre>
  *

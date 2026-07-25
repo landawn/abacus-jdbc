@@ -70,7 +70,7 @@ import com.landawn.abacus.util.stream.Stream;
  * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = new User("John", "Doe");
  * Long id = userDao.insert(user);
- * Optional<User> retrieved = userDao.get(id);
+ * com.landawn.abacus.util.u.Optional<User> retrieved = userDao.get(id);
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

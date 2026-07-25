@@ -5203,8 +5203,8 @@ public final class Jdbc {
      * <pre>{@code
      * // Filter rows where the "status" column equals "ACTIVE"
      * BiRowFilter filter = (rs, columnLabels) -> {
-     *     int idx = columnLabels.indexOf("status") + 1;
-     *     return "ACTIVE".equals(rs.getString(idx));
+     *     int idx = columnLabels.indexOf("status");
+     *     return idx >= 0 && "ACTIVE".equals(rs.getString(idx + 1));
      * };
      *
      * // Compose filters
@@ -5303,7 +5303,7 @@ public final class Jdbc {
      * Dataset dataset = JdbcUtil.extractData(rs, extractor);
      *
      * // Create a custom extractor via builder
-     * RowExtractor extractor = RowExtractor.builder()
+     * RowExtractor customExtractor = RowExtractor.builder()
      *     .getInt(1)
      *     .getString(2)
      *     .getTimestamp(3)
@@ -5399,7 +5399,7 @@ public final class Jdbc {
          * {@code outputRow} passed to {@code accept}, so that array must be at least as long as the number of
          * mapped columns. A {@code null} or undersized output array is rejected with
          * {@link IllegalArgumentException} before any values are written.</p>
-        
+         *
          * <p>Non-empty {@code columnLabels} and {@code prefixAndFieldNameMap} inputs are defensively copied when
          * this method is called; later caller mutations do not change the returned extractor.</p>
          *
@@ -6041,10 +6041,10 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Extract a single integer value (e.g., count, max, sum)
-         * Optional<Integer> count = preparedQuery.findOnlyOne(ColumnOne.GET_INT);
+         * com.landawn.abacus.util.u.Optional<Integer> count = preparedQuery.findOnlyOne(ColumnOne.GET_INT);
          *
          * // Extract a single string value
-         * Optional<String> name = preparedQuery.findOnlyOne(ColumnOne.GET_STRING);
+         * com.landawn.abacus.util.u.Optional<String> name = preparedQuery.findOnlyOne(ColumnOne.GET_STRING);
          *
          * // Use a type-based mapper for custom types
          * RowMapper<LocalDate> mapper = ColumnOne.get(LocalDate.class);

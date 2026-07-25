@@ -74,7 +74,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <pre>{@code
  * // Entity with one-to-many join annotation
  * @Table("employees")
- * public class Employee {
+ * class Employee {
  *     @Id
  *     private Long employeeId;
  *
@@ -84,7 +84,7 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * // Entity with many-to-many join annotation
  * @Table("employees")
- * public class Employee {
+ * class EmployeeWithProjectLinks {
  *     @Id
  *     private Long employeeId;
  *
@@ -205,6 +205,10 @@ public final class JoinInfo {
      * @see #isManyToManyJoin()
      */
     JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowJoiningByNullOrDefaultValue) {
+        N.checkArgNotNull(entityClass, "entityClass");
+        N.checkArgNotNull(tableName, "tableName");
+        N.checkArgNotNull(joinEntityPropName, "joinEntityPropName");
+
         this.allowJoiningByNullOrDefaultValue = allowJoiningByNullOrDefaultValue;
         this.entityClass = entityClass;
         this.tableName = tableName;
@@ -1111,13 +1115,17 @@ public final class JoinInfo {
      * @param entityClass the entity class to inspect for join properties, must not be {@code null}
      * @param tableName the database table name for the entity, must not be {@code null}
      * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist
-     * @throws IllegalArgumentException if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
+     * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (this is raised the first time the map is built and cached for the given key)
      *
      * @see JoinedBy
      * @see DaoConfig
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
+        N.checkArgNotNull(daoClass, "daoClass");
+        N.checkArgNotNull(entityClass, "entityClass");
+        N.checkArgNotNull(tableName, "tableName");
+
         Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.computeIfAbsent(daoClass,
                 k -> new ConcurrentHashMap<>());
 
@@ -1179,7 +1187,7 @@ public final class JoinInfo {
      * @param tableName the database table name for the entity, must not be {@code null}
      * @param joinEntityPropName the name of the property with the {@code @JoinedBy} annotation, must not be {@code null}
      * @return the JoinInfo for the specified property, never {@code null}
-     * @throws IllegalArgumentException if no {@code @JoinedBy} join property is found with the given name on the entity,
+     * @throws IllegalArgumentException if any argument is {@code null}, no {@code @JoinedBy} join property is found with the given name on the entity,
      *                                  or if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (surfaced while building the underlying join-info map)
      *
@@ -1187,6 +1195,8 @@ public final class JoinInfo {
      * @see #getEntityJoinInfo(Class, Class, String)
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
+        N.checkArgNotNull(joinEntityPropName, "joinEntityPropName");
+
         final JoinInfo joinInfo = getEntityJoinInfo(daoClass, entityClass, tableName).get(joinEntityPropName);
 
         if (joinInfo == null) {
@@ -1242,7 +1252,7 @@ public final class JoinInfo {
      * @param tableName the database table name for the entity, must not be {@code null}
      * @param joinPropEntityClass the class of the joined entity to search for, must not be {@code null}
      * @return an unmodifiable list of property names that join to the specified entity class, never {@code null}, empty if none found
-     * @throws IllegalArgumentException if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
+     * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (surfaced while building the underlying join-info map)
      *
      * @see JoinedBy
@@ -1250,6 +1260,11 @@ public final class JoinInfo {
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {
+        N.checkArgNotNull(daoClass, "daoClass");
+        N.checkArgNotNull(entityClass, "entityClass");
+        N.checkArgNotNull(tableName, "tableName");
+        N.checkArgNotNull(joinPropEntityClass, "joinPropEntityClass");
+
         final Tuple3<Class<?>, Class<?>, String> key = Tuple.of(daoClass, entityClass, tableName);
 
         final Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.computeIfAbsent(key, k -> {

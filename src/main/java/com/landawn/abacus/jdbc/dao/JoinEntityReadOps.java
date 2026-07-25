@@ -768,9 +768,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
      * User user = userDao.get(1L).orElseThrow();
-     * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses"), customExecutor);
+     * java.util.concurrent.ExecutorService customExecutor =
+     *     java.util.concurrent.Executors.newFixedThreadPool(4);
+     * try {
+     *     userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses"), customExecutor);
+     * } finally {
+     *     customExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -855,9 +860,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService customExecutor = Executors.newCachedThreadPool();
      * List<User> users = userDao.list(Filters.alwaysTrue());
-     * userDao.loadJoinEntities(users, Arrays.asList("orders", "addresses", "reviews"), customExecutor);
+     * java.util.concurrent.ExecutorService customExecutor =
+     *     java.util.concurrent.Executors.newCachedThreadPool();
+     * try {
+     *     userDao.loadJoinEntities(users, Arrays.asList("orders", "addresses", "reviews"), customExecutor);
+     * } finally {
+     *     customExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -932,9 +942,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ForkJoinPool customPool = new ForkJoinPool(8);
      * User user = userDao.get(1L).orElseThrow();
-     * userDao.loadAllJoinEntities(user, customPool);
+     * java.util.concurrent.ExecutorService customPool =
+     *     new java.util.concurrent.ForkJoinPool(8);
+     * try {
+     *     userDao.loadAllJoinEntities(user, customPool);
+     * } finally {
+     *     customPool.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity for which to load all join entities
@@ -1006,9 +1021,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService batchExecutor = Executors.newWorkStealingPool();
      * List<User> users = userDao.list(Filters.alwaysTrue());
-     * userDao.loadAllJoinEntities(users, batchExecutor);
+     * java.util.concurrent.ExecutorService batchExecutor =
+     *     java.util.concurrent.Executors.newWorkStealingPool();
+     * try {
+     *     userDao.loadAllJoinEntities(users, batchExecutor);
+     * } finally {
+     *     batchExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities for which to load all join entities.
@@ -1315,9 +1335,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService lazyLoadExecutor = Executors.newFixedThreadPool(3);
      * User user = getPartiallyLoadedUser();
-     * userDao.loadJoinEntitiesIfAbsent(user, Arrays.asList("orders", "addresses"), lazyLoadExecutor);
+     * java.util.concurrent.ExecutorService lazyLoadExecutor =
+     *     java.util.concurrent.Executors.newFixedThreadPool(3);
+     * try {
+     *     userDao.loadJoinEntitiesIfAbsent(user, Arrays.asList("orders", "addresses"), lazyLoadExecutor);
+     * } finally {
+     *     lazyLoadExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1405,9 +1430,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService batchLazyLoader = Executors.newWorkStealingPool();
      * List<User> users = getPartiallyLoadedUsers();
-     * userDao.loadJoinEntitiesIfAbsent(users, Arrays.asList("orders", "addresses"), batchLazyLoader);
+     * java.util.concurrent.ExecutorService batchLazyLoader =
+     *     java.util.concurrent.Executors.newWorkStealingPool();
+     * try {
+     *     userDao.loadJoinEntitiesIfAbsent(users, Arrays.asList("orders", "addresses"), batchLazyLoader);
+     * } finally {
+     *     batchLazyLoader.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1483,9 +1513,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService customExecutor = Executors.newCachedThreadPool();
      * User user = getPartiallyLoadedUser();
-     * userDao.loadAllJoinEntitiesIfAbsent(user, customExecutor);
+     * java.util.concurrent.ExecutorService customExecutor =
+     *     java.util.concurrent.Executors.newCachedThreadPool();
+     * try {
+     *     userDao.loadAllJoinEntitiesIfAbsent(user, customExecutor);
+     * } finally {
+     *     customExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -1555,9 +1590,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService batchExecutor = Executors.newWorkStealingPool();
      * List<User> users = getPartiallyLoadedUsers();
-     * userDao.loadAllJoinEntitiesIfAbsent(users, batchExecutor);
+     * java.util.concurrent.ExecutorService batchExecutor =
+     *     java.util.concurrent.Executors.newWorkStealingPool();
+     * try {
+     *     userDao.loadAllJoinEntitiesIfAbsent(users, batchExecutor);
+     * } finally {
+     *     batchExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities

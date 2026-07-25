@@ -104,7 +104,7 @@ public @interface Handler {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Register handler instances at startup (e.g., HandlerFactory.register("auditHandler", new AuditHandler(...)))
+     * // Register handler instances at startup (e.g., Jdbc.HandlerFactory.register("auditHandler", new AuditHandler(...)))
      * @Handler(qualifier = "auditHandler")
      * public interface ConfigDao extends CrudDao<Config, Long, ConfigDao> {
      *     // The handler registered under "auditHandler" will be applied

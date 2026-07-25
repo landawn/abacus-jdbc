@@ -56,7 +56,7 @@ import java.lang.annotation.Target;
  *     @Query("SELECT u.id, u.name, " +
  *            "       a.street AS \"addr.street\", a.city AS \"addr.city\" " +
  *            "FROM users u JOIN addresses a ON a.user_id = u.id WHERE u.id = :id")
- *     User getWithAddress(@Bind("id") long id);
+ *     User getWithAddress(@Bind("id") long id) throws SQLException;
  * }
  * // addr.street -> address.street, addr.city -> address.city
  * }</pre>
@@ -69,7 +69,7 @@ import java.lang.annotation.Target;
  *        "       d.id AS \"d.id\", d.model AS \"d.model\" " +
  *        "FROM users u LEFT JOIN devices d ON d.user_id = u.id " +
  *        "WHERE u.id IN ({ids})")
- * List<User> usersWithDevices(@BindList("ids") List<Long> ids);
+ * List<User> usersWithDevices(@BindList("ids") List<Long> ids) throws SQLException;
  * }</pre>
  *
  * @see Query

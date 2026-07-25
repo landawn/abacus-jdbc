@@ -44,7 +44,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * <pre>{@code
      * User user = userDao.gett(userId);
      * user.setEmail("newemail@example.com");
-     * user.setLastModified(new Date());
+     * user.setLastModified(new java.util.Date());
      * int updatedRows = userDao.update(user);
      * }</pre>
      *
@@ -86,7 +86,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Update user's last login time
-     * userDao.update("lastLoginTime", new Date(), userId);
+     * userDao.update("lastLoginTime", new java.util.Date(), userId);
      *
      * // Deactivate user
      * userDao.update("status", "INACTIVE", userId);
@@ -114,7 +114,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("email", "newemail@example.com");
      * updates.put("phone", "555-9999");
-     * updates.put("lastModified", new Date());
+     * updates.put("lastModified", new java.util.Date());
      *
      * int updated = userDao.update(updates, userId);
      * }</pre>
@@ -136,7 +136,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * List<User> users = userDao.list(Filters.eq("needsUpdate", true));
      * users.forEach(user -> {
      *     user.setProcessed(true);
-     *     user.setProcessedDate(new Date());
+     *     user.setProcessedDate(new java.util.Date());
      * });
      * int totalUpdated = userDao.batchUpdate(users);
      * }</pre>

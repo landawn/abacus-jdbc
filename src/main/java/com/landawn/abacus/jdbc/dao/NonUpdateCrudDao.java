@@ -61,35 +61,36 @@ import com.landawn.abacus.annotation.Beta;
  * // Supported operations - all work fine:
  *
  * // Insert operations
- * Transaction txn = new Transaction("TXN001", customerId, amount);
- * String txnId = transactionDao.insert(txn);   // Returns generated ID
+ * Transaction txn = new Transaction("TXN001", customerId, 125.50);
+ * String txnId = transactionDao.insert(txn);   // Returns the entity-provided ID, "TXN001"
  *
  * List<Transaction> newTransactions = createTransactions();
  * List<String> ids = transactionDao.batchInsert(newTransactions);   // Batch insert
  *
  * // Read by ID operations
- * Optional<Transaction> transaction = transactionDao.get(txnId);   // Returns Optional
+ * com.landawn.abacus.util.u.Optional<Transaction> transaction = transactionDao.get(txnId); // Returns Abacus Optional
  * Transaction txn2 = transactionDao.gett(txnId);   // Returns null if not found
  *
  * // Query single property by ID
- * Nullable<String> status = transactionDao.queryForString("status", txnId);
- * OptionalDouble amount = transactionDao.queryForDouble("amount", txnId);
+ * com.landawn.abacus.util.u.Nullable<String> status = transactionDao.queryForString("status", txnId);
+ * com.landawn.abacus.util.u.OptionalDouble storedAmount = transactionDao.queryForDouble("amount", txnId);
  *
  * // Query operations
  * List<Transaction> txns = transactionDao.list(Filters.eq("customerId", customerId));
- * Optional<Transaction> firstTxn = transactionDao.findFirst(Filters.gt("amount", 1000.0));
- * Optional<Transaction> uniqueTxn = transactionDao.findOnlyOne(Filters.eq("referenceNumber", "REF123"));
+ * com.landawn.abacus.util.u.Optional<Transaction> firstTxn = transactionDao.findFirst(Filters.gt("amount", 1000.0));
+ * com.landawn.abacus.util.u.Optional<Transaction> uniqueTxn = transactionDao.findOnlyOne(Filters.eq("referenceNumber", "REF123"));
  *
  * // Count and existence checks
  * int count = transactionDao.count(Filters.eq("status", "PENDING"));
  * boolean exists = transactionDao.exists(Filters.eq("id", txnId));
  *
  * // Prepare custom SELECT queries
- * List<Transaction> results = transactionDao.prepareQuery(
- *         "SELECT * FROM transactions WHERE amount > ? AND status = ?")
- *         .setDouble(1, 500.0)
- *         .setString(2, "COMPLETED")
- *         .list(Transaction.class);
+ * try (com.landawn.abacus.jdbc.PreparedQuery query = transactionDao.prepareQuery(
+ *         "SELECT * FROM transactions WHERE amount > ? AND status = ?")) {
+ *     List<Transaction> results = query.setDouble(1, 500.0)
+ *             .setString(2, "COMPLETED")
+ *             .list(Transaction.class);
+ * }
  *
  * // Unsupported operations - these are absent from the type and do not compile:
  * // transactionDao.update(txn);                            // does not compile

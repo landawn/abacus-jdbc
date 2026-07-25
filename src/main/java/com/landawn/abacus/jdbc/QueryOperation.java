@@ -47,7 +47,7 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT 1 FROM users WHERE email = ?", op = QueryOperation.exists)
-     * boolean emailExists(String email);
+     * boolean emailExists(String email) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#exists()
@@ -64,12 +64,12 @@ public enum QueryOperation {
      * or unique columns where duplicates would indicate a data integrity issue.</p>
      *
      * <p>For DAO methods, the final return value is adapted to the declared method return type
-     * (for example {@code Optional}, a bare value, {@code null}, or a default primitive value).</p>
+     * (for example {@link com.landawn.abacus.util.u.Optional}, a bare value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE id = ?", op = QueryOperation.findOnlyOne)
-     * Optional<User> getUserById(long id);
+     * com.landawn.abacus.util.u.Optional<User> getUserById(long id) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#findOnlyOne(Class)
@@ -85,12 +85,12 @@ public enum QueryOperation {
      * ensure deterministic results.</p>
      *
      * <p>For DAO methods, the final return value is adapted to the declared method return type
-     * (for example {@code Optional}, a bare value, {@code null}, or a default primitive value).</p>
+     * (for example {@link com.landawn.abacus.util.u.Optional}, a bare value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE age >= ? ORDER BY age", op = QueryOperation.findFirst)
-     * Optional<User> findYoungestAdult(int minAge);
+     * com.landawn.abacus.util.u.Optional<User> findYoungestAdult(int minAge) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#findFirst(Class)
@@ -110,7 +110,7 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE active = true", op = QueryOperation.list)
-     * List<User> getActiveUsers();
+     * List<User> getActiveUsers() throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#list()
@@ -126,7 +126,7 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE age > ?", op = QueryOperation.query)
-     * Dataset queryUsersByAge(int age);
+     * Dataset queryUsersByAge(int age) throws SQLException;
      * }</pre>
      *
      * @deprecated Generally it is unnecessary to specify {@code "op = QueryOperation.query"} in {@code @Query}; rely on
@@ -136,7 +136,7 @@ public enum QueryOperation {
     query,
 
     /**
-     * Returns query results as a {@code Stream} for lazy evaluation and processing.
+     * Returns query results as a {@link com.landawn.abacus.util.stream.Stream} for lazy evaluation and processing.
      * Useful for handling large result sets without loading all data into memory.
      *
      * <p>The stream should be properly closed after use, preferably in a try-with-resources block.
@@ -145,12 +145,12 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users", op = QueryOperation.stream)
-     * Stream<User> streamAllUsers();
+     * com.landawn.abacus.util.stream.Stream<User> streamAllUsers();
      * }</pre>
      *
      * @deprecated Generally it is unnecessary to specify {@code "op = QueryOperation.stream"} in {@code @Query}; rely on
      *             {@link #DEFAULT} -- the framework will use streaming automatically when the method's return
-     *             type is a {@code Stream}.
+     *             type is a {@link com.landawn.abacus.util.stream.Stream}.
      */
     @Deprecated
     stream,
@@ -164,15 +164,16 @@ public enum QueryOperation {
      * The query is expected to return a single column.</p>
      *
      * <p>For DAO methods, the final return value is adapted to the declared method return type
-     * (for example {@code Nullable}, {@code Optional}, a bare scalar value, {@code null}, or a default primitive value).</p>
+     * (for example {@link com.landawn.abacus.util.u.Nullable}, {@link com.landawn.abacus.util.u.Optional},
+     * a bare scalar value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT MAX(salary) FROM employees", op = QueryOperation.queryForSingle)
-     * Double getMaxSalary();
+     * Double getMaxSalary() throws SQLException;
      *
      * @Query(value = "SELECT name FROM users WHERE id = ?", op = QueryOperation.queryForSingle)
-     * String getUserName(long id);
+     * String getUserName(long id) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#queryForSingleValue(Class)
@@ -189,12 +190,13 @@ public enum QueryOperation {
      * column or constraint and duplicates would indicate a data integrity issue.</p>
      *
      * <p>For DAO methods, the final return value is adapted to the declared method return type
-     * (for example {@code Nullable}, {@code Optional}, a bare scalar value, {@code null}, or a default primitive value).</p>
+     * (for example {@link com.landawn.abacus.util.u.Nullable}, {@link com.landawn.abacus.util.u.Optional},
+     * a bare scalar value, {@code null}, or a default primitive value).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT email FROM users WHERE username = ?", op = QueryOperation.queryForUnique)
-     * String findEmailByUsername(String username);
+     * String findEmailByUsername(String username) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#queryForUniqueValue(Class)
@@ -212,7 +214,7 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call getUserBatches(?)}", op = QueryOperation.listAll, procedure = true)
-     * List<List<User>> getUserBatches(long departmentId);
+     * List<List<User>> getUserBatches(long departmentId) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#listAllResultSets(Class)
@@ -232,7 +234,7 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call getComplexReport(?, ?)}", op = QueryOperation.queryAll, procedure = true)
-     * List<Dataset> getComplexReport(Date startDate, Date endDate);
+     * List<Dataset> getComplexReport(Date startDate, Date endDate) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#queryAllResultSets()
@@ -244,7 +246,7 @@ public enum QueryOperation {
      * Retrieves all {@code ResultSet}s from a stored procedure call as {@code Stream}s.
      * Result sets are discovered and processed lazily, one at a time.
      *
-     * <p>With the standard DAO return type {@code Stream<Dataset>}, each individual result set is
+     * <p>With the standard DAO return type {@code com.landawn.abacus.util.stream.Stream<Dataset>}, each individual result set is
      * fully materialized as a {@code Dataset} before that stream element is emitted; the laziness is
      * across result sets, not rows within a result set. The returned stream owns JDBC resources and
      * must be closed. This operation requires {@code @Query(procedure = true)}.</p>
@@ -252,7 +254,7 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call streamLargeDatasets()}", op = QueryOperation.streamAll, procedure = true)
-     * Stream<Dataset> streamLargeDatasets();
+     * com.landawn.abacus.util.stream.Stream<Dataset> streamLargeDatasets();
      * }</pre>
      *
      * @see AbstractQuery#streamAllResultSets()
@@ -273,7 +275,7 @@ public enum QueryOperation {
      * @Query(value = "{call calculateStats(?, ?, ?)}", op = QueryOperation.executeAndGetOutParameters, procedure = true)
      * @OutParameter(position = 2, sqlType = Types.INTEGER)
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)
-     * Jdbc.OutParamResult calculateStats(int input);
+     * Jdbc.OutParamResult calculateStats(int input) throws SQLException;
      * }</pre>
      *
      * <p>This operation is primarily used with {@code @Query} annotation to execute the target procedure
@@ -296,10 +298,10 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = QueryOperation.update)
-     * int deactivateInactiveUsers(Date threshold);
+     * int deactivateInactiveUsers(Date threshold) throws SQLException;
      *
      * @Query(value = "DELETE FROM users WHERE id = ?", op = QueryOperation.update)
-     * int deleteUser(long id);
+     * int deleteUser(long id) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#update()
@@ -320,7 +322,7 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "DELETE FROM audit_logs WHERE created_date < ?", op = QueryOperation.largeUpdate)
-     * long purgeOldAuditLogs(Date cutoffDate);
+     * long purgeOldAuditLogs(Date cutoffDate) throws SQLException;
      * }</pre>
      *
      * @see AbstractQuery#largeUpdate()
@@ -342,10 +344,10 @@ public enum QueryOperation {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM users")  // QueryOperation defaults to QueryOperation.DEFAULT
-     * List<User> getAllUsers();      // Framework infers QueryOperation.list
+     * List<User> listAllUsers() throws SQLException;     // Framework infers QueryOperation.list
      *
      * @Query("DELETE FROM users WHERE id = ?")  // QueryOperation defaults to QueryOperation.DEFAULT
-     * int deleteUser(long id);                  // Framework infers QueryOperation.update
+     * int deleteUser(long id) throws SQLException;      // Framework infers QueryOperation.update
      * }</pre>
      *
      */

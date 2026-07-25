@@ -43,7 +43,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Method-level: hide a query that prints sensitive payment data.
+ * // Method-level: suppress statement logging for a sensitive payment-data path.
  * public interface PaymentDao extends CrudDao<Payment, Long, PaymentDao> {
  *     @SqlLogEnabled(false)
  *     @Query("SELECT * FROM payment_card WHERE id = :id")
@@ -87,11 +87,13 @@ public @interface SqlLogEnabled {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * @Query("SELECT * FROM users")
      * @SqlLogEnabled(true)  // Explicitly enable logging
-     * List<User> findAll();
+     * List<User> findAll() throws SQLException;
      *
+     * @Query("SELECT * FROM payment_info WHERE account_id = :accountId")
      * @SqlLogEnabled(false) // Disable logging for sensitive data
-     * List<PaymentInfo> findPaymentDetails();
+     * List<PaymentInfo> findPaymentDetails(@Bind("accountId") long accountId) throws SQLException;
      * }</pre>
      *
      * @return {@code true} to enable SQL logging, {@code false} to disable it
@@ -115,11 +117,13 @@ public @interface SqlLogEnabled {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * @Query(value = "INSERT INTO data_table (payload) VALUES (:payload)", batch = true)
      * @SqlLogEnabled(maxSqlLogLength = 500)
-     * void insertBatchData(List<Data> largeDataset);
+     * void insertBatchData(List<Data> largeDataset) throws SQLException;
      *
+     * @Query("SELECT department, COUNT(*) AS total FROM reports GROUP BY department")
      * @SqlLogEnabled(maxSqlLogLength = 2048) // Allow longer logs for complex queries
-     * List<Report> generateComplexReport();
+     * List<ReportSummary> generateComplexReport() throws SQLException;
      * }</pre>
      *
      * @return the maximum number of characters to include from SQL statements in logs; defaults to

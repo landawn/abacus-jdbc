@@ -121,13 +121,11 @@ public interface Transaction {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try {
-     *     // Perform database operations
      *     updateRecords();
      *     transaction.commit();
-     *     logger.info("Transaction committed successfully");
-     * } catch (UncheckedSQLException e) {
-     *     logger.error("Failed to commit transaction", e);
-     *     // Handle commit failure
+     * } finally {
+     *     // Also rolls back when the work, rather than commit itself, fails.
+     *     transaction.rollbackIfNotCommitted();
      * }
      * }</pre>
      *
@@ -150,6 +148,7 @@ public interface Transaction {
      * <pre>{@code
      * try {
      *     performRiskyOperation();
+     *     transaction.commit();
      * } catch (Exception e) {
      *     transaction.rollback();
      *     logger.warn(e, "Transaction rolled back");

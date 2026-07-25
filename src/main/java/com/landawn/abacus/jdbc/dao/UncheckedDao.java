@@ -40,11 +40,14 @@ import com.landawn.abacus.util.N;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * UncheckedDao<User, UserDao> userDao = ...;
+ * public interface UserDao extends UncheckedDao<User, UserDao> {
+ * }
+ *
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = new User("John", "Doe");
  * userDao.save(user);
  *
- * Optional<User> foundUser = userDao.findFirst(Filters.eq("firstName", "John"));
+ * com.landawn.abacus.util.u.Optional<User> foundUser = userDao.findFirst(Filters.eq("firstName", "John"));
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
@@ -62,7 +65,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("john@example.com", "John", "Doe");
-     * user.setLastLogin(new Date());
+     * user.setLastLogin(new java.util.Date());
      *
      * // Upsert based on email being unique
      * User result = userDao.upsert(user, Arrays.asList("email"));

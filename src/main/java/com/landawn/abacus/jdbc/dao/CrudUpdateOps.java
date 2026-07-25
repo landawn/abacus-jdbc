@@ -41,7 +41,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * <pre>{@code
      * User user = userDao.gett(userId);
      * user.setEmail("newemail@example.com");
-     * user.setLastModified(new Date());
+     * user.setLastModified(new java.util.Date());
      * int updatedRows = userDao.update(user);
      * }</pre>
      *
@@ -60,7 +60,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * User user = new User();
      * user.setId(userId);
      * user.setEmail("newemail@example.com");
-     * user.setLastModified(new Date());
+     * user.setLastModified(new java.util.Date());
      * // Only update email and lastModified fields
      * int rows = userDao.update(user, Arrays.asList("email", "lastModified"));
      * }</pre>
@@ -80,7 +80,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * userDao.update("lastLoginTime", new Date(), userId);
+     * userDao.update("lastLoginTime", new java.util.Date(), userId);
      * userDao.update("failedLoginAttempts", 0, userId);
      * }</pre>
      *
@@ -104,7 +104,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("status", "ACTIVE");
-     * updates.put("lastModified", new Date());
+     * updates.put("lastModified", new java.util.Date());
      * updates.put("modifiedBy", currentUserId);
      * userDao.update(updates, userId);
      * }</pre>
@@ -124,7 +124,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsersToUpdate();
-     * users.forEach(u -> u.setLastModified(new Date()));
+     * users.forEach(u -> u.setLastModified(new java.util.Date()));
      * int totalUpdated = userDao.batchUpdate(users);
      * }</pre>
      *
@@ -143,7 +143,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = loadUsers();   // 5000 users
-     * largeUserList.forEach(u -> u.setLastModified(new Date()));
+     * largeUserList.forEach(u -> u.setLastModified(new java.util.Date()));
      * // Process in batches of 500
      * int totalUpdated = userDao.batchUpdate(largeUserList, 500);
      * }</pre>
@@ -166,7 +166,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * List<User> users = loadUsers();
      * users.forEach(u -> {
      *     u.setStatus("INACTIVE");
-     *     u.setDeactivatedDate(new Date());
+     *     u.setDeactivatedDate(new java.util.Date());
      * });
      * int rows = userDao.batchUpdate(users, Arrays.asList("status", "deactivatedDate"));
      * }</pre>
@@ -190,7 +190,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * List<User> users = loadLargeUserList();   // 10000 users
      * users.forEach(u -> {
      *     u.setStatus("VERIFIED");
-     *     u.setVerifiedDate(new Date());
+     *     u.setVerifiedDate(new java.util.Date());
      * });
      * // Update only status and verifiedDate in batches of 500
      * int rows = userDao.batchUpdate(users, Arrays.asList("status", "verifiedDate"), 500);

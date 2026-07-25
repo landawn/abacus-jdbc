@@ -62,7 +62,7 @@ import com.landawn.abacus.annotation.Beta;
  * // Supported operations - all work fine:
  *
  * // Get by ID (returns Optional)
- * Optional<Report> report = reportDao.get(123L);
+ * com.landawn.abacus.util.u.Optional<Report> report = reportDao.get(123L);
  *
  * // Get by ID (returns null if not found)
  * Report report2 = reportDao.gett(456L);
@@ -71,7 +71,7 @@ import com.landawn.abacus.annotation.Beta;
  * List<Report> activeReports = reportDao.list(Filters.eq("status", "ACTIVE"));
  *
  * // Find first report
- * Optional<Report> firstReport = reportDao.findFirst(Filters.gt("createdDate", someDate));
+ * com.landawn.abacus.util.u.Optional<Report> firstReport = reportDao.findFirst(Filters.gt("createdDate", someDate));
  *
  * // Count reports
  * int count = reportDao.count(Filters.eq("type", "MONTHLY"));
@@ -80,13 +80,14 @@ import com.landawn.abacus.annotation.Beta;
  * boolean exists = reportDao.exists(Filters.eq("id", 789L));
  *
  * // Query single property by ID
- * Nullable<String> title = reportDao.queryForString("title", 123L);
- * OptionalInt year = reportDao.queryForInt("year", 123L);
+ * com.landawn.abacus.util.u.Nullable<String> title = reportDao.queryForString("title", 123L);
+ * com.landawn.abacus.util.u.OptionalInt year = reportDao.queryForInt("year", 123L);
  *
  * // Prepare custom SELECT queries
- * List<Report> results = reportDao.prepareQuery("SELECT * FROM reports WHERE year = ?")
- *                                 .setInt(1, 2023)
- *                                 .list(Report.class);
+ * try (com.landawn.abacus.jdbc.PreparedQuery query =
+ *         reportDao.prepareQuery("SELECT * FROM reports WHERE year = ?")) {
+ *     List<Report> results = query.setInt(1, 2023).list(Report.class);
+ * }
  *
  * // Unsupported operations - these are absent from the type and do not compile:
  * // reportDao.insert(new Report());     // does not compile

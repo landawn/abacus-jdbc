@@ -1443,7 +1443,7 @@ public class DataTransferUtilTest extends TestBase {
     // swapped values between columns. The fix derives the column list once from the source and
     // uses it for both SQL statements.
     @Test
-    public void testCopy_AlignsInsertColumnOrderToSource() throws Exception {
+    public void testCopy_AlignsInsertColumnOrderToSourceForAllColumnOverloads() throws Exception {
         // Two in-memory H2 datasources with the same table but different column declaration orders.
         final DataSource srcDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:copy_src_order;DB_CLOSE_DELAY=-1", "sa", "");
         final DataSource tgtDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:copy_tgt_order;DB_CLOSE_DELAY=-1", "sa", "");
@@ -1460,22 +1460,31 @@ public class DataTransferUtilTest extends TestBase {
                 st.execute("CREATE TABLE T_ORDER (c INT, b INT, a INT)");
             }
 
-            try (Connection srcConn = srcDs.getConnection();
-                 Connection tgtConn = tgtDs.getConnection()) {
-                long copied = DataTransferUtil.copy(srcConn, tgtConn, "T_ORDER", "T_ORDER", 10);
-                assertEquals(1L, copied);
-            }
+            // Exercise the direct all-column overload and the selected-column overload's documented
+            // null/empty aliases. All three must derive one shared order from the source metadata.
+            for (int mode = 0; mode < 3; mode++) {
+                try (Connection conn = tgtDs.getConnection();
+                     java.sql.Statement st = conn.createStatement()) {
+                    st.executeUpdate("DELETE FROM T_ORDER");
+                }
 
-            // After the fix, the target row must hold (a=10, b=20, c=30) matching the source.
-            // Before the fix, positional binding into the target's (c, b, a) order would store
-            // c=10, b=20, a=30 — i.e., a and c swapped.
-            try (Connection conn = tgtDs.getConnection();
-                 java.sql.Statement st = conn.createStatement();
-                 ResultSet rs = st.executeQuery("SELECT a, b, c FROM T_ORDER")) {
-                assertTrue(rs.next());
-                assertEquals(10, rs.getInt("a"), "column 'a' must hold the source value 10, not the swapped 30");
-                assertEquals(20, rs.getInt("b"));
-                assertEquals(30, rs.getInt("c"), "column 'c' must hold the source value 30, not the swapped 10");
+                try (Connection srcConn = srcDs.getConnection();
+                     Connection tgtConn = tgtDs.getConnection()) {
+                    final long copied = mode == 0 ? DataTransferUtil.copy(srcConn, tgtConn, "T_ORDER", "T_ORDER", 10)
+                            : DataTransferUtil.copy(srcConn, tgtConn, "T_ORDER", "T_ORDER", mode == 1 ? null : List.of(), 10);
+                    assertEquals(1L, copied);
+                }
+
+                // The target row must hold (a=10, b=20, c=30) matching the source. Before the fix,
+                // positional binding into the target's (c, b, a) order swapped a and c.
+                try (Connection conn = tgtDs.getConnection();
+                     java.sql.Statement st = conn.createStatement();
+                     ResultSet rs = st.executeQuery("SELECT a, b, c FROM T_ORDER")) {
+                    assertTrue(rs.next());
+                    assertEquals(10, rs.getInt("a"), "column 'a' must hold the source value 10, not the swapped 30");
+                    assertEquals(20, rs.getInt("b"));
+                    assertEquals(30, rs.getInt("c"), "column 'c' must hold the source value 30, not the swapped 10");
+                }
             }
         } finally {
             ((com.zaxxer.hikari.HikariDataSource) srcDs).close();

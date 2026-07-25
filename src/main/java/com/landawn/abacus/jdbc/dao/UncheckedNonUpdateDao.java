@@ -64,7 +64,7 @@ import com.landawn.abacus.annotation.Beta;
  * dao.batchSave(newLogs);
  *
  * // Can be used in functional contexts without try-catch:
- * Stream.of("INFO", "WARN", "ERROR")
+ * java.util.stream.Stream.of("INFO", "WARN", "ERROR")
  *       .forEach(level -> dao.save(new EventLog("Log level: " + level)));
  *
  * // Update and delete operations are absent from the type and do not compile:

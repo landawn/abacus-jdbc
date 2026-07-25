@@ -171,7 +171,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong lastLoginTime = userDao.queryForLong("lastLoginTimestamp", userId);
-     * lastLoginTime.ifPresent(time -> System.out.println("Last login: " + new Date(time)));
+     * lastLoginTime.ifPresent(time -> System.out.println("Last login: " + new java.util.Date(time)));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -282,7 +282,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<Timestamp> lastModified = userDao.queryForTimestamp("lastModified", userId);
+     * Nullable<java.sql.Timestamp> lastModified = userDao.queryForTimestamp("lastModified", userId);
      * lastModified.ifPresent(ts -> System.out.println("Last modified: " + ts));
      * }</pre>
      *

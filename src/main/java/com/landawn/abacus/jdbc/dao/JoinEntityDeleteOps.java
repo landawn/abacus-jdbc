@@ -354,9 +354,14 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService deleteExecutor = Executors.newFixedThreadPool(3);
      * User user = userDao.get(1L).orElseThrow();
-     * int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), deleteExecutor);
+     * java.util.concurrent.ExecutorService deleteExecutor =
+     *     java.util.concurrent.Executors.newFixedThreadPool(3);
+     * try {
+     *     int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), deleteExecutor);
+     * } finally {
+     *     deleteExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
@@ -479,9 +484,14 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService bulkDeleteExecutor = Executors.newWorkStealingPool();
      * List<User> users = getBulkUsersForDeletion();
-     * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), bulkDeleteExecutor);
+     * java.util.concurrent.ExecutorService bulkDeleteExecutor =
+     *     java.util.concurrent.Executors.newWorkStealingPool();
+     * try {
+     *     int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), bulkDeleteExecutor);
+     * } finally {
+     *     bulkDeleteExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned
@@ -568,9 +578,14 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService cleanupExecutor = Executors.newCachedThreadPool();
      * User user = userDao.get(1L).orElseThrow();
-     * int deletedCount = userDao.deleteAllJoinEntities(user, cleanupExecutor);
+     * java.util.concurrent.ExecutorService cleanupExecutor =
+     *     java.util.concurrent.Executors.newCachedThreadPool();
+     * try {
+     *     int deletedCount = userDao.deleteAllJoinEntities(user, cleanupExecutor);
+     * } finally {
+     *     cleanupExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entity the entity for which to delete all join entities
@@ -653,9 +668,14 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ExecutorService massCleanupExecutor = Executors.newWorkStealingPool(8);
      * List<User> users = getAllUsersForPurge();
-     * int deletedCount = userDao.deleteAllJoinEntities(users, massCleanupExecutor);
+     * java.util.concurrent.ExecutorService massCleanupExecutor =
+     *     java.util.concurrent.Executors.newWorkStealingPool(8);
+     * try {
+     *     int deletedCount = userDao.deleteAllJoinEntities(users, massCleanupExecutor);
+     * } finally {
+     *     massCleanupExecutor.shutdown();
+     * }
      * }</pre>
      *
      * @param entities the collection of entities for which to delete all join entities. If {@code null} or empty, 0 is returned

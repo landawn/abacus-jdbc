@@ -47,10 +47,10 @@ import java.lang.annotation.Target;
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *
  *     @Query(id = "findActiveAdults")              // Reference into the mapper file.
- *     List<User> findActiveAdults(@Bind("minAge") int minAge);
+ *     List<User> findActiveAdults(@Bind("minAge") int minAge) throws SQLException;
  *
  *     @Query(id = "softDeleteById")
- *     int softDeleteById(@Bind("id") Long id);
+ *     int softDeleteById(@Bind("id") Long id) throws SQLException;
  * }
  *
  * // sql/UserDao.xml:

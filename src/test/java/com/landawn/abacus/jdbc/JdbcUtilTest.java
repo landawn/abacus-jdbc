@@ -1305,6 +1305,35 @@ public class JdbcUtilTest extends TestBase {
         assertTrue(JdbcUtil.tableExists(mockConnection, "\"sales.data\""));
     }
 
+    @Test
+    public void testTableExists_UnqualifiedNameUsesCurrentCatalog() throws SQLException {
+        final ResultSet tableRs = mock(ResultSet.class);
+        when(mockConnection.getCatalog()).thenReturn("current_catalog");
+        when(mockDatabaseMetaData.getTables("current_catalog", null, "users", null)).thenReturn(tableRs);
+        when(tableRs.next()).thenReturn(true);
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "users"));
+        verify(mockDatabaseMetaData).getTables("current_catalog", null, "users", null);
+    }
+
+    @Test
+    public void testTableExists_CurrentCatalogDoesNotAlterUnqualifiedFallbackSql() throws SQLException {
+        final ResultSet lowerCaseRs1 = mock(ResultSet.class);
+        final ResultSet upperCaseRs = mock(ResultSet.class);
+        final ResultSet lowerCaseRs2 = mock(ResultSet.class);
+        when(mockConnection.getCatalog()).thenReturn("current_catalog");
+        when(mockDatabaseMetaData.getTables("current_catalog", null, "users", null)).thenReturn(lowerCaseRs1, lowerCaseRs2);
+        when(mockDatabaseMetaData.getTables("current_catalog", null, "USERS", null)).thenReturn(upperCaseRs);
+        when(lowerCaseRs1.next()).thenReturn(false);
+        when(upperCaseRs.next()).thenReturn(false);
+        when(lowerCaseRs2.next()).thenReturn(false);
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "users"));
+
+        verify(mockConnection).prepareStatement("SELECT 1 FROM users WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM current_catalog.users WHERE 1 > 2");
+    }
+
     //    @Test
     //    public void testGetDBSequenceWithConfig() {
     //        DBSequence seq = JdbcUtil.getDBSequence(mockDataSource, "seq_table", "seq_name", 1000L, 500);
@@ -1313,13 +1342,13 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testCreateDBLock() {
-        DBLock lock = JdbcUtil.createDBLock(mockDataSource, "lock_table");
-        assertNotNull(lock);
-        assertTrue(lock instanceof DBLock, "should return a DBLock instance");
-        // A second call with a different table name should produce a distinct instance
-        DBLock otherLock = JdbcUtil.createDBLock(mockDataSource, "other_lock_table");
-        assertNotNull(otherLock);
-        assertFalse(lock == otherLock, "different table names should yield different DBLock instances");
+        try (DBLock lock = JdbcUtil.createDBLock(mockDataSource, "lock_table");
+                DBLock otherLock = JdbcUtil.createDBLock(mockDataSource, "other_lock_table")) {
+            assertNotNull(lock);
+            assertTrue(lock instanceof AutoCloseable, "DBLock should support try-with-resources");
+            assertNotNull(otherLock);
+            assertFalse(lock == otherLock, "different table names should yield different instances");
+        }
     }
 
     @Test
@@ -1583,6 +1612,18 @@ public class JdbcUtilTest extends TestBase {
         String result = JdbcUtil.blobToString(mockBlob, StandardCharsets.ISO_8859_1);
         assertEquals(data, result);
         verify(mockBlob).free();
+    }
+
+    @Test
+    public void testBlob2String_PreservesReadFailureWhenFreeAlsoFails() throws SQLException {
+        final SQLException readFailure = new SQLException("read failed");
+        final SQLException freeFailure = new SQLException("free failed");
+        when(mockBlob.length()).thenThrow(readFailure);
+        doThrow(freeFailure).when(mockBlob).free();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> JdbcUtil.blobToString(mockBlob));
+        assertSame(readFailure, thrown);
+        assertArrayEquals(new Throwable[] { freeFailure }, thrown.getSuppressed());
     }
 
     @Test
@@ -2565,11 +2606,30 @@ public class JdbcUtilTest extends TestBase {
         when(blob2.getBytes(1, data.length)).thenReturn(data);
 
         when(mockResultSet.next()).thenReturn(true, true, false);
-        when(mockResultSet.getObject(1)).thenReturn(blob1);
-        when(mockResultSet.getBlob(1)).thenReturn(blob2);
+        when(mockResultSet.getObject(1)).thenReturn(blob1, blob2);
 
         List<?> values = JdbcUtil.getAllColumnValues(mockResultSet, 1);
         assertEquals(2, values.size());
+        assertArrayEquals(data, (byte[]) values.get(0));
+        assertArrayEquals(data, (byte[]) values.get(1));
+        verify(blob1).free();
+        verify(blob2).free();
+    }
+
+    @Test
+    public void testGetAllColumnValues_ConvertsEachRowsRuntimeTypeIndependently() throws SQLException {
+        final byte[] data = "blobdata".getBytes(StandardCharsets.UTF_8);
+        final Blob blob = mock(Blob.class);
+        when(blob.length()).thenReturn((long) data.length);
+        when(blob.getBytes(1, data.length)).thenReturn(data);
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getObject(1)).thenReturn("plain", blob);
+
+        final List<?> values = JdbcUtil.getAllColumnValues(mockResultSet, 1);
+
+        assertEquals("plain", values.get(0));
+        assertArrayEquals(data, (byte[]) values.get(1));
+        verify(blob).free();
     }
 
     // Test prepareQuery with Connection overloads
@@ -3173,6 +3233,34 @@ public class JdbcUtilTest extends TestBase {
         assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(rs, true, false));
     }
 
+    @Test
+    public void testClose_ResultSetBooleanFlags_PreservesLookupFailureWhenCloseAlsoFails() throws SQLException {
+        final SQLException lookupFailure = new SQLException("getStatement failed");
+        final SQLException closeFailure = new SQLException("close failed");
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getStatement()).thenThrow(lookupFailure);
+        doThrow(closeFailure).when(rs).close();
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(rs, true, false));
+        assertSame(lookupFailure, thrown.getCause());
+        assertArrayEquals(new Throwable[] { closeFailure }, thrown.getCause().getSuppressed());
+    }
+
+    @Test
+    public void testClose_ResultSetBooleanFlags_CleansUpAfterUncheckedLookupFailure() throws SQLException {
+        final IllegalStateException lookupFailure = new IllegalStateException("getStatement failed");
+        final SQLException closeFailure = new SQLException("close failed");
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getStatement()).thenThrow(lookupFailure);
+        doThrow(closeFailure).when(rs).close();
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> JdbcUtil.close(rs, true, false));
+
+        assertSame(lookupFailure, thrown);
+        assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
+        verify(rs).close();
+    }
+
     // close(Statement) wraps SQLException (line 1108).
     @Test
     public void testClose_Statement_WrapsSQLException() throws SQLException {
@@ -3403,6 +3491,58 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(2, thrown.getCause().getSuppressed().length, "should have two suppressed exceptions");
         assertEquals(stmtEx, thrown.getCause().getSuppressed()[0], "first suppressed should be from Statement.close()");
         assertEquals(connEx, thrown.getCause().getSuppressed()[1], "second suppressed should be from Connection.close()");
+    }
+
+    @Test
+    @DisplayName("close(ResultSet, Statement): an unchecked ResultSet failure does not skip Statement.close()")
+    public void testClose_ResultSetStatement_UncheckedFailureStillClosesStatement() throws SQLException {
+        final IllegalStateException rsEx = new IllegalStateException("rs runtime failure");
+        final SQLException stmtEx = new SQLException("stmt SQL failure");
+        final ResultSet rs = mock(ResultSet.class);
+        final Statement stmt = mock(Statement.class);
+        doThrow(rsEx).when(rs).close();
+        doThrow(stmtEx).when(stmt).close();
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> JdbcUtil.close(rs, stmt));
+
+        assertSame(rsEx, thrown);
+        assertArrayEquals(new Throwable[] { stmtEx }, thrown.getSuppressed());
+        verify(stmt).close();
+    }
+
+    @Test
+    @DisplayName("close(Statement, Connection): an Error from Statement.close() does not skip Connection.close()")
+    public void testClose_StatementConnection_ErrorStillClosesConnection() throws SQLException {
+        final AssertionError stmtError = new AssertionError("stmt error");
+        final IllegalStateException connEx = new IllegalStateException("conn runtime failure");
+        final Statement stmt = mock(Statement.class);
+        final Connection conn = mock(Connection.class);
+        doThrow(stmtError).when(stmt).close();
+        doThrow(connEx).when(conn).close();
+
+        final AssertionError thrown = assertThrows(AssertionError.class, () -> JdbcUtil.close(stmt, conn));
+
+        assertSame(stmtError, thrown);
+        assertArrayEquals(new Throwable[] { connEx }, thrown.getSuppressed());
+        verify(conn).close();
+    }
+
+    @Test
+    @DisplayName("close(ResultSet, true, true): an unchecked close failure does not leak its Statement or Connection")
+    public void testClose_ResultSetBooleanFlags_UncheckedCloseFailureStillClosesOwners() throws SQLException {
+        final IllegalStateException rsEx = new IllegalStateException("rs runtime failure");
+        final ResultSet rs = mock(ResultSet.class);
+        final Statement stmt = mock(Statement.class);
+        final Connection conn = mock(Connection.class);
+        when(rs.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(conn);
+        doThrow(rsEx).when(rs).close();
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> JdbcUtil.close(rs, true, true));
+
+        assertSame(rsEx, thrown);
+        verify(stmt).close();
+        verify(conn).close();
     }
 
     @Test
@@ -4157,6 +4297,9 @@ public class JdbcUtilTest extends TestBase {
         }
     }
 
+    public record RecordId(@com.landawn.abacus.annotation.Id long tenantId, @com.landawn.abacus.annotation.Id long entityId) {
+    }
+
     // isDefaultIdPropValue: bean with an @Id whose value is default vs set.
     @Test
     public void testIsDefaultIdPropValue_Bean() {
@@ -4172,6 +4315,12 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testIsDefaultIdPropValue_Bean_NoIdProp() {
         assertTrue(JdbcUtil.isDefaultIdPropValue(new SubAddress()));
+    }
+
+    @Test
+    public void testIsDefaultIdPropValue_Record() {
+        assertTrue(JdbcUtil.isDefaultIdPropValue(new RecordId(0, 0)));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(new RecordId(0, 7)));
     }
 
     // createCacheKey builds a non-null key embedding the method name and table.

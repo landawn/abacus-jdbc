@@ -433,11 +433,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Connection connection = ...;  // Obtain a database Connection
-     * SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
-     *
-     * System.out.println("Database Name: " + dbInfo.name());
-     * System.out.println("Database Version: " + dbInfo.version());
+     * try (Connection connection = dataSource.getConnection()) {
+     *     SqlDialect.ProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
+     *     System.out.println("Database Name: " + dbInfo.name());
+     *     System.out.println("Database Version: " + dbInfo.version());
+     * }
      * }</pre>
      *
      * @param conn The database {@link Connection} to use for retrieving metadata. It must be an active connection.
@@ -682,9 +682,9 @@ public final class JdbcUtil {
      * String username = "root";
      * String password = "your_password";
      *
-     * try (Connection connection = JdbcUtil.createConnection(jdbcUrl, username, password)) {
+     * try (Connection connection = JdbcUtil.createConnection(jdbcUrl, username, password);
+     *         Statement statement = connection.createStatement()) {
      *     // Perform database operations with the connection
-     *     Statement statement = connection.createStatement();
      *     // ...
      * } catch (UncheckedSQLException | SQLException e) {
      *     // Handle exceptions
@@ -1065,6 +1065,7 @@ public final class JdbcUtil {
 
         Connection conn = null;
         Statement stmt = null;
+        Throwable lookupFailure = null;
 
         try {
             if (closeStatement) {
@@ -1074,10 +1075,30 @@ public final class JdbcUtil {
             if (closeConnection && stmt != null) {
                 conn = stmt.getConnection();
             }
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        } finally {
+        } catch (final SQLException | RuntimeException | Error e) {
+            lookupFailure = e;
+        }
+
+        try {
             close(rs, stmt, conn);
+        } catch (final RuntimeException | Error closeFailure) {
+            if (lookupFailure == null) {
+                throw closeFailure;
+            }
+
+            // close(...) wraps a JDBC close failure. Suppress its SQLException directly so callers see
+            // the same failure ordering as the explicit multi-resource close overloads.
+            final Throwable secondaryFailure = closeFailure instanceof UncheckedSQLException && closeFailure.getCause() != null ? closeFailure.getCause()
+                    : closeFailure;
+            addSuppressedIfDistinct(lookupFailure, secondaryFailure);
+        }
+
+        if (lookupFailure instanceof final SQLException sqlException) {
+            throw new UncheckedSQLException(sqlException);
+        } else if (lookupFailure instanceof final RuntimeException runtimeException) {
+            throw runtimeException;
+        } else if (lookupFailure instanceof final Error error) {
+            throw error;
         }
     }
 
@@ -1164,9 +1185,32 @@ public final class JdbcUtil {
         }
     }
 
+    private static Throwable collectCloseFailure(final Throwable primaryFailure, final Throwable closeFailure) {
+        if (primaryFailure == null) {
+            return closeFailure;
+        }
+
+        addSuppressedIfDistinct(primaryFailure, closeFailure);
+        return primaryFailure;
+    }
+
+    private static void throwCloseFailure(final Throwable failure) throws UncheckedSQLException {
+        if (failure instanceof final SQLException sqlException) {
+            throw new UncheckedSQLException(sqlException);
+        } else if (failure instanceof final RuntimeException runtimeException) {
+            throw runtimeException;
+        } else if (failure instanceof final Error error) {
+            throw error;
+        }
+
+        throw new IllegalStateException("Unexpected JDBC resource close failure", failure);
+    }
+
     /**
      * Closes the specified {@link ResultSet} and {@link Statement}.
      * Resources are closed in the correct order: {@code ResultSet} first, then {@code Statement}.
+     * Both close operations are attempted even if the first one fails. The first failure is thrown,
+     * with any later failure attached to it as a suppressed exception.
      * Using try-with-resources is generally preferred for managing these resources.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1195,36 +1239,34 @@ public final class JdbcUtil {
      * @see #closeQuietly(ResultSet, Statement)
      */
     public static void close(final ResultSet rs, final Statement stmt) throws UncheckedSQLException {
-        SQLException exception = null;
+        Throwable failure = null;
 
         if (rs != null) {
             try {
                 rs.close();
-            } catch (final SQLException e) {
-                exception = e;
+            } catch (final SQLException | RuntimeException | Error e) {
+                failure = e;
             }
         }
 
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (final SQLException e) {
-                if (exception == null) {
-                    exception = e;
-                } else {
-                    addSuppressedIfDistinct(exception, e);
-                }
+            } catch (final SQLException | RuntimeException | Error e) {
+                failure = collectCloseFailure(failure, e);
             }
         }
 
-        if (exception != null) {
-            throw new UncheckedSQLException(exception);
+        if (failure != null) {
+            throwCloseFailure(failure);
         }
     }
 
     /**
      * Closes the specified {@link Statement} and {@link Connection}.
      * Resources are closed in order: {@code Statement} first, then {@code Connection}.
+     * Both close operations are attempted even if the first one fails. The first failure is thrown,
+     * with any later failure attached to it as a suppressed exception.
      * It is generally better to manage connections at a higher level, for example, by using
      * a {@code DataSource} and {@link #releaseConnection}.
      *
@@ -1249,36 +1291,34 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static void close(final Statement stmt, final Connection conn) throws UncheckedSQLException {
-        SQLException exception = null;
+        Throwable failure = null;
 
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (final SQLException e) {
-                exception = e;
+            } catch (final SQLException | RuntimeException | Error e) {
+                failure = e;
             }
         }
 
         if (conn != null) {
             try {
                 conn.close();
-            } catch (final SQLException e) {
-                if (exception == null) {
-                    exception = e;
-                } else {
-                    addSuppressedIfDistinct(exception, e);
-                }
+            } catch (final SQLException | RuntimeException | Error e) {
+                failure = collectCloseFailure(failure, e);
             }
         }
 
-        if (exception != null) {
-            throw new UncheckedSQLException(exception);
+        if (failure != null) {
+            throwCloseFailure(failure);
         }
     }
 
     /**
      * Closes the specified {@link ResultSet}, {@link Statement}, and {@link Connection}.
      * Resources are closed in the correct order: {@code ResultSet}, then {@code Statement}, then {@code Connection}.
+     * Every close operation is attempted even if an earlier one fails. The first failure is thrown,
+     * with any later failures attached to it as suppressed exceptions.
      * This is a low-level utility, and modern JDBC programming often relies on try-with-resources
      * or connection pooling which automates this cleanup.
      *
@@ -1305,42 +1345,34 @@ public final class JdbcUtil {
      * @see #closeQuietly(ResultSet, Statement, Connection)
      */
     public static void close(final ResultSet rs, final Statement stmt, final Connection conn) throws UncheckedSQLException {
-        SQLException exception = null;
+        Throwable failure = null;
 
         if (rs != null) {
             try {
                 rs.close();
-            } catch (final SQLException e) {
-                exception = e;
+            } catch (final SQLException | RuntimeException | Error e) {
+                failure = e;
             }
         }
 
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (final SQLException e) {
-                if (exception == null) {
-                    exception = e;
-                } else {
-                    addSuppressedIfDistinct(exception, e);
-                }
+            } catch (final SQLException | RuntimeException | Error e) {
+                failure = collectCloseFailure(failure, e);
             }
         }
 
         if (conn != null) {
             try {
                 conn.close();
-            } catch (final SQLException e) {
-                if (exception == null) {
-                    exception = e;
-                } else {
-                    addSuppressedIfDistinct(exception, e);
-                }
+            } catch (final SQLException | RuntimeException | Error e) {
+                failure = collectCloseFailure(failure, e);
             }
         }
 
-        if (exception != null) {
-            throw new UncheckedSQLException(exception);
+        if (failure != null) {
+            throwCloseFailure(failure);
         }
     }
 
@@ -1628,14 +1660,15 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ResultSet rs = statement.executeQuery("SELECT * FROM users");
-     * // Skip the first 10 users
-     * int skippedRows = JdbcUtil.skip(rs, 10);
+     * try (ResultSet rs = statement.executeQuery("SELECT * FROM users")) {
+     *     // Skip the first 10 users
+     *     int skippedRows = JdbcUtil.skip(rs, 10);
      *
-     * if (skippedRows == 10) {
-     *     // Now processing from the 11th user
-     *     if (rs.next()) {
-     *         // ...
+     *     if (skippedRows == 10) {
+     *         // Now processing from the 11th user
+     *         if (rs.next()) {
+     *             // ...
+     *         }
      *     }
      * }
      * }</pre>
@@ -1662,15 +1695,16 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ResultSet rs = statement.executeQuery("SELECT * FROM event_log");
-     * long largeNumberOfRowsToSkip = 100000L;
-     * long skipped = JdbcUtil.skip(rs, largeNumberOfRowsToSkip);
+     * try (ResultSet rs = statement.executeQuery("SELECT * FROM event_log")) {
+     *     long largeNumberOfRowsToSkip = 100000L;
+     *     long skipped = JdbcUtil.skip(rs, largeNumberOfRowsToSkip);
      *
-     * System.out.println("Skipped " + skipped + " rows.");
+     *     System.out.println("Skipped " + skipped + " rows.");
      *
-     * // Start processing from the next row
-     * while (rs.next()) {
-     *     // ...
+     *     // Start processing from the next row
+     *     while (rs.next()) {
+     *         // ...
+     *     }
      * }
      * }</pre>
      *
@@ -1774,9 +1808,10 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ResultSet rs = statement.executeQuery("SELECT id, name, email FROM users");
-     * int count = JdbcUtil.getColumnCount(rs);
-     * System.out.println("The ResultSet has " + count + " columns.");   // Prints 3
+     * try (ResultSet rs = statement.executeQuery("SELECT id, name, email FROM users")) {
+     *     int count = JdbcUtil.getColumnCount(rs);
+     *     System.out.println("The ResultSet has " + count + " columns.");   // Prints 3
+     * }
      * }</pre>
      *
      * @param rs the {@link ResultSet} to query; must not be {@code null}
@@ -2014,12 +2049,15 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ResultSetMetaData metaData = rs.getMetaData();
-     * // For a query like "SELECT first_name AS name FROM users"
-     * String label = JdbcUtil.getColumnLabel(metaData, 1);   // Returns "name"
+     * try (ResultSet rs = stmt.executeQuery("SELECT first_name AS name FROM users")) {
+     *     ResultSetMetaData metaData = rs.getMetaData();
+     *     String label = JdbcUtil.getColumnLabel(metaData, 1);   // Returns "name"
+     * }
      *
-     * // For a query like "SELECT first_name FROM users"
-     * String sameLabel = JdbcUtil.getColumnLabel(metaData, 1);   // Returns "first_name"
+     * try (ResultSet rs = stmt.executeQuery("SELECT first_name FROM users")) {
+     *     ResultSetMetaData metaData = rs.getMetaData();
+     *     String label = JdbcUtil.getColumnLabel(metaData, 1);   // Returns "first_name"
+     * }
      * }</pre>
      *
      * @param rsmd the {@link ResultSetMetaData} to read from; must not be {@code null}
@@ -2045,12 +2083,12 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // For a query: "SELECT user_id, user_name AS name FROM users"
-     * ResultSet rs = ...;
-     *
-     * int indexByName = JdbcUtil.getColumnIndex(rs, "user_id");             // Returns 1
-     * int indexByLabel = JdbcUtil.getColumnIndex(rs, "name");               // Returns 2
-     * int notFoundIndex = JdbcUtil.getColumnIndex(rs, "email");             // Returns -1
+     * try (ResultSet rs = stmt.executeQuery(
+     *         "SELECT user_id, user_name AS name FROM users")) {
+     *     int indexByName = JdbcUtil.getColumnIndex(rs, "user_id");   // Returns 1
+     *     int indexByLabel = JdbcUtil.getColumnIndex(rs, "name");     // Returns 2
+     *     int notFound = JdbcUtil.getColumnIndex(rs, "email");        // Returns -1
+     * }
      * }</pre>
      *
      * @param rs the {@link ResultSet} to search within; must not be {@code null}
@@ -2206,7 +2244,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (ResultSet rs = stmt.executeQuery("SELECT id, name, profile_picture_blob FROM users")) {
      *     while (rs.next()) {
-     *         long id = (long) JdbcUtil.getColumnValue(rs, 1);
+     *         long id = JdbcUtil.getColumnValue(rs, 1, long.class);
      *         String name = (String) JdbcUtil.getColumnValue(rs, 2);
      *         byte[] profilePic = (byte[]) JdbcUtil.getColumnValue(rs, 3);   // Blob is converted to byte[]
      *         // ...
@@ -2217,7 +2255,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} from which to retrieve the value.
      * @param columnIndex The 1-based index of the column.
      * @return The column value as a standard Java object. {@link Blob} is returned as {@code byte[]},
-     *         {@link Clob} as {@code String}.
+     *         {@link Clob} as {@code String}; converted LOBs are freed before this method returns.
      * @throws SQLException if a database access error occurs.
      * @see #getColumnValue(ResultSet, String)
      */
@@ -2246,25 +2284,9 @@ public final class JdbcUtil {
         }
 
         if (ret instanceof final Blob blob) {
-            try {
-                final long len = blob.length();
-                if (len > Integer.MAX_VALUE) {
-                    throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                }
-                ret = blob.getBytes(1, (int) len);
-            } finally {
-                blob.free();
-            }
+            ret = materializeBlob(blob);
         } else if (ret instanceof final Clob clob) {
-            try {
-                final long len = clob.length();
-                if (len > Integer.MAX_VALUE) {
-                    throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                }
-                ret = clob.getSubString(1, (int) len);
-            } finally {
-                clob.free();
-            }
+            ret = materializeClob(clob);
         } else if (checkDateType && !(rs instanceof ResultSetProxy)) {
             ret = columnConverterByIndex.apply(rs, columnIndex, ret);
         }
@@ -2282,7 +2304,7 @@ public final class JdbcUtil {
      * // Using the deprecated method (less efficient)
      * try (ResultSet rs = stmt.executeQuery("SELECT id, user_name AS name FROM users")) {
      *     while (rs.next()) {
-     *         long id = (long) JdbcUtil.getColumnValue(rs, "id");
+     *         long id = ((Number) JdbcUtil.getColumnValue(rs, "id")).longValue();
      *         String name = (String) JdbcUtil.getColumnValue(rs, "name");
      *     }
      * }
@@ -2292,7 +2314,7 @@ public final class JdbcUtil {
      *     int idIndex = JdbcUtil.getColumnIndex(rs, "id");
      *     int nameIndex = JdbcUtil.getColumnIndex(rs, "name");
      *     while (rs.next()) {
-     *         long id = (long) JdbcUtil.getColumnValue(rs, idIndex);
+     *         long id = JdbcUtil.getColumnValue(rs, idIndex, long.class);
      *         String name = (String) JdbcUtil.getColumnValue(rs, nameIndex);
      *     }
      * }
@@ -2322,30 +2344,74 @@ public final class JdbcUtil {
         }
 
         if (ret instanceof final Blob blob) {
-            try {
-                final long len = blob.length();
-                if (len > Integer.MAX_VALUE) {
-                    throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                }
-                ret = blob.getBytes(1, (int) len);
-            } finally {
-                blob.free();
-            }
+            ret = materializeBlob(blob);
         } else if (ret instanceof final Clob clob) {
-            try {
-                final long len = clob.length();
-                if (len > Integer.MAX_VALUE) {
-                    throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                }
-                ret = clob.getSubString(1, (int) len);
-            } finally {
-                clob.free();
-            }
+            ret = materializeClob(clob);
         } else if (checkDateType && !(rs instanceof ResultSetProxy)) {
             ret = columnConverterByLabel.apply(rs, columnLabel, ret);
         }
 
         return ret;
+    }
+
+    private static byte[] materializeBlob(final Blob blob) throws SQLException {
+        Throwable primaryFailure = null;
+
+        try {
+            final long len = blob.length();
+            if (len > Integer.MAX_VALUE) {
+                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+            }
+
+            return blob.getBytes(1, (int) len);
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
+        } finally {
+            freeBlob(blob, primaryFailure);
+        }
+    }
+
+    private static String materializeClob(final Clob clob) throws SQLException {
+        Throwable primaryFailure = null;
+
+        try {
+            final long len = clob.length();
+            if (len > Integer.MAX_VALUE) {
+                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+            }
+
+            return clob.getSubString(1, (int) len);
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
+        } finally {
+            freeClob(clob, primaryFailure);
+        }
+    }
+
+    private static void freeBlob(final Blob blob, final Throwable primaryFailure) throws SQLException {
+        try {
+            blob.free();
+        } catch (final SQLException | RuntimeException | Error e) {
+            if (primaryFailure == null) {
+                throw e;
+            }
+
+            addSuppressedIfDistinct(primaryFailure, e);
+        }
+    }
+
+    private static void freeClob(final Clob clob, final Throwable primaryFailure) throws SQLException {
+        try {
+            clob.free();
+        } catch (final SQLException | RuntimeException | Error e) {
+            if (primaryFailure == null) {
+                throw e;
+            }
+
+            addSuppressedIfDistinct(primaryFailure, e);
+        }
     }
 
     /**
@@ -2371,134 +2437,18 @@ public final class JdbcUtil {
      * @return A {@link List} containing all values from the specified column.
      * @throws SQLException if a database access error occurs.
      */
+    @SuppressWarnings("unchecked")
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws SQLException {
-        // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
-
-        final List<Object> result = new ArrayList<>();
-        Object val = null;
+        final List<T> result = new ArrayList<>();
 
         while (rs.next()) {
-            val = rs.getObject(columnIndex);
-
-            if (val == null) {
-                result.add(val);
-            } else if (val instanceof String || val instanceof Number || val instanceof java.sql.Timestamp || val instanceof Boolean) {
-                result.add(val);
-
-                while (rs.next()) {
-                    result.add(rs.getObject(columnIndex));
-                }
-            } else if (val instanceof Blob blob) {
-                try {
-                    long len = blob.length();
-                    if (len > Integer.MAX_VALUE) {
-                        throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                    }
-                    result.add(blob.getBytes(1, (int) len));
-                    blob.free();
-                    blob = null;
-
-                    while (rs.next()) {
-                        blob = rs.getBlob(columnIndex);
-
-                        if (blob != null) {
-                            len = blob.length();
-                            if (len > Integer.MAX_VALUE) {
-                                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                            }
-                            result.add(blob.getBytes(1, (int) len));
-                            blob.free();
-                            blob = null;
-                        } else {
-                            result.add(null);
-                        }
-                    }
-                } finally {
-                    if (blob != null) {
-                        blob.free();
-                    }
-                }
-            } else if (val instanceof Clob clob) {
-                try {
-                    long len = clob.length();
-                    if (len > Integer.MAX_VALUE) {
-                        throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                    }
-                    result.add(clob.getSubString(1, (int) len));
-                    clob.free();
-                    clob = null;
-
-                    while (rs.next()) {
-                        clob = rs.getClob(columnIndex);
-
-                        if (clob != null) {
-                            len = clob.length();
-                            if (len > Integer.MAX_VALUE) {
-                                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                            }
-                            result.add(clob.getSubString(1, (int) len));
-                            clob.free();
-                            clob = null;
-                        } else {
-                            result.add(null);
-                        }
-                    }
-                } finally {
-                    if (clob != null) {
-                        clob.free();
-                    }
-                }
-            } else {
-                final String className = val.getClass().getName();
-
-                if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
-
-                    do {
-                        result.add(rs.getTimestamp(columnIndex));
-                    } while (rs.next());
-                } else if (className.startsWith("oracle.sql.DATE")) {
-                    final ResultSetMetaData metaData = rs.getMetaData();
-                    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
-
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-
-                        do {
-                            result.add(rs.getTimestamp(columnIndex));
-                        } while (rs.next());
-                    } else {
-
-                        do {
-                            result.add(rs.getDate(columnIndex));
-                        } while (rs.next());
-                    }
-                } else if (val instanceof java.sql.Date) {
-                    // Also treat a declared metadata class of oracle.sql.TIMESTAMP as timestamp-bearing,
-                    // matching ResultSetProxy: otherwise time-of-day is silently truncated on such columns.
-                    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
-
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-
-                        do {
-                            result.add(rs.getTimestamp(columnIndex));
-                        } while (rs.next());
-                    } else {
-                        result.add(val);
-
-                        while (rs.next()) {
-                            result.add(rs.getDate(columnIndex));
-                        }
-                    }
-                } else {
-                    result.add(val);
-
-                    while (rs.next()) {
-                        result.add(rs.getObject(columnIndex));
-                    }
-                }
-            }
+            // Convert each row independently. JDBC drivers can return different runtime representations
+            // across rows (notably a scalar followed by a LOB), so the first non-null value cannot select a
+            // safe fast path for the rest of the result set.
+            result.add((T) getColumnValue(rs, columnIndex));
         }
 
-        return (List<T>) result;
+        return result;
     }
 
     /**
@@ -2644,7 +2594,7 @@ public final class JdbcUtil {
      * SqlOperation op2 = JdbcUtil.getSqlOperation("  insert into accounts (id, name) values (1, 'test')");
      * // op2 is SqlOperation.INSERT
      *
-     * SqlOperation op3 = JdbcUtil.getSqlOperation("CREATE TABLE new_table (...)");
+     * SqlOperation op3 = JdbcUtil.getSqlOperation("CREATE TABLE new_table (id BIGINT PRIMARY KEY)");
      * // op3 is SqlOperation.CREATE
      *
      * SqlOperation op4 = JdbcUtil.getSqlOperation("CREATEX foo");
@@ -2944,14 +2894,14 @@ public final class JdbcUtil {
      * }
      *
      * // Stream processing for large result sets
-     * try (Stream<Transaction> stream = JdbcUtil.prepareQuery(dataSource,
+     * try (Stream<PaymentTransaction> stream = JdbcUtil.prepareQuery(dataSource,
      *         "SELECT * FROM transactions WHERE amount > ?")
      *     .setDouble(1, 1000.0)
-     *     .stream(Transaction.class)) {
+     *     .stream(PaymentTransaction.class)) {
      *
      *     double totalAmount = stream
      *         .filter(t -> t.getStatus().equals("COMPLETED"))
-     *         .mapToDouble(Transaction::getAmount)
+     *         .mapToDouble(PaymentTransaction::getAmount)
      *         .sum();
      *
      *     System.out.println("Total: " + totalAmount);
@@ -3377,14 +3327,14 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Create a query with a specific fetch size and timeout
-     *     try (Stream<Record> stream = JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
+     *     try (Stream<AuditRecord> stream = JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
      *             (c, s) -> {
      *                 PreparedStatement stmt = c.prepareStatement(s);
      *                 stmt.setFetchSize(100);
      *                 stmt.setQueryTimeout(30);   // 30 seconds
      *                 return stmt;
      *             })
-     *         .stream(Record.class)) {
+     *         .stream(AuditRecord.class)) {
      *
      *         stream.forEach(System.out::println);
      *     }
@@ -5049,7 +4999,8 @@ public final class JdbcUtil {
      * <p><b>Key Differences from prepareQuery():</b></p>
      * <ul>
      *   <li><b>executeQuery():</b> One-time execution, loads all results into memory, closes resources immediately</li>
-     *   <li><b>prepareQuery():</b> Reusable statement, supports streaming, requires manual resource cleanup</li>
+     *   <li><b>prepareQuery():</b> Configurable and optionally reusable; terminal operations close it by default,
+     *       returned streams must be closed, and callers that disable auto-close must close the query</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>
@@ -6425,8 +6376,9 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * Dataset dataset = JdbcUtil.extractData(rs);
+     * try (ResultSet rs = stmt.executeQuery("SELECT * FROM users")) {
+     *     Dataset dataset = JdbcUtil.extractData(rs);
+     * }
      * }</pre>
      *
      * @param rs the {@link ResultSet} to extract data from; must not be {@code null}
@@ -6446,8 +6398,9 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * Dataset dataset = JdbcUtil.extractData(rs, 10, 50);   // Skip 10 rows, get next 50
+     * try (ResultSet rs = stmt.executeQuery("SELECT * FROM users")) {
+     *     Dataset dataset = JdbcUtil.extractData(rs, 10, 50);   // Skip 10 rows, get next 50
+     * }
      * }</pre>
      *
      * @param rs The ResultSet to extract data from
@@ -6468,15 +6421,18 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter rows where age is greater than 18
-     * ResultSet rs = stmt.executeQuery("SELECT name, age, email FROM users");
      * RowFilter adultFilter = resultSet -> resultSet.getInt("age") > 18;
-     * Dataset adults = JdbcUtil.extractData(rs, adultFilter);
+     * try (ResultSet rs = stmt.executeQuery("SELECT name, age, email FROM users")) {
+     *     Dataset adults = JdbcUtil.extractData(rs, adultFilter);
+     * }
      *
      * // Filter rows based on multiple conditions
      * RowFilter activeUsersFilter = resultSet ->
      *     resultSet.getBoolean("is_active") &&
      *     resultSet.getString("status").equals("VERIFIED");
-     * Dataset activeUsers = JdbcUtil.extractData(rs, activeUsersFilter);
+     * try (ResultSet rs = stmt.executeQuery("SELECT name, is_active, status FROM users")) {
+     *     Dataset activeUsers = JdbcUtil.extractData(rs, activeUsersFilter);
+     * }
      * }</pre>
      *
      * @param rs The ResultSet to extract data from, must not be {@code null}
@@ -6501,12 +6457,13 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Transform email addresses to lowercase during extraction
-     * ResultSet rs = stmt.executeQuery("SELECT id, name, email FROM users");
      * RowExtractor emailNormalizer = RowExtractor.builder()
      *              // email is the 3rd column (1-based index 3)
      *              .get(3, (rs, col) -> rs.getString(col).toLowerCase()).build();
      *
-     * Dataset normalizedData = JdbcUtil.extractData(rs, emailNormalizer);
+     * try (ResultSet rs = stmt.executeQuery("SELECT id, name, email FROM users")) {
+     *     Dataset normalizedData = JdbcUtil.extractData(rs, emailNormalizer);
+     * }
      * }</pre>
      *
      * @param rs The ResultSet to extract data from, must not be {@code null}
@@ -6537,9 +6494,11 @@ public final class JdbcUtil {
      *     Dataset data = JdbcUtil.extractData(rs, expensive, upperName);   // keeps only rows with price >= 30
      * }
      *
-     * // A filter that matches nothing yields an empty Dataset (column names still present); rs is NOT closed.
+     * // A filter that matches nothing yields an empty Dataset (column names still present).
      * RowFilter none = row -> false;
-     * Dataset empty = JdbcUtil.extractData(rs, none, RowExtractor.builder().build());   // empty.size() == 0
+     * try (ResultSet emptyRs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
+     *     Dataset empty = JdbcUtil.extractData(emptyRs, none, RowExtractor.builder().build());   // empty.size() == 0
+     * }
      * }</pre>
      *
      * @param rs The ResultSet to extract data from, must not be {@code null}
@@ -6566,12 +6525,19 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract all rows and let the method close the ResultSet for you.
-     * Dataset all = JdbcUtil.extractData(stmt.executeQuery("SELECT id, name, price FROM item"), true);
-     * // 'all' holds every selected row; the underlying ResultSet has been closed.
+     * try (Statement stmt = connection.createStatement()) {
+     *     Dataset all = JdbcUtil.extractData(
+     *             stmt.executeQuery("SELECT id, name, price FROM item"), true);
+     *     // 'all' holds every selected row; the underlying ResultSet has been closed.
+     * }
      *
      * // Keep the ResultSet open for further use.
-     * try (ResultSet rs = stmt.executeQuery("SELECT id, name FROM item WHERE id = ?")) {
-     *     Dataset data = JdbcUtil.extractData(rs, false);   // rs remains open
+     * try (PreparedStatement stmt = connection.prepareStatement(
+     *         "SELECT id, name FROM item WHERE id = ?")) {
+     *     stmt.setLong(1, itemId);
+     *     try (ResultSet rs = stmt.executeQuery()) {
+     *         Dataset data = JdbcUtil.extractData(rs, false);   // rs remains open
+     *     }
      * }
      * }</pre>
      *
@@ -6690,9 +6656,10 @@ public final class JdbcUtil {
      * try (ResultSet rs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
      *     Dataset data = JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, cheap, upperName, false);
      *     // 'data' holds the rows with price <= 30, name column upper-cased
-     *
+     * }
+     * try (ResultSet pageRs = stmt.executeQuery("SELECT id, name, price FROM item ORDER BY id")) {
      *     // Skip the first row, then take up to one matching row.
-     *     Dataset one = JdbcUtil.extractData(rs, 1, 1, cheap, upperName, false);   // one.size() <= 1
+     *     Dataset one = JdbcUtil.extractData(pageRs, 1, 1, cheap, upperName, false);   // one.size() <= 1
      * }
      *
      * // Any null argument or negative offset/count throws IllegalArgumentException.
@@ -6823,25 +6790,23 @@ public final class JdbcUtil {
      * mapped to an {@code Object[]} containing the values of all columns of that row.
      *
      * <p>The {@code ResultSet} is consumed lazily as the stream is traversed; if you only consume a
-     * prefix of the stream the remaining rows are skipped. The caller is responsible for closing the
+     * prefix of the stream the remaining rows remain unread. The caller is responsible for closing the
      * input {@code ResultSet} — typically by attaching {@code onClose(Fn.closeQuietly(rs))} to the
-     * returned stream and consuming it inside a try-with-resources.</p>
+     * returned stream and closing it with try-with-resources. A terminal operation alone does not invoke
+     * the stream's close handlers.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * try {
-     *     JdbcUtil.stream(rs)
-     *         .forEach(row -> {
-     *             System.out.println(Arrays.toString(row));
-     *         });
-     * } finally {
-     *     rs.close();
+     * try (ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+     *         Stream<Object[]> rows = JdbcUtil.stream(rs)) {
+     *     rows.forEach(row -> System.out.println(Arrays.toString(row)));
      * }
      *
      * // Or with auto-close:
-     * JdbcUtil.stream(resultSet).onClose(Fn.closeQuietly(resultSet))
-     *     .forEach(row -> processRow(row));
+     * try (Stream<Object[]> rows = JdbcUtil.stream(resultSet)
+     *         .onClose(Fn.closeQuietly(resultSet))) {
+     *     rows.forEach(row -> processRow(row));
+     * }
      * }</pre>
      *
      * @param rs the {@link ResultSet} to stream; must not be {@code null}
@@ -6859,10 +6824,11 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * JdbcUtil.stream(rs, User.class)
-     *     .onClose(Fn.closeQuietly(rs))
-     *     .filter(user -> user.getAge() > 18)
-     *     .forEach(user -> processUser(user));
+     * try (Stream<User> users = JdbcUtil.stream(rs, User.class)
+     *         .onClose(Fn.closeQuietly(rs))) {
+     *     users.filter(user -> user.getAge() > 18)
+     *          .forEach(user -> processUser(user));
+     * }
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
@@ -6880,15 +6846,16 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet using the specified RowMapper.
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * {@code JdbcUtil.stream(resultSet, rowMapper).onClose(Fn.closeQuietly(resultSet))...}
+     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished. One option is to attach
+     * {@code onClose(Fn.closeQuietly(resultSet))} and close the returned stream with try-with-resources.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowMapper<String> nameMapper = rs -> rs.getString("name");
-     * JdbcUtil.stream(resultSet, nameMapper)
-     *     .onClose(Fn.closeQuietly(resultSet))
-     *     .forEach(name -> System.out.println(name));
+     * try (Stream<String> names = JdbcUtil.stream(resultSet, nameMapper)
+     *         .onClose(Fn.closeQuietly(resultSet))) {
+     *     names.forEach(name -> System.out.println(name));
+     * }
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
@@ -6997,9 +6964,10 @@ public final class JdbcUtil {
      * <pre>{@code
      * RowFilter ageFilter = rs -> rs.getInt("age") > 18;
      * RowMapper<User> userMapper = rs -> new User(rs.getString("name"), rs.getInt("age"));
-     * JdbcUtil.stream(resultSet, ageFilter, userMapper)
-     *     .onClose(Fn.closeQuietly(resultSet))
-     *     .forEach(user -> processAdultUser(user));
+     * try (Stream<User> users = JdbcUtil.stream(resultSet, ageFilter, userMapper)
+     *         .onClose(Fn.closeQuietly(resultSet))) {
+     *     users.forEach(user -> processAdultUser(user));
+     * }
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
@@ -7088,9 +7056,10 @@ public final class JdbcUtil {
      *     }
      *     return row;
      * };
-     * JdbcUtil.stream(resultSet, mapMapper)
-     *     .onClose(Fn.closeQuietly(resultSet))
-     *     .forEach(row -> System.out.println(row));
+     * try (Stream<Map<String, Object>> rows = JdbcUtil.stream(resultSet, mapMapper)
+     *         .onClose(Fn.closeQuietly(resultSet))) {
+     *     rows.forEach(row -> System.out.println(row));
+     * }
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
@@ -7223,9 +7192,10 @@ public final class JdbcUtil {
      *     return sb.toString();
      * };
      *
-     * JdbcUtil.stream(resultSet, hasNonNullValues, csvMapper)
-     *     .onClose(Fn.closeQuietly(resultSet))
-     *     .forEach(csvRow -> System.out.println(csvRow));
+     * try (Stream<String> rows = JdbcUtil.stream(resultSet, hasNonNullValues, csvMapper)
+     *         .onClose(Fn.closeQuietly(resultSet))) {
+     *     rows.forEach(csvRow -> System.out.println(csvRow));
+     * }
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
@@ -7300,9 +7270,10 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all names from the first column
-     * JdbcUtil.stream(resultSet, 1)
-     *     .onClose(Fn.closeQuietly(resultSet))
-     *     .forEach(name -> System.out.println(name));
+     * try (Stream<String> names = JdbcUtil.stream(resultSet, 1)
+     *         .onClose(Fn.closeQuietly(resultSet))) {
+     *     names.forEach(name -> System.out.println(name));
+     * }
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
@@ -7344,10 +7315,11 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all email addresses
-     * JdbcUtil.stream(resultSet, "email")
-     *     .onClose(Fn.closeQuietly(resultSet))
-     *     .filter(email -> email != null && email.contains("@"))
-     *     .forEach(email -> sendNewsletter(email));
+     * try (Stream<String> emails = JdbcUtil.stream(resultSet, "email")
+     *         .onClose(Fn.closeQuietly(resultSet))) {
+     *     emails.filter(email -> email != null && email.contains("@"))
+     *           .forEach(email -> sendNewsletter(email));
+     * }
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
@@ -7391,14 +7363,15 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}");
-     * stmt.execute(); // the statement must be executed before its result sets can be streamed
-     * JdbcUtil.streamAllResultSets(stmt)
-     *     .onClose(Fn.closeQuietly(stmt))
-     *     .forEach(dataset -> {
-     *         System.out.println("Result set with " + dataset.size() + " rows");
-     *         dataset.println();
-     *     });
+     * try (CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}")) {
+     *     stmt.execute(); // the statement must be executed before its result sets can be streamed
+     *     try (Stream<Dataset> datasets = JdbcUtil.streamAllResultSets(stmt)) {
+     *         datasets.forEach(dataset -> {
+     *             System.out.println("Result set with " + dataset.size() + " rows");
+     *             dataset.println();
+     *         });
+     *     }
+     * }
      * }</pre>
      *
      * @param stmt the Statement to extract ResultSets from
@@ -7426,9 +7399,10 @@ public final class JdbcUtil {
      *     return names;
      * };
      *
-     * JdbcUtil.streamAllResultSets(stmt, namesExtractor)
-     *     .onClose(Fn.closeQuietly(stmt))
-     *     .forEach(namesList -> System.out.println("Found " + namesList.size() + " names"));
+     * try (Stream<List<String>> resultSets = JdbcUtil.streamAllResultSets(stmt, namesExtractor)
+     *         .onClose(Fn.closeQuietly(stmt))) {
+     *     resultSets.forEach(names -> System.out.println("Found " + names.size() + " names"));
+     * }
      * }</pre>
      *
      * @param <R> the type of the result extracted from the ResultSet
@@ -7472,12 +7446,11 @@ public final class JdbcUtil {
      *     return columns;
      * };
      *
-     * JdbcUtil.streamAllResultSets(stmt, columnarExtractor)
-     *     .onClose(Fn.closeQuietly(stmt))
-     *     .forEach(columnsMap -> {
-     *         columnsMap.forEach((col, values) ->
-     *             System.out.println(col + ": " + values.size() + " values"));
-     *     });
+     * try (Stream<Map<String, List<Object>>> resultSets = JdbcUtil.streamAllResultSets(stmt, columnarExtractor)
+     *         .onClose(Fn.closeQuietly(stmt))) {
+     *     resultSets.forEach(columnsMap -> columnsMap.forEach((col, values) ->
+     *         System.out.println(col + ": " + values.size() + " values")));
+     * }
      * }</pre>
      *
      * @param <R> the type of the result extracted from the ResultSet
@@ -7652,7 +7625,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String query = "SELECT * FROM orders WHERE order_date > ? ORDER BY order_id LIMIT 500";
+     * String query = "SELECT * FROM orders WHERE order_id > ? ORDER BY order_id LIMIT 500";
      * ResultExtractor<List<Order>> ordersExtractor = rs -> {
      *     List<Order> orders = new ArrayList<>();
      *     while (rs.next()) {
@@ -7663,10 +7636,10 @@ public final class JdbcUtil {
      *
      * JdbcUtil.queryByPage(dataSource, query, 500, (preparedQuery, previousOrders) -> {
      *     if (previousOrders == null) {
-     *         preparedQuery.setDate(1, startDate);
+     *         preparedQuery.setLong(1, 0L);
      *     } else {
      *         Order lastOrder = previousOrders.get(previousOrders.size() - 1);
-     *         preparedQuery.setDate(1, lastOrder.getOrderDate());
+     *         preparedQuery.setLong(1, lastOrder.getOrderId());
      *     }
      * }, ordersExtractor)
      * .forEach(orders -> processOrderBatch(orders));
@@ -8406,11 +8379,11 @@ public final class JdbcUtil {
             final String table;
 
             if (nameParts.length == 1) {
-                catalog = null;
+                catalog = conn.getCatalog();
                 schema = null;
                 table = nameParts[0];
             } else if (nameParts.length == 2) {
-                catalog = null;
+                catalog = conn.getCatalog();
                 schema = nameParts[0];
                 table = nameParts[1];
             } else if (nameParts.length == 3) {
@@ -8454,7 +8427,10 @@ public final class JdbcUtil {
                 return true;
             }
 
-            final String safeQualifiedTableName = buildSimpleQualifiedTableName(catalog, schema, table);
+            // Use the current catalog only to scope metadata lookup. The fallback SQL must retain the
+            // caller's original qualification: on databases such as PostgreSQL and SQL Server,
+            // "catalog.table" is not equivalent to an unqualified table in the current catalog.
+            final String safeQualifiedTableName = buildSimpleQualifiedTableName(nameParts.length == 3 ? catalog : null, schema, table);
 
             if (Strings.isNotEmpty(safeQualifiedTableName)) {
                 try {
@@ -8951,7 +8927,7 @@ public final class JdbcUtil {
     static final com.landawn.abacus.util.function.Predicate<Object> defaultIdTester = JdbcUtil::isDefaultIdPropValue;
 
     /**
-     * Checks if the given value is a default/unset ID property value (null, zero for numbers, or a bean with all default ID values).
+     * Checks if the given value is a default/unset ID property value (null, zero for numbers, or a bean/record with all default ID values).
      *
      * @param value the value to check
      * @return {@code true} if the value is a default ID property value, {@code false} otherwise
@@ -8966,7 +8942,7 @@ public final class JdbcUtil {
             return isZeroNumber(number);
         } else if (value instanceof EntityId) {
             return N.allMatch(((EntityId) value).entrySet(), it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
-        } else if (Beans.isBeanClass(value.getClass())) {
+        } else if (Beans.isBeanClass(value.getClass()) || Beans.isRecordClass(value.getClass())) {
             final Class<?> entityClass = value.getClass();
             final List<String> idPropNameList = QueryUtil.idPropNames(entityClass);
 
@@ -9011,7 +8987,7 @@ public final class JdbcUtil {
      *     JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", "active", userId);
      * });
      *
-     * future.thenRunAsync(() -> System.out.println("Update completed"));
+     * future.thenRunAsync(() -> System.out.println("Update completed")).get();
      * }</pre>
      *
      * @param sqlAction The SQL action to be executed asynchronously
@@ -9039,7 +9015,7 @@ public final class JdbcUtil {
      *
      * Futures.allOf(futures._1, futures._2).thenRunAsync(() ->
      *     System.out.println("Both updates completed")
-     * );
+     * ).get();
      * }</pre>
      *
      * @param sqlAction1 The first SQL action to be executed asynchronously
@@ -9072,7 +9048,7 @@ public final class JdbcUtil {
      *
      * Futures.allOf(futures._1, futures._2, futures._3).thenRunAsync(() ->
      *     System.out.println("All updates completed")
-     * );
+     * ).get();
      * }</pre>
      *
      * @param sqlAction1 The first SQL action to be executed asynchronously
@@ -9103,7 +9079,7 @@ public final class JdbcUtil {
      *     JdbcUtil.executeUpdate(dataSource, "INSERT INTO users (name, email) VALUES (?, ?)", e.getName(), e.getEmail());
      * });
      *
-     * future.thenRunAsync(() -> System.out.println("User inserted"));
+     * future.thenRunAsync(() -> System.out.println("User inserted")).get();
      * }</pre>
      *
      * @param <T> The type of the parameter
@@ -9131,7 +9107,7 @@ public final class JdbcUtil {
      *     (id, st) -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
      * );
      *
-     * future.thenRunAsync(() -> System.out.println("Status updated"));
+     * future.thenRunAsync(() -> System.out.println("Status updated")).get();
      * }</pre>
      *
      * @param <T> The type of the first parameter
@@ -9164,7 +9140,7 @@ public final class JdbcUtil {
      *     }
      * );
      *
-     * future.thenRunAsync(() -> System.out.println("Order status updated"));
+     * future.thenRunAsync(() -> System.out.println("Order status updated")).get();
      * }</pre>
      *
      * @param <A> The type of the first parameter
@@ -9196,7 +9172,7 @@ public final class JdbcUtil {
      *     return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findFirst(User.class).orElse(null);
      * });
      *
-     * future.thenRunAsync(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
+     * future.thenRunAsync(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none"))).get();
      * }</pre>
      *
      * @param <R> The type of the result
@@ -9223,8 +9199,8 @@ public final class JdbcUtil {
      *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE age > ?").setInt(1, 18).list(String.class)
      * );
      *
-     * futures._1.thenRunAsync(name -> System.out.println("User name: " + name));
-     * futures._2.thenRunAsync(results -> System.out.println("Found " + results.size() + " emails"));
+     * futures._1.thenRunAsync(name -> System.out.println("User name: " + name)).get();
+     * futures._2.thenRunAsync(results -> System.out.println("Found " + results.size() + " emails")).get();
      * }</pre>
      *
      * @param <R1> The type of the result from the first action
@@ -9259,7 +9235,7 @@ public final class JdbcUtil {
      *
      * Futures.allOf(futures._1, futures._2, futures._3).thenRunAsync(() -> {
      *     System.out.println("All queries completed");
-     * });
+     * }).get();
      * }</pre>
      *
      * @param <R1> The type of the result from the first action
@@ -9292,7 +9268,7 @@ public final class JdbcUtil {
      *     param -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, param).findFirst(User.class).orElse(null)
      * );
      *
-     * future.thenRunAsync(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
+     * future.thenRunAsync(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none"))).get();
      * }</pre>
      *
      * @param <T> The type of the parameter
@@ -9322,7 +9298,7 @@ public final class JdbcUtil {
      *                          .setLong(1, uid).setString(2, st).list(Order.class)
      * );
      *
-     * future.thenRunAsync(orders -> System.out.println("Found " + orders.size() + " orders"));
+     * future.thenRunAsync(orders -> System.out.println("Found " + orders.size() + " orders")).get();
      * }</pre>
      *
      * @param <T> The type of the first parameter
@@ -9356,7 +9332,7 @@ public final class JdbcUtil {
      *         .queryForSingleValue(BigDecimal.class).orElse(BigDecimal.ZERO)
      * );
      *
-     * future.thenRunAsync(total -> System.out.println("Total sales: " + total));
+     * future.thenRunAsync(total -> System.out.println("Total sales: " + total)).get();
      * }</pre>
      *
      * @param <A> The type of the first parameter
@@ -9520,25 +9496,9 @@ public final class JdbcUtil {
                     JdbcUtil.closeQuietly(rs);
                 }
             } else if (value instanceof final Blob blob) {
-                try {
-                    final long len = blob.length();
-                    if (len > Integer.MAX_VALUE) {
-                        throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                    }
-                    value = blob.getBytes(1, (int) len);
-                } finally {
-                    blob.free();
-                }
+                value = materializeBlob(blob);
             } else if (value instanceof final Clob clob) {
-                try {
-                    final long len = clob.length();
-                    if (len > Integer.MAX_VALUE) {
-                        throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-                    }
-                    value = clob.getSubString(1, (int) len);
-                } finally {
-                    clob.free();
-                }
+                value = materializeClob(clob);
             }
 
             outParamValues.put(key, value);
@@ -9765,15 +9725,7 @@ public final class JdbcUtil {
             return null;
         }
 
-        try {
-            final long len = blob.length();
-            if (len > Integer.MAX_VALUE) {
-                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-            }
-            return new String(blob.getBytes(1, (int) len), Charsets.UTF_8);
-        } finally {
-            blob.free();
-        }
+        return new String(materializeBlob(blob), Charsets.UTF_8);
     }
 
     /**
@@ -9800,15 +9752,7 @@ public final class JdbcUtil {
 
         N.checkArgNotNull(charset, cs.charset);
 
-        try {
-            final long len = blob.length();
-            if (len > Integer.MAX_VALUE) {
-                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-            }
-            return new String(blob.getBytes(1, (int) len), charset);
-        } finally {
-            blob.free();
-        }
+        return new String(materializeBlob(blob), charset);
     }
 
     /**
@@ -9834,14 +9778,19 @@ public final class JdbcUtil {
             return 0;
         }
 
+        Throwable primaryFailure = null;
+
         try {
             // IOUtil.write(InputStream, File) closes only the output FileOutputStream — the input
             // stream is the caller's responsibility, so wrap it in try-with-resources to avoid leak.
             try (java.io.InputStream in = blob.getBinaryStream()) {
                 return IOUtil.write(in, output);
             }
+        } catch (final SQLException | IOException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            blob.free();
+            freeBlob(blob, primaryFailure);
         }
     }
 
@@ -9865,15 +9814,7 @@ public final class JdbcUtil {
             return null;
         }
 
-        try {
-            final long len = clob.length();
-            if (len > Integer.MAX_VALUE) {
-                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-            }
-            return clob.getSubString(1, (int) len);
-        } finally {
-            clob.free();
-        }
+        return materializeClob(clob);
     }
 
     /**
@@ -9899,14 +9840,19 @@ public final class JdbcUtil {
             return 0;
         }
 
+        Throwable primaryFailure = null;
+
         try {
             // IOUtil.write(Reader, File) closes only the output writer — the input reader is the
             // caller's responsibility, so wrap it in try-with-resources to avoid leak.
             try (java.io.Reader reader = clob.getCharacterStream()) {
                 return IOUtil.write(reader, output);
             }
+        } catch (final SQLException | IOException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            clob.free();
+            freeClob(clob, primaryFailure);
         }
     }
 
@@ -10497,8 +10443,10 @@ public final class JdbcUtil {
      *     // Execute operations within the existing transaction
      * } else {
      *     // Start a new transaction
-     *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     *     // ...
+     *     try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+     *         // Execute operations in the new transaction
+     *         tran.commit();
+     *     }
      * }
      * }</pre>
      *
@@ -10554,7 +10502,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Basic transaction usage
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction basicTran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     JdbcUtil.executeUpdate(dataSource,
      *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)",
@@ -10564,13 +10512,13 @@ public final class JdbcUtil {
      *         "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
      *         quantity, productId);
      *
-     *     tran.commit();
+     *     basicTran.commit();
      * } finally {
-     *     tran.rollbackIfNotCommitted();
+     *     basicTran.rollbackIfNotCommitted();
      * }
      *
      * // Transaction with conditional rollback
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction conditionalTran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     int updatedRows = JdbcUtil.executeUpdate(dataSource,
      *         "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
@@ -10584,13 +10532,13 @@ public final class JdbcUtil {
      *         "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)",
      *         accountId, amount, "DEBIT");
      *
-     *     tran.commit();
+     *     conditionalTran.commit();
      * } catch (Exception e) {
      *     // Transaction automatically rolled back in finally block
      *     logger.error("Transaction failed: " + e.getMessage());
      *     throw e;
      * } finally {
-     *     tran.rollbackIfNotCommitted();
+     *     conditionalTran.rollbackIfNotCommitted();
      * }
      *
      * // Transaction shared across method calls
@@ -11767,10 +11715,10 @@ public final class JdbcUtil {
      *
      *     // Custom query methods
      *     @Query("SELECT * FROM users WHERE email = ?")
-     *     Optional<User> findByEmail(String email);
+     *     Optional<User> findByEmail(String email) throws SQLException;
      *
      *     @Query("SELECT * FROM users WHERE status = ? ORDER BY created_at DESC")
-     *     List<User> findByStatus(String status);
+     *     List<User> findByStatus(String status) throws SQLException;
      *
      *     @Query("SELECT * FROM users WHERE age >= :minAge AND city = :city")
      *     Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city);
@@ -11817,14 +11765,14 @@ public final class JdbcUtil {
      * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
      *     // Aggregate queries
      *     @Query("SELECT COUNT(*) FROM orders WHERE status = ?")
-     *     long countByStatus(String status);
+     *     long countByStatus(String status) throws SQLException;
      *
      *     @Query("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?")
-     *     Optional<BigDecimal> getTotalByCustomer(Long customerId);
+     *     Optional<BigDecimal> getTotalByCustomer(Long customerId) throws SQLException;
      *
      *     // Complex joins (SQL defined externally in SQL mapper file)
      *     @Query(id = "findOrdersWithCustomerDetails")
-     *     List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start);
+     *     List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start) throws SQLException;
      * }
      *
      * OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource);
@@ -11836,7 +11784,7 @@ public final class JdbcUtil {
      * ContinuableFuture<Optional<Order>> future = orderDao.callAsync(dao -> dao.get(orderId));
      * future.thenRunAsync(order -> {
      *     order.ifPresent(o -> System.out.println("Order: " + o.getId()));
-     * });
+     * }).get();
      * }</pre>
      *
      * <p><b>Performance and memory considerations:</b></p>

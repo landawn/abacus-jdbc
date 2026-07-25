@@ -84,6 +84,28 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testNestedDefaultIsolationInheritsOuterLevelAcrossDeeperScope() throws SQLException {
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_UNCOMMITTED);
+
+        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED,
+                SqlTransaction.CreatedBy.JDBC_UTIL, false);
+        transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false);
+
+        transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+        assertEquals(IsolationLevel.READ_COMMITTED, transaction.isolationLevel());
+
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false);
+        assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
+
+        transaction.decrementAndGetRef();
+        assertEquals(IsolationLevel.READ_COMMITTED, transaction.isolationLevel());
+        verify(connection, times(2)).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        transaction.rollbackIfNotCommitted();
+        transaction.rollbackIfNotCommitted();
+    }
+
+    @Test
     public void testTransactionNoneIsRejectedBeforeConnectionMutation() throws SQLException {
         assertThrows(IllegalArgumentException.class,
                 () -> new SqlTransaction(dataSource, connection, IsolationLevel.NONE, SqlTransaction.CreatedBy.JDBC_UTIL, false));

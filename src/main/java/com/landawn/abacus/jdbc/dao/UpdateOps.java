@@ -63,7 +63,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
-     * updates.put("lastModified", new Date());
+     * updates.put("lastModified", new java.util.Date());
      * updates.put("modifiedBy", currentUser);
      * int count = dao.update(updates, Filters.eq("status", "PENDING"));
      * }</pre>
@@ -86,7 +86,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * <pre>{@code
      * User updates = new User();
      * updates.setStatus("ACTIVE");
-     * updates.setLastLogin(new Date());
+     * updates.setLastLogin(new java.util.Date());
      * int count = dao.update(updates, Filters.eq("id", userId));
      * }</pre>
      *
