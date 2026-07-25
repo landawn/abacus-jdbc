@@ -2462,17 +2462,15 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(ex.getCause().getMessage().contains("Unclosed SQL token in SQL"), ex.getCause().getMessage());
     }
 
-    // isSimpleSqlIdentifier returns false for empty/null input (L2161-2162). Every public caller guards
-    // against empty identifiers, so this branch is exercised directly via reflection.
+    // isSimpleSqlIdentifier returns false for empty/null input. Every public caller guards against
+    // empty identifiers, so this branch is exercised directly. The logic now lives in the shared
+    // package-private SqlIdentifierUtil (previously duplicated here and in DataTransferUtil).
     @Test
-    public void testIsSimpleSqlIdentifier_EmptyAndNull_Reflection() throws Exception {
-        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("isSimpleSqlIdentifier", String.class);
-        m.setAccessible(true);
-
-        assertEquals(Boolean.FALSE, m.invoke(null, "")); // L2162 (empty)
-        assertEquals(Boolean.FALSE, m.invoke(null, (Object) null)); // L2162 (null)
-        assertEquals(Boolean.FALSE, m.invoke(null, "1bad")); // first char not alpha/underscore
-        assertEquals(Boolean.TRUE, m.invoke(null, "valid_name1")); // happy path
+    public void testIsSimpleSqlIdentifier_EmptyAndNull() {
+        assertFalse(com.landawn.abacus.jdbc.SqlIdentifierUtil.isSimpleSqlIdentifier("")); // empty
+        assertFalse(com.landawn.abacus.jdbc.SqlIdentifierUtil.isSimpleSqlIdentifier(null)); // null
+        assertFalse(com.landawn.abacus.jdbc.SqlIdentifierUtil.isSimpleSqlIdentifier("1bad")); // first char not alpha/underscore
+        assertTrue(com.landawn.abacus.jdbc.SqlIdentifierUtil.isSimpleSqlIdentifier("valid_name1")); // happy path
     }
 
     // TODO: L1978-1979 (catch (Exception) -> IllegalArgumentException "Failed to convert insert SQL to

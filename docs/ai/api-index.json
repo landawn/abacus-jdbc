@@ -41131,7 +41131,7 @@
               "javadoc_summary": "Default maximum length (in characters) for SQL statements written to the SQL log."
             },
             {
-              "name": "DEFAULT_PERF_LOG_THRESHOLD_MILLIS",
+              "name": "DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS",
               "modifiers": [
                 "public",
                 "static",
@@ -48139,7 +48139,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS",
+              "signature": "long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS",
               "return_type": "long",
               "type_params": [],
               "params": [],

@@ -114,9 +114,9 @@ public @interface PerfLog {
      * }</pre>
      *
      * @return the minimum execution time in milliseconds for SQL logging; defaults to
-     *         {@link JdbcUtil#DEFAULT_PERF_LOG_THRESHOLD_MILLIS} (1000 ms)
+     *         {@link JdbcUtil#DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS} (1000 ms)
      */
-    long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS; // 1000
+    long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS; // 1000
 
     /**
      * Specifies the minimum execution time threshold (in milliseconds) for logging DAO method performance.

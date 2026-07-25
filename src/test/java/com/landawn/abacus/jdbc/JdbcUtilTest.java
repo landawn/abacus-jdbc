@@ -1343,7 +1343,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testCreateDBLock() {
         try (DBLock lock = JdbcUtil.createDBLock(mockDataSource, "lock_table");
-                DBLock otherLock = JdbcUtil.createDBLock(mockDataSource, "other_lock_table")) {
+             DBLock otherLock = JdbcUtil.createDBLock(mockDataSource, "other_lock_table")) {
             assertNotNull(lock);
             assertTrue(lock instanceof AutoCloseable, "DBLock should support try-with-resources");
             assertNotNull(otherLock);
@@ -2488,7 +2488,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testDefaultMinExecutionTimeForSqlPerfLog() {
-        assertEquals(1000L, JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS);
+        assertEquals(1000L, JdbcUtil.DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS);
     }
 
     @Test
@@ -3882,15 +3882,16 @@ public class JdbcUtilTest extends TestBase {
     // Regression: stripIdentifierDelimiters did not unescape doubled quotes inside a quoted body,
     // so toQualifiedSqlIdentifier (which re-quotes) would double-escape and emit corrupt SQL.
     @Test
-    public void testStripIdentifierDelimiters_UnescapesDoubledQuote() throws Exception {
-        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("stripIdentifierDelimiters", String.class);
-        m.setAccessible(true);
-
-        assertEquals("a\"b", m.invoke(null, "\"a\"\"b\""), "doubled \" inside double-quoted identifier must unescape");
-        assertEquals("a`b", m.invoke(null, "`a``b`"), "doubled ` inside backtick identifier must unescape");
-        assertEquals("a]b", m.invoke(null, "[a]]b]"), "doubled ] inside bracketed identifier must unescape");
+    public void testStripIdentifierDelimiters_UnescapesDoubledQuote() {
+        // The logic now lives in the shared package-private SqlIdentifierUtil.
+        assertEquals("a\"b", com.landawn.abacus.jdbc.SqlIdentifierUtil.stripIdentifierDelimiters("\"a\"\"b\""),
+                "doubled \" inside double-quoted identifier must unescape");
+        assertEquals("a`b", com.landawn.abacus.jdbc.SqlIdentifierUtil.stripIdentifierDelimiters("`a``b`"),
+                "doubled ` inside backtick identifier must unescape");
+        assertEquals("a]b", com.landawn.abacus.jdbc.SqlIdentifierUtil.stripIdentifierDelimiters("[a]]b]"),
+                "doubled ] inside bracketed identifier must unescape");
         // Single-quoted bodies without doubled quotes are returned as the literal body.
-        assertEquals("plain", m.invoke(null, "\"plain\""));
+        assertEquals("plain", com.landawn.abacus.jdbc.SqlIdentifierUtil.stripIdentifierDelimiters("\"plain\""));
     }
 
     // Regression: isTableNotExistsException relied solely on SQLState (which Oracle/SQL Server do not

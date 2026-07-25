@@ -47,7 +47,7 @@ public class PerfLogTest extends TestBase {
     public void testPerfLog_SqlLogThresholdMillisDefault() throws Exception {
         Method method = PerfLog.class.getDeclaredMethod("sqlPerfLogThresholdMillis");
         Object defaultValue = method.getDefaultValue();
-        assertEquals(JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS, defaultValue);
+        assertEquals(JdbcUtil.DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS, defaultValue);
         assertEquals(1000L, defaultValue);
     }
 

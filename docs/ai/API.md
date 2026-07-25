@@ -12307,11 +12307,11 @@ Enables SQL and DAO-method performance logging for the annotated method (or for 
   - (none)
 - **Returns:** the maximum number of characters to include from SQL statements in logs; defaults to {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} (1024 characters)
 ##### sqlPerfLogThresholdMillis(...) -> long
-- **Signature:** `long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_PERF_LOG_THRESHOLD_MILLIS`
+- **Signature:** `long sqlPerfLogThresholdMillis() default JdbcUtil.DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS`
 - **Summary:** Specifies the minimum execution time threshold (in milliseconds) for logging SQL performance.
 - **Parameters:**
   - (none)
-- **Returns:** the minimum execution time in milliseconds for SQL logging; defaults to {@link JdbcUtil#DEFAULT_PERF_LOG_THRESHOLD_MILLIS} (1000 ms)
+- **Returns:** the minimum execution time in milliseconds for SQL logging; defaults to {@link JdbcUtil#DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS} (1000 ms)
 ##### daoMethodPerfLogThresholdMillis(...) -> long
 - **Signature:** `long daoMethodPerfLogThresholdMillis() default JdbcUtil.DEFAULT_DAO_METHOD_PERF_LOG_THRESHOLD_MILLIS`
 - **Summary:** Specifies the minimum execution time threshold (in milliseconds) for logging DAO method performance.

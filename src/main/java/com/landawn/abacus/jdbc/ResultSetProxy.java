@@ -768,9 +768,9 @@ final class ResultSetProxy implements ResultSet {
                     // and unconditionally materializes LOBs). Pre-fix, row 1 returned the raw Blob
                     // while rows 2+ returned byte[] — inconsistent for the same column.
                     if (ret instanceof Blob blob) {
-                        ret = materialize(blob);
+                        ret = JdbcUtil.materializeBlob(blob);
                     } else if (ret instanceof Clob clob) {
-                        ret = materialize(clob);
+                        ret = JdbcUtil.materializeClob(clob);
                     }
                     columnGetters[columnIndex] = ColumnGetter.GET_OBJECT;
                 }
@@ -870,9 +870,9 @@ final class ResultSetProxy implements ResultSet {
                     // The cached getter goes through JdbcUtil.getColumnValue (matching the index
                     // path) so the same column read via int or label yields the same type.
                     if (ret instanceof Blob blob) {
-                        ret = materialize(blob);
+                        ret = JdbcUtil.materializeBlob(blob);
                     } else if (ret instanceof Clob clob) {
-                        ret = materialize(clob);
+                        ret = JdbcUtil.materializeClob(clob);
                     }
                     getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
                 }
@@ -883,64 +883,6 @@ final class ResultSetProxy implements ResultSet {
             return ret;
         } else {
             return getter.apply(delegate);
-        }
-    }
-
-    private static byte[] materialize(final Blob blob) throws SQLException {
-        Throwable failure = null;
-
-        try {
-            final long len = blob.length();
-
-            if (len > Integer.MAX_VALUE) {
-                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-            }
-
-            return blob.getBytes(1, (int) len);
-        } catch (final Throwable e) { //NOSONAR
-            failure = e;
-            throw e;
-        } finally {
-            try {
-                blob.free();
-            } catch (final Throwable e) { //NOSONAR - preserve unchecked cleanup failures too
-                if (failure == null) {
-                    throw e;
-                }
-
-                if (failure != e) {
-                    failure.addSuppressed(e);
-                }
-            }
-        }
-    }
-
-    private static String materialize(final Clob clob) throws SQLException {
-        Throwable failure = null;
-
-        try {
-            final long len = clob.length();
-
-            if (len > Integer.MAX_VALUE) {
-                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
-            }
-
-            return clob.getSubString(1, (int) len);
-        } catch (final Throwable e) { //NOSONAR
-            failure = e;
-            throw e;
-        } finally {
-            try {
-                clob.free();
-            } catch (final Throwable e) { //NOSONAR - preserve unchecked cleanup failures too
-                if (failure == null) {
-                    throw e;
-                }
-
-                if (failure != e) {
-                    failure.addSuppressed(e);
-                }
-            }
         }
     }
 

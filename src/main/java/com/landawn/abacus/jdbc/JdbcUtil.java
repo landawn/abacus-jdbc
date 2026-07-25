@@ -244,7 +244,7 @@ public final class JdbcUtil {
      * that complete in less than this threshold are not logged at the {@code SQL-PERF} level.
      * Value: {@code 1000} (1 second).
      */
-    public static final long DEFAULT_PERF_LOG_THRESHOLD_MILLIS = 1000L;
+    public static final long DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS = 1000L;
 
     /**
      * Default minimum execution time (in milliseconds) for DAO method performance logging.
@@ -349,7 +349,7 @@ public final class JdbcUtil {
     static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = ThreadLocal.withInitial(() -> new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH));
 
     static final ThreadLocal<SqlLogConfig> sqlPerfLogThresholdMillis_TL = ThreadLocal
-            .withInitial(() -> new SqlLogConfig(DEFAULT_PERF_LOG_THRESHOLD_MILLIS, DEFAULT_MAX_SQL_LOG_LENGTH));
+            .withInitial(() -> new SqlLogConfig(DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS, DEFAULT_MAX_SQL_LOG_LENGTH));
 
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
 
@@ -2354,7 +2354,11 @@ public final class JdbcUtil {
         return ret;
     }
 
-    private static byte[] materializeBlob(final Blob blob) throws SQLException {
+    /**
+     * Reads the whole {@link Blob} into a byte array and always frees it, attaching any {@code free()}
+     * failure as a suppressed exception so it can never mask the read failure.
+     */
+    static byte[] materializeBlob(final Blob blob) throws SQLException {
         Throwable primaryFailure = null;
 
         try {
@@ -2372,7 +2376,11 @@ public final class JdbcUtil {
         }
     }
 
-    private static String materializeClob(final Clob clob) throws SQLException {
+    /**
+     * Reads the whole {@link Clob} into a string and always frees it, attaching any {@code free()}
+     * failure as a suppressed exception so it can never mask the read failure.
+     */
+    static String materializeClob(final Clob clob) throws SQLException {
         Throwable primaryFailure = null;
 
         try {
@@ -2761,6 +2769,15 @@ public final class JdbcUtil {
         return index;
     }
 
+    /**
+     * Skips over a quoted string or delimited identifier. Like
+     * {@code com.landawn.abacus.query.SqlParser}, this accepts the union of the dialect escaping
+     * styles &mdash; doubled delimiters (SQL standard) and backslash escapes (MySQL/MariaDB) &mdash;
+     * so SQL is tokenized the same way here as by the parser the rest of the framework uses. A
+     * standard-SQL literal whose body ends with a backslash therefore reads as unterminated; the
+     * scan then finds no leading operation keyword and the statement is classified
+     * {@code UNKNOWN} rather than being misclassified.
+     */
     private static int skipQuotedSqlText(final String sql, int index, final char quote) {
         final int len = sql.length();
         index++;
@@ -8498,14 +8515,14 @@ public final class JdbcUtil {
     }
 
     private static String buildSimpleQualifiedTableName(final String catalog, final String schema, final String tableName) {
-        if (!isSimpleSqlIdentifier(tableName)) {
+        if (!isUnquotedSafeIdentifier(tableName)) {
             return null;
         }
 
         final StringBuilder sb = new StringBuilder(64);
 
         if (Strings.isNotEmpty(catalog)) {
-            if (!isSimpleSqlIdentifier(catalog)) {
+            if (!isUnquotedSafeIdentifier(catalog)) {
                 return null;
             }
 
@@ -8513,7 +8530,7 @@ public final class JdbcUtil {
         }
 
         if (Strings.isNotEmpty(schema)) {
-            if (!isSimpleSqlIdentifier(schema)) {
+            if (!isUnquotedSafeIdentifier(schema)) {
                 return null;
             }
 
@@ -8525,7 +8542,13 @@ public final class JdbcUtil {
         return sb.toString();
     }
 
-    private static boolean isSimpleSqlIdentifier(final String identifier) {
+    /**
+     * Tests whether an identifier can be embedded in generated SQL without delimiters. Deliberately
+     * broader than {@link SqlIdentifierUtil#isSimpleSqlIdentifier(String)} (which decides how a
+     * user-supplied name is <i>rendered</i>): here the only requirement is that the text cannot carry
+     * SQL punctuation into a statement this class assembles for a metadata probe.
+     */
+    private static boolean isUnquotedSafeIdentifier(final String identifier) {
         if (Strings.isEmpty(identifier)) {
             return false;
         }
@@ -8539,28 +8562,6 @@ public final class JdbcUtil {
         }
 
         return true;
-    }
-
-    private static String stripIdentifierDelimiters(final String identifier) {
-        final String trimmed = Strings.stripToEmpty(identifier);
-
-        if (trimmed.length() >= 2) {
-            final char first = trimmed.charAt(0);
-            final char last = trimmed.charAt(trimmed.length() - 1);
-
-            // Unescape doubled delimiters inside the quoted body so the returned identifier holds
-            // the literal name. Otherwise downstream re-quoting via toQualifiedSqlIdentifier would
-            // double-escape (e.g., `"a""b"` -> body `a""b` -> re-quoted `"a""""b"`).
-            if ((first == '"' && last == '"') || (first == '`' && last == '`')) {
-                return trimmed.substring(1, trimmed.length() - 1).replace("" + first + first, String.valueOf(first));
-            }
-
-            if (first == '[' && last == ']') {
-                return trimmed.substring(1, trimmed.length() - 1).replace("]]", "]");
-            }
-        }
-
-        return trimmed;
     }
 
     /**
@@ -8652,7 +8653,7 @@ public final class JdbcUtil {
     }
 
     private static void addQualifiedIdentifierPart(final List<String> parts, final StringBuilder sb, final String qualifiedName, final String argName) {
-        final String part = stripIdentifierDelimiters(sb.toString());
+        final String part = SqlIdentifierUtil.stripIdentifierDelimiters(sb.toString());
 
         if (Strings.isEmpty(part)) {
             throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
@@ -8683,7 +8684,7 @@ public final class JdbcUtil {
             }
 
             if (identifierQuote == null) {
-                if (!isSimpleSqlIdentifier(part)) {
+                if (!isUnquotedSafeIdentifier(part)) {
                     throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
                 }
 
@@ -8852,7 +8853,7 @@ public final class JdbcUtil {
         final String[] parts = splitQualifiedSqlIdentifier(qualifiedName, "tableName");
 
         for (final String part : parts) {
-            if (!isSimpleSqlIdentifier(part)) {
+            if (!isUnquotedSafeIdentifier(part)) {
                 return null;
             }
         }
@@ -12047,7 +12048,7 @@ public final class JdbcUtil {
          * @param executor the asynchronous executor, or {@code null} to use the shared executor
          */
         @Builder
-        DaoCreationOptions(final String targetTableName, final Dsl dsl, final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) {
+        public DaoCreationOptions(final String targetTableName, final Dsl dsl, final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) {
             this.targetTableName = targetTableName;
             this.dsl = dsl;
             this.sqlMapper = sqlMapper;

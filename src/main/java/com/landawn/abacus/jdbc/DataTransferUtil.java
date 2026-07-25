@@ -2933,14 +2933,14 @@ public final class DataTransferUtil {
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
+            sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(checkColumnName(iter.next(), dbProductInfo))
+        sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo))
                 .append(SK._SPACE)
                 .append(SK.FROM)
                 .append(SK._SPACE)
-                .append(checkTableName(tableName, dbProductInfo));
+                .append(SqlIdentifierUtil.checkTableName(tableName, dbProductInfo));
 
         return sb.toString();
     }
@@ -2953,17 +2953,22 @@ public final class DataTransferUtil {
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final StringBuilder sb = new StringBuilder();
 
-        sb.append(SK.INSERT).append(SK._SPACE).append(SK.INTO).append(SK._SPACE).append(checkTableName(tableName, dbProductInfo)).append(SK._PARENTHESIS_L);
+        sb.append(SK.INSERT)
+                .append(SK._SPACE)
+                .append(SK.INTO)
+                .append(SK._SPACE)
+                .append(SqlIdentifierUtil.checkTableName(tableName, dbProductInfo))
+                .append(SK._PARENTHESIS_L);
 
         final Iterator<String> iter = columnNames.iterator();
         final int lastIdx = columnNames.size() - 1;
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
+            sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(checkColumnName(iter.next(), dbProductInfo))
+        sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo))
                 .append(SK._PARENTHESIS_R)
                 .append(SK._SPACE)
                 .append(SK.VALUES)
@@ -2971,140 +2976,6 @@ public final class DataTransferUtil {
                 .append(Strings.repeat("?", columnNames.size(), ", ", "(", ")"));
 
         return sb.toString();
-    }
-
-    private static String checkTableName(final String tableName, final ProductInfo dbProductInfo) {
-        final String quote = getTableColumnNameQuoteString(dbProductInfo);
-
-        final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
-        final boolean[] explicitlyDelimitedParts = explicitlyDelimitedIdentifierParts(tableName, parts.length);
-
-        if (parts.length == 1) {
-            return explicitlyDelimitedParts[0] || !isSimpleSqlIdentifier(parts[0]) ? quoteIdentifier(parts[0], quote) : parts[0];
-        }
-
-        final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
-
-        for (int i = 0, len = parts.length; i < len; i++) {
-            if (i > 0) {
-                sb.append('.');
-            }
-
-            // Preserve an explicitly delimited part even when its decoded text is a simple
-            // identifier. Dropping the delimiters from (for example) "MixedCase" changes its
-            // identity on case-folding databases. Plain simple parts remain unquoted so ordinary
-            // names still receive the database's normal case folding.
-            sb.append(explicitlyDelimitedParts[i] || !isSimpleSqlIdentifier(parts[i]) ? quoteIdentifier(parts[i], quote) : parts[i]);
-        }
-
-        return sb.toString();
-    }
-
-    private static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
-        N.checkArgNotBlank(columnName, cs.columnName);
-
-        final String quote = getTableColumnNameQuoteString(dbProductInfo);
-
-        if (startsWithIdentifierDelimiter(columnName)) {
-            final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(columnName, "columnName");
-
-            if (parts.length != 1) {
-                throw new IllegalArgumentException("'columnName' must be a single identifier: " + columnName);
-            }
-
-            // Decode the caller's delimiter and re-quote with the active database dialect. This
-            // both preserves case-sensitive simple names and avoids double-quoting input such as
-            // "MixedCase" or [order].
-            return quoteIdentifier(parts[0], quote);
-        }
-
-        return isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quote);
-    }
-
-    private static boolean startsWithIdentifierDelimiter(final String identifier) {
-        final String trimmed = identifier.trim();
-
-        return !trimmed.isEmpty() && (trimmed.charAt(0) == '"' || trimmed.charAt(0) == '`' || trimmed.charAt(0) == '[');
-    }
-
-    /**
-     * Returns which parts of a validated qualified identifier were explicitly delimited in the
-     * caller's text. {@link JdbcUtil#splitQualifiedSqlIdentifier(String, String)} deliberately
-     * returns decoded names only, so this small companion scan retains the case-sensitivity signal
-     * needed when the names are rendered for another database dialect.
-     */
-    private static boolean[] explicitlyDelimitedIdentifierParts(final String qualifiedName, final int partCount) {
-        final boolean[] result = new boolean[partCount];
-        final String trimmed = qualifiedName.trim();
-        int partIndex = 0;
-        boolean atPartStart = true;
-        char closingQuote = 0;
-
-        for (int i = 0, len = trimmed.length(); i < len; i++) {
-            final char ch = trimmed.charAt(i);
-
-            if (closingQuote != 0) {
-                if (ch == closingQuote) {
-                    if (i + 1 < len && trimmed.charAt(i + 1) == closingQuote) {
-                        i++;
-                    } else {
-                        closingQuote = 0;
-                    }
-                }
-
-                continue;
-            }
-
-            if (atPartStart) {
-                if (Character.isWhitespace(ch)) {
-                    continue;
-                }
-
-                if (ch == '"' || ch == '`' || ch == '[') {
-                    result[partIndex] = true;
-                    closingQuote = ch == '[' ? ']' : ch;
-                }
-
-                atPartStart = false;
-            } else if (ch == '.') {
-                partIndex++;
-                atPartStart = true;
-            }
-        }
-
-        return result;
-    }
-
-    private static boolean isSimpleSqlIdentifier(final String identifier) {
-        if (Strings.isEmpty(identifier)) {
-            return false;
-        }
-
-        final char first = identifier.charAt(0);
-
-        if (!(Strings.isAsciiAlpha(first) || first == '_')) {
-            return false;
-        }
-
-        for (int i = 1, len = identifier.length(); i < len; i++) {
-            final char ch = identifier.charAt(i);
-
-            if (!(Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_')) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static String quoteIdentifier(final String identifier, final String quote) {
-        // Escape any embedded quote character by doubling it, then wrap, so identifiers containing
-        // the active quote char produce valid SQL instead of unbalanced/injectable output.
-        return quote + identifier.replace(quote, quote + quote) + quote;
-    }
-
-    private static String getTableColumnNameQuoteString(final ProductInfo dbProductInfo) {
-        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.name(), "MySQL", "MariaDB") ? "`" : "\"";
     }
 
     /**

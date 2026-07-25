@@ -125,8 +125,7 @@ public class JoinInfoTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> JoinInfo.getEntityJoinInfo(UserDao.class, null, "user_entity"));
         assertThrows(IllegalArgumentException.class, () -> JoinInfo.getEntityJoinInfo(UserDao.class, UserEntity.class, null));
         assertThrows(IllegalArgumentException.class, () -> JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", null));
-        assertThrows(IllegalArgumentException.class,
-                () -> JoinInfo.getJoinEntityPropNamesByType(UserDao.class, UserEntity.class, "user_entity", null));
+        assertThrows(IllegalArgumentException.class, () -> JoinInfo.getJoinEntityPropNamesByType(UserDao.class, UserEntity.class, "user_entity", null));
     }
 
     @Test

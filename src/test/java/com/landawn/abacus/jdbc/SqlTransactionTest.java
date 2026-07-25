@@ -87,8 +87,7 @@ public class SqlTransactionTest extends TestBase {
     public void testNestedDefaultIsolationInheritsOuterLevelAcrossDeeperScope() throws SQLException {
         when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_UNCOMMITTED);
 
-        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED,
-                SqlTransaction.CreatedBy.JDBC_UTIL, false);
+        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, false);
         transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false);
 
         transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
