@@ -2183,6 +2183,13 @@ final class DaoImpl {
             throw new IllegalArgumentException("Failed to resolve entity/id generic type parameters for DAO interface: " + daoClassName);
         }
 
+        // An unbound entity type variable (e.g. createDao called on the raw Dao interface, or on a generic
+        // interface like BaseDao<T> extends Dao<T, BaseDao<T>> without a concrete binding) would otherwise
+        // fail with a ClassCastException at the '(Class) typeArguments[0]' cast below.
+        if (N.notEmpty(typeArguments) && !(typeArguments[0] instanceof Class)) {
+            throw new IllegalArgumentException("Failed to resolve entity generic type parameter for DAO interface: " + daoClassName);
+        }
+
         if (N.notEmpty(typeArguments)) {
             if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !Beans.isBeanClass((Class) typeArguments[0])) {
                 throw new IllegalArgumentException(

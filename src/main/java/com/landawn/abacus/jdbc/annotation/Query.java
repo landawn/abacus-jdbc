@@ -117,7 +117,9 @@ public @interface Query {
      * This can contain any valid SQL, including SELECT, INSERT, UPDATE, DELETE, or stored procedure calls.
      *
      * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
-     * (across {@code value} and {@link #id()}) fails DAO initialization with {@link IllegalArgumentException}.
+     * (across {@code value} and {@link #id()}) fails DAO initialization &mdash; with
+     * {@link IllegalArgumentException} when both {@code value} and {@link #id()} are supplied, or with
+     * {@code UnsupportedOperationException} when multiple entries are declared on an abstract method.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime.</p>
@@ -191,7 +193,9 @@ public @interface Query {
      * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
      *
      * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
-     * (across {@link #value()} and {@code id}) fails DAO initialization with {@link IllegalArgumentException}.
+     * (across {@link #value()} and {@code id}) fails DAO initialization &mdash; with
+     * {@link IllegalArgumentException} when both {@link #value()} and {@code id} are supplied, or with
+     * {@code UnsupportedOperationException} when multiple entries are declared on an abstract method.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime.</p>

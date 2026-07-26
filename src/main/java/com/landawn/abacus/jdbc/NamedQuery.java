@@ -1580,7 +1580,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.setTimestamp("eventTime", Timestamp.valueOf("2023-12-25 10:30:00"));
      *
      * // Setting null
-     * query.setTimestamp("updatedAt", null);
+     * query.setTimestamp("updatedAt", (Timestamp) null);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)

@@ -555,6 +555,13 @@ public final class JdbcCodeGenerationUtil {
                             }
                             final String declaration = commaIdx >= 0 ? withoutInitializer.substring(0, commaIdx).trim() : withoutInitializer.trim();
                             final int idx = declaration.lastIndexOf(' ');
+
+                            // Reject declarations that don't split into a type/name pair (e.g. "private int;")
+                            // with a clear IAE instead of a StringIndexOutOfBoundsException from substring below.
+                            if (idx < 0) {
+                                throw new IllegalArgumentException("Cannot parse field declaration in additionalClassBodySource: " + declAndSkip._1);
+                            }
+
                             return Tuple.of(declaration.substring(0, idx).trim(), declaration.substring(idx + 1).trim(), declAndSkip._2);
                         })
                         .toList();
@@ -2709,9 +2716,9 @@ public final class JdbcCodeGenerationUtil {
          * List of field-type annotation arguments.
          * Each tuple contains: (field name, {@code @Type} annotation argument expression).
          * The second element is emitted verbatim as the argument to {@code @Type(...)}, so it must be
-         * a valid annotation argument — {@code @Type} declares {@code String value()}, so use the quoted
-         * attribute form: e.g., {@code Tuple.of("tags", "name = \"List<String>\"")} produces
-         * {@code @Type(name = "List<String>")}.
+         * a valid annotation argument — {@code @Type} declares the type-name member as {@code String name()}
+         * ({@code value()} is a deprecated alias), so use the explicit attribute form: e.g.,
+         * {@code Tuple.of("tags", "name = \"List<String>\"")} produces {@code @Type(name = "List<String>")}.
          * Used to generate {@code @Type} annotations for fields whose database types
          * require explicit type mapping.
          */
