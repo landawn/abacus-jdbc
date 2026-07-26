@@ -323,6 +323,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql,
@@ -361,6 +362,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter, final Connection conn,
@@ -437,6 +439,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
@@ -480,6 +483,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
@@ -544,6 +548,7 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
@@ -580,6 +585,7 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
@@ -669,6 +675,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt, final int batchSize,
@@ -708,6 +715,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter,
@@ -796,6 +804,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
@@ -839,6 +848,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @SuppressWarnings({ "rawtypes", "null" })
     @Deprecated
@@ -958,6 +968,7 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -994,6 +1005,7 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported (after filtering)
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
@@ -1140,6 +1152,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
+     * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize,
@@ -1216,6 +1229,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
+     * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1370,6 +1384,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
+     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
@@ -1462,6 +1477,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
+     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1506,6 +1522,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
+     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
@@ -1644,6 +1661,7 @@ public final class DataTransferUtil {
      *         {@code batchSize <= 0}, {@code batchIntervalInMillis < 0}, or a data row has more fields than the header
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
+     * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1710,6 +1728,7 @@ public final class DataTransferUtil {
      *         {@code batchSize <= 0}, {@code batchIntervalInMillis < 0}, or a data row has more fields than the header
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
+     * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
@@ -1810,7 +1829,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceDataSource the DataSource to obtain database connections from
-     * @param selectSql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
@@ -1851,7 +1870,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param selectSql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
@@ -1887,13 +1906,14 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param selectSql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code output} is {@code null}, or if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
+     * @deprecated use {@link #exportCsvFrom(Connection, String)} instead: {@code exportCsvFrom(conn, selectSql).columns(columnNames).to(output)}.
      */
     @Deprecated
     public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> columnNames, final File output) throws SQLException {
@@ -1974,6 +1994,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code output} is {@code null}, or if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
+     * @deprecated use {@link #exportCsvFrom(PreparedStatement)} instead: {@code exportCsvFrom(stmt).columns(columnNames).to(output)}.
      */
     @Deprecated
     public static long exportCsv(final PreparedStatement stmt, final Collection<String> columnNames, final File output) throws SQLException {
@@ -2058,6 +2079,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
+     * @deprecated use {@link #exportCsvFrom(ResultSet)} instead: {@code exportCsvFrom(rs).columns(columnNames).to(output)}.
      */
     @Deprecated
     public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final File output) throws SQLException {
@@ -2098,7 +2120,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param sourceDataSource the DataSource to obtain database connections from
-     * @param selectSql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
@@ -2141,7 +2163,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param selectSql the SQL query to execute for retrieving data
+     * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
      * @throws SQLException if a database access error occurs
@@ -2226,6 +2248,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing
+     * @deprecated use {@link #exportCsvFrom(ResultSet)} instead: {@code exportCsvFrom(rs).columns(columnNames).to(output)}.
      */
     @Deprecated
     public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final Writer output) throws IllegalArgumentException, SQLException {
@@ -2419,6 +2442,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).batchSize(batchSize).to(targetDataSource, targetTableName)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
@@ -2474,6 +2498,7 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs or any specified column doesn't exist
+     * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).columns(columnNames).to(targetDataSource, targetTableName)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
@@ -2506,6 +2531,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).columns(columnNames).batchSize(batchSize).to(targetDataSource, targetTableName)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
@@ -2598,6 +2624,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code fetchSize < 0} or {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).fetchSize(fetchSize).batchSize(batchSize).to(targetDataSource, insertSql)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
@@ -2634,6 +2661,7 @@ public final class DataTransferUtil {
      *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).parameterSetter(parameterSetter).to(targetDataSource, insertSql)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
@@ -2684,6 +2712,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code fetchSize < 0}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchDelay(...).parameterSetter(parameterSetter).to(targetDataSource, insertSql)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
@@ -2801,6 +2830,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).batchSize(batchSize).to(targetConn, targetTableName)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
@@ -2862,6 +2892,7 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs or any specified column doesn't exist
+     * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).columns(columnNames).to(targetConn, targetTableName)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
@@ -2898,6 +2929,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).columns(columnNames).batchSize(batchSize).to(targetConn, targetTableName)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
@@ -3045,6 +3077,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code fetchSize < 0} or {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).fetchSize(fetchSize).batchSize(batchSize).to(targetConn, insertSql)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
@@ -3082,6 +3115,7 @@ public final class DataTransferUtil {
      *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).parameterSetter(parameterSetter).to(targetConn, insertSql)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
@@ -3136,6 +3170,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code fetchSize < 0}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchDelay(...).parameterSetter(parameterSetter).to(targetConn, insertSql)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
@@ -3195,6 +3230,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #copyFrom(PreparedStatement)} instead: {@code copyFrom(selectStmt).batchSize(batchSize).batchDelay(...).parameterSetter(parameterSetter).to(insertStmt)}.
      */
     @Deprecated
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final int batchSize, final long batchIntervalInMillis,

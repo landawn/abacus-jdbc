@@ -7483,7 +7483,7 @@ public final class Jdbc {
                 }
             }
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SEPARATOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 pool.clear();
@@ -7595,7 +7595,7 @@ public final class Jdbc {
                 }
             }
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SEPARATOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
@@ -7612,7 +7612,7 @@ public final class Jdbc {
     }
 
     private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) {
-        final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
+        final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SEPARATOR);
 
         return Strings.isNotEmpty(cachedTableName) && cachedTableName.equalsIgnoreCase(tableName);
     }

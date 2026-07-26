@@ -66,6 +66,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param id the ID of the entity to delete
      * @return the number of rows deleted (typically 1 or 0)
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

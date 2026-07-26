@@ -623,7 +623,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p>Performance characteristics:</p>
      * <ul>
-     *   <li>For N parent entities, this method executes O(1) queries instead of O(N)</li>
+     *   <li>For N parent entities, this method executes one query per batch (batched by {@link JdbcUtil#DEFAULT_BATCH_SIZE}) instead of O(N) queries</li>
      *   <li>Large collections may be automatically batched to prevent excessive memory usage</li>
      *   <li>Selecting fewer properties via {@code joinSelectPropNames} can significantly improve performance</li>
      * </ul>
@@ -1162,7 +1162,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
@@ -1189,11 +1189,13 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
             throws UncheckedSQLException {
+        N.checkArgNotNull(entity, cs.entity);
+
         final Class<?> cls = entity.getClass();
         final PropInfo propInfo = ParserUtil.getBeanInfo(cls).getPropInfo(joinEntityPropName);
 
@@ -1359,12 +1361,13 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(joinEntityPropNames)) {

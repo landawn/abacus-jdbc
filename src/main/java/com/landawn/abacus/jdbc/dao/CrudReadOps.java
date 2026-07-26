@@ -77,6 +77,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForBoolean()
      */
@@ -97,6 +98,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForChar()
      */
@@ -117,6 +119,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForByte()
      */
@@ -137,6 +140,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForShort()
      */
@@ -157,6 +161,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForInt()
      */
@@ -177,6 +182,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForLong()
      */
@@ -197,6 +203,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForFloat()
      */
@@ -217,6 +224,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForDouble()
      */
@@ -235,6 +243,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the String value if found, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForString()
      */
@@ -329,6 +338,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param targetValueType the class of the value type to convert to
      * @return a {@code Nullable} holding the value (possibly {@code null} for a SQL {@code NULL}) when a record
      *         matches, or an empty {@code Nullable} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -396,6 +406,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param targetValueType the class of the value type to convert to
      * @return a {@code Nullable} holding the unique value (possibly {@code null} for a SQL {@code NULL}) when a
      *         record matches, or an empty {@code Nullable} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
@@ -466,6 +477,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *
      * @param id the ID of the entity to retrieve
      * @return an {@link Optional} containing the entity if found, otherwise empty
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -489,6 +501,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if {@code null}
      * @return an {@link Optional} containing the entity if found, otherwise empty
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -510,6 +523,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *
      * @param id the ID of the entity to retrieve
      * @return the entity if found, otherwise {@code null}
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -532,6 +546,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if {@code null}
      * @return the entity if found, otherwise {@code null}
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -680,6 +695,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *
      * @param id the entity ID to check for existence
      * @return {@code true} if an entity with the given ID exists, {@code false} otherwise
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#exists()
      */

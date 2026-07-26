@@ -49,6 +49,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *
      * <p>The default implementation returns {@code null}, which selects the default extractor.</p>
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Override
      * public Jdbc.BiRowMapper<Long> idExtractor() {

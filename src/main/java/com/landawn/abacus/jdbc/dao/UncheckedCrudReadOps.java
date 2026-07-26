@@ -66,6 +66,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForBoolean()
      */
@@ -89,6 +90,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForChar()
      */
@@ -112,6 +114,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForByte()
      */
@@ -135,6 +138,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForShort()
      */
@@ -158,6 +162,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForInt()
      */
@@ -181,6 +186,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForLong()
      */
@@ -204,6 +210,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForFloat()
      */
@@ -227,6 +234,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForDouble()
      */
@@ -248,6 +256,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the String value, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForString()
      */
@@ -357,6 +366,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param targetValueType the class of the target value type
      * @return a {@code Nullable} containing the converted value (which holds {@code null} when the value is SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -430,6 +440,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param targetValueType the class of the target value type
      * @return a {@code Nullable} containing the unique result value (which holds {@code null} when the value is SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
@@ -505,6 +516,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param id the entity ID
      * @return an {@code Optional} containing the entity if found, otherwise empty
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -525,6 +537,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return an {@code Optional} containing the entity with selected properties if found, otherwise empty
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -547,6 +560,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param id the entity ID
      * @return the entity if found, otherwise {@code null}
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -568,6 +582,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return the entity with selected properties if found, otherwise {@code null}
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -686,6 +701,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param id the entity ID to check
      * @return {@code true} if the entity exists, {@code false} otherwise
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#exists()
      */

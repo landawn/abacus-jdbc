@@ -1143,7 +1143,7 @@ public class DaoImplTest extends TestBase {
         }
 
         assertNotNull(updatedKey.get(), "refresh must receive a table-bearing fallback key when argument serialization fails");
-        assertTrue(updatedKey.get().contains(JdbcUtil.CACHE_KEY_SPLITOR));
+        assertTrue(updatedKey.get().contains(JdbcUtil.CACHE_KEY_SEPARATOR));
     }
 
     @Test

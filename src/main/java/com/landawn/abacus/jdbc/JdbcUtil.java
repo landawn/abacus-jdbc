@@ -376,7 +376,7 @@ public final class JdbcUtil {
     // a non-canonical dialect would yield a fresh Dsl on every call and defeat DaoImpl's identity-keyed proxy cache.
     private static final Map<SqlDialect, Dsl> dslPool = new ConcurrentHashMap<>();
 
-    static final String CACHE_KEY_SPLITOR = "#";
+    static final String CACHE_KEY_SEPARATOR = "#";
 
     static final ThreadLocal<Jdbc.DaoCache> localThreadCache_TL = new ThreadLocal<>();
 
@@ -878,7 +878,10 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} from which to obtain a connection. Must not be {@code null}.
      * @return A {@link Connection} object.
      * @throws IllegalArgumentException if {@code ds} is {@code null}.
-     * @throws UncheckedSQLException if a database access error occurs.
+     * @throws UncheckedSQLException if a database access error occurs. When Spring is present and its
+     *         transaction synchronization is active, the connection is obtained through
+     *         {@link org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)}
+     *         and Spring's {@code CannotGetJdbcConnectionException} may propagate unwrapped instead.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)
      */
@@ -2835,7 +2838,6 @@ public final class JdbcUtil {
     }
 
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
-        // stmt.setFetchDirectionToForward().setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
         if (stmt.getFetchSize() < JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET) {
@@ -12318,7 +12320,7 @@ public final class JdbcUtil {
             return null;
         }
 
-        return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);
+        return Strings.concat(fullClassMethodName, CACHE_KEY_SEPARATOR, tableName, CACHE_KEY_SEPARATOR, paramKey);
     }
 
     // ==============================================Jdbc Context=======================================================>>

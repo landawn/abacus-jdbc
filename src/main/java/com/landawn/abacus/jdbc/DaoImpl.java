@@ -6386,7 +6386,7 @@ final class DaoImpl {
                                 // stable method/table portion so built-in and custom caches can still identify
                                 // the affected table (and custom caches still receive args/methodSignature).
                                 final String refreshCacheKey = Strings.isNotEmpty(cacheKey) ? cacheKey
-                                        : Strings.concat(fullClassMethodName, JdbcUtil.CACHE_KEY_SPLITOR, tableName, JdbcUtil.CACHE_KEY_SPLITOR);
+                                        : Strings.concat(fullClassMethodName, JdbcUtil.CACHE_KEY_SEPARATOR, tableName, JdbcUtil.CACHE_KEY_SEPARATOR);
 
                                 Throwable refreshFailure = null;
 
