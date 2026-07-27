@@ -46,7 +46,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * (whether declared at the type or method level) are only honored on cacheable DAOs &mdash; that is,
  * {@code NonUpdateDao} or {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying
  * any of them to a DAO that supports update/delete operations fails with
- * {@code UnsupportedOperationException} at initialization time.</p>
+ * {@code UnsupportedOperationException} at DAO initialization time.</p>
  *
  * <p>The configured {@link #capacity()} and {@link #evictDelayMillis()} must both be non-negative;
  * invalid values fail DAO initialization with {@code UnsupportedOperationException}.</p>

@@ -80,7 +80,7 @@ public final class SpringApplicationContext {
      * registered as a Spring bean. The context is stored in a process-wide holder shared by all
      * instances (including the one the framework constructs internally).
      *
-     * @param applicationContext the Spring application context
+     * @param applicationContext the Spring application context.
      */
     @Autowired // NOSONAR
     public void setApplicationContext(final ApplicationContext applicationContext) {
@@ -122,9 +122,9 @@ public final class SpringApplicationContext {
      * initialized but no bean with the given name exists, {@code NoSuchBeanDefinitionException}
      * is thrown.</p>
      *
-     * @param name the name of the bean to retrieve
-     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found
+     * @param name the name of the bean to retrieve.
+     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
      *
      * @see ApplicationContext#getBean(String)
      */
@@ -143,11 +143,11 @@ public final class SpringApplicationContext {
      * DataSource dataSource = springAppContext.getBean(DataSource.class);
      * }</pre>
      *
-     * @param <T> the bean type to be retrieved from the Spring context
-     * @param requiredType the class object representing the type of bean to retrieve
-     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean of the given type exists
-     * @throws org.springframework.beans.factory.NoUniqueBeanDefinitionException if more than one bean of the given type exists
+     * @param <T> the bean type to be retrieved from the Spring context.
+     * @param requiredType the class object representing the type of bean to retrieve.
+     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean of the given type exists.
+     * @throws org.springframework.beans.factory.NoUniqueBeanDefinitionException if more than one bean of the given type exists.
      *
      * @see ApplicationContext#getBean(Class)
      */
@@ -168,12 +168,12 @@ public final class SpringApplicationContext {
      * DataSource dataSource = springAppContext.getBean("myDataSource", DataSource.class);
      * }</pre>
      *
-     * @param <T> the bean type to be retrieved from the Spring context
-     * @param name the name of the bean to retrieve
-     * @param requiredType the class object representing the required type of the bean
-     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found
-     * @throws org.springframework.beans.factory.BeanNotOfRequiredTypeException if the bean is not of the required type
+     * @param <T> the bean type to be retrieved from the Spring context.
+     * @param name the name of the bean to retrieve.
+     * @param requiredType the class object representing the required type of the bean.
+     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
+     * @throws org.springframework.beans.factory.BeanNotOfRequiredTypeException if the bean is not of the required type.
      *
      * @see ApplicationContext#getBean(String, Class)
      */

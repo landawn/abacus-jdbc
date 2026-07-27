@@ -24,7 +24,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 /**
  * Unchecked-exception insert capability: the {@link InsertOps} operations re-declared to throw
  * {@link com.landawn.abacus.exception.UncheckedSQLException}.
- * 
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
  * @see InsertOps
@@ -54,8 +54,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     void save(final T entity) throws UncheckedSQLException;
 
     /**
-     * Saves the specified entity with only the specified properties.
-     * Properties not included in {@code propNamesToSave} will not be persisted.
+     * Saves (inserts) the specified entity with only the specified properties.
+     * Only the listed properties will be included in the INSERT statement.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -72,8 +72,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     void save(final T entity, final Collection<String> propNamesToSave) throws UncheckedSQLException;
 
     /**
-     * Saves the entity using a named insert SQL statement. The SQL statement should contain
-     * named parameters that will be populated from the entity properties.
+     * Saves (inserts) the entity using a custom named INSERT SQL statement.
+     * The SQL should use named parameters that match the entity properties.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -82,8 +82,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.save(sql, user);
      * }</pre>
      *
-     * @param namedInsertSql the named insert SQL statement
-     * @param entity the entity to save
+     * @param namedInsertSql the named INSERT SQL statement
+     * @param entity the entity providing the parameter values
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -91,8 +91,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     void save(final String namedInsertSql, final T entity) throws UncheckedSQLException;
 
     /**
-     * Batch saves the specified entities to the database using the default batch size.
-     * This method is more efficient than saving entities one by one.
+     * Batch saves (inserts) multiple entities using the default batch size.
+     * More efficient than saving entities one by one.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -103,7 +103,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users);
      * }</pre>
      *
-     * @param entities the collection of entities to save
+     * @param entities the collection of entities to insert
      * @throws UncheckedSQLException if a database access error occurs
      * @see #batchSave(Collection, int)
      */
@@ -113,8 +113,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     }
 
     /**
-     * Batch saves the specified entities to the database using the specified batch size.
-     * The entities will be saved in batches to improve performance.
+     * Batch saves (inserts) multiple entities with a specified batch size.
+     * The entities are inserted in batches of the specified size for optimal performance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -122,8 +122,9 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users, 1000);
      * }</pre>
      *
-     * @param entities the collection of entities to save
-     * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
+     * @param entities the collection of entities to insert
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -131,7 +132,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     void batchSave(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Batch saves the specified entities with only the specified properties using the default batch size.
+     * Batch saves entities with only the specified properties using default batch size.
+     * Only the listed properties will be included in the INSERT statements.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -139,8 +141,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entities the collection of entities to save
-     * @param propNamesToSave the properties to save for each entity (must not be {@code null} or empty)
+     * @param entities the collection of entities to insert
+     * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -150,7 +152,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     }
 
     /**
-     * Batch saves the specified entities with only the specified properties using the specified batch size.
+     * Batch saves entities with only the specified properties and custom batch size.
+     * Combines property selection with batch processing for optimal performance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -158,9 +161,10 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(users, Arrays.asList("firstName", "email"), 500);
      * }</pre>
      *
-     * @param entities the collection of entities to save
-     * @param propNamesToSave the properties to save for each entity (must not be {@code null} or empty)
-     * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
+     * @param entities the collection of entities to insert
+     * @param propNamesToSave the property names to include (must not be {@code null} or empty)
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -168,7 +172,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Batch saves entities using a named insert SQL statement with the default batch size.
+     * Batch saves entities using a custom named INSERT SQL with default batch size.
+     * The SQL should use named parameters matching entity properties.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -177,8 +182,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(sql, users);
      * }</pre>
      *
-     * @param namedInsertSql the named insert SQL statement
-     * @param entities the collection of entities to save
+     * @param namedInsertSql the named INSERT SQL statement
+     * @param entities the entities providing parameter values
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -188,7 +193,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     }
 
     /**
-     * Batch saves entities using a named insert SQL statement with the specified batch size.
+     * Batch saves entities using a custom named INSERT SQL with specified batch size.
+     * Provides maximum control over batch insert operations.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -197,9 +203,10 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * userDao.batchSave(sql, users, 1000);
      * }</pre>
      *
-     * @param namedInsertSql the named insert SQL statement
-     * @param entities the collection of entities to save
-     * @param batchSize the number of entities to process in each batch. The operation will split large collections into chunks of this size.
+     * @param namedInsertSql the named INSERT SQL statement
+     * @param entities the entities providing parameter values
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */

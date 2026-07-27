@@ -24,8 +24,9 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Unchecked-exception update capability of {@link UncheckedCrudDao}.
- * 
+ * Unchecked-exception update capability of {@link UncheckedCrudDao}: the {@link CrudUpdateOps}
+ * operations re-declared to throw {@link UncheckedSQLException}.
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type
@@ -81,7 +82,8 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
     int update(final T entity, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
 
     /**
-     * Updates a single property value for the entity with the specified ID.
+     * Updates a single property of the entity identified by ID.
+     * Convenience method for updating one property without building a map of properties.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -94,7 +96,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
-     * @param id the entity ID
+     * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -120,7 +122,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param updateProps a map of property names to their new values
-     * @param id the entity ID
+     * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -162,7 +164,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities to update
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch
      * @return the total number of rows updated
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
@@ -210,7 +212,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch
      * @return the total number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive

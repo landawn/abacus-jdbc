@@ -46,6 +46,11 @@ import com.landawn.abacus.util.Throwables;
  * It serves as a base interface for creating type-safe, SQL-based data access objects with support for
  * both traditional JDBC operations and modern functional programming patterns.
  *
+ * <p>All database operations declared here are <i>checked</i>: they propagate {@link SQLException}
+ * to the caller. For a variant whose methods instead throw the unchecked
+ * {@link com.landawn.abacus.exception.UncheckedSQLException}, see {@link UncheckedDao}. For variants
+ * that forbid mutating operations, see {@link ReadOnlyDao} and {@link NonUpdateDao}.</p>
+ *
  * <h2>Key Features:</h2>
  * <ul>
  *   <li>Type-safe database operations with compile-time checking</li>
@@ -100,7 +105,7 @@ import com.landawn.abacus.util.Throwables;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <TD> the self-type parameter for fluent API support; must be the concrete sub-DAO interface
+ * @param <TD> the self-type of the DAO for fluent interface support
  *
  * @see JdbcUtil#createDao(Class, DataSource)
  * @see JdbcUtil#createDao(Class, DataSource, JdbcUtil.DaoCreationOptions)
@@ -195,7 +200,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * Combines named parameters with auto-generated key retrieval.
      *
      * @param namedSql the named SQL query string
-     * @param generateKeys {@code true} to return generated keys
+     * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -239,7 +244,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * Creates a NamedQuery from a pre-parsed SQL object with key generation option.
      *
      * @param namedSql the pre-parsed named query
-     * @param generateKeys {@code true} to return generated keys
+     * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -310,7 +315,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
 
     /**
      * Creates a CallableQuery for executing stored procedures or functions.
-     * The query should use the JDBC escape syntax: {@code {call procedure_name(?, ?)}}
+     * The query should use the JDBC escape syntax: {@code {call procedure_name(?, ?)}}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -349,8 +354,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     }
 
     /**
-     * Performs an upsert operation - inserts if not exists, updates if exists.
-     * The existence check is based on the specified unique properties.
+     * Executes an upsert operation: inserts the entity if no record matches the unique properties,
+     * otherwise updates the existing record.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -377,7 +382,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     }
 
     /**
-     * Performs an upsert operation based on a custom condition.
+     * Executes an upsert operation: inserts the entity if no record matches the condition,
+     * otherwise updates the existing record.
      * More flexible than property-based upsert for complex conditions.
      *
      * <p><b>Usage Examples:</b></p>

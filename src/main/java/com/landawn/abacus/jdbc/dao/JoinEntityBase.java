@@ -28,7 +28,7 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
  * operation itself.
  *
  * @param <T> the entity type managed by this DAO
- * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ * @param <TD> the self-referencing DAO type
  *
  * @see JoinEntityReadOps
  * @see JoinEntityDeleteOps

@@ -69,20 +69,21 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * and handling OUT parameters. This class extends {@link AbstractQuery} and provides comprehensive support
  * for calling database stored procedures with both IN and OUT parameters.
  *
- * <p>The backing {@code CallableStatement} is closed by default after materializing execution methods
- * (which will trigger the backing {@code CallableStatement} to be executed, for example,
- * query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/..),
- * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</p>
+ * <p>The backing {@code CallableStatement} is closed by default
+ * after materializing execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
+ * {@code findFirst}, {@code findOnlyOne}, {@code list}, {@code execute}, and similar),
+ * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
  * Lazy streams retain the statement until the stream is closed, and asynchronous operations retain
  * it until the task completes.
  *
- * <p>Generally, don't cache or reuse the instance of this class, unless the {@code closeAfterExecution}
- * flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</p>
+ * <p>In general, do not cache or reuse the instance of this class,
+ * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
  *
- * <p>Result sets consumed by materializing query methods are always closed after extraction,
- * even if the {@code closeAfterExecution} flag is set to {@code false}.</p>
+ * <p>Result sets consumed by materializing query methods are always closed after extraction, even if
+ * the {@code closeAfterExecution} flag is set to {@code false}.
  *
- * <p>Remember: parameter/column index in {@code CallableStatement/ResultSet} starts from 1, not 0.</p>
+ * <p>Remember: when using positional methods inherited from {@link AbstractQuery}, parameter/column
+ * indexes in {@link CallableStatement}/{@link ResultSet} start from 1, not 0.
  *
  * <p><b>Note on named parameters:</b> unlike {@link NamedQuery} (which resolves parameter names against the
  * SQL it parses and reports an unknown name with an {@link IllegalArgumentException}), the name-based
@@ -1695,8 +1696,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *      .execute();
      * }</pre>
      *
-     * <p>If any binding fails, this query is closed because its parameters may have been only partially set.</p>
-     *
      * @param entity the entity object containing the parameter values. Must not be {@code null}.
      * @param parameterNamesToSet a list of parameter names corresponding to properties in the entity.
      *                       Each name should match a property name in the entity class.
@@ -1807,7 +1806,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based)
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterIndex}
      * @see java.sql.CallableStatement#registerOutParameter(int, int)
      * @see java.sql.Types
      */
@@ -1844,7 +1843,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *              Used for DECIMAL and NUMERIC types.
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based)
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterIndex}
      * @see java.sql.CallableStatement#registerOutParameter(int, int, int)
      * @see java.sql.Types#DECIMAL
      * @see java.sql.Types#NUMERIC
@@ -1882,7 +1881,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 this should include the schema name if required.
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based)
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterIndex}
      * @see java.sql.CallableStatement#registerOutParameter(int, int, String)
      * @see java.sql.Types#STRUCT
      */
@@ -1916,7 +1915,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if a database access error occurs or if parameterName is invalid
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterName}
      * @see java.sql.CallableStatement#registerOutParameter(String, int)
      * @see java.sql.Types
      */
@@ -1948,7 +1947,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param scale the number of digits to the right of the decimal point
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if a database access error occurs or if parameterName is invalid
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterName}
      * @see java.sql.CallableStatement#registerOutParameter(String, int, int)
      * @see java.sql.Types#DECIMAL
      * @see java.sql.Types#NUMERIC
@@ -1979,7 +1978,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param typeName the fully-qualified SQL type name
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if a database access error occurs or if parameterName is invalid
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterName}
      * @see java.sql.CallableStatement#registerOutParameter(String, int, String)
      * @see java.sql.Types#STRUCT
      */
@@ -2011,7 +2010,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterIndex}
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType)
      * @see java.sql.JDBCType
      */
@@ -2044,7 +2043,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterIndex}
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
      * @see java.sql.JDBCType#NUMERIC
@@ -2078,7 +2077,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterIndex
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterIndex}
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
      * @see java.sql.JDBCType#ARRAY
@@ -2112,7 +2111,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *        and must return a non-null vendor type number.
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is {@code null} or {@code sqlType.getVendorTypeNumber()} is {@code null}
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterName
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterName}
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType)
      * @see java.sql.JDBCType
      */
@@ -2144,7 +2143,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param scale the number of digits to the right of the decimal point
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is {@code null} or {@code sqlType.getVendorTypeNumber()} is {@code null}
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterName
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterName}
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
      */
@@ -2178,7 +2177,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param typeName the fully-qualified SQL type name
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is {@code null} or {@code sqlType.getVendorTypeNumber()} is {@code null}
-     * @throws SQLException if a database access error occurs or if the driver rejects parameterName
+     * @throws SQLException if a database access error occurs or if the driver rejects {@code parameterName}
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
      */
@@ -2472,6 +2471,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         throw new SQLException(message);
     }
 
+    /**
+     * Returns the vendor type number of the given {@link SQLType}.
+     *
+     * @param sqlType the SQL type; must not be {@code null} and must return a non-null vendor type number
+     * @return the vendor type number of {@code sqlType}
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null} or its vendor type number is {@code null}
+     */
     int getVendorTypeNumber(final SQLType sqlType) {
         checkArgNotNull(sqlType, cs.sqlType);
 

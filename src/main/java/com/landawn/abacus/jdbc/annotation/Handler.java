@@ -93,10 +93,11 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
 public @interface Handler {
 
     /**
-     * Specifies a qualifier used to look up a pre-registered handler instance from
-     * {@code HandlerFactory} (or a DAO-class handler map). When non-empty, the qualifier takes
-     * precedence over {@link #impl()}; the framework resolves the handler by this name instead
-     * of instantiating one from the {@code impl} attribute.
+     * Specifies a qualifier used to look up a pre-registered handler instance: the name of a
+     * {@code static final} {@link Jdbc.Handler} field declared in the DAO interface (or its nested
+     * classes), or the qualifier of a handler registered with {@code Jdbc.HandlerFactory}. When
+     * non-empty, the qualifier takes precedence over {@link #impl()}; the framework resolves the
+     * handler by this name instead of instantiating one from the {@code impl} attribute.
      *
      * <p>This is useful when you want to register a handler instance once (with custom
      * configuration or dependencies) and then reference it from multiple DAO interfaces or

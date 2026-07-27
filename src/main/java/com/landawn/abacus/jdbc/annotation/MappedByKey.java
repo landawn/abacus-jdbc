@@ -87,9 +87,9 @@ public @interface MappedByKey {
      * <p>The value of that property is extracted from each merged result entity and used as the key
      * in the resulting map.</p>
      *
-     * <p>If left empty, the framework falls back to the target entity's single id
-     * property name; a DAO whose entity has no id property then fails initialization with
-     * {@code IllegalArgumentException}.</p>
+     * <p>If left empty, the framework falls back to the target entity's id property name
+     * (the first id property when the entity has a composite id); a DAO whose entity has no
+     * id property then fails initialization with {@code IllegalArgumentException}.</p>
      *
      * <p>Examples:</p>
      * <pre>{@code

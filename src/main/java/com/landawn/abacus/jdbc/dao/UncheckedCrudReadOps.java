@@ -278,6 +278,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the Date value, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForDate()
      */
@@ -299,6 +300,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the Time value, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForTime()
      */
@@ -320,6 +322,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the Timestamp value, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForTimestamp()
      */
@@ -342,6 +345,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the byte array value, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForBytes()
      */
@@ -389,6 +393,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @param targetValueType the class of the target value type
      * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -413,7 +418,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
      * @return an {@code Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
-     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws UncheckedSQLException if a database access error occurs
@@ -467,6 +472,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @param targetValueType the class of the target value type
      * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -493,7 +499,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
      * @return an {@code Optional} containing the unique mapped value if a record matches the {@code id}, otherwise empty
-     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
@@ -722,6 +728,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param id the entity ID to check
      * @return {@code true} if the entity does not exist, {@code false} if it exists
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#notExists()
      */
@@ -733,7 +740,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
 
     /**
      * Counts how many of the specified IDs exist in the database.
-     * This is a beta API that can be used to check how many of the given IDs actually exist.
+     * This is useful for validating bulk operations.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

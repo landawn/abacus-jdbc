@@ -77,7 +77,7 @@ import com.landawn.abacus.util.u.Optional;
  * List<User> users = userDao.batchGet(userIds, Order.class);
  * }</pre>
  *
- * @param <T> the entity type that this helper manages
+ * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
  * @param <TD> the concrete DAO type, bounded by {@link DaoBase}, that owns this helper;
  *             the DAO must also implement {@link CrudReadOps} (read-only CRUD DAOs qualify)
@@ -163,9 +163,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
-     * @param joinEntityClass the class of join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -193,7 +193,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
@@ -222,7 +222,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -251,7 +251,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param joinEntityClass the class of join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @return the entity with specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -316,9 +316,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
-     * @param joinEntityClass the class of join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @return the entity with selected properties and join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -353,7 +353,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
@@ -393,7 +393,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param id the entity ID to retrieve
-     * @param sourceSelectPropNames the properties to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -415,7 +415,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
 
     /**
      * Retrieves multiple entities by their IDs and loads the specified type of join entities.
-     * Uses the default batch size for processing. The loaded related entities are populated in place on
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. The loaded related entities are populated in place on
      * each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
@@ -442,7 +442,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
 
     /**
      * Retrieves multiple entities by their IDs and optionally loads all join entities.
-     * Uses the default batch size for processing. When {@code includeAllJoinEntities} is {@code true}, the
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. When {@code includeAllJoinEntities} is {@code true}, the
      * loaded entities are populated in place on each returned entity; when {@code false}, no join entities
      * are loaded.
      *
@@ -467,7 +467,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
 
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
-     * Uses the default batch size for processing. The loaded related entities are populated in place on
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. The loaded related entities are populated in place on
      * each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
@@ -479,9 +479,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
-     * @param joinEntityClass the class of join entities to load for each entity
+     * @param joinEntityClass the class of the join entities to load for each entity
      * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
@@ -495,7 +495,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
 
     /**
      * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
-     * Uses the default batch size for processing. The loaded related entities are populated in place on each
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. The loaded related entities are populated in place on each
      * returned entity; if {@code joinEntityClasses} is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
@@ -507,7 +507,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClasses the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
@@ -523,7 +523,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
 
     /**
      * Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
-     * Uses the default batch size for processing. When {@code includeAllJoinEntities} is {@code true}, the
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. When {@code includeAllJoinEntities} is {@code true}, the
      * loaded entities are populated in place on each returned entity; when {@code false}, no join entities
      * are loaded.
      *
@@ -536,7 +536,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -565,9 +565,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
-     * @param joinEntityClass the class of join entities to load for each entity
+     * @param joinEntityClass the class of the join entities to load for each entity
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and join entities loaded
@@ -609,7 +609,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClasses the collection of join entity classes to load for each entity
      * @param batchSize the number of entities to process in each batch. The operation will split
@@ -659,7 +659,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param sourceSelectPropNames the properties to select from each entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded

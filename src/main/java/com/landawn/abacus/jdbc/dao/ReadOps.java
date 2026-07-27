@@ -52,7 +52,7 @@ import com.landawn.abacus.util.stream.Stream;
  * DAO accessors ({@code dataSource()}, {@code targetEntityClass()}, etc.) and the SELECT-form
  * {@code prepareQuery}/{@code prepareNamedQuery} builders are inherited from {@link DaoBase}.
  *
- * <p>Contains no data-modifying operation, so it is the root mixed into read-only DAOs
+ * <p>Contains no data-modifying operations, so it is the root capability mixed into read-only DAOs
  * ({@link ReadOnlyDao}).</p>
  *
  * <p><b>&#9888; Warning:</b> The caller owns streams returned by this API and must close them. Fetch
@@ -183,7 +183,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
     /**
-     * Finds the first record with only specified properties matching the condition.
+     * Finds the first record matching the condition, selecting only the specified properties.
      * Useful for retrieving partial entities with only needed fields.
      *
      * <p><b>Usage Examples:</b></p>
@@ -203,7 +203,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
-     * Finds the first record with specified properties and maps the result.
+     * Finds the first record with the specified properties and maps the result.
      * Combines property selection with custom result mapping.
      *
      * @param <R> the result type after applying the mapping function
@@ -220,7 +220,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws SQLException, IllegalArgumentException;
 
     /**
-     * Finds the first record with specified properties using a bi-function mapper.
+     * Finds the first record with the specified properties using a bi-function mapper.
      * Provides maximum flexibility for property selection and result mapping.
      *
      * @param <R> the result type after applying the mapping function
@@ -237,7 +237,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws SQLException, IllegalArgumentException;
 
     /**
-     * Finds exactly one record matching the condition, throwing exception if multiple found.
+     * Finds exactly one record matching the condition, throwing an exception if multiple are found.
      * Use this when you expect exactly zero or one result.
      *
      * <p><b>Usage Examples:</b></p>
@@ -255,7 +255,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, SQLException;
 
     /**
-     * Finds exactly one record and maps it, throwing exception if multiple found.
+     * Finds exactly one record and maps it, throwing an exception if multiple are found.
      * Ensures uniqueness while allowing custom result transformation.
      *
      * @param <R> the result type after applying the mapping function
@@ -272,7 +272,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
-     * Finds exactly one record using a bi-function mapper, throwing if multiple found.
+     * Finds exactly one record using a bi-function mapper, throwing an exception if multiple are found.
      * The mapper receives both the ResultSet and column labels.
      *
      * @param <R> the result type after applying the mapping function
@@ -289,7 +289,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
-     * Finds exactly one record with specified properties, throwing if multiple found.
+     * Finds exactly one record with the specified properties, throwing an exception if multiple are found.
      * Combines property selection with uniqueness constraint.
      *
      * @param selectPropNames the properties to select, {@code null} for all
@@ -302,7 +302,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, SQLException;
 
     /**
-     * Finds exactly one record with specified properties and maps it.
+     * Finds exactly one record with the specified properties and maps it.
      * Ensures both property selection and uniqueness with custom mapping.
      *
      * @param <R> the result type after applying the mapping function
@@ -320,7 +320,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
-     * Finds exactly one record with specified properties using a bi-function mapper.
+     * Finds exactly one record with the specified properties using a bi-function mapper.
      * Maximum flexibility with property selection, uniqueness, and custom mapping.
      *
      * @param <R> the result type after applying the mapping function
@@ -793,7 +793,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
 
     /**
      * Executes a query and returns the results as a Dataset.
-     * Dataset provides a flexible, column-oriented view of the results.
+     * A Dataset provides a flexible, column-oriented view of the results.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1135,7 +1135,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
 
     /**
      * Returns a lazy Stream of entities matching the condition.
-     * The stream uses lazy evaluation - no database connection or query execution occurs until a terminal operation is called.
+     * The stream uses lazy evaluation — no database connection or query execution occurs until a terminal operation is called.
      * Any {@link SQLException} raised during stream consumption is wrapped as an
      * {@link com.landawn.abacus.exception.UncheckedSQLException}. The stream must be closed
      * (e.g. via try-with-resources) to release the underlying JDBC resources.
@@ -1580,8 +1580,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws SQLException;
 
     /**
-     * Iterates over filtered results with maximum flexibility.
-     * All parameters support bi-function interfaces.
+     * Iterates over filtered results of selected properties with a bi-function filter and consumer.
+     * Both the filter and the consumer receive the ResultSet and column labels.
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition

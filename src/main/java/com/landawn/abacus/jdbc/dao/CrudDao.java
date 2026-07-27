@@ -75,7 +75,7 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
- * @param <TD> the self-type of the DAO for fluent interface support
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  *
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)

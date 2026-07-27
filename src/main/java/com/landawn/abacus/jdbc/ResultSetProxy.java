@@ -53,8 +53,8 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p>The proxy uses two caching mechanisms:</p>
  * <ul>
- *   <li>Index-based caching: {@code columnGetters} array for column index access</li>
- *   <li>Label-based caching: {@code columnGettersByLabel} map for column label access</li>
+ *   <li>Index-based caching of getter strategies for column index access</li>
+ *   <li>Label-based caching of getter strategies for column label access</li>
  * </ul>
  *
  * <p>Key features:</p>
@@ -696,7 +696,7 @@ final class ResultSetProxy implements ResultSet {
      * is returned. In both cases no getter strategy is cached.</p>
      *
      * @param columnIndex the first column is 1, the second is 2, ...
-     * @return the column value; if the value is SQL NULL, the value returned is null
+     * @return the column value; if the value is SQL NULL, the value returned is {@code null}
      * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
      */
     @Override
@@ -800,7 +800,7 @@ final class ResultSetProxy implements ResultSet {
      * read for that label.</p>
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
-     * @return the column value; if the value is SQL NULL, the value returned is null
+     * @return the column value; if the value is SQL NULL, the value returned is {@code null}
      * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
      */
     @Override
@@ -1483,9 +1483,7 @@ final class ResultSetProxy implements ResultSet {
     /**
      * Updates the designated column with an {@code Object} value using the given target SQL type.
      * The database is not changed until {@link #updateRow} or {@link #insertRow} is called.
-     * Delegates to the underlying {@link ResultSet} (without this override, the JDBC 4.2 interface
-     * default would throw {@code SQLFeatureNotSupportedException} even when the wrapped driver
-     * supports it).
+     * Delegates to the underlying {@link ResultSet}.
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value

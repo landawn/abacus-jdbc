@@ -25,6 +25,6 @@ public enum CacheSerialization {
     /** Uses Kryo to deep-copy mutable cached values. */
     KRYO,
 
-    /** Uses JSON serialization to deep-copy mutable cached values. */
+    /** Uses JSON to deep-copy mutable cached values. */
     JSON
 }

@@ -258,6 +258,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
+    /**
+     * Returns whether the underlying statement is closed automatically after each execution.
+     *
+     * @return {@code true} if the statement is closed after execution (the default), {@code false} otherwise
+     * @see #closeAfterExecution(boolean)
+     */
     boolean isCloseAfterExecution() {
         return isCloseAfterExecution;
     }
@@ -2227,7 +2233,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterIndex the 1-based index of the parameter to set
      * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
-     * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
+     * @param scaleOrLength for numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is not a standard {@code java.sql.Types} constant
      * @throws SQLException if a database access error occurs
@@ -2284,7 +2290,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterIndex the 1-based index of the parameter to set
      * @param value the object to set, or {@code null} to set a typed SQL {@code NULL}
      * @param sqlType the SQL type to use
-     * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
+     * @param scaleOrLength for numeric types, the number of decimal places; for strings, the length
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
      * @throws SQLException if a database access error occurs
@@ -4147,6 +4153,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
+    /**
+     * Replaces the action performed by {@link #addBatch()} on this query.
+     *
+     * <p>The action is reset to the default ({@link PreparedStatement#addBatch()}) when this query is closed.</p>
+     *
+     * @param addBatchAction the custom add-batch action; must not be {@code null}
+     * @return this AbstractQuery instance for method chaining
+     */
     This configAddBatchAction(final Throwables.BiConsumer<? super This, ? super Stmt, SQLException> addBatchAction) {
         this.addBatchAction = addBatchAction;
 
@@ -4422,10 +4436,25 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
+    /**
+     * Returns the current fetch size of the underlying statement.
+     *
+     * @return the fetch size currently set on the underlying statement
+     * @throws SQLException if a database access error occurs
+     * @see #setFetchSize(int)
+     */
     int getFetchSize() throws SQLException {
         return stmt.getFetchSize();
     }
 
+    /**
+     * Returns the current fetch direction of the underlying statement.
+     *
+     * @return the fetch direction currently set on the underlying statement (one of the
+     *         {@code ResultSet.FETCH_*} constants)
+     * @throws SQLException if a database access error occurs
+     * @see #setFetchDirection(FetchDirection)
+     */
     int getFetchDirection() throws SQLException {
         return stmt.getFetchDirection();
     }

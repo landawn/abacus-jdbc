@@ -101,6 +101,7 @@ import com.landawn.abacus.util.RegExUtil;
  * @see BindList
  * @see SqlFragment
  * @see SqlFragmentList
+ * @see SqlScript
  * @see SqlSource
  * @see Handler
  * @see QueryOperation
@@ -188,8 +189,10 @@ public @interface Query {
     String[] value() default {};
 
     /**
-     * Specifies SQL statement identifier lines defined in an external SQL mapper.
-     * This allows SQL to be defined separately from Java code, enabling better organization and reusability.
+     * Specifies SQL statement identifier lines referencing SQL defined in an external SQL mapper
+     * (see {@link SqlSource}) or in a {@link SqlScript} field on the DAO.
+     * Referencing SQL by id keeps complex or reused statements out of the annotated method,
+     * enabling better organization and reusability.
      * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
      *
      * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
@@ -242,7 +245,8 @@ public @interface Query {
      * a {@code default} method whose last parameter is a {@code String[]} (see above), which collects every
      * entry from both {@link #value()} and {@code id} at runtime.</p>
      *
-     * @return SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
+     * @return SQL statement id lines resolved through the SQL mapper or a {@link SqlScript} field;
+     *         empty by default when using {@link #value()}
      * @see RegExUtil#JAVA_IDENTIFIER_MATCHER
      */
     String[] id() default {};
@@ -537,8 +541,8 @@ public @interface Query {
     boolean collectionAsSingleParameter() default false;
 
     /**
-     * Indicates whether the SQL statement contains template variables defined by the {@link SqlFragment} or {@link SqlFragmentList} annotations
-     * that will be replaced with query fragments containing named parameters.
+     * Indicates whether the query fragments substituted for {@link SqlFragment}/{@link SqlFragmentList}
+     * template variables themselves contain named parameters that must also be parsed and bound.
      *
      * <p>By default ({@code false}) the substituted fragment is treated as plain text and is not
      * re-scanned for named parameters, so any {@code :param} placeholders introduced by the fragment

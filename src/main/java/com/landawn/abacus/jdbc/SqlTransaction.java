@@ -176,7 +176,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * given {@code isolationLevel} is not {@link IsolationLevel#DEFAULT}, the connection's
      * transaction isolation is updated accordingly.</p>
      *
-     * @param ds the data source the connection came from; used to release the connection on completion when {@code closeConnection} is {@code true}. May be {@code null} if {@code closeConnection} is {@code false}
+     * @param ds the data source the connection came from; used to release the connection on completion when {@code closeConnection} is {@code true}. May be {@code null} if {@code closeConnection} is {@code false}.
      * @param conn the JDBC connection that backs this transaction, must not be {@code null}
      * @param isolationLevel the isolation level for this transaction, must not be {@code null}
      * @param creator the originator type (see {@link CreatedBy}) used to identify the registry slot and diagnostic ID; must not be {@code null}
@@ -421,7 +421,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * Commits the current transaction and executes the specified action after the commit.
      * This is an internal method used for executing post-commit callbacks with nested transaction support.
      *
-     * <p>When called on a nested transaction (reference count greater than 0), this method simply decrements
+     * <p>When called on a nested transaction (reference count still greater than 0 after decrementing), this method simply decrements
      * the reference count without actually committing. The actual commit only occurs when the
      * outermost transaction's commit is called (reference count reaches 0).</p>
      *
@@ -997,8 +997,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     /**
      * Checks if this transaction is marked for update operations only.
-     * This is an internal method used for transaction management to optimize read-only versus
-     * read-write transaction handling.
+     * A for-update-only transaction is not enlisted for read-only ({@code SELECT}) operations;
+     * such queries execute outside the transaction.
      *
      * @return {@code true} if the transaction is for update only, {@code false} otherwise
      */
@@ -1012,7 +1012,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * creator's ordinal value. It is intended for readable diagnostics; the active-transaction registry
      * uses a collision-safe key containing the actual object references.
      *
-     * @param ds the data source; may be {@code null} (as permitted by the constructor when {@code closeConnection} is {@code false}), in which case the identity hash code is {@code 0}
+     * @param ds the data source; may be {@code null} (as permitted by the constructor when {@code closeConnection} is {@code false}), in which case the identity hash code is {@code 0}.
      * @param creator the transaction creator type, must not be {@code null}
      * @return the diagnostic transaction identifier string, never {@code null}
      * @throws IllegalArgumentException if {@code creator} is {@code null}

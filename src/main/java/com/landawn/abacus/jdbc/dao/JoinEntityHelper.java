@@ -24,8 +24,8 @@ package com.landawn.abacus.jdbc.dao;
  * See those interfaces for the individual operations; read-only DAOs mix in only
  * {@link JoinEntityReadOps} (via {@link ReadOnlyJoinEntityHelper}).</p>
  *
- * @param <T> the entity type managed by this DAO
- * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ * @param <T> the entity type that this helper manages
+ * @param <TD> the companion {@link Dao} type that owns this helper
  *
  * @see JoinEntityReadOps
  * @see JoinEntityDeleteOps

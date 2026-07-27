@@ -24,8 +24,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 
 /**
- * Unchecked-exception insert capability of {@link UncheckedCrudDao}.
- * 
+ * Unchecked-exception insert capability of {@link UncheckedCrudDao}: the {@link CrudInsertOps}
+ * operations re-declared to throw {@link UncheckedSQLException}.
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type
@@ -37,7 +38,10 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudInsertOps<T, ID, TD>, UncheckedInsertOps<T, TD>
         permits UncheckedCrudDao, UncheckedNonUpdateCrudDao {
     /**
-     * Generates a new ID for entity insertion using an unchecked database-access contract.
+     * Generates a new ID for entity insertion.
+     *
+     * <p>Override this method for client-side strategies such as UUIDs or sequences. The default
+     * implementation throws because ID generation is normally handled by the database.</p>
      *
      * @return the generated ID
      * @throws UncheckedSQLException if a database access error occurs
@@ -121,7 +125,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
     ID insert(final String namedInsertSql, final T entity) throws UncheckedSQLException;
 
     /**
-     * Performs batch insert of multiple entities using the default batch size.
+     * Performs batch insert of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * This method is more efficient than inserting entities one by one.
      *
      * <p><b>Usage Examples:</b></p>
@@ -165,8 +170,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Performs batch insert with only specified properties for all entities.
-     * Uses the default batch size.
+     * Performs batch insert with only the specified properties for all entities.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -202,7 +207,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Performs batch insert using a custom named SQL statement with default batch size.
+     * Performs batch insert using a custom named SQL statement with the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * This is useful for complex insert scenarios that require custom SQL.
      *
      * <p><b>Usage Examples:</b></p>

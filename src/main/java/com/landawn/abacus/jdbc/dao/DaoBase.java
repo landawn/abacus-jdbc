@@ -180,7 +180,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
-     * @return a PreparedQuery instance
+     * @return a PreparedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
@@ -287,7 +287,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
-     * @return a NamedQuery instance
+     * @return a NamedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
@@ -304,7 +304,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
-     * @return a NamedQuery instance
+     * @return a NamedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */

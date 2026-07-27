@@ -405,7 +405,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalBoolean} describing the value of a single boolean column for the first
+     * Returns an {@code OptionalBoolean} holding the value of a single boolean column for the first
      * record matching the condition. Only the first matching record is read; any remaining matching
      * records are ignored.
      *
@@ -431,7 +431,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalChar} describing the value of a single char column for the first record
+     * Returns an {@code OptionalChar} holding the value of a single char column for the first record
      * matching the condition. Only the first matching record is read; any remaining matching records
      * are ignored.
      *
@@ -454,7 +454,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalByte} describing the value of a single byte column for the first record
+     * Returns an {@code OptionalByte} holding the value of a single byte column for the first record
      * matching the condition. Only the first matching record is read; any remaining matching records
      * are ignored.
      *
@@ -477,7 +477,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalShort} describing the value of a single short column for the first record
+     * Returns an {@code OptionalShort} holding the value of a single short column for the first record
      * matching the condition. Only the first matching record is read; any remaining matching records
      * are ignored.
      *
@@ -500,7 +500,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalInt} describing the value of a single int column for the first record
+     * Returns an {@code OptionalInt} holding the value of a single int column for the first record
      * matching the condition. Only the first matching record is read; any remaining matching records
      * are ignored.
      *
@@ -523,7 +523,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalLong} describing the value of a single long column for the first record
+     * Returns an {@code OptionalLong} holding the value of a single long column for the first record
      * matching the condition. Only the first matching record is read; any remaining matching records
      * are ignored.
      *
@@ -546,7 +546,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalFloat} describing the value of a single float column for the first record
+     * Returns an {@code OptionalFloat} holding the value of a single float column for the first record
      * matching the condition. Only the first matching record is read; any remaining matching records
      * are ignored.
      *
@@ -569,7 +569,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns an {@code OptionalDouble} describing the value of a single double column for the first record
+     * Returns an {@code OptionalDouble} holding the value of a single double column for the first record
      * matching the condition. Only the first matching record is read; any remaining matching records
      * are ignored.
      *
@@ -592,7 +592,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<String>} describing the value of a single String column for the first
+     * Returns a {@code Nullable<String>} holding the value of a single String column for the first
      * record matching the condition. Only the first matching record is read; any remaining matching
      * records are ignored.
      *
@@ -617,7 +617,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Date>} describing the value of a single date column for the first
+     * Returns a {@code Nullable<java.sql.Date>} holding the value of a single date column for the first
      * record matching the condition. Only the first matching record is read; any remaining matching
      * records are ignored.
      *
@@ -639,7 +639,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Time>} describing the value of a single time column for the first
+     * Returns a {@code Nullable<java.sql.Time>} holding the value of a single time column for the first
      * record matching the condition. Only the first matching record is read; any remaining matching
      * records are ignored.
      *
@@ -661,7 +661,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Timestamp>} describing the value of a single timestamp column for
+     * Returns a {@code Nullable<java.sql.Timestamp>} holding the value of a single timestamp column for
      * the first record matching the condition. Only the first matching record is read; any remaining
      * matching records are ignored.
      *
@@ -683,7 +683,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<byte[]>} describing the value of a single binary column for the first
+     * Returns a {@code Nullable<byte[]>} holding the value of a single binary column for the first
      * record matching the condition. Only the first matching record is read; any remaining matching
      * records are ignored.
      *
@@ -705,7 +705,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<V>} describing the value of a single column for the first record matching
+     * Returns a {@code Nullable<V>} holding the value of a single column for the first record matching
      * the condition, converted to the specified target type. Only the first matching record is read; any
      * remaining matching records are ignored. The returned {@code Nullable} preserves the distinction
      * between "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null).
@@ -731,7 +731,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
             throws UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the non-null value of a single column for the first record
+     * Returns an {@code Optional} holding the non-null value of a single column for the first record
      * matching the condition, converted to the specified target type. Only the first matching record is
      * read; any remaining matching records are ignored. Unlike {@link #queryForSingleValue(String, Condition, Class)},
      * this method collapses both "no record matched" and "the matched value is SQL {@code NULL}" into an
@@ -757,7 +757,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
             throws UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the non-null value of a single column for the first record
+     * Returns an {@code Optional} holding the non-null value of a single column for the first record
      * matching the condition, mapped by the provided row mapper. Only the first matching record is read;
      * any remaining matching records are ignored.
      *
@@ -788,7 +788,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
             throws UncheckedSQLException;
 
     /**
-     * Returns a {@code Nullable<V>} describing the value of a single column for the unique record matching
+     * Returns a {@code Nullable<V>} holding the value of a single column for the unique record matching
      * the condition, converted to the specified target type. Throws {@code DuplicateResultException} if
      * more than one record matches. The returned {@code Nullable} preserves the distinction between
      * "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null).
@@ -815,7 +815,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the unique non-null value of a single column for the record
+     * Returns an {@code Optional} holding the unique non-null value of a single column for the record
      * matching the condition, converted to the specified target type. Throws {@code DuplicateResultException}
      * if more than one record matches. Both "no record matched" and "the matched value is SQL {@code NULL}"
      * collapse into an empty {@code Optional}.
@@ -845,7 +845,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
             throws DuplicateResultException, UncheckedSQLException;
 
     /**
-     * Returns an {@code Optional} describing the unique non-null value of a single column for the record
+     * Returns an {@code Optional} holding the unique non-null value of a single column for the record
      * matching the condition, mapped by the provided row mapper. Throws {@code DuplicateResultException}
      * if more than one record matches.
      *
@@ -976,7 +976,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
             throws UncheckedSQLException;
 
     /**
-     * Executes a query and processes the result set using the bi-result extractor which receives column labels.
+     * Executes a query and processes the result set using the bi-result extractor that receives column labels.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -247,13 +247,13 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * System.out.println("Deleted " + deletedCount + " reviews for " + users.size() + " users");
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete join entities. Can be empty
-     *                 but not {@code null}. If empty, this method returns 0 immediately
+     * @param entities the collection of entities for which to delete join entities.
+     *                 If {@code null} or empty, this method returns 0 immediately
      * @param joinEntityPropName the property name of the join entities to delete. Must be a valid
      *                           property name that exists in the entity class and is annotated
      *                           with {@code @JoinedBy}
      * @return the total number of deleted records across all parent entities. Returns 0 if no
-     *         matching records were found or if {@code entities} is empty
+     *         matching records were found or if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy}

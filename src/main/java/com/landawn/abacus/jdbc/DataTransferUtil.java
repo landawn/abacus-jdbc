@@ -1086,7 +1086,7 @@ public final class DataTransferUtil {
      * System.out.println("Imported " + rowsImported + " users");
      * }</pre>
      *
-     * @param <T> iterator element type
+     * @param <T> the iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
@@ -1139,7 +1139,7 @@ public final class DataTransferUtil {
      * }
      * }</pre>
      *
-     * @param <T> iterator element type
+     * @param <T> the iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param conn the Connection to the database (will not be closed by this method)
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
@@ -1217,7 +1217,7 @@ public final class DataTransferUtil {
      * }
      * }</pre>
      *
-     * @param <T> iterator element type
+     * @param <T> the iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
@@ -1326,7 +1326,7 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values; must not be {@code null}
      * @return the total number of rows successfully imported
-     * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}
+     * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
@@ -1381,7 +1381,7 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values; must not be {@code null}
      * @return the total number of rows successfully imported
-     * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
@@ -1428,7 +1428,7 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}
      * @return the total number of rows successfully imported
-     * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}
+     * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      */
@@ -1474,7 +1474,7 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}
      * @return the total number of rows successfully imported
-     * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
@@ -1519,7 +1519,7 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}
      * @return the total number of rows successfully imported (after filtering)
-     * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
      * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
@@ -1591,8 +1591,7 @@ public final class DataTransferUtil {
      * This method provides direct control over the PreparedStatement used for import.
      *
      * <p>The first line read from the Reader is treated as a header row and will be skipped during import.
-     * The PreparedStatement will not be closed by this method, allowing for reuse.
-     * The Reader will be wrapped in a BufferedReader for optimal performance if not already buffered.</p>
+     * The PreparedStatement will not be closed by this method, allowing for reuse.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1830,7 +1829,7 @@ public final class DataTransferUtil {
      *
      * @param sourceDataSource the DataSource to obtain database connections from
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
-     * @param output the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
@@ -1871,7 +1870,7 @@ public final class DataTransferUtil {
      *
      * @param conn the Connection to the database (will not be closed by this method)
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
-     * @param output the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
@@ -1908,7 +1907,7 @@ public final class DataTransferUtil {
      * @param conn the Connection to the database (will not be closed by this method)
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
-     * @param output the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code output} is {@code null}, or if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
@@ -1954,7 +1953,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
-     * @param output the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
@@ -1989,7 +1988,7 @@ public final class DataTransferUtil {
      *
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
-     * @param output the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code output} is {@code null}, or if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
@@ -2037,7 +2036,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
-     * @param output the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
@@ -2074,7 +2073,7 @@ public final class DataTransferUtil {
      *
      * @param rs the ResultSet containing the data to export (will not be closed by this method)
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
-     * @param output the File to write the CSV data to (will be created if doesn't exist; its parent directory must already exist)
+     * @param output the File to write the CSV data to (will be created if it doesn't exist; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
@@ -3429,6 +3428,11 @@ public final class DataTransferUtil {
         private Map<String, ? extends Type> columnTypeMap;
         private Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter;
 
+        /**
+         * Creates a builder for importing the given Dataset.
+         *
+         * @param dataset the Dataset whose data will be imported
+         */
         DatasetImportBuilder(final Dataset dataset) {
             this.dataset = dataset;
         }
@@ -3692,6 +3696,13 @@ public final class DataTransferUtil {
         private long batchIntervalInMillis = 0;
         private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter;
 
+        /**
+         * Creates a builder over exactly one row source: an iterator, a CSV reader, or a CSV file.
+         *
+         * @param iter the iterator whose elements will be imported, or {@code null}
+         * @param reader the reader supplying CSV data, or {@code null}
+         * @param file the CSV file to import, or {@code null}
+         */
         RowImportBuilder(final Iterator<? extends T> iter, final Reader reader, final File file) {
             this.iter = iter;
             this.reader = reader;
@@ -3953,6 +3964,16 @@ public final class DataTransferUtil {
         private final String selectSql;
         private Collection<String> columnNames;
 
+        /**
+         * Creates a builder over exactly one query source: a DataSource, a Connection, a PreparedStatement,
+         * or a ResultSet.
+         *
+         * @param dataSource the DataSource to obtain a connection from, or {@code null}
+         * @param conn the Connection to run the query against, or {@code null}
+         * @param stmt the PreparedStatement to execute, or {@code null}
+         * @param rs the ResultSet to export, or {@code null}
+         * @param selectSql the SQL query to execute, or {@code null} when a statement/result set is supplied
+         */
         CsvExportBuilder(final javax.sql.DataSource dataSource, final Connection conn, final PreparedStatement stmt, final ResultSet rs,
                 final String selectSql) {
             this.dataSource = dataSource;
@@ -4245,6 +4266,12 @@ public final class DataTransferUtil {
         private long batchIntervalInMillis = 0;
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
+        /**
+         * Creates a builder for copying the rows of the given SELECT query from the given DataSource.
+         *
+         * @param sourceDataSource the data source to read from
+         * @param selectSql the SQL query selecting the rows to copy
+         */
         CopyFromDataSource(final javax.sql.DataSource sourceDataSource, final String selectSql) {
             this.sourceDataSource = sourceDataSource;
             this.selectSql = selectSql;
@@ -4333,6 +4360,12 @@ public final class DataTransferUtil {
         private long batchIntervalInMillis = 0;
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
+        /**
+         * Creates a builder for copying the rows of the given SELECT query from the given Connection.
+         *
+         * @param sourceConn the connection to read from
+         * @param selectSql the SQL query selecting the rows to copy
+         */
         CopyFromConnection(final Connection sourceConn, final String selectSql) {
             this.sourceConn = sourceConn;
             this.selectSql = selectSql;
@@ -4420,6 +4453,11 @@ public final class DataTransferUtil {
         private long batchIntervalInMillis = 0;
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
+        /**
+         * Creates a builder for copying the rows produced by the given source PreparedStatement.
+         *
+         * @param selectStmt the statement that produces the rows to copy
+         */
         CopyFromStatement(final PreparedStatement selectStmt) {
             this.selectStmt = selectStmt;
         }
@@ -4493,6 +4531,12 @@ public final class DataTransferUtil {
         private Collection<String> columnNames;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
 
+        /**
+         * Creates a builder for copying the given source table from the given DataSource.
+         *
+         * @param sourceDataSource the data source to read from
+         * @param sourceTableName the name of the source table
+         */
         CopyTableFromDataSource(final javax.sql.DataSource sourceDataSource, final String sourceTableName) {
             this.sourceDataSource = sourceDataSource;
             this.sourceTableName = sourceTableName;
@@ -4554,6 +4598,12 @@ public final class DataTransferUtil {
         private Collection<String> columnNames;
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
 
+        /**
+         * Creates a builder for copying the given source table from the given Connection.
+         *
+         * @param sourceConn the connection to read from
+         * @param sourceTableName the name of the source table
+         */
         CopyTableFromConnection(final Connection sourceConn, final String sourceTableName) {
             this.sourceConn = sourceConn;
             this.sourceTableName = sourceTableName;

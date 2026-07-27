@@ -24,9 +24,10 @@ import com.landawn.abacus.annotation.Beta;
  * <p>It is a pure capability composite of {@link ReadOps} and {@link InsertOps}
  * (reads + inserts). It does <b>not</b> mix in
  * {@code UpdateOps}/{@code DeleteOps}, so {@code update}/{@code upsert}/{@code delete}/
- * {@code batchUpdate}/{@code batchUpsert} (along with {@code prepareCallableQuery} and the generated-keys
+ * {@code batchUpdate}/{@code batchUpsert} (along with {@code prepareCallableQuery} and the
  * {@code prepareQuery}/{@code prepareNamedQuery} overloads that take a {@code boolean}/{@code int[]}/
- * {@code String[]}, which are full-{@link Dao}-only) are <b>absent from the type</b> — calling them is a
+ * {@code String[]} generated-keys argument or a custom {@code stmtCreator}, which are full-{@link Dao}-only)
+ * are <b>absent from the type</b> — calling them is a
  * compile error rather than a runtime {@link UnsupportedOperationException}.</p>
  *
  * <p>The inherited {@code prepareQuery}/{@code prepareNamedQuery} (and {@code *ForLargeResult})

@@ -23,8 +23,7 @@ import com.landawn.abacus.util.Strings;
  * Shared rendering rules for SQL table/column identifiers used by the SQL-generating utilities in
  * this package ({@link DataTransferUtil} and {@link JdbcCodeGenerationUtil}).
  *
- * <p>These utilities previously carried private, independently maintained copies of the same logic,
- * which drifted apart. Keeping a single implementation here guarantees that a table or column name
+ * <p>Centralizing the rules in a single implementation guarantees that a table or column name
  * is rendered identically no matter which utility generates the statement.</p>
  *
  * <p>The rules are:</p>

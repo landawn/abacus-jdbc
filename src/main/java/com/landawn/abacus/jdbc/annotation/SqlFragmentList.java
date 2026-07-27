@@ -86,7 +86,7 @@ public @interface SqlFragmentList {
      * with the {@code -parameters} javac flag, otherwise initialization fails with
      * {@code UnsupportedOperationException}.
      *
-     * <p>The variable is referenced in the query template using curly braces: {@code {variableName}}</p>
+     * <p>Template variables are referenced in the SQL using curly braces: {@code {variableName}}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

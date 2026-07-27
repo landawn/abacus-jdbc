@@ -117,6 +117,10 @@ public @interface MergedById {
      * with {@link MappedByKey}, to that annotation's key). Specify it explicitly to merge by
      * properties that are not the entity's id — e.g. {@code @MergedById("ID, firstName")}.</p>
      *
+     * <p>When {@code @MergedById} and {@link MappedByKey} are combined and both name a key
+     * explicitly, the two must be the same single property; otherwise DAO initialization fails
+     * with {@code IllegalArgumentException}.</p>
+     *
      * <p>Examples:</p>
      * <pre>{@code
      * // Merge by the entity's @Id property(ies) - no value needed

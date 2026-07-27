@@ -33,8 +33,8 @@ import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.N;
 
 /**
- * The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations
- * with unchecked exceptions. It is the unchecked counterpart of {@link CrudDao}: it extends
+ * Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unchecked exception
+ * handling. It is the unchecked counterpart of {@link CrudDao}: it extends
  * {@link UncheckedDao} (the unchecked base DAO) and {@link CrudDao}, and re-declares the id-based
  * operations so that they throw the unchecked {@link UncheckedSQLException} instead of the checked
  * {@link java.sql.SQLException}.
@@ -66,7 +66,7 @@ import com.landawn.abacus.util.N;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
- * @param <TD> the self-type of the DAO for method chaining
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
@@ -79,8 +79,9 @@ import com.landawn.abacus.util.N;
 public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<T, ID, TD>> extends UncheckedCrudReadOps<T, ID, TD>,
         UncheckedCrudInsertOps<T, ID, TD>, UncheckedCrudUpdateOps<T, ID, TD>, UncheckedCrudDeleteOps<T, ID, TD>, UncheckedDao<T, TD>, CrudDao<T, ID, TD> {
     /**
-     * Performs an upsert operation: inserts the entity if it doesn't exist based on ID fields, otherwise updates the existing entity.
-     * The entity must have ID field(s) defined.
+     * Performs an upsert operation, matching existing records by the entity's ID property(ies):
+     * inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record
+     * with the values from {@code entity}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -93,7 +94,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * // Result will be either the newly inserted or updated user
      * }</pre>
      *
-     * @param entity the entity to insert or update
+     * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (either newly inserted or updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
@@ -110,7 +111,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
     }
 
     /**
-     * Performs an upsert operation: inserts the entity if it doesn't exist based on the specified unique properties, otherwise updates the existing entity.
+     * Performs an upsert operation, matching existing records by the specified unique properties:
+     * inserts {@code entity} if no record with the same values exists; otherwise updates the existing
+     * record with the values from {@code entity}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -124,8 +127,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * User result = userDao.upsert(user, Arrays.asList("email"));
      * }</pre>
      *
-     * @param entity the entity to insert or update
-     * @param matchPropNames the property names that uniquely identify the record
+     * @param entity the entity to insert or update (must not be {@code null})
+     * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
@@ -142,9 +145,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
     }
 
     /**
-     * Executes an upsert operation based on the specified condition.
-     * If no record matches the condition, inserts the entity.
-     * Otherwise, copies the non-id properties from the entity into the existing record and updates it.
+     * Performs an upsert operation: inserts {@code entity} if no record matches the specified
+     * condition; otherwise copies non-id properties from {@code entity} into the existing record
+     * (loaded via {@link #findOnlyOne(Condition)}) and updates it.
+     * This allows for upsert logic based on any criteria, not just ID fields.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -162,13 +166,14 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * User result = userDao.upsert(user, cond);
      * }</pre>
      *
-     * @param entity the entity to insert or update
-     * @param cond the condition to check for existing record
+     * @param entity the entity to insert or update (must not be {@code null})
+     * @param cond the condition used to look up an existing record (must not be {@code null})
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
      *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the specified condition
+     * @see Filters
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
@@ -180,8 +185,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
     }
 
     /**
-     * Batch upserts multiple entities using the default batch size.
-     * Entities are inserted if they don't exist (based on ID), otherwise updated.
+     * Performs batch upsert of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     * Each entity will be inserted if new or updated if it already exists, matching by ID fields.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -205,8 +211,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
     }
 
     /**
-     * Batch upserts multiple entities using the specified batch size.
-     * Entities are inserted if they don't exist (based on ID), otherwise updated.
+     * Performs batch upsert of multiple entities with a specified batch size,
+     * matching existing records by ID fields.
+     * Large collections will be processed in batches of the specified size.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -216,7 +223,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive
@@ -238,8 +246,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
     }
 
     /**
-     * Batch upserts multiple entities based on the specified unique properties.
-     * Uses the default batch size.
+     * Performs batch upsert based on the specified unique properties for matching.
+     * This allows upsert logic based on properties other than the ID fields.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -249,7 +258,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param matchPropNames the property names that uniquely identify each record
+     * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty
@@ -261,16 +270,15 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
     }
 
     /**
-     * Batch upserts multiple entities based on the specified unique properties using the specified batch size.
-     * This method efficiently handles large collections by:
-     * <ol>
-     *   <li>Querying existing records in batches</li>
-     *   <li>Separating entities into insert and update groups</li>
-     *   <li>Performing batch insert and batch update operations</li>
-     * </ol>
+     * Performs batch upsert based on the specified unique properties with a custom batch size.
+     * This provides the most flexibility for batch upsert operations.
      *
-     * <p>When both inserts and updates are needed (or either set is larger than {@code batchSize}),
-     * the operation is wrapped in a transaction.</p>
+     * <p>Internally, the entities are partitioned into those that already exist (matched by the
+     * supplied unique properties) and those that do not. New entities are inserted via
+     * {@link #batchInsert(Collection, int)}; existing entities are updated by copying non-id
+     * (and non-unique-key) properties from the input entity into the loaded database entity and
+     * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed
+     * (or either set is large), the operation is wrapped in a transaction.</p>
      *
      * <p>For a single match property, a {@code null} key is matched with {@code IS NULL}; it is not
      * placed in an {@code IN} predicate, whose SQL semantics would never match a null column.</p>
@@ -287,11 +295,13 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param matchPropNames the property names that uniquely identify each record
-     * @param batchSize the size of each batch
+     * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, if {@code matchPropNames} is {@code null} or empty,
+     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
+     *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      * @throws UncheckedSQLException if a database access error occurs

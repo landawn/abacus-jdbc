@@ -33,7 +33,8 @@ import com.landawn.abacus.query.condition.Condition;
 sealed interface UncheckedDeleteOps<T, TD extends UncheckedDaoBase<T, TD>> extends DeleteOps<T, TD>, UncheckedDaoBase<T, TD>
         permits UncheckedDao, UncheckedCrudDeleteOps {
     /**
-     * Deletes all records that match the specified condition.
+     * Deletes all records matching the specified condition.
+     * Returns the count of deleted records.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -44,7 +45,7 @@ sealed interface UncheckedDeleteOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * ));
      * }</pre>
      *
-     * @param cond the condition to match records to delete
+     * @param cond the condition to match records for deletion
      * @return the number of records deleted, or {@code 0} if none match
      * @throws UncheckedSQLException if a database access error occurs
      */

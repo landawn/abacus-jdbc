@@ -47,8 +47,9 @@ import com.landawn.abacus.util.stream.Stream;
  * as a join key. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
  * caller's thread-bound transaction and may partially populate entities before a task fails.</p>
  *
- * @param <T> the entity type that this helper manages
- * @param <TD> the DAO self-type, bounded by {@link UncheckedDaoBase}, that owns this helper
+ * @param <T> the entity type managed by this DAO
+ * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ *
  * @see JoinEntityReadOps
  * @see UncheckedJoinEntityHelper
  * @see com.landawn.abacus.annotation.JoinedBy
@@ -58,8 +59,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         permits UncheckedJoinEntityDeleteOps, UncheckedCrudJoinEntityReadOps, UncheckedReadOnlyJoinEntityHelper {
 
     /**
-     * Finds the first entity matching the condition and loads the specified join entity class.
-     * This is a convenience method that combines finding and join loading in one operation.
+     * Finds the first entity that matches the specified condition and loads the specified type of join entities.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -71,7 +71,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
@@ -92,9 +92,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Finds the first entity matching the condition and loads multiple join entity classes.
-     * The matching join property of every requested type is populated in place on the returned entity.
-     * If {@code joinEntityClasses} is {@code null} or empty, the entity is returned without any join entities loaded.
+     * Finds the first entity that matches the specified condition and loads multiple types of join entities.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -106,11 +104,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntityClasses the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param joinEntityClasses the collection of join entity classes to load.
+     *                          If {@code null} or empty, no join entities are loaded and the matched entity is returned as-is
      * @param cond the condition to match
-     * @return an Optional containing the entity with the requested join entities loaded, or empty if not found
+     * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
@@ -129,7 +128,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Finds the first entity matching the condition and optionally loads all join entities.
+     * Finds the first entity that matches the specified condition, optionally loading all join entities.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -141,7 +140,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
@@ -162,8 +161,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Finds exactly one entity matching the condition and loads the specified join entity class.
-     * Throws an exception if multiple entities are found.
+     * Finds the only entity that matches the specified condition and loads the specified type of join entities.
+     * Throws an exception if more than one entity matches the condition.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -175,11 +174,11 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
-     * @return an Optional containing the unique entity with loaded join entities, or empty if not found
+     * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -197,10 +196,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Finds exactly one entity matching the condition and loads multiple join entity classes.
-     * Throws an exception if multiple entities are found. The matching join property of every requested type is
-     * populated in place on the returned entity. If {@code joinEntityClasses} is {@code null} or empty, the entity is
-     * returned without any join entities loaded.
+     * Finds the only entity that matches the specified condition and loads multiple types of join entities.
+     * Throws an exception if more than one entity matches the condition.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -211,11 +208,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntityClasses the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param joinEntityClasses the collection of join entity classes to load.
+     *                          If {@code null} or empty, no join entities are loaded and the matched entity is returned as-is
      * @param cond the condition to match
-     * @return an Optional containing the unique entity with loaded join entities, or empty if not found
+     * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -235,8 +233,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Finds exactly one entity matching the condition and optionally loads all join entities.
-     * Throws an exception if multiple entities are found.
+     * Finds the only entity that matches the specified condition, optionally loading all join entities.
+     * Throws an exception if more than one entity matches the condition.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -247,12 +245,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
-     * @return an Optional containing the unique entity with loaded join entities, or empty if not found
+     * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -269,11 +267,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Lists all entities matching the condition and loads the specified join entity class for each.
-     * This is a beta API that provides batch loading of join entities for better performance. Each returned
-     * entity has its matching join property populated in place. For result sets larger than
-     * {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches to keep the
-     * generated queries bounded in size.
+     * Retrieves a list of entities that match the specified condition and loads the specified type of join entities for each.
+     * For result sets larger than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join-entity loading is performed in batches.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -285,11 +281,11 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @param cond the condition to match
-     * @return a list of entities, each with the specified join property populated in place; empty if no entity matches
+     * @return a list of entities matching the condition with the specified join entities loaded
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
@@ -310,11 +306,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Lists all entities matching the condition and loads multiple join entity classes for each.
-     * This is a beta API that efficiently loads multiple relationships in batches. Each returned entity has the
-     * matching join property of every requested type populated in place. For result sets larger than
-     * {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches. If
-     * {@code joinEntityClasses} is {@code null} or empty, the entities are returned without any join entities loaded.
+     * Retrieves a list of entities that match the specified condition and loads multiple types of join entities for each.
+     * For result sets larger than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join-entity loading is performed in batches.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -326,11 +320,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntityClasses the collection of join entity classes to load. If {@code null} or empty, no join entities are loaded
+     * @param joinEntityClasses the collection of join entity classes to load.
+     *                          If {@code null} or empty, no join entities are loaded and the matched entities are returned as-is
      * @param cond the condition to match
-     * @return a list of entities, each with the requested join properties populated in place; empty if no entity matches
+     * @return a list of entities matching the condition with the specified join entities loaded
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
@@ -358,10 +353,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Lists all entities matching the condition and optionally loads all join entities for each.
-     * This is a beta API that provides automatic loading of all relationships. When loading is requested, every
-     * property annotated with {@code @JoinedBy} is populated in place on each returned entity. For result sets larger
-     * than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join loading is automatically performed in batches.
+     * Retrieves a list of entities that match the specified condition, optionally loading all join entities.
+     * For result sets larger than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join-entity loading is performed in batches.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -373,13 +367,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
-     * @return a list of entities, each with all join properties populated in place when {@code includeAllJoinEntities} is
-     *         {@code true}; empty if no entity matches
+     * @return a list of entities matching the condition with join entities loaded as specified
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -400,10 +393,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class for a single entity.
-     * The join properties are determined by the {@code @JoinedBy} relationship annotations in the entity class and are
-     * populated in place on the entity. If the entity class declares more than one join property of the specified type,
-     * all of them are loaded.
+     * Loads join entities of the specified type for a single entity.
+     * If multiple properties in the entity class are joined to the specified type, all of them will be loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -413,7 +404,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * // Now user.getOrders() will contain the loaded orders
      * }</pre>
      *
-     * @param entity the entity to load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -424,7 +415,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class with selected properties for a single entity.
+     * Loads join entities of the specified type for a single entity with specific property selection.
+     * If multiple properties in the entity class are joined to the specified type, all of them will be loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -437,7 +429,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entity the entity to load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -458,10 +450,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class for multiple entities in batch.
-     * This is more efficient than loading join entities one by one, as it avoids the N+1 query problem. The matching
-     * join property is populated in place on each entity. If the entity class declares more than one join property of
-     * the specified type, all of them are loaded.
+     * Loads join entities of the specified type for a collection of entities.
+     * If multiple properties in the entity class are joined to the specified type, all of them will be loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -470,7 +460,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadJoinEntities(users, Order.class);
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -481,7 +471,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class with selected properties for multiple entities.
+     * Loads join entities of the specified type for a collection of entities with specific property selection.
+     * If multiple properties in the entity class are joined to the specified type, all of them will be loaded.
+     * The loaded join entities are populated in place on each entity in the collection.
+     * If {@code entities} is {@code null} or empty, this method returns immediately without performing any query.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -494,7 +487,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -520,8 +513,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for a specific property name of a single entity.
-     * This method provides fine-grained control over which join property to load.
+     * Loads join entities for a single entity by property name.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -532,10 +525,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadJoinEntities(user, "profile");
      * }</pre>
      *
-     * @param entity the entity to load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
@@ -543,14 +536,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for a specific property name with selected properties for a single entity.
-     * This is the core implementation method for loading join entities in unchecked mode.
+     * Loads join entities for a single entity by property name with specific property selection.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * This is an abstract method whose implementation is provided by the generated DAO.
      *
-     * <p>It queries the database for related entities based on the join relationship defined in the
-     * {@code @JoinedBy} annotation and populates the specified property in the entity. Unlike the
-     * checked version in {@link JoinEntityReadOps}, this method throws {@link UncheckedSQLException}
-     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming
-     * contexts and lambda expressions.</p>
+     * <p>This method is the core implementation for loading join entities. It queries the database
+     * for related entities based on the join relationship defined in the {@code @JoinedBy} annotation
+     * and populates the specified property in the entity. Unlike the checked version in
+     * {@link JoinEntityReadOps}, this method throws {@link UncheckedSQLException} instead of
+     * {@link java.sql.SQLException}.</p>
      *
      * <p>The implementation handles collection, map, and scalar properties. Every invocation replaces
      * the current property value: no match is represented by an empty collection or map, or by
@@ -572,7 +566,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *     .ifPresent(u -> userDao.loadJoinEntities(u, "addresses", null));
      * }</pre>
      *
-     * @param entity the entity to load join entities for. Must not be {@code null}
+     * @param entity the entity for which to load join entities. Must not be {@code null}
      * @param joinEntityPropName the property name of the join entities to load. Must be a valid
      *                           property name that exists in the entity class and is annotated
      *                           with {@code @JoinedBy}
@@ -588,7 +582,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws UncheckedSQLException;
 
     /**
-     * Loads join entities for a specific property name for multiple entities in batch.
+     * Loads join entities for a collection of entities by property name.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -597,10 +592,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadJoinEntities(users, "orders");
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for
+     * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
@@ -608,14 +603,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for a specific property name with selected properties for multiple entities.
-     * This is the core batch implementation method for loading join entities in unchecked mode.
+     * Loads join entities for a collection of entities by property name with specific property selection.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * This is an abstract method whose implementation is provided by the generated DAO.
      *
-     * <p>It efficiently loads related entities for multiple parent entities in a single operation,
-     * avoiding the N+1 query problem. The implementation typically uses an IN clause to fetch all
-     * related entities in one query, then distributes them to the appropriate parent entities based
-     * on the foreign key relationship. Existing property values are replaced; parents without a
-     * matching row receive an empty collection or map, or {@code null} for a scalar property.</p>
+     * <p>This method is the core batch implementation for loading join entities. It efficiently loads
+     * related entities for multiple parent entities in a single operation, avoiding the N+1 query problem.
+     * The implementation typically uses an IN clause to fetch all related entities in one query, then
+     * distributes them to the appropriate parent entities based on the foreign key relationship.
+     * Existing property values are replaced; parents without a matching row receive an empty collection
+     * or map, or {@code null} for a scalar property.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityReadOps}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
@@ -645,7 +642,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *     .toList();
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for.
+     * @param entities the collection of entities for which to load join entities.
      *                 If {@code null} or empty, no join entities are loaded
      * @param joinEntityPropName the property name of the join entities to load. Must be a valid
      *                           property name that exists in the entity class and is annotated
@@ -663,7 +660,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             throws UncheckedSQLException;
 
     /**
-     * Loads join entities for multiple property names of a single entity.
+     * Loads multiple join entities for a single entity by property names.
+     * Each property name must correspond to a field annotated with {@code @JoinedBy}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -675,10 +673,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entity the entity to load join entities for
-     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
+     * @param entity the entity for which to load join entities
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -692,8 +690,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for multiple property names of a single entity, optionally in parallel.
-     * This is a beta API that can improve performance for loading multiple unrelated join entities.
+     * Loads multiple join entities for a single entity with optional parallel execution.
+     * When parallel execution is enabled, join entities are loaded concurrently for better performance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -706,11 +704,11 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entity the entity to load join entities for
-     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
-     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param entity the entity for which to load join entities
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -724,8 +722,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for multiple property names using a custom executor for parallel execution.
-     * This is a beta API for advanced parallel loading scenarios.
+     * Loads multiple join entities for a single entity using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -743,12 +741,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entity the entity to load join entities for
-     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param entity the entity for which to load join entities
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
-     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
+     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
@@ -767,7 +765,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for multiple property names for multiple entities.
+     * Loads multiple join entities for a collection of entities by property names.
+     * Each property name must correspond to a field annotated with {@code @JoinedBy}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -779,10 +778,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for. If {@code null} or empty, this method returns immediately
-     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -796,8 +795,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for multiple property names for multiple entities, optionally in parallel.
-     * This is a beta API for batch parallel loading.
+     * Loads multiple join entities for a collection of entities with optional parallel execution.
+     * When parallel execution is enabled, different join entity types are loaded concurrently.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -810,11 +809,11 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for
-     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
-     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param entities the collection of entities for which to load join entities
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -829,8 +828,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for multiple property names for multiple entities using a custom executor.
-     * This is a beta API for advanced batch parallel loading scenarios.
+     * Loads multiple join entities for a collection of entities using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior when loading multiple join entity types.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -848,12 +847,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for
-     * @param joinEntityPropNames the property names of join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param entities the collection of entities for which to load join entities
+     * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
-     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
+     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
@@ -873,8 +872,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities defined in the entity class for a single entity.
-     * This loads every property annotated with {@code @JoinedBy}.
+     * Loads all join entities for a single entity.
+     * This method loads all properties annotated with {@code @JoinedBy} in the entity class, populating them in place.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -883,7 +882,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntities(user);
      * }</pre>
      *
-     * @param entity the entity to load all join entities for
+     * @param entity the entity for which to load all join entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -893,8 +892,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities for a single entity, optionally in parallel.
-     * This is a beta API for loading all relationships with parallel execution option.
+     * Loads all join entities for a single entity with optional parallel execution.
+     * When parallel execution is enabled, all join entities are loaded concurrently for better performance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -903,8 +902,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntities(user, true);
      * }</pre>
      *
-     * @param entity the entity to load all join entities for
-     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param entity the entity for which to load all join entities
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -919,8 +918,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities for a single entity using a custom executor.
-     * This is a beta API for advanced parallel loading of all relationships.
+     * Loads all join entities for a single entity using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior when loading all join entities.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -935,8 +934,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entity the entity to load all join entities for
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param entity the entity for which to load all join entities
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}
      */
@@ -950,8 +949,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities for multiple entities in batch.
-     * Every property annotated with {@code @JoinedBy} is populated in place on each entity.
+     * Loads all join entities for a collection of entities.
+     * This method loads all properties annotated with {@code @JoinedBy} in the entity class for each entity,
+     * populating them in place. If {@code entities} is {@code null} or empty, this method returns immediately.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -960,7 +960,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntities(users);
      * }</pre>
      *
-     * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load all join entities. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -974,8 +974,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities for multiple entities, optionally in parallel.
-     * This is a beta API for batch loading all relationships with parallel execution option.
+     * Loads all join entities for a collection of entities with optional parallel execution.
+     * When parallel execution is enabled, different join entity types are loaded concurrently.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -984,8 +984,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntities(users, true);
      * }</pre>
      *
-     * @param entities the collection of entities to load all join entities for
-     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param entities the collection of entities for which to load all join entities
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1000,8 +1000,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities for multiple entities using a custom executor.
-     * This is a beta API for advanced batch parallel loading of all relationships.
+     * Loads all join entities for a collection of entities using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior when loading all join entities.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1016,8 +1016,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities to load all join entities for. If {@code null} or empty, this method returns immediately
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param entities the collection of entities for which to load all join entities. If {@code null} or empty, this method returns immediately
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}
      */
@@ -1035,8 +1035,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class only if they are currently {@code null}.
-     * This is useful for lazy loading scenarios.
+     * Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null}.
+     * If multiple properties in the entity class are joined to the specified type, only those whose value is {@code null} are loaded.
+     * This method is useful for lazy loading scenarios.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1045,7 +1046,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadJoinEntitiesIfAbsent(user, Order.class);
      * }</pre>
      *
-     * @param entity the entity to conditionally load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -1056,7 +1057,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class with selected properties only if they are currently {@code null}.
+     * Loads join entities of the specified type for a single entity only if the corresponding join properties are currently {@code null},
+     * with specific property selection.
+     * If multiple properties in the entity class are joined to the specified type, only those whose value is {@code null} are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1069,7 +1072,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entity the entity to conditionally load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -1091,7 +1094,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class for multiple entities only where they are {@code null}.
+     * Loads join entities of the specified type for a collection of entities only if the corresponding join properties are currently {@code null}.
+     * For each join property in the entity class joined to the specified type, only entities whose value for that property is {@code null}
+     * will have their join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1100,7 +1105,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadJoinEntitiesIfAbsent(users, Order.class);
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for
+     * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -1111,7 +1116,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities of the specified class with selected properties for multiple entities only where they are {@code null}.
+     * Loads join entities of the specified type for a collection of entities only if the corresponding join properties are currently {@code null},
+     * with specific property selection.
+     * For each join property in the entity class joined to the specified type, only entities whose value for that property is {@code null}
+     * will have their join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1124,7 +1132,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for
+     * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -1150,7 +1158,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for a specific property only if it is currently {@code null}.
+     * Loads join entities for a single entity by property name only if the property is currently {@code null}.
+     * This method is useful for lazy loading specific join properties.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1159,10 +1168,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadJoinEntitiesIfAbsent(user, "profile");
      * }</pre>
      *
-     * @param entity the entity to conditionally load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
@@ -1170,8 +1179,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for a specific property with selected fields only if the property is {@code null}.
-     * If the property already holds a non-{@code null} value, it is left unchanged and no query is executed.
+     * Loads join entities for a single entity by property name only if the property is currently {@code null},
+     * with specific property selection.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1184,12 +1193,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entity the entity to conditionally load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
@@ -1209,7 +1218,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for a specific property for multiple entities only where the property is {@code null}.
+     * Loads join entities for a collection of entities by property name only if the property is currently {@code null}.
+     * Only entities with {@code null} values for the specified property will have their join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1218,10 +1228,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadJoinEntitiesIfAbsent(users, "orders");
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for
+     * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
@@ -1229,9 +1239,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads join entities for a specific property with selected fields for multiple entities only where {@code null}.
-     * Entities that already have the property populated are skipped; only those whose property value is {@code null}
-     * trigger a load, and the matching join entities are populated in place on them.
+     * Loads join entities for a collection of entities by property name only if the property is currently {@code null},
+     * with specific property selection.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1244,12 +1253,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropName the property name of the join entities to load
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class,
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class,
      *                                  or if the first element of {@code entities} is {@code null}
      */
     @Override
@@ -1277,7 +1286,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads multiple join properties only if they are {@code null} for a single entity.
+     * Loads multiple join entities for a single entity by property names only if they are currently {@code null}.
+     * Only properties with {@code null} values will have their join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1289,10 +1299,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entity the entity to conditionally load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -1306,8 +1316,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads multiple join properties only if they are {@code null}, optionally in parallel.
-     * This is a beta API for conditional parallel loading.
+     * Loads multiple join entities for a single entity only if they are currently {@code null},
+     * with optional parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1320,11 +1330,11 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entity the entity to conditionally load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1338,8 +1348,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads multiple join properties only if they are {@code null} using a custom executor.
-     * This is a beta API for advanced conditional parallel loading.
+     * Loads multiple join entities for a single entity only if they are currently {@code null},
+     * using a custom executor for parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1357,12 +1367,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entity the entity to conditionally load join entities for
+     * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any property name in
-     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any of the
+     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
@@ -1383,7 +1393,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads multiple join properties for multiple entities only where they are {@code null}.
+     * Loads multiple join entities for a collection of entities by property names only if they are currently {@code null}.
+     * Only properties with {@code null} values will have their join entities loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1395,10 +1406,10 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -1412,8 +1423,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads multiple join properties for multiple entities only where {@code null}, optionally in parallel.
-     * This is a beta API for batch conditional parallel loading.
+     * Loads multiple join entities for a collection of entities only if they are currently {@code null},
+     * with optional parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1426,11 +1437,11 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for
+     * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param inParallel if {@code true}, join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1445,8 +1456,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads multiple join properties for multiple entities only where {@code null} using a custom executor.
-     * This is a beta API for advanced batch conditional parallel loading.
+     * Loads multiple join entities for a collection of entities only if they are currently {@code null},
+     * using a custom executor for parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1464,12 +1475,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load join entities for
+     * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
-     *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
+     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
@@ -1489,7 +1500,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities only if they are {@code null} for a single entity.
+     * Loads all join entities for a single entity only if they are currently {@code null}.
+     * This method checks all properties annotated with {@code @JoinedBy} and loads only those that are {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1498,7 +1510,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntitiesIfAbsent(user);
      * }</pre>
      *
-     * @param entity the entity to conditionally load all join entities for
+     * @param entity the entity for which to load join entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1508,8 +1520,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities only if they are {@code null}, optionally in parallel.
-     * This is a beta API for conditional loading of all relationships.
+     * Loads all join entities for a single entity only if they are currently {@code null},
+     * with optional parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1518,8 +1530,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntitiesIfAbsent(user, true);
      * }</pre>
      *
-     * @param entity the entity to conditionally load all join entities for
-     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param entity the entity for which to load join entities
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1534,8 +1546,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities only if they are {@code null} using a custom executor.
-     * This is a beta API for advanced conditional loading of all relationships.
+     * Loads all join entities for a single entity only if they are currently {@code null},
+     * using a custom executor for parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1549,8 +1561,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entity the entity to conditionally load all join entities for
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param entity the entity for which to load join entities
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}
      */
@@ -1564,7 +1576,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities only if they are {@code null} for multiple entities.
+     * Loads all join entities for a collection of entities only if they are currently {@code null}.
+     * This method checks all properties annotated with {@code @JoinedBy} and loads only those that are {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1573,7 +1586,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntitiesIfAbsent(users);
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load all join entities for
+     * @param entities the collection of entities for which to load join entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1587,8 +1600,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities only if they are {@code null} for multiple entities, optionally in parallel.
-     * This is a beta API for batch conditional loading of all relationships.
+     * Loads all join entities for a collection of entities only if they are currently {@code null},
+     * with optional parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1597,8 +1610,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntitiesIfAbsent(users, true);
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load all join entities for
-     * @param inParallel if {@code true}, all join properties are loaded in parallel; if {@code false}, loaded sequentially
+     * @param entities the collection of entities for which to load join entities
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1613,8 +1626,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Loads all join entities only if they are {@code null} for multiple entities using a custom executor.
-     * This is a beta API for advanced batch conditional loading of all relationships.
+     * Loads all join entities for a collection of entities only if they are currently {@code null},
+     * using a custom executor for parallel execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1628,8 +1641,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities to conditionally load all join entities for
-     * @param executor the {@code Executor} to use for parallel execution
+     * @param entities the collection of entities for which to load join entities
+     * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code executor} is {@code null}
      */

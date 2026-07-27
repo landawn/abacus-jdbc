@@ -207,7 +207,7 @@ public enum QueryOperation {
      * Retrieves all {@code ResultSet}s from a stored procedure call as {@code List}s.
      * Each {@code ResultSet} is converted to a {@code List} of the specified type.
      *
-     * <p>This operation is primarily used with {@code @Query} annotation for stored procedures
+     * <p>This operation is primarily used with the {@code @Query} annotation for stored procedures
      * that return multiple result sets. Each result set is processed and returned
      * in a collection via {@code listAllResultSets/listAllResultSetsAndGetOutParameters}.</p>
      *
@@ -228,7 +228,7 @@ public enum QueryOperation {
      *
      * <p>Similar to {@link #listAll} but returns {@code Dataset} objects which provide more
      * flexibility for data processing and transformation compared to typed {@code List}s.
-     * This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSet}s
+     * This operation is primarily used with the {@code @Query} annotation to retrieve all the {@code ResultSet}s
      * returned from the executed procedure via {@code queryAllResultSets/queryAllResultSetsAndGetOutParameters}.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -278,7 +278,7 @@ public enum QueryOperation {
      * Jdbc.OutParamResult calculateStats(int input) throws SQLException;
      * }</pre>
      *
-     * <p>This operation is primarily used with {@code @Query} annotation to execute the target procedure
+     * <p>This operation is primarily used with the {@code @Query} annotation to execute the target procedure
      * and get out parameters by {@code executeAndGetOutParameters}.</p>
      *
      * @see CallableQuery#executeAndGetOutParameters()

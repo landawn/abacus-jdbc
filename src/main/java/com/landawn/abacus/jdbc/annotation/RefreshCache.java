@@ -44,8 +44,8 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
  *
- * <p>Note: caching (and therefore cache invalidation) is only supported on cacheable DAOs
- * ({@code NonUpdateDao}/{@code ReadOnlyDao} families), whose only write operations are the built-in
+ * <p>Note: caching (and therefore cache invalidation) is only honored on cacheable DAOs
+ * ({@code NonUpdateDao} or {@code ReadOnlyDao} subtypes and their {@code Unchecked} variants), whose only write operations are the built-in
  * insert/save methods and custom {@code INSERT} queries — a custom {@code UPDATE}/{@code DELETE}
  * {@code @Query} fails DAO initialization on such DAOs.</p>
  *

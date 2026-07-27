@@ -34,8 +34,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>Consider carefully whether caching at the DAO layer is appropriate for your use case,
  * as it can lead to stale data issues if not managed properly.</p>
  *
- * <p>The cache key is automatically generated based on the method name and parameters.
- * Results are cached after the first execution and returned from cache for subsequent
+ * <p>The cache key is automatically derived from the fully-qualified method name and the
+ * serialized parameters. Results are cached after the first execution and returned from cache for subsequent
  * calls with the same parameters until the cache expires or is invalidated. A {@code null}
  * method result is not cached; use an empty {@code Optional}, collection, or other non-null
  * result object when caching an explicit "no result" value is important.</p>
@@ -251,12 +251,11 @@ public @interface CacheResult {
     CacheSerialization serialization() default CacheSerialization.NONE;
 
     /**
-     * Specifies filter patterns for methods when the annotation is applied at the class level.
+     * Specifies filter patterns for methods when the annotation is applied at the type level.
      * Only methods whose names match at least one of these patterns will be cached.
      *
-     * <p>The patterns support case-insensitive prefix matching and regular expressions.
-     * A method matches if its name starts with a filter entry (case-insensitive), or if the entry matches the full method name as a regex.
-     * Multiple patterns are combined with OR logic.</p>
+     * <p>Each entry matches when the method name starts with that entry (case-insensitive), or when the
+     * entry matches the full method name as a regular expression. Multiple patterns are combined with OR logic.</p>
      *
      * <p>This filter is ignored when the annotation is applied at the method level.</p>
      *

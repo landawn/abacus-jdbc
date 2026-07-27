@@ -61,7 +61,7 @@ import com.landawn.abacus.util.u.Optional;
  * );
  * }</pre>
  *
- * @param <T> the entity type that this helper manages
+ * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
  * @param <TD> the concrete DAO type, bounded by {@link UncheckedDaoBase}, that owns this helper;
  *             the DAO must also implement {@link UncheckedCrudReadOps} (read-only CRUD DAOs qualify)
@@ -74,9 +74,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
         CrudJoinEntityReadOps<T, ID, TD> permits UncheckedCrudJoinEntityHelper, UncheckedReadOnlyCrudJoinEntityHelper {
 
     /**
-     * Retrieves an entity by ID and loads the specified join entity class.
-     * This is a beta API that combines entity retrieval with automatic join loading.
-     * The loaded related entities are populated in place on the returned entity instance.
+     * Retrieves an entity by its ID and loads the specified type of join entities.
+     * Only the join properties of the specified class will be loaded; if multiple properties in the entity
+     * class are joined to that type, all of them are loaded. The loaded related entities are populated in
+     * place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -88,9 +89,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * }
      * }</pre>
      *
-     * @param id the entity ID
+     * @param id the entity ID to retrieve
      * @param joinEntityClass the class of the join entities to load
-     * @return an {@link Optional} containing the entity with the specified join entities loaded, or an empty {@code Optional} if no entity is found
+     * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -102,10 +103,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID and optionally loads all join entities.
-     * This is a beta API for convenient loading of all relationships. When {@code includeAllJoinEntities}
-     * is {@code true}, all {@code @JoinedBy} properties are populated in place on the returned entity;
-     * when {@code false}, no join entities are loaded.
+     * Retrieves an entity by its ID and optionally loads all join entities.
+     * When {@code includeAllJoinEntities} is {@code true}, all fields annotated with {@code @JoinedBy} are
+     * populated in place on the returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -114,10 +114,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * // User will have orders, profile, addresses, etc. all loaded
      * }</pre>
      *
-     * @param id the entity ID
+     * @param id the entity ID to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an {@link Optional} containing the entity with its join entities loaded (when requested), or an empty {@code Optional} if no entity is found
+     * @return an Optional containing the entity with join entities loaded as specified, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -128,8 +128,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and loads the specified join entity class.
-     * This is a beta API for efficient partial loading of entities with relationships.
+     * Retrieves an entity by its ID with only selected properties and loads the specified type of join entities.
+     * This method allows for optimized queries by selecting only needed columns from the main entity.
      * The loaded related entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
@@ -142,11 +142,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param id the entity ID
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param id the entity ID to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
-     * @return an {@link Optional} containing the entity with the selected properties and the specified join entities loaded, or an empty {@code Optional} if no entity is found
+     * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -159,10 +159,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and loads multiple join entity classes.
-     * This is a beta API for flexible entity loading with multiple relationships.
-     * The loaded related entities are populated in place on the returned entity; if {@code joinEntityClasses}
-     * is {@code null} or empty, no join entities are loaded.
+     * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities.
+     * This method provides fine-grained control over what data is loaded from the database.
+     * The loaded related entities are populated in place on the returned entity instance; if
+     * {@code joinEntityClasses} is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -174,11 +174,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param id the entity ID
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param id the entity ID to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
-     * @return an {@link Optional} containing the entity with the selected properties and the specified join entities loaded, or an empty {@code Optional} if no entity is found
+     * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -191,8 +191,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and optionally loads all join entities.
-     * This is a beta API for flexible entity retrieval with automatic relationship loading. When
+     * Retrieves an entity by its ID with only selected properties and optionally loads all join entities.
+     * Combines property selection with the option to load all relationships. When
      * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
      * returned entity; when {@code false}, no join entities are loaded.
      *
@@ -206,12 +206,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param id the entity ID
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param id the entity ID to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an {@link Optional} containing the entity with the selected properties and its join entities loaded (when requested), or an empty {@code Optional} if no entity is found
+     * @return an Optional containing the entity with selected properties and join entities as specified, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -223,9 +223,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID and loads the specified join entity class, returning the entity directly.
-     * This is a beta API that returns {@code null} if the entity is not found.
-     * The loaded related entities are populated in place on the returned entity instance.
+     * Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
+     * This is the null-returning variant of {@link #get(Object, Class)}. The loaded related entities are
+     * populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -236,9 +236,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * }
      * }</pre>
      *
-     * @param id the entity ID
+     * @param id the entity ID to retrieve
      * @param joinEntityClass the class of the join entities to load
-     * @return the entity with loaded join entities, or {@code null} if not found
+     * @return the entity with specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -256,8 +256,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID and optionally loads all join entities, returning the entity directly.
-     * This is a beta API that returns {@code null} if the entity is not found. When {@code includeAllJoinEntities}
+     * Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
+     * This is the null-returning variant of {@link #get(Object, boolean)}. When {@code includeAllJoinEntities}
      * is {@code true}, the loaded entities are populated in place on the returned entity; when {@code false},
      * no join entities are loaded.
      *
@@ -270,10 +270,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * }
      * }</pre>
      *
-     * @param id the entity ID
+     * @param id the entity ID to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with its join entities loaded (when requested), or {@code null} if no entity is found
+     * @return the entity with join entities loaded as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -290,9 +290,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and loads the specified join entity class, returning {@code null} if not found.
-     * This is a beta API for efficient partial entity loading with relationships.
-     * The loaded related entities are populated in place on the returned entity instance.
+     * Retrieves an entity by its ID with only selected properties and loads the specified type of join entities, returning {@code null} if not found.
+     * This is the null-returning variant of {@link #get(Object, Collection, Class)}. The loaded related
+     * entities are populated in place on the returned entity instance.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -304,11 +304,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param id the entity ID
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param id the entity ID to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
-     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
+     * @return the entity with selected properties and join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -327,10 +327,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and loads multiple join entity classes, returning {@code null} if not found.
-     * This is a beta API for complex entity loading scenarios.
-     * The loaded related entities are populated in place on the returned entity; if {@code joinEntityClasses}
-     * is {@code null} or empty, no join entities are loaded.
+     * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning {@code null} if not found.
+     * This is the null-returning variant of {@link #get(Object, Collection, Collection)}. The loaded related
+     * entities are populated in place on the returned entity; if {@code joinEntityClasses} is {@code null} or
+     * empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -342,11 +342,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param id the entity ID
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param id the entity ID to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
-     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
+     * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -367,8 +367,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Retrieves an entity by ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
-     * This is a beta API that combines partial loading with automatic relationship loading. When
+     * Retrieves an entity by its ID with only selected properties and optionally loads all join entities, returning {@code null} if not found.
+     * This is the null-returning variant of {@link #get(Object, Collection, boolean)}. When
      * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on the
      * returned entity; when {@code false}, no join entities are loaded.
      *
@@ -382,12 +382,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param id the entity ID
-     * @param sourceSelectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     * @param id the entity ID to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with the selected properties and its join entities loaded (when requested), or {@code null} if no entity is found
+     * @return the entity with selected properties and join entities as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -405,9 +405,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities by IDs and loads the specified join entity class for each.
-     * This is a beta API for efficient batch loading with relationships.
-     * The loaded related entities are populated in place on each returned entity.
+     * Retrieves multiple entities by their IDs and loads the specified type of join entities.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. The loaded related entities are populated in place on
+     * each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -418,9 +418,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
+     * @param ids the collection of IDs to retrieve
      * @param joinEntityClass the class of the join entities to load for each entity
-     * @return a list of the found entities, each with the specified join entities loaded; empty if none are found
+     * @return a list of entities with the specified join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -432,10 +432,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities by IDs and optionally loads all join entities for each.
-     * This is a beta API for batch loading with automatic relationship loading. When
-     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on each
-     * returned entity; when {@code false}, no join entities are loaded.
+     * Retrieves multiple entities by their IDs and optionally loads all join entities.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. When {@code includeAllJoinEntities} is {@code true}, the
+     * loaded entities are populated in place on each returned entity; when {@code false}, no join entities
+     * are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -446,10 +446,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
+     * @param ids the collection of IDs to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return a list of the found entities, each with its join entities loaded (when requested); empty if none are found
+     * @return a list of entities with join entities loaded as specified
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -460,9 +460,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities with selected properties and loads the specified join entity class.
-     * This is a beta API for efficient partial batch loading with relationships.
-     * The loaded related entities are populated in place on each returned entity.
+     * Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. The loaded related entities are populated in place on
+     * each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -474,11 +474,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
-     * @param sourceSelectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If {@code null}, all properties of the main entities are selected
+     * @param ids the collection of IDs to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClass the class of the join entities to load for each entity
-     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
+     * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -491,10 +491,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities with selected properties and loads multiple join entity classes.
-     * This is a beta API for complex batch loading scenarios.
-     * The loaded related entities are populated in place on each returned entity; if {@code joinEntityClasses}
-     * is {@code null} or empty, no join entities are loaded.
+     * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. The loaded related entities are populated in place on each
+     * returned entity; if {@code joinEntityClasses} is {@code null} or empty, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -506,11 +505,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
-     * @param sourceSelectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If {@code null}, all properties of the main entities are selected
-     * @param joinEntityClasses the collection of join entity classes to load
-     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
+     * @param ids the collection of IDs to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the entities are selected
+     * @param joinEntityClasses the collection of join entity classes to load for each entity
+     * @return a list of entities with selected properties and specified join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
@@ -523,10 +522,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities with selected properties and optionally loads all join entities.
-     * This is a beta API for flexible batch loading with automatic relationship loading. When
-     * {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on each
-     * returned entity; when {@code false}, no join entities are loaded.
+     * Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}) for processing. When {@code includeAllJoinEntities} is {@code true}, the
+     * loaded entities are populated in place on each returned entity; when {@code false}, no join entities
+     * are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -538,12 +537,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
-     * @param sourceSelectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If {@code null}, all properties of the main entities are selected
+     * @param ids the collection of IDs to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return a list of the found entities, each with the selected properties and its join entities loaded (when requested); empty if none are found
+     * @return a list of entities with selected properties and join entities as specified
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -555,8 +554,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities with selected properties using a specific batch size and loads the specified join entity class.
-     * This is a beta API for efficient large-scale batch loading with relationships.
+     * Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
+     * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
      * The loaded related entities are populated in place on each returned entity.
      *
      * <p><b>Usage Examples:</b></p>
@@ -570,12 +569,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
-     * @param sourceSelectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If {@code null}, all properties of the main entities are selected
+     * @param ids the collection of IDs to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClass the class of the join entities to load for each entity
-     * @param batchSize the size of each batch for processing
-     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
+     * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property of the specified type is found in the entity class
@@ -600,8 +600,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities with selected properties using a specific batch size and loads multiple join entity classes.
-     * This is a beta API for complex large-scale batch loading scenarios.
+     * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
+     * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
      * The loaded related entities are populated in place on each returned entity; if {@code joinEntityClasses}
      * is {@code null} or empty, no join entities are loaded.
      *
@@ -616,12 +616,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
-     * @param sourceSelectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If {@code null}, all properties of the main entities are selected
-     * @param joinEntityClasses the collection of join entity classes to load
-     * @param batchSize the size of each batch for processing
-     * @return a list of the found entities, each with the selected properties and the specified join entities loaded; empty if none are found
+     * @param ids the collection of IDs to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the entities are selected
+     * @param joinEntityClasses the collection of join entity classes to load for each entity
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
+     * @return a list of entities with selected properties and specified join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property is found for one of the specified types in the entity class
@@ -652,10 +653,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     }
 
     /**
-     * Batch gets entities with selected properties using a specific batch size and optionally loads all join entities.
-     * This is a beta API for maximum flexibility in batch loading operations. When {@code includeAllJoinEntities}
-     * is {@code true}, the loaded entities are populated in place on each returned entity; when {@code false},
-     * no join entities are loaded.
+     * Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
+     * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
+     * When {@code includeAllJoinEntities} is {@code true}, the loaded entities are populated in place on each
+     * returned entity; when {@code false}, no join entities are loaded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -668,13 +669,14 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * );
      * }</pre>
      *
-     * @param ids the collection of entity IDs
-     * @param sourceSelectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If {@code null}, all properties of the main entities are selected
+     * @param ids the collection of IDs to retrieve
+     * @param sourceSelectPropNames the properties (columns) to be selected from each entity, excluding join entity properties.
+     *                       If {@code null}, all properties of the entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @param batchSize the size of each batch for processing
-     * @return a list of the found entities, each with the selected properties and its join entities loaded (when requested); empty if none are found
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
+     * @return a list of entities with selected properties and join entities as specified
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code batchSize} is not positive

@@ -497,10 +497,11 @@ final class DaoImpl {
      *
      * <p>The decision rules are:</p>
      * <ul>
-     *   <li>{@link QueryOperation#list} or {@link QueryOperation#listAll}: treated as a list query, but only if the return type is a proper
-     *       {@link Collection} subtype (not raw {@code Collection.class} itself); otherwise an
-     *       {@link UnsupportedOperationException} is raised.</li>
      *   <li>Methods annotated with {@link MappedByKey @MappedByKey}: always treated as list queries.</li>
+     *   <li>{@link QueryOperation#list} or {@link QueryOperation#listAll}: treated as a list query, but only if the return type is a proper
+     *       {@link Collection} subtype (not raw {@code Collection.class} itself). A {@code Tuple2} return type (a stored procedure with
+     *       out parameters) is treated as non-list; any other non-{@code Collection} return type raises an
+     *       {@link UnsupportedOperationException}.</li>
      *   <li>Any explicit {@code QueryOperation} other than {@link QueryOperation#DEFAULT}: not a list query.</li>
      *   <li>{@link QueryOperation#DEFAULT}: only a return type that is a {@code Collection} subtype can be a list query; for any
      *       other return type the result is non-list. When the return type is a {@code Collection} subtype, the

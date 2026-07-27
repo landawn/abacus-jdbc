@@ -111,7 +111,7 @@ public enum FetchDirection {
      *
      * @param intValue the JDBC constant value for this fetch direction (one of
      *        {@link ResultSet#FETCH_FORWARD}, {@link ResultSet#FETCH_REVERSE}, or
-     *        {@link ResultSet#FETCH_UNKNOWN})
+     *        {@link ResultSet#FETCH_UNKNOWN}).
      */
     FetchDirection(final int intValue) {
         this.intValue = intValue;

@@ -334,6 +334,7 @@ public final class JdbcCodeGenerationUtil {
      * @param entityName the name of the entity class to generate
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @return the generated entity class as a string containing the complete Java source code
+     * @throws IllegalArgumentException if a generated class or field name is not a valid Java identifier or collides with another generated name
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query) {
@@ -387,6 +388,7 @@ public final class JdbcCodeGenerationUtil {
      * @param entityName the name of the entity class to generate
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @return the generated entity class as a string containing the complete Java source code
+     * @throws IllegalArgumentException if a generated class or field name is not a valid Java identifier or collides with another generated name
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query) {
@@ -431,6 +433,20 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
+    /**
+     * Generates an entity class from the column metadata of the given result set.
+     * Primary keys are auto-detected from database metadata when no id fields are configured.
+     *
+     * @param entityName the name of the entity class to generate; also used to look up primary key metadata when no id fields are configured
+     * @param rs the result set whose column metadata defines the generated fields
+     * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
+     * @return the generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws IllegalArgumentException if the configuration cannot produce valid Java source (for example,
+     *             generated names are invalid or collide, an annotation is unusable, or a field is both
+     *             read-only and non-updatable)
+     */
     static String generateEntityClass(final String entityName, final ResultSet rs, final EntityCodeConfig config) {
         final EntityCodeConfig configToUse = N.defaultIfNull(config, defaultEntityCodeConfig);
 
@@ -1568,7 +1584,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
      *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
-     * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
+     * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
      * @throws IllegalArgumentException if either name is {@code null} or blank, the key column is missing or ambiguous,
      *             or no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -1597,7 +1613,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
      *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
-     * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
+     * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
      * @throws IllegalArgumentException if either name is {@code null} or blank, the key column is missing or ambiguous,
      *             or no columns remain for the SET clause
      * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
@@ -2072,7 +2088,7 @@ public final class JdbcCodeGenerationUtil {
      * // Returns: "UPDATE products SET name = 'Widget', price = 19.99, stock = 100 WHERE id = 123"
      * }</pre>
      *
-     * @param ds the data source to connect to the database
+     * @param ds the data source used to resolve database-specific behavior
      * @param insertSql the INSERT SQL statement to convert
      * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). May be null/empty.
      * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause

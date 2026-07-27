@@ -159,8 +159,8 @@ public final class JoinInfo {
      * including parsing the {@code @JoinedBy} annotation, determining join type (one-to-many or many-to-many),
      * and building optimized SQL statements for join operations.
      *
-     * <p>The constructor processes the join configuration and creates cached SQL builders and parameter setters
-     * for different SQL builder types (PSC, PAC, PLC). It supports two main join patterns:</p>
+     * <p>The constructor processes the join configuration and prepares SQL builders and parameter setters
+     * for the supported SQL builder DSLs (PSC, PAC, PLC). It supports two main join patterns:</p>
      * <ul>
      *   <li><b>One-to-Many Join:</b> Direct foreign key relationship (e.g., "employeeId" or "employeeId = id")</li>
      *   <li><b>Many-to-Many Join:</b> Relationship through intermediate table (e.g., "employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId")</li>
@@ -176,29 +176,22 @@ public final class JoinInfo {
      *   <li>For many-to-many joins, verifies the intermediate entity class exists and is properly configured</li>
      * </ul>
      *
-     * <p><b>Implementation Notes:</b></p>
-     * <ul>
-     *   <li>The constructor caches SQL builders for performance optimization</li>
-     *   <li>Key extractors are created for efficient entity grouping during join operations</li>
-     *   <li>Parameter setters are optimized based on the number of join columns</li>
-     *   <li>For many-to-many joins, both main entity and intermediate table SQL statements are generated</li>
-     * </ul>
-     *
      * <p>This constructor is package-private and intended for internal use. Application code should
      * obtain {@code JoinInfo} instances through {@link #getEntityJoinInfo(Class, Class, String)} or
      * {@link #getPropJoinInfo(Class, Class, String, String)}.</p>
      *
-     * @param entityClass the entity class containing the join property, must not be {@code null}
-     * @param tableName the database table name for the entity, must not be {@code null}
-     * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}
+     * @param entityClass the entity class containing the join property, must not be {@code null}.
+     * @param tableName the database table name for the entity, must not be {@code null}.
+     * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}.
      * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are {@code null} or default;
      *                                         if {@code false}, an {@code IllegalArgumentException} is thrown later from the generated
      *                                         parameter setters and source-key extractors when a null or default join value is encountered.
-     *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class
-     * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid;
+     *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class.
+     * @throws IllegalArgumentException if {@code entityClass}, {@code tableName}, or {@code joinEntityPropName} is {@code null};
+     *                                   if the join property is not found, not properly annotated, or the join configuration is invalid;
      *                                   if the referenced entity type is not a valid bean/entity class;
      *                                   if join column types are incompatible between source and referenced entities;
-     *                                   or if the many-to-many intermediate entity class is not found or improperly configured
+     *                                   or if the many-to-many intermediate entity class is not found or improperly configured.
      *
      * @see JoinedBy
      * @see com.landawn.abacus.jdbc.annotation.DaoConfig
@@ -777,12 +770,12 @@ public final class JoinInfo {
      * String sql = plan._1.apply(Arrays.asList("id", "name", "description"));
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection
      *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT),
      *         and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a
-     *         {@link PreparedStatement}
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     *         {@link PreparedStatement}.
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -814,13 +807,13 @@ public final class JoinInfo {
      * String sql = batchPlan._1.apply(Arrays.asList("id", "name"), employees.size());
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
      *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
      *         in the batch onto a {@link PreparedStatement}. The SQL-builder function requires a positive batch size
      *         and throws {@link IllegalArgumentException} for zero or a negative value.
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -854,12 +847,12 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deletePlan._3;
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple containing the delete SQL ({@code _1}), the middle (join) table delete SQL
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future
      *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3}) that
-     *         binds the join key(s) of a single source entity onto a {@link PreparedStatement}
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     *         binds the join key(s) of a single source entity onto a {@link PreparedStatement}.
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -892,13 +885,13 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDeletePlan._3;
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}
+     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple of (main delete SQL builder ({@code _1}), middle/join table delete SQL builder
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future use when per-entity
      *         cascade-delete control is supported), and parameter setter ({@code _3}) that binds the join key(s) of every
      *         entity in the batch onto a {@link PreparedStatement}). Each SQL-builder function requires a positive batch
      *         size and throws {@link IllegalArgumentException} for zero or a negative value.
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC)
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
@@ -939,13 +932,13 @@ public final class JoinInfo {
      * joinInfo.setJoinPropEntities(employees, projects);
      * }</pre>
      *
-     * @param entities the source entities to populate with joined entities
-     * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities
+     * @param entities the source entities to populate with joined entities.
+     * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities.
      * @throws UnsupportedOperationException if this is a many-to-many join; use {@link #setJoinPropEntities(Collection, Map)}
-     *                                  with keys derived from the junction table instead
+     *                                  with keys derived from the junction table instead.
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
-     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}
+     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}.
      *
      * @see #setJoinPropEntities(Collection, Map)
      */
@@ -992,12 +985,12 @@ public final class JoinInfo {
      * joinInfo.setJoinPropEntities(employees, projectsByEmployeeId);
      * }</pre>
      *
-     * @param entities the source entities to populate with joined entities
+     * @param entities the source entities to populate with joined entities.
      * @param groupedPropEntities a map of grouped joined entities keyed by the join key used to match source entities
-     *                            (the source key for one-to-many; the junction-table-derived key for many-to-many)
+     *                            (the source key for one-to-many; the junction-table-derived key for many-to-many).
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
-     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}
+     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}.
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
@@ -1056,7 +1049,7 @@ public final class JoinInfo {
      * }
      * }</pre>
      *
-     * @return {@code true} if this is a many-to-many join, {@code false} otherwise
+     * @return {@code true} if this is a many-to-many join, {@code false} otherwise.
      */
     public boolean isManyToManyJoin() {
         return isManyToManyJoin;
@@ -1111,12 +1104,12 @@ public final class JoinInfo {
      * derived from the {@code @DaoConfig(allowJoiningByNullOrDefaultValue = ...)} setting on {@code daoClass}
      * (defaults to {@code false} when the annotation is absent).</p>
      *
-     * @param daoClass the DAO class associated with the entity, must not be {@code null}
-     * @param entityClass the entity class to inspect for join properties, must not be {@code null}
-     * @param tableName the database table name for the entity, must not be {@code null}
-     * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist
+     * @param daoClass the DAO class associated with the entity, must not be {@code null}.
+     * @param entityClass the entity class to inspect for join properties, must not be {@code null}.
+     * @param tableName the database table name for the entity, must not be {@code null}.
+     * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist.
      * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
-     *                                  (this is raised the first time the map is built and cached for the given key)
+     *                                  (this is raised the first time the map is built and cached for the given key).
      *
      * @see JoinedBy
      * @see DaoConfig
@@ -1182,14 +1175,14 @@ public final class JoinInfo {
      * joinInfo.setJoinPropEntities(employees, allProjects);
      * }</pre>
      *
-     * @param daoClass the DAO class associated with the entity, must not be {@code null}
-     * @param entityClass the entity class containing the join property, must not be {@code null}
-     * @param tableName the database table name for the entity, must not be {@code null}
-     * @param joinEntityPropName the name of the property with the {@code @JoinedBy} annotation, must not be {@code null}
-     * @return the JoinInfo for the specified property, never {@code null}
+     * @param daoClass the DAO class associated with the entity, must not be {@code null}.
+     * @param entityClass the entity class containing the join property, must not be {@code null}.
+     * @param tableName the database table name for the entity, must not be {@code null}.
+     * @param joinEntityPropName the name of the property with the {@code @JoinedBy} annotation, must not be {@code null}.
+     * @return the JoinInfo for the specified property, never {@code null}.
      * @throws IllegalArgumentException if any argument is {@code null}, no {@code @JoinedBy} join property is found with the given name on the entity,
      *                                  or if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
-     *                                  (surfaced while building the underlying join-info map)
+     *                                  (surfaced while building the underlying join-info map).
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
@@ -1247,13 +1240,13 @@ public final class JoinInfo {
      * }
      * }</pre>
      *
-     * @param daoClass the DAO class associated with the entity, must not be {@code null}
-     * @param entityClass the entity class to search for join properties, must not be {@code null}
-     * @param tableName the database table name for the entity, must not be {@code null}
-     * @param joinPropEntityClass the class of the joined entity to search for, must not be {@code null}
-     * @return an unmodifiable list of property names that join to the specified entity class, never {@code null}, empty if none found
+     * @param daoClass the DAO class associated with the entity, must not be {@code null}.
+     * @param entityClass the entity class to search for join properties, must not be {@code null}.
+     * @param tableName the database table name for the entity, must not be {@code null}.
+     * @param joinPropEntityClass the class of the joined entity to search for, must not be {@code null}.
+     * @return an unmodifiable list of property names that join to the specified entity class, never {@code null}, empty if none found.
      * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
-     *                                  (surfaced while building the underlying join-info map)
+     *                                  (surfaced while building the underlying join-info map).
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)

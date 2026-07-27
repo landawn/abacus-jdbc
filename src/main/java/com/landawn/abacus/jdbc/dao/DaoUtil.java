@@ -236,8 +236,8 @@ public final class DaoUtil {
      *
      * @param <T> the entity type
      * @param <ID> the ID type of the entity
-     * @param entity the entity instance from which to extract the ID. Must not be {@code null}
-     * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
+     * @param entity the entity instance from which to extract the ID. Must not be {@code null}.
+     * @param idPropNameList the list of ID property names. Must not be {@code null} or empty.
      * @param entityInfo the bean information for the entity class
      * @return the extracted ID value (simple value for single ID, {@link Seid} for composite ID)
      * @throws IllegalArgumentException if {@code entity}, {@code idPropNameList}, or
@@ -289,7 +289,7 @@ public final class DaoUtil {
      *
      * @param <T> the entity type
      * @param <ID> the ID type of the entity
-     * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
+     * @param idPropNameList the list of ID property names. Must not be {@code null} or empty.
      * @param entityInfo the bean information for the entity class
      * @return a function that extracts ID values from entities
      * @throws IllegalArgumentException if {@code idPropNameList} or {@code entityInfo} is
@@ -353,7 +353,7 @@ public final class DaoUtil {
      * @param propName the property to match
      * @param values the non-empty values to match
      * @return an {@code IN}, {@code IS NULL}, or combined {@code OR} condition as appropriate
-     * @throws IllegalArgumentException if {@code propName} or {@code values} is null or empty
+     * @throws IllegalArgumentException if {@code propName} or {@code values} is null or empty.
      */
     static Condition singlePropValuesToCondition(final String propName, final Collection<?> values) {
         N.checkArgNotEmpty(propName, "propName");
@@ -453,7 +453,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the CrudJoinEntityReadOps instance to cast
      * @return the DAO instance cast to CrudReadOps
-     * @throws UnsupportedOperationException if the DAO does not implement CrudReadOps interface
+     * @throws UnsupportedOperationException if the DAO does not implement CrudReadOps interface.
      */
     static <T, ID, TD extends DaoBase<T, TD>> CrudReadOps<T, ID, TD> getCrudReadOps(final CrudJoinEntityReadOps<T, ID, TD> dao) {
         if (dao instanceof CrudReadOps) {
@@ -487,7 +487,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the join-entity helper instance to cast
      * @return the DAO instance cast to ReadOps
-     * @throws UnsupportedOperationException if the DAO does not implement ReadOps interface
+     * @throws UnsupportedOperationException if the DAO does not implement ReadOps interface.
      */
     static <T, TD extends DaoBase<T, TD>> ReadOps<T, TD> getReadOps(final JoinEntityBase<T, TD> dao) {
         if (dao instanceof ReadOps) {
@@ -521,7 +521,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the UncheckedJoinEntityReadOps instance to cast
      * @return the DAO instance cast to UncheckedReadOps
-     * @throws UnsupportedOperationException if the DAO does not implement UncheckedReadOps interface
+     * @throws UnsupportedOperationException if the DAO does not implement UncheckedReadOps interface.
      */
     static <T, TD extends UncheckedDaoBase<T, TD>> UncheckedReadOps<T, TD> getReadOps(final UncheckedJoinEntityReadOps<T, TD> dao) {
         if (dao instanceof UncheckedReadOps) {
@@ -556,7 +556,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the UncheckedCrudJoinEntityReadOps instance to cast
      * @return the DAO instance cast to UncheckedCrudReadOps
-     * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudReadOps interface
+     * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudReadOps interface.
      */
     static <T, ID, TD extends UncheckedDaoBase<T, TD>> UncheckedCrudReadOps<T, ID, TD> getCrudReadOps(final UncheckedCrudJoinEntityReadOps<T, ID, TD> dao) {
         if (dao instanceof UncheckedCrudReadOps) {
@@ -704,8 +704,8 @@ public final class DaoUtil {
      * // Throws UncheckedSQLException if any operation failed
      * }</pre>
      *
-     * @param futures the list of futures to complete. Must not be {@code null}
-     * @throws UncheckedSQLException if any future fails with a SQL-related exception
+     * @param futures the list of futures to complete. Must not be {@code null}.
+     * @throws UncheckedSQLException if any future fails with a SQL-related exception.
      */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
         Exception firstException = null;
@@ -746,10 +746,10 @@ public final class DaoUtil {
      * // Throws UncheckedSQLException if any operation failed
      * }</pre>
      *
-     * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}
+     * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
-     * @throws UncheckedSQLException if any future fails with a SQL-related exception
-     * @throws ArithmeticException if the sum overflows an {@code int}
+     * @throws UncheckedSQLException if any future fails with a SQL-related exception.
+     * @throws ArithmeticException if the sum overflows an {@code int}.
      */
     static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures) throws UncheckedSQLException {
         long result = 0;
@@ -794,8 +794,8 @@ public final class DaoUtil {
      * // Throws SQLException if any operation failed
      * }</pre>
      *
-     * @param futures the list of futures to complete. Must not be {@code null}
-     * @throws SQLException if any future fails with a SQL-related exception
+     * @param futures the list of futures to complete. Must not be {@code null}.
+     * @throws SQLException if any future fails with a SQL-related exception.
      */
     static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
         Exception firstException = null;
@@ -836,10 +836,10 @@ public final class DaoUtil {
      * // Throws SQLException if any operation failed
      * }</pre>
      *
-     * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}
+     * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
-     * @throws SQLException if any future fails with a SQL-related exception
-     * @throws ArithmeticException if the sum overflows an {@code int}
+     * @throws SQLException if any future fails with a SQL-related exception.
+     * @throws ArithmeticException if the sum overflows an {@code int}.
      */
     static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
         long result = 0;

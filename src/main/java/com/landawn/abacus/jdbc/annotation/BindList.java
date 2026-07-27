@@ -133,7 +133,7 @@ public @interface BindList {
      * This is useful for conditionally including SQL fragments based on whether the collection has values.
      *
      * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
-     * Consider using {@link SqlFragment} annotation for complex dynamic SQL construction.</p>
+     * Consider using the {@link SqlFragment} annotation for complex dynamic SQL construction.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -159,7 +159,7 @@ public @interface BindList {
      * This is used in conjunction with {@link #prefixForNonEmpty()} to wrap the parameter placeholders.
      *
      * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
-     * Consider using {@link SqlFragment} annotation for complex dynamic SQL construction.</p>
+     * Consider using the {@link SqlFragment} annotation for complex dynamic SQL construction.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

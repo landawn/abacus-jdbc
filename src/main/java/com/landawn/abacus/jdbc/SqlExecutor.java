@@ -19,7 +19,7 @@ package com.landawn.abacus.jdbc;
  *
  * <p>This class is no longer functional: its public API and supporting state have been removed,
  * and the original implementation is preserved only as commented-out source below for historical
- * reference. The body cannot be invoked, and the class itself cannot be instantiated.</p>
+ * reference. None of the archived code can be invoked, and the class itself cannot be instantiated.</p>
  *
  * <p>The original {@code SqlExecutor} was a general-purpose JDBC helper that has since been
  * superseded by {@link PreparedQuery}, {@link NamedQuery}, and the

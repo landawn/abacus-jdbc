@@ -1164,7 +1164,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a CharSequence value.
      *
      * <p>This method converts the CharSequence (StringBuilder, StringBuffer, etc.) to a String
-     * and sets the parameter. Null values are handled appropriately.
+     * and sets the parameter. If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1206,7 +1206,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a Character value.
      *
      * <p>This method converts the Character to a String and sets the parameter.
-     * Null values are handled appropriately.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1505,9 +1505,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a time value using a java.util.Date.
      *
-     * <p>This method converts a java.util.Date to java.sql.Time, preserving only the time
-     * portion (hours, minutes, seconds) and discarding the date portion. If the provided
-     * Date is already a java.sql.Time instance, it is used directly without conversion.
+     * <p>If {@code value} is already a {@code java.sql.Time}, it is passed to the driver as-is; otherwise
+     * a new {@code java.sql.Time} is constructed from {@code value.getTime()}. Whether the date portion
+     * is discarded depends on the JDBC driver and target column type.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

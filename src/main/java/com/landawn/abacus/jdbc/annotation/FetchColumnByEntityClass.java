@@ -82,7 +82,7 @@ public @interface FetchColumnByEntityClass {
      * <ul>
      *   <li>Only columns with matching properties in the entity class are fetched</li>
      *   <li>Avoids materializing unrelated columns in the returned {@code Dataset}</li>
-     *   <li>Results in cleaner Dataset with only relevant columns</li>
+     *   <li>Results in a cleaner {@code Dataset} with only relevant columns</li>
      * </ul>
      *
      * <p>When {@code false}:</p>

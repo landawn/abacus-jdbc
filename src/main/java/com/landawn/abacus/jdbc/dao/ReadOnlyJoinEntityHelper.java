@@ -57,6 +57,7 @@ package com.landawn.abacus.jdbc.dao;
  * @param <T> the entity type that this helper manages
  * @param <TD> the companion {@link ReadOnlyDao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
+ *
  * @see JoinEntityReadOps
  * @see JoinEntityHelper
  * @see ReadOnlyDao

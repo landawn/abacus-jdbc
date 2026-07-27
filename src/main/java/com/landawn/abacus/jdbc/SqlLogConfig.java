@@ -84,7 +84,7 @@ final class SqlLogConfig {
      * SqlLogConfig config2 = new SqlLogConfig(true, 0);
      * }</pre>
      *
-     * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable
+     * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
      *                        to 4, the smallest length the truncation marker supports.
@@ -149,7 +149,7 @@ final class SqlLogConfig {
      * config.set(false, 1000);
      * }</pre>
      *
-     * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable
+     * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
      *                        to 4, the smallest length the truncation marker supports.

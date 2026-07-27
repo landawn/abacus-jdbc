@@ -98,7 +98,7 @@ import com.landawn.abacus.annotation.Beta;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <ID> the type of the entity's primary key
+ * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
  * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyDao
  * @see CrudReadOps

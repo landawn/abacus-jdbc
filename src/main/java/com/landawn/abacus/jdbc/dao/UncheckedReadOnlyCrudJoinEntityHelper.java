@@ -18,7 +18,7 @@ package com.landawn.abacus.jdbc.dao;
 /**
  * A specialized interface that combines read-only operations with join entity support for CRUD DAOs with unchecked exceptions.
  * This interface provides functionality to read entities along with their related entities through joins,
- * but explicitly disables the delete operations on the joined entities.
+ * but does not expose the delete operations on the joined entities.
  *
  * <p>This interface is particularly useful in scenarios where you need to fetch entities with their
  * relationships (like one-to-many or many-to-many) but want to ensure that the related entities
@@ -67,7 +67,7 @@ package com.landawn.abacus.jdbc.dao;
  * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedReadOnlyCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityReadOps
- * @see UncheckedCrudDao
+ * @see UncheckedReadOnlyCrudDao
  */
 public non-sealed interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, TD extends UncheckedReadOnlyCrudDao<T, ID, TD>>
         extends UncheckedReadOnlyJoinEntityHelper<T, TD>, ReadOnlyCrudJoinEntityHelper<T, ID, TD>, UncheckedCrudJoinEntityReadOps<T, ID, TD> {

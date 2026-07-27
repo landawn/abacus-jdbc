@@ -25,7 +25,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 /**
  * Update capability of {@link CrudDao}: id/entity-based {@code update}/{@code batchUpdate}.
  * Extends {@link UpdateOps}.
- * 
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type
@@ -52,8 +52,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
     int update(final T entity) throws SQLException;
 
     /**
-     * Updates only specified properties of an existing entity.
-     * This is useful when you want to update only certain fields.
+     * Updates only the specified properties of an existing entity.
+     * Properties not included in {@code propNamesToUpdate} will not be modified.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -74,9 +74,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
     int update(final T entity, final Collection<String> propNamesToUpdate) throws SQLException;
 
     /**
-     * Updates a single property of an entity identified by ID.
-     * This is a convenience default method for updating one field; it builds a single-entry
-     * map and delegates to {@link #update(Map, Object)}.
+     * Updates a single property of the entity identified by ID.
+     * Convenience method for updating one property without building a map of properties.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

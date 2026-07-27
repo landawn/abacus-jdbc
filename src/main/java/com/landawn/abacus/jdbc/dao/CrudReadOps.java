@@ -262,6 +262,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the Date value if found, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForDate()
      */
@@ -280,6 +281,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the Time value if found, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForTime()
      */
@@ -298,6 +300,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the Timestamp value if found, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForTimestamp()
      */
@@ -317,6 +320,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @return a {@code Nullable} containing the byte array value if found, or {@code Nullable.empty()} if no record exists
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForBytes()
      */
@@ -359,6 +363,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -379,7 +384,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
      * @return an {@link Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
-     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws SQLException if a database access error occurs
@@ -431,6 +436,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -454,7 +460,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
      * @return an {@link Optional} containing the mapped unique value if a record matches the {@code id}, otherwise empty
-     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
@@ -714,6 +720,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *
      * @param id the entity ID to check for non-existence
      * @return {@code true} if no entity with the given ID exists, {@code false} otherwise
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#notExists()
      */

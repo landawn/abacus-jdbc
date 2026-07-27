@@ -53,7 +53,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *
  * <p><b>Lazy stream limitation:</b> {@link Propagation#REQUIRED},
  * {@link Propagation#REQUIRES_NEW}, {@link Propagation#NOT_SUPPORTED}, and
- * {@link Propagation#NEVER} cannot be used on a method returning a
+ * {@link Propagation#NEVER} cannot be used on a method returning an
  * Abacus {@link com.landawn.abacus.util.stream.BaseStream} (including
  * {@link com.landawn.abacus.util.stream.Stream}) or a {@link java.util.stream.BaseStream}. Such a
  * stream performs work after the method returns: an invocation-owned transaction may already have

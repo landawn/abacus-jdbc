@@ -1809,7 +1809,7 @@ public final class Jdbc {
 
         /**
          * Maps the current row of the given {@code ResultSet} to an object of type {@code T}.
-         * This method should not advance the ResultSet cursor (e.g., call {@code rs.next()}). It
+         * This method should not advance the ResultSet cursor (e.g., by calling {@code rs.next()}). It
          * operates solely on the data available at the current cursor position.
          *
          * @param rs the {@code ResultSet} positioned at the row to be mapped
@@ -4322,7 +4322,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnName} is {@code null}.
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}
              * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
@@ -4371,6 +4371,17 @@ public final class Jdbc {
                 return this;
             }
 
+            /**
+             * Resolves the {@code ColumnGetter} to use for each column of the {@code ResultSet}, based on the
+             * configured column getters and this builder's default getter. A configured column name is matched
+             * against the result column labels case-insensitively when no exact-case match is found; columns
+             * without a configured getter use the default getter.
+             *
+             * @param columnLabelList the column labels of the {@code ResultSet}
+             * @param configuredColumnGetters the snapshot of column getters configured on this builder, keyed by column name
+             * @return an array with one resolved {@code ColumnGetter} per result column
+             * @throws IllegalArgumentException if a configured column name is not found among the result column labels
+             */
             ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList, final Map<String, ColumnGetter<?>> configuredColumnGetters) { //NOSONAR
                 final int rsColumnCount = columnLabelList.size();
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount];
@@ -5324,7 +5335,7 @@ public final class Jdbc {
          *
          * <p>The {@code outputRow} must be at least as long as the number of columns the implementation
          * intends to write; an implementation may throw {@link IllegalArgumentException} if the array is
-         * too short. The implementation must not advance the cursor (e.g. call {@code rs.next()}).</p>
+         * too short. The implementation must not advance the cursor (e.g., by calling {@code rs.next()}).</p>
          *
          * @param rs the {@code ResultSet} positioned at a valid row; must not be {@code null}
          * @param outputRow the array to be populated with data from the current row; must not be {@code null}
@@ -6577,7 +6588,7 @@ public final class Jdbc {
      * depending on how the underlying {@link OutParam} was registered.
      *
      * <p>This type is not directly instantiable by callers; instances are produced by the framework
-     * (e.g. by {@code CallableQuery} methods that accept a list of {@code OutParam}s).</p>
+     * (e.g., by {@code CallableQuery} methods that accept a list of {@code OutParam}s).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6847,7 +6858,7 @@ public final class Jdbc {
          * }</pre>
          *
          * @param handler the handler instance to register.
-         * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
+         * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
          * @throws IllegalArgumentException if {@code handler} is {@code null}, or if the qualifier derived by
          *         {@link ClassUtil#getCanonicalClassName(Class)} is empty. Use {@link #register(String, Handler)}
          *         when an explicit, stable qualifier is required (particularly for anonymous or lambda-built handlers).
@@ -7506,6 +7517,7 @@ public final class Jdbc {
      *
      * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p>
      *
+     * @param cache the backing map used to store cached results
      * @see DaoCache#createByMap()
      * @see DaoCache#createByMap(Map)
      */

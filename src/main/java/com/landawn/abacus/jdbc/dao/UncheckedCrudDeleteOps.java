@@ -22,7 +22,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Unchecked-exception delete capability of {@link UncheckedCrudDao}.
+ * Unchecked-exception delete capability of {@link UncheckedCrudDao}: the {@link CrudDeleteOps} operations
+ * re-declared to throw {@link UncheckedSQLException}.
  * 
  * @param <T> entity type
  * @param <ID> id type
@@ -35,7 +36,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD>> extends CrudDeleteOps<T, ID, TD>, UncheckedDeleteOps<T, TD>
         permits UncheckedCrudDao {
     /**
-     * Deletes the specified entity from the database. The entity must have its ID set.
+     * Deletes an entity from the database, identifying it by its ID property(ies).
+     * The entity must have its ID field(s) populated.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -46,15 +48,16 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entity the entity to delete (must have ID set)
-     * @return the number of rows deleted (typically 1 or 0)
+     * @param entity the entity to delete (must have its ID populated)
+     * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     int delete(final T entity) throws UncheckedSQLException;
 
     /**
-     * Deletes the entity with the specified ID from the database.
+     * Deletes an entity by its ID.
+     * This is more efficient than loading the entity first and then deleting it.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -65,7 +68,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param id the ID of the entity to delete
-     * @return the number of rows deleted (typically 1 or 0)
+     * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -73,8 +76,9 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
     int deleteById(final ID id) throws UncheckedSQLException;
 
     /**
-     * Batch deletes multiple entities from the database using the default batch size.
-     * Each entity must have its ID set.
+     * Performs batch delete of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     * Each entity must have its ID field(s) populated.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -93,8 +97,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Batch deletes multiple entities from the database using the specified batch size.
-     * Each entity must have its ID set.
+     * Performs batch delete of multiple entities with a specified batch size.
+     * Large collections will be processed in batches of the specified size.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -104,7 +108,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities to delete
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
@@ -113,7 +118,9 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
     int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Batch deletes entities by their IDs using the default batch size.
+     * Deletes multiple entities by their IDs using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     * This is more efficient than deleting entities one by one.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -121,7 +128,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * int totalDeleted = userDao.batchDeleteByIds(userIdsToDelete);
      * }</pre>
      *
-     * @param ids the collection of entity IDs to delete
+     * @param ids the collection of IDs to delete
      * @return the total number of rows deleted
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -131,8 +138,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
     }
 
     /**
-     * Batch deletes entities by their IDs using the specified batch size.
-     * This is more efficient than deleting entities one by one, especially for large collections.
+     * Deletes multiple entities by their IDs with a specified batch size.
+     * Large ID collections will be processed in batches to avoid database query size limits.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -141,8 +148,9 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * int totalDeleted = userDao.batchDeleteByIds(thousandsOfIds, 1000);
      * }</pre>
      *
-     * @param ids the collection of entity IDs to delete
-     * @param batchSize the size of each batch
+     * @param ids the collection of IDs to delete
+     * @param batchSize the number of IDs to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
