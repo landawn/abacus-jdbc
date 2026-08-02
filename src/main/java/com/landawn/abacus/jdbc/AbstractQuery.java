@@ -311,9 +311,19 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                     this.closeHandler = () -> {
                         try {
                             closeHandler.run();
-                        } finally {
-                            tmp.run();
+                        } catch (final RuntimeException | Error primaryFailure) {
+                            try {
+                                tmp.run();
+                            } catch (final RuntimeException | Error olderFailure) {
+                                if (olderFailure != primaryFailure) {
+                                    primaryFailure.addSuppressed(olderFailure);
+                                }
+                            }
+
+                            throw primaryFailure;
                         }
+
+                        tmp.run();
                     };
                 }
 
@@ -4492,6 +4502,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalBoolean.of(rs.getBoolean(1)) : OptionalBoolean.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve any declared execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4528,6 +4541,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalChar.of(CHAR_TYPE.get(rs, 1)) : OptionalChar.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4563,6 +4579,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalByte.of(rs.getByte(1)) : OptionalByte.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4598,6 +4617,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalShort.of(rs.getShort(1)) : OptionalShort.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4636,6 +4658,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalInt.of(rs.getInt(1)) : OptionalInt.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4672,6 +4697,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalLong.of(rs.getLong(1)) : OptionalLong.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4707,6 +4735,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalFloat.of(rs.getFloat(1)) : OptionalFloat.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4743,6 +4774,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? OptionalDouble.of(rs.getDouble(1)) : OptionalDouble.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4780,6 +4814,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(rs.getString(1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4816,6 +4853,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(BIG_INTEGER_TYPE.get(rs, 1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4850,6 +4890,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(rs.getBigDecimal(1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4883,6 +4926,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(rs.getDate(1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4916,6 +4962,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(rs.getTime(1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4949,6 +4998,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(rs.getTimestamp(1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -4982,6 +5034,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(rs.getBytes(1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5056,6 +5111,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Nullable.of(targetValueType.get(rs, 1)) : Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5140,6 +5198,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next() ? Optional.of(targetValueType.get(rs, 1)) : Optional.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5233,6 +5294,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return Nullable.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5331,6 +5395,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return Optional.empty();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5443,6 +5510,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs));
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5486,6 +5556,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return JdbcUtil.checkNotResultSet(resultExtractor.apply(rs, JdbcUtil.getColumnLabels(rs)));
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5496,6 +5569,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>This method is typically used with stored procedures that return multiple result sets.
      * It extracts the first two result sets using the provided extractors.</p>
+     *
+     * <p><b>Note:</b> When {@code closeAfterExecution(false)} has been set, any trailing results beyond
+     * the two consumed here are drained before this method returns so the statement can be safely
+     * reused. If that drain fails, the drain exception is added as a suppressed exception to the
+     * primary failure when the query itself failed, or thrown when the query otherwise succeeded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5548,17 +5626,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             primaryFailure = e;
             throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                try {
-                    discardRemainingResultsIfStatementWillBeReused(primaryFailure);
-                } finally {
-                    closeAfterExecutionIfAllowed();
-                }
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -5567,6 +5635,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>This method is typically used with stored procedures that return multiple result sets.
      * It extracts the first three result sets using the provided extractors.</p>
+     *
+     * <p><b>Note:</b> When {@code closeAfterExecution(false)} has been set, any trailing results beyond
+     * the three consumed here are drained before this method returns so the statement can be safely
+     * reused. If that drain fails, the drain exception is added as a suppressed exception to the
+     * primary failure when the query itself failed, or thrown when the query otherwise succeeded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5630,17 +5703,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             primaryFailure = e;
             throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                try {
-                    discardRemainingResultsIfStatementWillBeReused(primaryFailure);
-                } finally {
-                    closeAfterExecutionIfAllowed();
-                }
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -5701,6 +5764,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -5714,14 +5778,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -5758,6 +5819,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -5771,14 +5833,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -6125,6 +6184,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             } else {
                 return null;
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6172,6 +6234,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 return null;
             }
 
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6219,6 +6284,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 return null;
             }
 
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6473,6 +6541,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return null;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6509,6 +6580,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return null;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6553,6 +6627,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return null;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6592,6 +6669,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             } else {
                 return null;
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6638,6 +6718,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return null;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -6914,6 +6997,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -7089,6 +7175,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -7131,6 +7220,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(targetType, cs.targetType);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -7145,14 +7235,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -7187,6 +7274,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -7201,14 +7289,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -7242,6 +7327,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -7256,14 +7342,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -7300,6 +7383,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -7314,14 +7398,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -7362,6 +7443,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(stmt);
@@ -7376,14 +7458,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -8005,13 +8084,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             return Stream.of(iter);
         }).mapE(rs -> JdbcUtil.<R> extractAndCloseResultSet(rs, resultExtractor)).onClose(() -> {
             try {
-                final ObjIteratorEx<ResultSet> iter = iterRef.get();
-
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
+                closeAllResultsAndQueryIfAllowed(iterRef.get(), null);
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
             }
         });
     }
@@ -8073,13 +8148,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             return Stream.of(iter);
         }).mapE(rs -> JdbcUtil.<R> extractAndCloseResultSet(rs, resultExtractor)).onClose(() -> {
             try {
-                final ObjIteratorEx<ResultSet> iter = iterRef.get();
-
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
+                closeAllResultsAndQueryIfAllowed(iterRef.get(), null);
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
             }
         });
     }
@@ -8089,8 +8160,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 return executeQuery();
             } catch (final SQLException e) {
-                closeAfterExecutionIfAllowed();
-                throw new UncheckedSQLException(e);
+                final UncheckedSQLException primaryFailure = new UncheckedSQLException(e);
+                closeAfterExecutionIfAllowed(primaryFailure);
+                throw primaryFailure;
+            } catch (final RuntimeException | Error primaryFailure) {
+                closeAfterExecutionIfAllowed(primaryFailure);
+                throw primaryFailure;
             }
         };
     }
@@ -8100,10 +8175,42 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 return JdbcUtil.execute(stmt);
             } catch (final SQLException e) {
-                closeAfterExecutionIfAllowed();
-                throw new UncheckedSQLException(e);
+                final UncheckedSQLException primaryFailure = new UncheckedSQLException(e);
+                closeAfterExecutionIfAllowed(primaryFailure);
+                throw primaryFailure;
+            } catch (final RuntimeException | Error primaryFailure) {
+                closeAfterExecutionIfAllowed(primaryFailure);
+                throw primaryFailure;
             }
         };
+    }
+
+    final void closeAllResultsAndQueryIfAllowed(final ObjIteratorEx<ResultSet> iter, final Throwable primaryFailure) throws SQLException {
+        Throwable cleanupPrimary = primaryFailure;
+
+        try {
+            if (iter != null) {
+                iter.closeResource();
+            }
+        } catch (final RuntimeException | Error cleanupFailure) {
+            if (cleanupPrimary == null) {
+                cleanupPrimary = cleanupFailure;
+                throw cleanupFailure;
+            }
+
+            if (cleanupFailure != cleanupPrimary) {
+                cleanupPrimary.addSuppressed(cleanupFailure);
+            }
+        } finally {
+            try {
+                discardRemainingResultsIfStatementWillBeReused(cleanupPrimary);
+            } catch (final SQLException | RuntimeException | Error cleanupFailure) {
+                cleanupPrimary = cleanupFailure;
+                throw cleanupFailure;
+            } finally {
+                closeAfterExecutionIfAllowed(cleanupPrimary);
+            }
+        }
     }
 
     private void discardRemainingResultsIfStatementWillBeReused(final Throwable primaryFailure) throws SQLException {
@@ -8158,6 +8265,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try (ResultSet rs = executeQuery()) {
             return rs.next();
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8233,6 +8343,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (rs.next()) {
                 rowConsumer.accept(rs);
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8276,6 +8389,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (rs.next()) {
                 rowConsumer.accept(rs, JdbcUtil.getColumnLabels(rs));
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8328,6 +8444,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             } else {
                 orElseAction.run();
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8382,6 +8501,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             } else {
                 orElseAction.run();
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8427,6 +8549,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return cnt;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8473,6 +8598,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return cnt;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8525,6 +8653,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return cnt;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8571,6 +8702,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return false;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8621,6 +8755,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return false;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8669,6 +8806,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return true;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8722,6 +8862,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return true;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8844,6 +8987,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 rowConsumer.accept(rs);
             }
 
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8891,6 +9037,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                     rowConsumer.accept(rs);
                 }
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -8942,6 +9091,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 rowConsumer.accept(rs, columnLabels);
             }
 
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9006,6 +9158,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9283,6 +9438,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final ID id = rs.next() ? autoGeneratedKeyExtractor.apply(rs) : null;
                 return id == null || isDefaultIdTester.test(id) ? Optional.empty() : Optional.of(id);
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9319,6 +9477,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                     return Optional.empty();
                 }
             }
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9456,6 +9617,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return ids;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9498,6 +9662,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return ids;
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9533,6 +9700,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return JdbcUtil.executeUpdate(stmt);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9584,6 +9754,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return toResultTuple(updatedRowCount, generatedKeysList);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9636,6 +9809,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return toResultTuple(updatedRowCount, generatedKeysList);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9687,6 +9863,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return JdbcUtil.executeBatch(stmt);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9737,6 +9916,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return toResultTuple(updatedRowCount, generatedKeysList);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9785,6 +9967,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return toResultTuple(updatedRowCount, generatedKeysList);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9818,6 +10003,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return JdbcUtil.executeLargeUpdate(stmt);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9854,6 +10042,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return JdbcUtil.executeLargeBatch(stmt);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9900,6 +10091,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return JdbcUtil.execute(stmt);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -9960,6 +10154,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             JdbcUtil.execute(stmt);
 
             return func.apply(stmt);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -10004,6 +10201,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
             return func.apply(stmt, isFirstResultSet);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -10051,6 +10251,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             JdbcUtil.execute(stmt);
 
             consumer.accept(stmt);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -10096,6 +10299,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
             consumer.accept(stmt, isFirstResultSet);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -10327,6 +10533,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             try {
                 return action.call();
+            } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+                closeAfterExecutionIfAllowed(primaryFailure);
+                throw primaryFailure;
             } finally {
                 closeAfterExecutionIfAllowed();
             }
@@ -10554,6 +10763,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     void closeAfterExecutionIfAllowed() {
         if (isCloseAfterExecution) {
             close();
+        }
+    }
+
+    final void closeAfterExecutionIfAllowed(final Throwable primaryFailure) {
+        if (isCloseAfterExecution) {
+            if (primaryFailure == null) {
+                close();
+            } else {
+                closeSuppressingFailure(primaryFailure);
+            }
         }
     }
 

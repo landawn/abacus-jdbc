@@ -1873,6 +1873,7 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
+     * @throws IllegalArgumentException if {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
@@ -1914,6 +1915,7 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
+     * @throws IllegalArgumentException if {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
@@ -1997,6 +1999,7 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
      * @param output the File to write the CSV data to (will be created if it doesn't exist)
      * @return the total number of rows exported to the CSV file
+     * @throws IllegalArgumentException if {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing to the file
      */
@@ -2164,6 +2167,7 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
+     * @throws IllegalArgumentException if {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing
      */
@@ -2207,6 +2211,7 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
+     * @throws IllegalArgumentException if {@code output} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while writing
      */

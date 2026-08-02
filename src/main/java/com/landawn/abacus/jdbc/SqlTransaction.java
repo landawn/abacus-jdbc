@@ -45,7 +45,11 @@ import com.landawn.abacus.util.Throwables;
  * automatically enlist in it.</p>
  *
  * <p><b>&#9888; Warning:</b> A transaction and its connection must be used only on the thread that
- * started it. Transaction context is not propagated to executor tasks or other threads.</p>
+ * started it. Transaction context is not propagated to executor tasks or other threads. This is
+ * enforced: {@link #connection()}, {@link #commit()}, {@link #rollback()},
+ * {@link #rollbackIfNotCommitted()}, {@link #close()}, {@link #runOutsideTransaction(Throwables.Runnable)},
+ * and {@link #callOutsideTransaction(Throwables.Callable)} all throw {@link IllegalStateException}
+ * when invoked from any other thread.</p>
  *
  * <p><b>Nested scopes:</b> beginning a transaction again on the same thread and data source does
  * not start a brand-new transaction; instead it re-enters this one and increments an internal
@@ -417,10 +421,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
      *         automatic rollback is also attempted, and any rollback failure is suppressed in
      *         favour of this exception
-     * @throws IllegalStateException if the outermost commit is attempted while the transaction is
-     *         not in {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}. If this transaction
+     * @throws IllegalStateException if called from a thread other than the transaction's owner
+     *         thread, or if the outermost commit is attempted while the transaction is not in
+     *         {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}. If this transaction
      *         scope has already completed (reference count already below zero), the call is
-     *         logged and ignored rather than throwing, or if called from a thread other than the transaction's owner thread.
+     *         logged and ignored rather than throwing.
      */
     @Override
     public void commit() throws UncheckedSQLException {
@@ -444,10 +449,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalArgumentException if {@code actionAfterCommit} is {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
      *         automatic rollback is also attempted
-     * @throws IllegalStateException if the outermost commit is attempted while the transaction is
-     *         neither {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}. If this transaction
+     * @throws IllegalStateException if called from a thread other than the transaction's owner
+     *         thread, or if the outermost commit is attempted while the transaction is neither
+     *         {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}. If this transaction
      *         scope has already completed (reference count already below zero), the call is
-     *         logged and ignored rather than throwing, or if called from a thread other than the transaction's owner thread.
+     *         logged and ignored rather than throwing.
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         N.checkArgNotNull(actionAfterCommit, "actionAfterCommit");
@@ -557,11 +563,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
-     * @throws IllegalStateException if the outermost rollback is attempted while the transaction
-     *         status is not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
+     * @throws IllegalStateException if called from a thread other than the transaction's owner
+     *         thread, or if the outermost rollback is attempted while the transaction status is
+     *         not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
      *         {@link Status#FAILED_COMMIT}. If this transaction scope has already completed
      *         (reference count already below zero), the call is logged and ignored rather
-     *         than throwing, or if called from a thread other than the transaction's owner thread.
+     *         than throwing.
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated
@@ -581,10 +588,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param actionAfterRollback the action to be executed after the rollback completes in this (outermost) scope; for a nested scope the rollback is deferred to the outermost scope and this action is <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
      * @throws IllegalArgumentException if {@code actionAfterRollback} is {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
-     * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE},
+     * @throws IllegalStateException if called from a thread other than the transaction's owner
+     *         thread, or if the transaction status is not {@link Status#ACTIVE},
      *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. If this transaction
      *         scope has already completed (reference count already below zero), the call is
-     *         logged and ignored rather than throwing, or if called from a thread other than the transaction's owner thread.
+     *         logged and ignored rather than throwing.
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         N.checkArgNotNull(actionAfterRollback, "actionAfterRollback");
@@ -1104,10 +1112,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Runnable} throws an exception
-     * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
-     *         been opened on this thread for the same data source and creator and was not closed. If {@code cmd} itself
-     *         throws, this condition is instead attached as a suppressed exception, or if called from a thread other than
-     *         the transaction's owner thread.
+     * @throws IllegalStateException if called from a thread other than the transaction's owner
+     *         thread, or if, after {@code cmd} completes normally, another transaction has been
+     *         opened on this thread for the same data source and creator and was not closed. If
+     *         {@code cmd} itself throws, the latter condition is instead attached to that
+     *         exception as a suppressed exception.
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
         N.checkArgNotNull(cmd, cs.cmd);
@@ -1176,10 +1185,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @return the result returned by the {@code Callable}
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Callable} throws an exception
-     * @throws IllegalStateException if, after {@code cmd} completes normally, another transaction has
-     *         been opened on this thread for the same data source and creator and was not closed. If {@code cmd} itself
-     *         throws, this condition is instead attached as a suppressed exception, or if called from a thread other than
-     *         the transaction's owner thread.
+     * @throws IllegalStateException if called from a thread other than the transaction's owner
+     *         thread, or if, after {@code cmd} completes normally, another transaction has been
+     *         opened on this thread for the same data source and creator and was not closed. If
+     *         {@code cmd} itself throws, the latter condition is instead attached to that
+     *         exception as a suppressed exception.
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd) throws E {
         N.checkArgNotNull(cmd, cs.cmd);

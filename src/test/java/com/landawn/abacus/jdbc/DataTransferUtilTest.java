@@ -1060,8 +1060,7 @@ public class DataTransferUtilTest extends TestBase {
         List<String> selectColumnNames = Arrays.asList("col1");
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
-        assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.importData(mockDataset, selectColumnNames, null, mockConnection, insertSql, 1, 0));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, selectColumnNames, null, mockConnection, insertSql, 1, 0));
     }
 
     @Test

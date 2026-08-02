@@ -38,6 +38,9 @@ import com.landawn.abacus.annotation.Beta;
  * such as append-only data stores, immutable records, or when you want to ensure data is never modified
  * after creation.</p>
  *
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
+ * incompatible changes, or even removal, in a future release.</p>
+ *
  * <p><b>&#9888; Warning:</b> This is an API capability restriction, not a database security or
  * integrity boundary. Enforce append-only rules with database permissions, constraints, and an
  * appropriate transaction policy as well.</p>

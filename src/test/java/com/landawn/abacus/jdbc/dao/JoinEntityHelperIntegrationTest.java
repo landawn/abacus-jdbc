@@ -428,6 +428,26 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         assertEquals(2, includeAll.get(0).getOrders().size());
     }
 
+    @Test
+    public void testSelectiveSourceReadsAutomaticallyIncludeJoinKeys() {
+        final JoinUser first = seedUser("SelectiveA", 1.0, 2.0);
+        final JoinUser second = seedUser("SelectiveB", 3.0);
+
+        final JoinUser byId = userDao.gett(first.getId(), List.of("name"), JoinOrder.class);
+        assertEquals(first.getId(), byId.getId());
+        assertEquals(2, byId.getOrders().size());
+
+        final List<JoinUser> batch = userDao.batchGet(List.of(first.getId(), second.getId()), List.of("name"), List.<Class<?>> of(JoinOrder.class), 2);
+        assertEquals(2, batch.size());
+        assertEquals(3, batch.stream().mapToInt(user -> user.getOrders().size()).sum());
+
+        try (com.landawn.abacus.util.stream.Stream<JoinUser> stream = userDao.stream(List.of("name"), true, Filters.gt("id", 0))) {
+            final List<JoinUser> streamed = stream.toList();
+            assertEquals(2, streamed.size());
+            assertEquals(3, streamed.stream().mapToInt(user -> user.getOrders().size()).sum());
+        }
+    }
+
     // deleteJoinEntities by prop-name and by class (multi-property -> transactional branch).
     @Test
     public void testDeleteJoinEntities_ByPropNameAndByClass() {

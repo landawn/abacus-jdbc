@@ -46,6 +46,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *
      * @param entity the entity to delete (must have its ID populated)
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     int delete(final T entity) throws SQLException;

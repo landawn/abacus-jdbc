@@ -47,6 +47,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param propValue the new value for the property
      * @param cond the condition to match records
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final Condition cond) throws SQLException {
@@ -71,6 +72,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param updateProps map of property names to new values
      * @param cond the condition to match records
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
@@ -93,6 +95,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entity the entity containing update values
      * @param cond the condition to match records
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     default int update(final T entity, final Condition cond) throws SQLException {
@@ -122,6 +125,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param propNamesToUpdate the property names to update
      * @param cond the condition to match records
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
+     *                                  or if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException;

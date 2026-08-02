@@ -227,7 +227,7 @@ public class ReadOnlyJoinEntityHelperIntegrationTest extends TestBase {
     public void testReadOnlyCrudJoinDao_findFirstWithJoin() {
         seedUser("FindMe", 5.0, 6.0);
 
-        final Optional<RoUser> found = roUserDao.findFirst(null, RoOrder.class, Filters.eq("name", "FindMe"));
+        final Optional<RoUser> found = roUserDao.findFirst(List.of("name"), RoOrder.class, Filters.eq("name", "FindMe"));
         assertTrue(found.isPresent());
         assertEquals(2, found.get().getOrders().size());
     }

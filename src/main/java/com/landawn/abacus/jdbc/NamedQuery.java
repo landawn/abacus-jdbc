@@ -1512,7 +1512,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date date = new java.util.Date();   // Current date and time
-     * query.setTime("startTime", date);             // Only time portion is used
+     * query.setTime("startTime", date);             // Typically only the time portion is stored
      *
      * // Using Calendar
      * Calendar cal = Calendar.getInstance();
@@ -3763,7 +3763,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * if the map contains a matching key, its value is bound to that parameter using the default
      * SQL type mapping (as if by {@code setObject}). Map entries whose keys do not correspond to
      * named parameters in the SQL are ignored. Named parameters that are absent from the map are
-     * left unbound and must be bound before the query is executed.
+     * left untouched — they keep any previously bound value or remain unbound — so several calls
+     * can bind disjoint subsets; every parameter must be bound before the query is executed.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3774,9 +3775,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * query.setParameters(params);
      * }</pre>
-     *
-     * <p>Entries whose keys are not present in the SQL are ignored. SQL parameters absent from the map
-     * are left unchanged, allowing several calls to bind disjoint subsets.</p>
      *
      * @param parameters a map containing parameter names (without the ':' prefix) as keys and their values
      * @return this NamedQuery instance for method chaining
@@ -4146,7 +4144,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>Arrays or Collections for positional parameters</li>
      * </ul>
      *
-     * <p>The runtime type of the first non-null element normally determines how the remaining non-null
+     * <p>The runtime type of the first element (when it is non-null) determines how the remaining non-null
      * elements are interpreted, so they should have the same parameter shape. If the iterator is empty,
      * this is a no-op and no batch is added. A {@code null} element is only supported when the SQL has exactly one
      * parameter placeholder — a single named parameter appearing exactly once (it is bound as SQL

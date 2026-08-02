@@ -6062,8 +6062,8 @@ public final class Jdbc {
          * // Use a type-based mapper for custom types
          * RowMapper<LocalDate> mapper = ColumnOne.get(LocalDate.class);
          *
-         * // Set a single parameter by type
-         * preparedQuery.setParameters(userId, ColumnOne.SET_INT);
+         * // Set a single parameter by type (settParameters accepts a setter over the query itself)
+         * preparedQuery.settParameters(userId, ColumnOne.SET_INT);
          * }</pre>
          *
          * @see ColumnGetter
@@ -6931,7 +6931,7 @@ public final class Jdbc {
 
                         result = existingHandler == null ? springHandler : existingHandler;
                     }
-                } catch (final Exception e) {
+                } catch (final Exception | LinkageError e) {
                     // Spring lookup is optional; the registry is rechecked below in case registration raced with it.
                 }
             }
@@ -6972,7 +6972,7 @@ public final class Jdbc {
             if (result == null && springAppContext != null) {
                 try {
                     result = springAppContext.getBean(handlerClass);
-                } catch (final Exception e) {
+                } catch (final Exception | LinkageError e) {
                     // Fall back to lookup by qualifier, then recheck the registry.
                 }
 
@@ -6983,7 +6983,7 @@ public final class Jdbc {
                         if (bean instanceof Handler) {
                             result = (Handler<?>) bean;
                         }
-                    } catch (final Exception e) {
+                    } catch (final Exception | LinkageError e) {
                         // The registry is rechecked below in case registration raced with Spring lookup.
                     }
                 }

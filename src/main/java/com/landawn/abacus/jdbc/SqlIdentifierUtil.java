@@ -21,7 +21,8 @@ import com.landawn.abacus.util.Strings;
 
 /**
  * Shared rendering rules for SQL table/column identifiers used by the SQL-generating utilities in
- * this package ({@link DataTransferUtil} and {@link JdbcCodeGenerationUtil}).
+ * this package ({@link DataTransferUtil} and {@link JdbcCodeGenerationUtil}); {@link JdbcUtil} also
+ * relies on the delimiter-decoding helper when splitting qualified identifiers.
  *
  * <p>Centralizing the rules in a single implementation guarantees that a table or column name
  * is rendered identically no matter which utility generates the statement.</p>
@@ -248,20 +249,16 @@ final class SqlIdentifierUtil {
     static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
         N.checkArgNotBlank(columnName, cs.columnName);
 
-        if (startsWithIdentifierDelimiter(columnName)) {
-            final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(columnName, "columnName");
+        final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(columnName, "columnName");
 
-            if (parts.length != 1) {
-                throw new IllegalArgumentException("'columnName' must be a single identifier: " + columnName);
-            }
-
-            // Decode the caller's delimiter and re-quote with the active database dialect. This
-            // both preserves case-sensitive simple names and avoids double-quoting input such as
-            // "MixedCase" or [order].
-            return checkColumnName(parts[0], dbProductInfo, true);
+        if (parts.length != 1) {
+            throw new IllegalArgumentException("'columnName' must be a single identifier: " + columnName);
         }
 
-        return checkColumnName(columnName, dbProductInfo, false);
+        // Parse every input, not just explicitly delimited names: this strips insignificant outer
+        // whitespace consistently and prevents an unquoted qualified name from being silently
+        // reinterpreted as one literal column containing a dot.
+        return checkColumnName(parts[0], dbProductInfo, startsWithIdentifierDelimiter(columnName));
     }
 
     /**

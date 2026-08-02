@@ -70,7 +70,9 @@ import com.landawn.abacus.util.Throwables;
  * <p>All standard {@link ResultSet} methods are transparently delegated to the underlying
  * ResultSet instance without modification. Only the {@link #getObject(int)} and
  * {@link #getObject(String)} methods provide enhanced functionality with Oracle-specific
- * type conversion and performance optimization through caching.</p>
+ * type conversion and performance optimization through caching. The {@code java.sql.Wrapper}
+ * methods ({@link #unwrap(Class)} and {@link #isWrapperFor(Class)}) are the only other
+ * exception: they first consider the proxy itself before consulting the delegate.</p>
  *
  * <p>This delegation pattern allows the proxy to be used as a drop-in replacement for any
  * {@link ResultSet} without requiring changes to existing JDBC code. Methods such as {@code next()},

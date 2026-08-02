@@ -51,6 +51,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity containing the values to update
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -76,7 +77,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propNamesToUpdate the property names to update (must not be {@code null} or empty)
      * @return the number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToUpdate} is {@code null} or empty
      */
     @Override
     int update(final T entity, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
@@ -98,6 +99,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propValue the new value for the property
      * @param id the ID of the entity to update
      * @return the number of rows updated
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -124,13 +126,15 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param updateProps a map of property names to their new values
      * @param id the ID of the entity to update
      * @return the number of rows updated
+     * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     int update(final Map<String, Object> updateProps, final ID id) throws UncheckedSQLException;
 
     /**
-     * Batch updates multiple entities using the default batch size.
+     * Batch updates multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * All updatable properties of each entity will be included in the UPDATE statement.
      *
      * <p><b>Usage Examples:</b></p>
@@ -173,7 +177,8 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
     int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Batch updates only the specified properties of multiple entities using the default batch size.
+     * Batch updates only the specified properties of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

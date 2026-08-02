@@ -50,6 +50,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param propValue the new value for the property
      * @param cond the condition to match records to update
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -74,6 +75,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param updateProps a map of property names to their new values
      * @param cond the condition to match records to update
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -97,6 +99,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entity the entity containing values to update
      * @param cond the condition to match records to update
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -109,7 +112,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
 
     /**
      * Updates records matching the condition with specified properties from the entity.
-     * Only the properties listed in propNamesToUpdate will be updated.
+     * Only the properties listed in {@code propNamesToUpdate} will be updated.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -129,6 +132,8 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param propNamesToUpdate the properties to update from the entity
      * @param cond the condition to match records to update
      * @return the number of records updated
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
+     *                                  or if {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

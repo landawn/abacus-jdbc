@@ -610,7 +610,7 @@ public final class JdbcCodeGenerationUtil {
                 final Connection conn = stmt == null ? null : stmt.getConnection();
 
                 if (conn != null) {
-                    // Pre-fix this passed entityName verbatim, so a qualified name like
+                    // Pre-fix, this passed entityName verbatim, so a qualified name like
                     // "schema.users" was sent as a literal table name (drivers never match);
                     // PK auto-detection silently produced no @Id. Split the identifier so
                     // catalog/schema/table get the correct slots. Unqualified names retain the
@@ -1534,7 +1534,7 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(columnLabelList, tableName);
 
             return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ");
+                    + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?").join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1604,8 +1604,10 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
 
             return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(updateColumnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ")
-                    + " WHERE " + SqlIdentifierUtil.checkColumnName(resolvedKeyColumnName, dbProductInfo) + " = ?";
+                    + Stream.of(updateColumnLabelList)
+                            .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?")
+                            .join(", ")
+                    + " WHERE " + SqlIdentifierUtil.checkColumnName(resolvedKeyColumnName, dbProductInfo, false) + " = ?";
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1713,7 +1715,9 @@ public final class JdbcCodeGenerationUtil {
                 whereSection = " WHERE ";
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
-                    whereSection += Stream.of(resolvedKeyColumnNames).map(c -> SqlIdentifierUtil.checkColumnName(c, dbProductInfo) + " = ?").join(" AND ");
+                    whereSection += Stream.of(resolvedKeyColumnNames)
+                            .map(c -> SqlIdentifierUtil.checkColumnName(c, dbProductInfo, false) + " = ?")
+                            .join(" AND ");
 
                     if (Strings.isNotEmpty(whereClause)) {
                         whereSection += " AND " + whereClause;
@@ -1724,7 +1728,7 @@ public final class JdbcCodeGenerationUtil {
             }
 
             return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ")
+                    + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?").join(", ")
                     + whereSection;
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1796,10 +1800,9 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList)
-                            .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
-                            .join(", ");
+            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+                    .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
+                    .join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1869,11 +1872,10 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
             checkNamedParameterColumnLabels(Stream.of(updateColumnLabelList).append(resolvedKeyColumnName).toList(), tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(updateColumnLabelList)
-                            .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
-                            .join(", ")
-                    + " WHERE " + SqlIdentifierUtil.checkColumnName(resolvedKeyColumnName, dbProductInfo) + " = :" + Strings.toCamelCase(resolvedKeyColumnName);
+            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(updateColumnLabelList)
+                    .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
+                    .join(", ") + " WHERE " + SqlIdentifierUtil.checkColumnName(resolvedKeyColumnName, dbProductInfo, false) + " = :"
+                    + Strings.toCamelCase(resolvedKeyColumnName);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1981,7 +1983,7 @@ public final class JdbcCodeGenerationUtil {
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
                     whereSection += Stream.of(resolvedKeyColumnNames)
-                            .map(c -> SqlIdentifierUtil.checkColumnName(c, dbProductInfo) + " = :" + Strings.toCamelCase(c))
+                            .map(c -> SqlIdentifierUtil.checkColumnName(c, dbProductInfo, false) + " = :" + Strings.toCamelCase(c))
                             .join(" AND ");
 
                     if (Strings.isNotEmpty(whereClause)) {
@@ -1992,11 +1994,9 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList)
-                            .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
-                            .join(", ")
-                    + whereSection;
+            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+                    .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
+                    .join(", ") + whereSection;
 
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2390,6 +2390,7 @@ public final class JdbcCodeGenerationUtil {
         int bracketDepth = 0;
         int braceDepth = 0;
         char quote = 0;
+        boolean inTopLevelInitializer = false;
 
         for (int i = 0, len = declaration.length(); i < len; i++) {
             final char ch = declaration.charAt(i);
@@ -2402,7 +2403,7 @@ public final class JdbcCodeGenerationUtil {
                 }
             } else if (ch == '"' || ch == '\'') {
                 quote = ch;
-            } else if (ch == '<') {
+            } else if (ch == '<' && (!inTopLevelInitializer || angleDepth > 0 || isGenericTypeArgumentStart(declaration, i))) {
                 angleDepth++;
             } else if (ch == '>' && angleDepth > 0) {
                 angleDepth--;
@@ -2418,14 +2419,103 @@ public final class JdbcCodeGenerationUtil {
                 braceDepth++;
             } else if (ch == '}') {
                 braceDepth--;
+            } else if (ch == '=' && angleDepth == 0 && parenthesisDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                inTopLevelInitializer = true;
             } else if (ch == ',' && angleDepth == 0 && parenthesisDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
                 result.add(declaration.substring(start, i).trim());
                 start = i + 1;
+                inTopLevelInitializer = false;
             }
         }
 
         result.add(declaration.substring(start).trim());
         return result;
+    }
+
+    private static boolean isGenericTypeArgumentStart(final String declaration, final int angleIndex) {
+        int typeNameEnd = angleIndex - 1;
+
+        while (typeNameEnd >= 0 && Character.isWhitespace(declaration.charAt(typeNameEnd))) {
+            typeNameEnd--;
+        }
+
+        if (typeNameEnd < 0) {
+            return false;
+        }
+
+        if (declaration.charAt(typeNameEnd) == '.') {
+            return true; // Explicit generic method invocation: Type.<A, B>method().
+        }
+
+        int typeNameStart = typeNameEnd;
+
+        while (typeNameStart >= 0 && Character.isJavaIdentifierPart(declaration.charAt(typeNameStart))) {
+            typeNameStart--;
+        }
+
+        if (typeNameStart == typeNameEnd || !Character.isJavaIdentifierStart(declaration.charAt(typeNameStart + 1))) {
+            return false;
+        }
+
+        int previous = typeNameStart;
+
+        while (true) {
+            while (previous >= 0 && Character.isWhitespace(declaration.charAt(previous))) {
+                previous--;
+            }
+
+            if (previous < 0 || declaration.charAt(previous) != '.') {
+                break;
+            }
+
+            previous--;
+
+            while (previous >= 0 && Character.isWhitespace(declaration.charAt(previous))) {
+                previous--;
+            }
+
+            while (previous >= 0 && Character.isJavaIdentifierPart(declaration.charAt(previous))) {
+                previous--;
+            }
+        }
+
+        while (previous >= 0 && Character.isWhitespace(declaration.charAt(previous))) {
+            previous--;
+        }
+
+        final int previousWordEnd = previous;
+
+        while (previous >= 0 && Character.isJavaIdentifierPart(declaration.charAt(previous))) {
+            previous--;
+        }
+
+        if (previousWordEnd >= 0) {
+            final CharSequence previousWord = declaration.subSequence(previous + 1, previousWordEnd + 1);
+
+            if ("new".contentEquals(previousWord) || "instanceof".contentEquals(previousWord)) {
+                return true;
+            }
+        }
+
+        int nestedAngleDepth = 1;
+
+        for (int i = angleIndex + 1, len = declaration.length(); i < len; i++) {
+            final char ch = declaration.charAt(i);
+
+            if (ch == '<') {
+                nestedAngleDepth++;
+            } else if (ch == '>' && --nestedAngleDepth == 0) {
+                i++;
+
+                while (i < len && Character.isWhitespace(declaration.charAt(i))) {
+                    i++;
+                }
+
+                return i + 1 < len && declaration.charAt(i) == ':' && declaration.charAt(i + 1) == ':';
+            }
+        }
+
+        return false;
     }
 
     private static String stripJavaInitializer(final String declarator) {
@@ -2594,7 +2684,7 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static List<String> checkColumnName(final List<String> columnLabelList, final ProductInfo dbProductInfo) {
-        return N.map(columnLabelList, it -> SqlIdentifierUtil.checkColumnName(it, dbProductInfo));
+        return N.map(columnLabelList, it -> SqlIdentifierUtil.checkColumnName(it, dbProductInfo, false));
     }
 
     private static void checkUpdateSetColumnLabels(final Collection<String> columnLabelList, final String tableName) {
@@ -2907,7 +2997,11 @@ public final class JdbcCodeGenerationUtil {
         /**
          * Additional source code to append to the generated entity class body.
          * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}).
-         * Lines starting with {@code //} are treated as comments and stripped during field parsing.
+         * Line comments ({@code //...}) are stripped during field parsing, whether they occupy a whole line
+         * or trail a declaration. Multi-variable declarations (e.g., {@code "private int width, height;"})
+         * are fully parsed: each declared variable is recognized individually and, when {@code copy()}
+         * generation is enabled, receives its own assignment in the generated {@code copy()} method
+         * ({@code static}/{@code final} fields are skipped).
          *
          * <p>Imports are auto-added only for generic {@code java.util} types used by these fields
          * (e.g. {@code List}, {@code Map}); any other type (such as {@code java.time.LocalDate} or a

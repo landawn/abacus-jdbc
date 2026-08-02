@@ -29,6 +29,8 @@ import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
+import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.util.u.Optional;
 
 /**
  * End-to-end integration coverage for the <i>non-crud</i> join-entity helper bodies that the existing
@@ -517,6 +519,17 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
         cjUserDao.loadJoinEntitiesIfAbsent(users, CJOrder.class);
 
         assertEquals(2, users.get(0).getOrders().size());
+    }
+
+    @Test
+    public void testCheckedSelectiveFindAutomaticallyIncludesJoinKey() throws SQLException {
+        seedCjUser(1, "CheckedSelective", 2);
+
+        final Optional<CJUser> found = cjUserDao.findFirst(List.of("name"), CJOrder.class, Filters.eq("id", 1));
+
+        assertTrue(found.isPresent());
+        assertEquals(1L, found.get().getId());
+        assertEquals(2, found.get().getOrders().size());
     }
 
     // loadJoinEntitiesIfAbsent(entity, unknownProp) throws IllegalArgumentException (L1213).

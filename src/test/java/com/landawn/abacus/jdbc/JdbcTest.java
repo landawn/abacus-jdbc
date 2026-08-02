@@ -166,6 +166,9 @@ public class JdbcTest extends TestBase {
         // Marker handler used by the deterministic registration-race test.
     }
 
+    public static final class SpringLinkageFailureHandler implements Jdbc.Handler<Object> {
+    }
+
     // ParametersSetter Tests
     @Test
     public void testParametersSetterDoNothing() throws SQLException {
@@ -3775,6 +3778,25 @@ public class JdbcTest extends TestBase {
 
         try {
             assertSame(winner, Jdbc.HandlerFactory.get(SpringRaceHandler.class));
+        } finally {
+            new SpringApplicationContext().setApplicationContext(null);
+        }
+    }
+
+    @Test
+    public void testHandlerFactoryIgnoresOptionalSpringLinkageFailures() {
+        final String qualifier = JdbcTest.class.getName() + ".linkageFailure." + System.nanoTime();
+        final ApplicationContext applicationContext = Mockito.mock(ApplicationContext.class);
+
+        when(applicationContext.getBean(qualifier)).thenThrow(new NoSuchMethodError("incompatible Spring API"));
+        when(applicationContext.getBean(SpringLinkageFailureHandler.class)).thenThrow(new NoClassDefFoundError("missing optional Spring type"));
+        when(applicationContext.getBean(SpringLinkageFailureHandler.class.getCanonicalName())).thenThrow(new NoSuchMethodError("incompatible Spring API"));
+
+        new SpringApplicationContext().setApplicationContext(applicationContext);
+
+        try {
+            assertNull(Jdbc.HandlerFactory.get(qualifier));
+            assertNull(Jdbc.HandlerFactory.get(SpringLinkageFailureHandler.class));
         } finally {
             new SpringApplicationContext().setApplicationContext(null);
         }

@@ -326,7 +326,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, sourceSelectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
 
         if (result != null) {
             loadJoinEntities(result, joinEntityClass);
@@ -364,7 +364,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     @Beta
     default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, sourceSelectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this).gett(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
 
         if (result != null && N.notEmpty(joinEntityClasses)) {
             for (final Class<?> joinEntityClass : joinEntityClasses) {
@@ -404,7 +404,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     @Beta
     default T gett(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, sourceSelectPropNames);
+        final T result = DaoUtil.getCrudReadOps(this)
+                .gett(id, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -580,7 +581,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
             final int batchSize) throws DuplicateResultException, SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, sourceSelectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this)
+                .batchGet(ids, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), batchSize);
 
         if (N.notEmpty(result)) {
             if (result.size() <= batchSize) {
@@ -624,7 +626,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
             final int batchSize) throws DuplicateResultException, SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, sourceSelectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this)
+                .batchGet(ids, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), batchSize);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntityClasses)) {
             if (result.size() <= batchSize) {
@@ -675,7 +678,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
             final int batchSize) throws DuplicateResultException, SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        final List<T> result = DaoUtil.getCrudReadOps(this).batchGet(ids, sourceSelectPropNames, batchSize);
+        final List<T> result = DaoUtil.getCrudReadOps(this)
+                .batchGet(ids, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames, batchSize);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() <= batchSize) {

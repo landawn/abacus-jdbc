@@ -566,7 +566,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
 
     /**
      * Deletes all join entities for a single entity.
-     * This deletes the join entities for every join relationship defined in the entity.
+     * This deletes the rows referenced by every property annotated with {@code @JoinedBy};
+     * the in-memory join properties of {@code entity} are left unchanged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -652,7 +653,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
 
     /**
      * Deletes all join entities for multiple entities.
-     * This deletes the join entities for every join relationship of each of the given entities in a batch operation.
+     * This deletes the rows referenced by every property annotated with {@code @JoinedBy} for each entity;
+     * the in-memory join properties of the entities are left unchanged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -45,8 +45,8 @@ import com.landawn.abacus.util.stream.Stream;
  * <p>This interface contains no operation that modifies the database, so it can be mixed into
  * read-only DAOs (see {@link ReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
  *
- * <p><b>&#9888; Warning:</b> When selecting only some source properties, include every property used
- * as a join key. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
+ * <p>Properties used as source join keys are selected automatically and may therefore be populated
+ * even when omitted from a selective read. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
  * caller's thread-bound transaction and may partially populate entities before a task fails.</p>
  *
  * @param <T> the entity type managed by this DAO
@@ -77,7 +77,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond) throws SQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(sourceSelectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond);
 
         if (result.isPresent()) {
             loadJoinEntities(result.get(), joinEntityClass);
@@ -106,7 +106,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws SQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(sourceSelectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
 
         if (result.isPresent() && N.notEmpty(joinEntityClasses)) {
             for (final Class<?> joinEntityClass : joinEntityClasses) {
@@ -136,7 +136,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws SQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findFirst(sourceSelectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this)
+                .findFirst(includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {
             loadAllJoinEntities(result.get());
@@ -166,7 +167,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond)
             throws DuplicateResultException, SQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(sourceSelectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond);
 
         if (result.isPresent()) {
             loadJoinEntities(result.get(), joinEntityClass);
@@ -197,7 +198,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws DuplicateResultException, SQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(sourceSelectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this)
+                .findOnlyOne(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
 
         if (result.isPresent() && N.notEmpty(joinEntityClasses)) {
             for (final Class<?> joinEntityClass : joinEntityClasses) {
@@ -229,7 +231,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws DuplicateResultException, SQLException {
-        final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(sourceSelectPropNames, cond);
+        final Optional<T> result = DaoUtil.getReadOps(this)
+                .findOnlyOne(includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {
             loadAllJoinEntities(result.get());
@@ -259,7 +262,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     @Beta
     default List<T> list(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond) throws SQLException {
-        final List<T> result = DaoUtil.getReadOps(this).list(sourceSelectPropNames, cond);
+        final List<T> result = DaoUtil.getReadOps(this).list(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond);
 
         if (N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -295,7 +298,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
     @Beta
     default List<T> list(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws SQLException {
-        final List<T> result = DaoUtil.getReadOps(this).list(sourceSelectPropNames, cond);
+        final List<T> result = DaoUtil.getReadOps(this).list(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntityClasses)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -335,7 +338,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     @Beta
     default List<T> list(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws SQLException {
-        final List<T> result = DaoUtil.getReadOps(this).list(sourceSelectPropNames, cond);
+        final List<T> result = DaoUtil.getReadOps(this)
+                .list(includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames, cond);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
@@ -374,7 +378,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
     @Beta
     default Stream<T> stream(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond) {
         return DaoUtil.getReadOps(this)
-                .stream(sourceSelectPropNames, cond) //
+                .stream(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond) //
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE)
                 .onEach(batchEntities -> {
                     try {
@@ -417,7 +421,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
         }
 
         return DaoUtil.getReadOps(this)
-                .stream(sourceSelectPropNames, cond)
+                .stream(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond)
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
                 .onEach(batchEntities -> {
                     try {
@@ -459,7 +463,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
     default Stream<T> stream(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
         if (includeAllJoinEntities) {
             return DaoUtil.getReadOps(this)
-                    .stream(sourceSelectPropNames, cond)
+                    .stream(DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames), cond)
                     .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
                     .onEach(batchEntities -> {
                         try {
@@ -1114,7 +1118,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * userDao.loadJoinEntitiesIfAbsent(users, Order.class);
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
@@ -1136,7 +1141,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * userDao.loadJoinEntitiesIfAbsent(users, PaymentMethod.class, Arrays.asList("type", "lastFourDigits"));
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
@@ -1225,10 +1231,12 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * userDao.loadJoinEntitiesIfAbsent(users, "reviews");
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities.
+     *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class
+     * @throws IllegalArgumentException if the specified {@code joinEntityPropName} does not exist in the entity class,
+     *                                  or if the first element of {@code entities} is {@code null}
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
         loadJoinEntitiesIfAbsent(entities, joinEntityPropName, null);

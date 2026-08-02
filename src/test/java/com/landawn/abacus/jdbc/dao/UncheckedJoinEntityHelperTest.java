@@ -94,10 +94,10 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         TestEntity entity = new TestEntity();
         Condition condition = Mockito.mock(Condition.class);
 
-        when(dao.findFirst(List.of("id"), condition)).thenReturn(Optional.of(entity));
+        when(dao.findFirst((Collection<String>) null, condition)).thenReturn(Optional.of(entity));
         doNothing().when(dao).loadAllJoinEntities(entity);
 
-        Optional<TestEntity> result = dao.findFirst(List.of("id"), true, condition);
+        Optional<TestEntity> result = dao.findFirst(null, true, condition);
 
         assertTrue(result.isPresent());
         assertSame(entity, result.orElseNull());
@@ -161,10 +161,10 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         TestEntity entity = new TestEntity();
         Condition condition = Mockito.mock(Condition.class);
 
-        when(dao.findOnlyOne(List.of("id"), condition)).thenReturn(Optional.of(entity));
+        when(dao.findOnlyOne((Collection<String>) null, condition)).thenReturn(Optional.of(entity));
         doNothing().when(dao).loadAllJoinEntities(entity);
 
-        Optional<TestEntity> result = dao.findOnlyOne(List.of("id"), true, condition);
+        Optional<TestEntity> result = dao.findOnlyOne(null, true, condition);
 
         assertTrue(result.isPresent());
         verify(dao).loadAllJoinEntities(entity);
@@ -507,7 +507,7 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         TestEntity first = new TestEntity();
         TestEntity second = new TestEntity();
         Condition condition = Mockito.mock(Condition.class);
-        List<String> selectPropNames = List.of("id");
+        Collection<String> selectPropNames = null;
 
         when(dao.stream(selectPropNames, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(first, second));
         doNothing().when(dao).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(String.class));

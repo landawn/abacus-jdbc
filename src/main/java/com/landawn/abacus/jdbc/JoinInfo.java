@@ -134,6 +134,7 @@ public final class JoinInfo {
     final BeanInfo entityInfo;
     final PropInfo joinPropInfo;
     final PropInfo[] srcPropInfos;
+    private final List<String> sourcePropNames;
     final PropInfo[] referencedPropInfos;
     final Type<?> referencedEntityType;
     final Class<?> referencedEntityClass;
@@ -753,6 +754,17 @@ public final class JoinInfo {
             srcEntityKeyExtractor = srcEntityKeyExtractorTmp;
             referencedEntityKeyExtractor = referencedEntityKeyExtractorTmp;
         }
+
+        sourcePropNames = Collections.unmodifiableList(Stream.of(srcPropInfos).map(propInfo -> propInfo.name).toList());
+    }
+
+    /**
+     * Returns the source-entity properties whose values are required to load this join.
+     *
+     * @return an unmodifiable, non-empty list of source join-key property names
+     */
+    public List<String> sourcePropNames() {
+        return sourcePropNames;
     }
 
     /**

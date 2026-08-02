@@ -52,10 +52,10 @@ public class CrudJoinEntityHelperTest extends TestBase {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(8L, List.of("id"))).thenReturn(entity);
+        when(dao.gett(8L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadAllJoinEntities(entity);
 
-        Optional<TestEntity> result = dao.get(8L, List.of("id"), true);
+        Optional<TestEntity> result = dao.get(8L, null, true);
 
         assertTrue(result.isPresent());
         assertSame(entity, result.orElseNull());
@@ -74,13 +74,13 @@ public class CrudJoinEntityHelperTest extends TestBase {
     }
 
     @Test
-    public void testGet_UsesSelectedProperties() throws SQLException {
+    public void testGet_UsesJoinEntityClassOverload() throws SQLException {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(9L, List.of("name"), String.class)).thenReturn(entity);
+        when(dao.gett(9L, null, String.class)).thenReturn(entity);
 
-        Optional<TestEntity> result = dao.get(9L, List.of("name"), String.class);
+        Optional<TestEntity> result = dao.get(9L, null, String.class);
 
         assertTrue(result.isPresent());
         assertSame(entity, result.orElseNull());
@@ -92,15 +92,15 @@ public class CrudJoinEntityHelperTest extends TestBase {
         TestEntity entity = new TestEntity();
 
         when(dao.gett(10L)).thenReturn(entity);
-        when(dao.gett(11L, List.of("name"))).thenReturn(entity);
-        when(dao.gett(12L, List.of("name"))).thenReturn(entity);
+        when(dao.gett(11L, (Collection<String>) null)).thenReturn(entity);
+        when(dao.gett(12L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadAllJoinEntities(entity);
         doNothing().when(dao).loadJoinEntities(entity, String.class);
         doNothing().when(dao).loadJoinEntities(entity, Integer.class);
 
         assertSame(entity, dao.get(10L, true).orElseNull());
-        assertSame(entity, dao.get(11L, List.of("name"), List.of(String.class, Integer.class)).orElseNull());
-        assertSame(entity, dao.gett(12L, List.of("name"), List.of(String.class, Integer.class)));
+        assertSame(entity, dao.get(11L, null, List.of(String.class, Integer.class)).orElseNull());
+        assertSame(entity, dao.gett(12L, null, List.of(String.class, Integer.class)));
 
         verify(dao).loadAllJoinEntities(entity);
         verify(dao, times(2)).loadJoinEntities(entity, String.class);
@@ -146,7 +146,7 @@ public class CrudJoinEntityHelperTest extends TestBase {
     public void testBatchGet_LoadsJoinEntitiesWithinSingleBatch() throws SQLException {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<Long> ids = List.of(1L, 2L);
-        List<String> selectPropNames = List.of("name");
+        Collection<String> selectPropNames = null;
         List<TestEntity> entities = List.of(new TestEntity(), new TestEntity());
 
         Mockito.doReturn(entities).when(dao).batchGet(ids, selectPropNames, 2);
@@ -195,10 +195,10 @@ public class CrudJoinEntityHelperTest extends TestBase {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(18L, List.of("name"))).thenReturn(entity);
+        when(dao.gett(18L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadJoinEntities(entity, String.class);
 
-        assertSame(entity, dao.gett(18L, List.of("name"), String.class));
+        assertSame(entity, dao.gett(18L, null, String.class));
         verify(dao).loadJoinEntities(entity, String.class);
     }
 
@@ -208,10 +208,10 @@ public class CrudJoinEntityHelperTest extends TestBase {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(19L, List.of("name"))).thenReturn(entity);
+        when(dao.gett(19L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadAllJoinEntities(entity);
 
-        assertSame(entity, dao.gett(19L, List.of("name"), true));
+        assertSame(entity, dao.gett(19L, null, true));
         verify(dao).loadAllJoinEntities(entity);
     }
 
@@ -219,7 +219,7 @@ public class CrudJoinEntityHelperTest extends TestBase {
     public void testBatchGet_LoadsJoinEntitiesAcrossBatches() throws SQLException {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<Long> ids = List.of(1L, 2L, 3L);
-        List<String> selectPropNames = List.of("name");
+        Collection<String> selectPropNames = null;
         List<TestEntity> entities = List.of(new TestEntity(), new TestEntity(), new TestEntity());
 
         Mockito.doReturn(entities).when(dao).batchGet(ids, selectPropNames, 2);

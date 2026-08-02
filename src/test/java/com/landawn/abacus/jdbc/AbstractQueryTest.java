@@ -1823,13 +1823,16 @@ public class AbstractQueryTest extends TestBase {
     }
 
     @Test
-    public void testStreamAllResultSets_CloseClosesBufferedResultSet() throws SQLException {
+    public void testStreamAllResultSets_CloseClosesBufferedResultSetAndDrainsReusableStatement() throws SQLException {
         final ResultSet first = Mockito.mock(ResultSet.class);
         final ResultSet second = Mockito.mock(ResultSet.class);
 
         when(preparedStatement.execute()).thenReturn(true);
         when(preparedStatement.getResultSet()).thenReturn(first, second);
         when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, false);
+        when(preparedStatement.getMoreResults()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+        query.closeAfterExecution(false);
 
         try (Stream<String> stream = query.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
             final java.util.Iterator<String> iter = stream.iterator();
@@ -1840,6 +1843,8 @@ public class AbstractQueryTest extends TestBase {
 
         verify(first).close();
         verify(second).close();
+        verify(preparedStatement).getMoreResults();
+        verify(preparedStatement, never()).close();
     }
 
     // TODO: L142 (static initializer) - uncovered branch requires method with parameterTypes[0] != int, edge case not testable
@@ -2070,8 +2075,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.getUpdateCount()).thenReturn(-1);
         query.closeAfterExecution(false);
 
-        final com.landawn.abacus.util.Tuple.Tuple2<String, String> result = query.query2ResultSets((rs, labels) -> "first",
-                (rs, labels) -> "second");
+        final com.landawn.abacus.util.Tuple.Tuple2<String, String> result = query.query2ResultSets((rs, labels) -> "first", (rs, labels) -> "second");
 
         assertEquals("first", result._1);
         assertEquals("second", result._2);
@@ -2098,8 +2102,8 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.getUpdateCount()).thenReturn(-1);
         query.closeAfterExecution(false);
 
-        final com.landawn.abacus.util.Tuple.Tuple3<String, String, String> result = query.query3ResultSets((rs, labels) -> "first",
-                (rs, labels) -> "second", (rs, labels) -> "third");
+        final com.landawn.abacus.util.Tuple.Tuple3<String, String, String> result = query.query3ResultSets((rs, labels) -> "first", (rs, labels) -> "second",
+                (rs, labels) -> "third");
 
         assertEquals("first", result._1);
         assertEquals("second", result._2);
@@ -2124,10 +2128,9 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.getMoreResults()).thenThrow(drainFailure);
         query.closeAfterExecution(false);
 
-        final SQLException thrown = assertThrows(SQLException.class,
-                () -> query.query2ResultSets((rs, labels) -> {
-                    throw extractorFailure;
-                }, (rs, labels) -> "second"));
+        final SQLException thrown = assertThrows(SQLException.class, () -> query.query2ResultSets((rs, labels) -> {
+            throw extractorFailure;
+        }, (rs, labels) -> "second"));
 
         assertSame(extractorFailure, thrown);
         assertArrayEquals(new Throwable[] { drainFailure }, thrown.getSuppressed());
@@ -2144,5 +2147,56 @@ public class AbstractQueryTest extends TestBase {
         query.close();
 
         assertNull(query.closeHandler);
+    }
+
+    @Test
+    public void testClosePreservesFailuresFromEveryCloseHandler() {
+        final RuntimeException olderFailure = new RuntimeException("older handler failed");
+        final RuntimeException newerFailure = new RuntimeException("newer handler failed");
+
+        query.onClose(() -> {
+            throw olderFailure;
+        }).onClose(() -> {
+            throw newerFailure;
+        });
+
+        final RuntimeException thrown = assertThrows(RuntimeException.class, query::close);
+
+        assertSame(newerFailure, thrown);
+        assertArrayEquals(new Throwable[] { olderFailure }, thrown.getSuppressed());
+    }
+
+    @Test
+    public void testExecutionFailureRemainsPrimaryWhenAutomaticCloseHandlerFails() throws SQLException {
+        final SQLException executionFailure = new SQLException("query failed");
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        when(preparedStatement.executeQuery()).thenThrow(executionFailure);
+        query.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final SQLException thrown = assertThrows(SQLException.class, query::queryForBoolean);
+
+        assertSame(executionFailure, thrown);
+        assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
+    }
+
+    @Test
+    public void testQueryAllResultSetsDrainsAfterExtractorFailureWhenStatementIsReusable() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final SQLException extractorFailure = new SQLException("extractor failed");
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs);
+        when(preparedStatement.getMoreResults()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+        query.closeAfterExecution(false);
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> query.queryAllResultSets(resultSet -> {
+            throw extractorFailure;
+        }));
+
+        assertSame(extractorFailure, thrown);
+        verify(preparedStatement).getMoreResults();
+        verify(preparedStatement, never()).close();
     }
 }

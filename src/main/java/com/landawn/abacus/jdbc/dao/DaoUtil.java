@@ -353,7 +353,7 @@ public final class DaoUtil {
      * @param propName the property to match
      * @param values the non-empty values to match
      * @return an {@code IN}, {@code IS NULL}, or combined {@code OR} condition as appropriate
-     * @throws IllegalArgumentException if {@code propName} or {@code values} is null or empty.
+     * @throws IllegalArgumentException if {@code propName} or {@code values} is {@code null} or empty.
      */
     static Condition singlePropValuesToCondition(final String propName, final Collection<?> values) {
         N.checkArgNotEmpty(propName, "propName");
@@ -596,6 +596,76 @@ public final class DaoUtil {
      */
     static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
+    }
+
+    @SuppressWarnings("deprecation")
+    static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
+            final Class<?> joinEntityClass) {
+        if (sourceSelectPropNames == null) {
+            return null;
+        }
+
+        final Map<String, JoinInfo> entityJoinInfo = getEntityJoinInfo(dao.targetDaoInterface(), dao.targetEntityClass(), dao.targetTableName());
+        final List<String> joinPropNames = JoinInfo.getJoinEntityPropNamesByType(dao.targetDaoInterface(), dao.targetEntityClass(), dao.targetTableName(),
+                joinEntityClass);
+
+        if (joinPropNames.isEmpty()) {
+            return sourceSelectPropNames;
+        }
+
+        Collection<String> result = sourceSelectPropNames;
+
+        for (final String joinPropName : joinPropNames) {
+            result = includeSourceJoinPropNames(result, entityJoinInfo.get(joinPropName));
+        }
+
+        return result;
+    }
+
+    static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
+            final Collection<Class<?>> joinEntityClasses) {
+        if (sourceSelectPropNames == null || N.isEmpty(joinEntityClasses)) {
+            return sourceSelectPropNames;
+        }
+
+        Collection<String> result = sourceSelectPropNames;
+
+        for (final Class<?> joinEntityClass : joinEntityClasses) {
+            result = includeSourceJoinPropNames(dao, result, joinEntityClass);
+        }
+
+        return result;
+    }
+
+    @SuppressWarnings("deprecation")
+    static Collection<String> includeAllSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames) {
+        if (sourceSelectPropNames == null) {
+            return null;
+        }
+
+        Collection<String> result = sourceSelectPropNames;
+
+        for (final JoinInfo joinInfo : getEntityJoinInfo(dao.targetDaoInterface(), dao.targetEntityClass(), dao.targetTableName()).values()) {
+            result = includeSourceJoinPropNames(result, joinInfo);
+        }
+
+        return result;
+    }
+
+    private static Collection<String> includeSourceJoinPropNames(final Collection<String> sourceSelectPropNames, final JoinInfo joinInfo) {
+        List<String> result = null;
+
+        for (final String sourcePropName : joinInfo.sourcePropNames()) {
+            if (!sourceSelectPropNames.contains(sourcePropName)) {
+                if (result == null) {
+                    result = new ArrayList<>(sourceSelectPropNames);
+                }
+
+                result.add(sourcePropName);
+            }
+        }
+
+        return result == null ? sourceSelectPropNames : result;
     }
 
     /**

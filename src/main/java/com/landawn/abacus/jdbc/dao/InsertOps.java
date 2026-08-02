@@ -160,6 +160,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param namedInsertSql the named INSERT SQL statement
      * @param entities the entities providing parameter values
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -175,7 +176,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entities the entities providing parameter values
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     @Beta

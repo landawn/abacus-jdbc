@@ -26,6 +26,11 @@ package com.landawn.abacus.jdbc;
  * matches the actual method-parameter name in the source code, and reducing the risk
  * of typos when the same name is referenced across many call sites.</p>
  *
+ * <p><b>Contract:</b> each constant's name and its string value are identical, and both must equal
+ * the declared name of the method parameter it validates. Renaming a method parameter therefore
+ * requires renaming the corresponding constant (and its value) in the same change, and vice versa,
+ * so the three names never drift apart.</p>
+ *
  * <p>The constants are primarily used in:</p>
  * <ul>
  *   <li>{@code N.checkArgNotNull / checkArgNotEmpty / ...} validation calls inside framework methods</li>
@@ -111,7 +116,7 @@ public final class cs { // NOSONAR
      */
     public static final String consumer = "consumer";
     /**
-     * Parameter name for Consumer functional interfaces that process all elements in a collection.
+     * Parameter name for a single consumer applied to every column in a row.
      */
     public static final String consumerForAll = "consumerForAll";
     /**
@@ -375,7 +380,7 @@ public final class cs { // NOSONAR
      */
     public static final String type = "type";
     /**
-     * Parameter name for collections of unique property names used in query construction.
+     * Parameter name for the property names used to match an existing record (e.g., in upsert operations).
      */
     public static final String matchPropNames = "matchPropNames";
     /**
@@ -387,7 +392,7 @@ public final class cs { // NOSONAR
      */
     public static final String valueExtractor = "valueExtractor";
     /**
-     * Parameter name for property names used in select queries.
+     * Parameter name for a single property name to select in a query.
      */
     public static final String selectPropName = "selectPropName";
     /**
@@ -447,7 +452,7 @@ public final class cs { // NOSONAR
      */
     public static final String other = "other";
     /**
-     * Parameter name for predicates that filter values before they are placed into a map.
+     * Parameter name for bi-predicates that filter entries (column label and value) before they are placed into the result map.
      */
     public static final String entryFilter = "entryFilter";
     /**

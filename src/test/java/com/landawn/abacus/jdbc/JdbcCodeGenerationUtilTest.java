@@ -171,6 +171,26 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testGenerateSelectSql_QuotesDecodedMetadataLabelContainingDot() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("16");
+        when(conn.prepareStatement("SELECT * FROM users WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(1);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("user.name");
+
+        assertEquals("SELECT \"user.name\" FROM users", JdbcCodeGenerationUtil.generateSelectSql(conn, "users"));
+    }
+
+    @Test
     public void testGenerateInsertSql_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
         final Connection conn = Mockito.mock(Connection.class);
         final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
@@ -2305,6 +2325,37 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("private int low = Math.min(1, 2), high = Math.max(3, 4);"), result);
         assertTrue(result.contains("copy.low = this.low;"), result);
         assertTrue(result.contains("copy.high = this.high;"), result);
+    }
+
+    @Test
+    public void testGenerateEntityClass_RelationalInitializerDoesNotHideFollowingField() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalClassBodySource("    private boolean first = Integer.MIN_VALUE < 2, second = true;")
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("copy.first = this.first;"), result);
+        assertTrue(result.contains("copy.second = this.second;"), result);
+    }
+
+    @Test
+    public void testGenerateEntityClass_GenericMethodReferencesRemainSingleDeclarators() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalClassBodySource(
+                        "    private java.util.function.Supplier<java.util.Map<String, Integer>> factory = java.util.HashMap<String, Integer>::new, other = java.util.HashMap<String, Integer>::new;")
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("copy.factory = this.factory;"), result);
+        assertTrue(result.contains("copy.other = this.other;"), result);
     }
 
     // entityName that is not a parseable SQL identifier (4-part "a.b.c.d") makes

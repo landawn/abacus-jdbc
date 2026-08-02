@@ -184,6 +184,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param namedInsertSql the named INSERT SQL statement
      * @param entities the entities providing parameter values
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -207,7 +208,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entities the entities providing parameter values
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta

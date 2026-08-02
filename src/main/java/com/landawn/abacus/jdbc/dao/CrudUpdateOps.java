@@ -47,6 +47,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *
      * @param entity the entity with updated values (must have its ID populated)
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     int update(final T entity) throws SQLException;
@@ -69,7 +70,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param propNamesToUpdate the property names to update (must not be {@code null} or empty)
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToUpdate} is {@code null} or empty
      */
     int update(final T entity, final Collection<String> propNamesToUpdate) throws SQLException;
 
@@ -87,6 +88,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param propValue the new value for the property
      * @param id the ID of the entity to update
      * @return the number of rows updated
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final ID id) throws SQLException {
@@ -111,6 +113,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param updateProps a map of property names to their new values
      * @param id the ID of the entity to update
      * @return the number of rows updated
+     * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     int update(final Map<String, Object> updateProps, final ID id) throws SQLException;

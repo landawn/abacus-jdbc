@@ -34,6 +34,9 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads reject non-{@code SELECT} statements
  * at runtime, enforced centrally by the DAO proxy.)</p>
  *
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
+ * incompatible changes, or even removal, in a future release.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudDao<User, Long, UserReadOnlyDao> {

@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -2335,5 +2336,39 @@ public class CallableQueryTest extends TestBase {
         // object-returning method (String) falls through → SQLException — L2424
         SQLException ex = assertThrows(SQLException.class, () -> md.getColumnName(1));
         assertTrue(ex.getMessage().contains("Empty ResultSet metadata has no columns"));
+    }
+
+    @Test
+    public void testExecutionFailureRemainsPrimaryWhenAutomaticCloseHandlerFails() throws SQLException {
+        final SQLException executionFailure = new SQLException("call failed");
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        when(callableStatement.execute()).thenThrow(executionFailure);
+        callableQuery.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final SQLException thrown = assertThrows(SQLException.class, callableQuery::executeAndGetOutParameters);
+
+        assertSame(executionFailure, thrown);
+        assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
+    }
+
+    @Test
+    public void testQueryAllResultSetsDrainsAfterExtractorFailureWhenStatementIsReusable() throws SQLException {
+        final ResultSet rs = mock(ResultSet.class);
+        final SQLException extractorFailure = new SQLException("extractor failed");
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        when(callableStatement.getMoreResults()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.closeAfterExecution(false);
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> callableQuery.queryAllResultSetsAndGetOutParameters(resultSet -> {
+            throw extractorFailure;
+        }));
+
+        assertSame(extractorFailure, thrown);
+        verify(callableStatement).getMoreResults();
+        verify(callableStatement, never()).close();
     }
 }

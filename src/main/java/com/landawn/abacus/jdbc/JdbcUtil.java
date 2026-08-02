@@ -7158,8 +7158,9 @@ public final class JdbcUtil {
      * <p>The {@code ResultSet} is consumed lazily as the stream is traversed; if you only consume a
      * prefix of the stream the remaining rows remain unread. The caller is responsible for closing the
      * input {@code ResultSet} — typically by attaching {@code onClose(Fn.closeQuietly(rs))} to the
-     * returned stream and closing it with try-with-resources. A terminal operation alone does not invoke
-     * the stream's close handlers.</p>
+     * returned stream and closing it with try-with-resources. Close handlers run when the stream is
+     * closed — explicitly, through try-with-resources, or automatically after a terminal operation
+     * completes; try-with-resources also covers streams abandoned before any terminal operation.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11017,18 +11018,32 @@ public final class JdbcUtil {
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             Connection conn = null;
+            boolean springLinkageFailure = false;
 
             try {
-                conn = JdbcUtil.getConnection(ds);
+                // Acquire and release through the same Spring integration path. In particular, do
+                // not switch the global flag before releasing a transaction-bound connection.
+                conn = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
 
                 return org.springframework.jdbc.datasource.DataSourceUtils.isConnectionTransactional(conn, ds);
             } catch (final LinkageError e) {
                 // Catch any LinkageError (NoClassDefFoundError, NoSuchMethodError, etc.) so that
                 // mismatched Spring versions or partial classpaths fall back gracefully instead of
                 // propagating a fatal error.
-                isInSpring = false;
+                springLinkageFailure = true;
             } finally {
-                JdbcUtil.releaseConnection(conn, ds);
+                if (conn != null) {
+                    try {
+                        org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
+                    } catch (final LinkageError e) {
+                        springLinkageFailure = true;
+                        logger.warn(e, "Failed to release connection through Spring after checking transaction state");
+                    }
+                }
+
+                if (springLinkageFailure) {
+                    isInSpring = false;
+                }
             }
         }
 
@@ -12042,7 +12057,7 @@ public final class JdbcUtil {
      * @return A {@link Tuple3} of the key extractor, ID getter, and ID setter.
      */
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
-    static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
+    static synchronized <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
             final Class<? extends DaoBase> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
         if (!Beans.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
@@ -12201,7 +12216,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code idExtractor} is {@code null}.
      * @see #setIdExtractorForDao(Class, BiRowMapper)
      */
-    public static <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface,
+    public static synchronized <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface,
             final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(idExtractor, cs.idExtractor);
@@ -12245,7 +12260,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code idExtractor} is {@code null}.
      * @see #setIdExtractorForDao(Class, RowMapper)
      */
-    public static <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface,
+    public static synchronized <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface,
             final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(idExtractor, cs.idExtractor);

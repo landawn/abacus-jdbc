@@ -2642,6 +2642,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final List<Jdbc.OutParam> outParamsToUse = copyOutParams();
 
             return func.apply(cstmt, outParamsToUse, isFirstResultSet);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2790,6 +2793,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             final List<Jdbc.OutParam> outParamsToUse = copyOutParams();
 
             consumer.accept(cstmt, outParamsToUse, isFirstResultSet);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2856,6 +2862,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return JdbcUtil.getOutParameters(cstmt, outParams);
+        } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
+            closeAfterExecutionIfAllowed(primaryFailure);
+            throw primaryFailure;
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2938,6 +2947,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
+        Throwable primaryFailure = null;
+
         try {
             R result = null;
             final ResultSet rs = executeQueryOrNull();
@@ -2948,8 +2959,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeAfterExecutionIfAllowed();
+            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
         }
     }
 
@@ -2993,6 +3007,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
+        Throwable primaryFailure = null;
+
         try {
             R result = null;
             final ResultSet rs = executeQueryOrNull();
@@ -3003,8 +3019,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeAfterExecutionIfAllowed();
+            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
         }
     }
 
@@ -3087,6 +3106,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -3100,14 +3120,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -3161,6 +3178,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -3174,14 +3192,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -3239,6 +3254,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor2, cs.resultExtractor2);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -3262,14 +3278,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -3333,6 +3346,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(resultExtractor3, cs.resultExtractor3);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -3361,14 +3375,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -3478,6 +3489,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(rowMapper, cs.rowMapper);
 
+        Throwable primaryFailure = null;
+
         try {
             final List<T> result = new ArrayList<>();
 
@@ -3492,8 +3505,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeAfterExecutionIfAllowed();
+            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
         }
     }
 
@@ -3545,6 +3561,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
 
+        Throwable primaryFailure = null;
+
         try {
             final List<T> result = new ArrayList<>();
 
@@ -3561,8 +3579,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeAfterExecutionIfAllowed();
+            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
         }
     }
 
@@ -3614,6 +3635,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(rowMapper, cs.rowMapper);
 
+        Throwable primaryFailure = null;
+
         try {
             final List<T> result = new ArrayList<>();
 
@@ -3630,8 +3653,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeAfterExecutionIfAllowed();
+            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
         }
     }
 
@@ -3696,6 +3722,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
 
+        Throwable primaryFailure = null;
+
         try {
             final List<T> result = new ArrayList<>();
 
@@ -3714,8 +3742,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeAfterExecutionIfAllowed();
+            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
         }
     }
 
@@ -3766,6 +3797,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(targetType, cs.targetType);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -3779,14 +3811,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -3842,6 +3871,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -3855,14 +3885,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -3921,6 +3948,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -3934,14 +3962,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -4004,6 +4029,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -4017,14 +4043,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -4103,6 +4126,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
+        Throwable primaryFailure = null;
 
         try {
             final boolean isResultSet = JdbcUtil.execute(cstmt);
@@ -4116,14 +4140,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
-            try {
-                if (iter != null) {
-                    iter.closeResource();
-                }
-            } finally {
-                closeAfterExecutionIfAllowed();
-            }
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 

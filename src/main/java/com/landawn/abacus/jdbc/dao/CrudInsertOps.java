@@ -159,7 +159,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException {
@@ -179,7 +179,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
@@ -198,7 +198,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
-     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty
      */
@@ -221,7 +221,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive
      */
@@ -241,7 +241,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
-     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -265,8 +266,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException if a database access error occurs
      */
     @Beta

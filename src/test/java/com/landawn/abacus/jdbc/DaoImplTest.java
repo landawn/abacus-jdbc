@@ -41,6 +41,7 @@ import com.landawn.abacus.jdbc.annotation.OutParameter;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
+import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
@@ -173,6 +174,76 @@ public class DaoImplTest extends TestBase {
     interface EmptyBindProcedureDao {
         @Query(value = "call test_proc(?, ?)", procedure = true)
         void callProc(@Bind("p1") String first, @Bind String second);
+    }
+
+    interface SingleEmptyBindProcedureDao extends Dao<TestEntity, SingleEmptyBindProcedureDao> {
+        @Query(value = "call test_proc(?)", procedure = true)
+        void callProc(@Bind String value) throws SQLException;
+    }
+
+    interface SingleEmptyBindNamedDao extends Dao<TestEntity, SingleEmptyBindNamedDao> {
+        @Query("select * from test where name = :name")
+        List<TestEntity> list(@Bind TestEntity parameters) throws SQLException;
+    }
+
+    interface DisabledParametersSetterDao extends Dao<TestEntity, DisabledParametersSetterDao> {
+        @Query("select * from test where id = ?")
+        List<TestEntity> list(long id, Jdbc.ParametersSetter<PreparedStatement> setter) throws SQLException;
+    }
+
+    interface DisabledBiParametersSetterDao extends Dao<TestEntity, DisabledBiParametersSetterDao> {
+        @Query("select * from test where id = ?")
+        List<TestEntity> list(Jdbc.BiParametersSetter<PreparedStatement, Object> setter, long id) throws SQLException;
+    }
+
+    interface DisabledTriParametersSetterDao extends Dao<TestEntity, DisabledTriParametersSetterDao> {
+        @Query("select * from test where id = ? and name = ?")
+        List<TestEntity> list(long id, String name, Jdbc.TriParametersSetter<PreparedStatement, Object> setter) throws SQLException;
+    }
+
+    interface ProcedureListAllDao extends Dao<TestEntity, ProcedureListAllDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<TestEntity>>, Jdbc.OutParamResult> callProc() throws SQLException;
+    }
+
+    interface ShallowProcedureListAllDao extends Dao<TestEntity, ShallowProcedureListAllDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        com.landawn.abacus.util.Tuple.Tuple2<List<TestEntity>, Jdbc.OutParamResult> callProc() throws SQLException;
+    }
+
+    interface InvalidOuterProcedureListAllDao extends Dao<TestEntity, InvalidOuterProcedureListAllDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        com.landawn.abacus.util.Tuple.Tuple2<java.util.Set<List<TestEntity>>, Jdbc.OutParamResult> callProc() throws SQLException;
+    }
+
+    interface ShallowProcedureListAllWithMapperDao extends Dao<TestEntity, ShallowProcedureListAllWithMapperDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        com.landawn.abacus.util.Tuple.Tuple2<List<TestEntity>, Jdbc.OutParamResult> callProc(Jdbc.RowMapper<TestEntity> mapper) throws SQLException;
+    }
+
+    interface ProcedureListAllWithoutOutDao extends Dao<TestEntity, ProcedureListAllWithoutOutDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        List<List<TestEntity>> callProc() throws SQLException;
+    }
+
+    interface ShallowProcedureListAllWithoutOutDao extends Dao<TestEntity, ShallowProcedureListAllWithoutOutDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        List<TestEntity> callProc() throws SQLException;
+    }
+
+    interface ShallowProcedureListAllWithoutOutWithMapperDao extends Dao<TestEntity, ShallowProcedureListAllWithoutOutWithMapperDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        List<TestEntity> callProc(Jdbc.RowMapper<TestEntity> mapper) throws SQLException;
+    }
+
+    interface InvalidConcreteProcedureListAllDao extends Dao<TestEntity, InvalidConcreteProcedureListAllDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.listAll)
+        java.util.LinkedList<List<TestEntity>> callProc() throws SQLException;
+    }
+
+    interface InvalidConcreteProcedureQueryAllDao extends Dao<TestEntity, InvalidConcreteProcedureQueryAllDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.queryAll)
+        java.util.LinkedList<Dataset> callProc() throws SQLException;
     }
 
     interface InvalidProcedureOutResultDao extends Dao<TestEntity, InvalidProcedureOutResultDao> {
@@ -494,6 +565,33 @@ public class DaoImplTest extends TestBase {
         }
     }
 
+    interface SqlIdDefaultMethodDao extends Dao<TestEntity, SqlIdDefaultMethodDao> {
+        @SqlScript(id = "selectOne")
+        String SELECT_ONE = "SELECT 1";
+
+        @Query(id = "selectOne")
+        @NonDBOperation
+        default String firstSql(final String... sqls) {
+            return sqls[0];
+        }
+    }
+
+    interface MissingSqlIdDefaultMethodDao extends Dao<TestEntity, MissingSqlIdDefaultMethodDao> {
+        @Query(id = "missingSql")
+        @NonDBOperation
+        default String firstSql(final String... sqls) {
+            return sqls[0];
+        }
+    }
+
+    interface InvalidSqlIdDefaultMethodDao extends Dao<TestEntity, InvalidSqlIdDefaultMethodDao> {
+        @Query(id = "not-valid")
+        @NonDBOperation
+        default String firstSql(final String... sqls) {
+            return sqls[0];
+        }
+    }
+
     static final class StubQuery extends AbstractQuery<PreparedStatement, StubQuery> {
         private final Dataset dataset;
 
@@ -595,6 +693,37 @@ public class DaoImplTest extends TestBase {
 
         assertTrue(ex.getCause() instanceof UnsupportedOperationException);
         assertTrue(ex.getCause().getMessage().contains("non-empty"));
+    }
+
+    @Test
+    void testSingleBareBindIsRejectedForProcedureAndNamedParameters() throws Exception {
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(SingleEmptyBindProcedureDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao(SingleEmptyBindNamedDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        final Method daoMethod = SingleEmptyBindNamedDao.class.getMethod("list", TestEntity.class);
+        final DaoImpl.QueryInfo queryInfo = new DaoImpl.QueryInfo("select * from test where name = :name", null, 0, 0, false, 0, QueryOperation.DEFAULT, false,
+                false, true, false, false, false);
+        final Method factory = DaoImpl.class.getDeclaredMethod("createParametersSetter", DaoImpl.QueryInfo.class, String.class, Method.class, Class[].class,
+                int.class, int.class, int[].class, boolean[].class, int.class);
+        factory.setAccessible(true);
+
+        final InvocationTargetException ex = assertThrows(InvocationTargetException.class, () -> factory.invoke(null, queryInfo, "SingleEmptyBindNamedDao.list",
+                daoMethod, daoMethod.getParameterTypes(), 1, 0, new int[] { 0 }, new boolean[] { false }, 1));
+
+        assertTrue(ex.getCause() instanceof UnsupportedOperationException);
+        assertTrue(ex.getCause().getMessage().contains("non-empty"));
+    }
+
+    @Test
+    void testParametersSetterIsRejectedRegardlessOfParameterPosition() throws SQLException {
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(DisabledParametersSetterDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(DisabledBiParametersSetterDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(DisabledTriParametersSetterDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
     }
 
     // BUG FIX: a batch @Query whose Collection parameter also carries @BindList used to pass DAO
@@ -905,8 +1034,8 @@ public class DaoImplTest extends TestBase {
                         com.landawn.abacus.query.SqlMapper.FETCH_SIZE, "41", com.landawn.abacus.query.SqlMapper.BATCH_SIZE, "43")));
         final java.lang.reflect.Field field = DaoImpl.class.getDeclaredField("sqlAnnoMap");
         field.setAccessible(true);
-        final java.util.function.BiFunction<java.lang.annotation.Annotation, com.landawn.abacus.query.SqlMapper, DaoImpl.QueryInfo> resolver =
-                (java.util.function.BiFunction) ((Map) field.get(null)).get(Query.class);
+        final java.util.function.BiFunction<java.lang.annotation.Annotation, com.landawn.abacus.query.SqlMapper, DaoImpl.QueryInfo> resolver = (java.util.function.BiFunction) ((Map) field
+                .get(null)).get(Query.class);
         final Query query = SqlMapperValueIdDao.class.getMethod("findByName").getAnnotation(Query.class);
 
         final DaoImpl.QueryInfo queryInfo = resolver.apply(query, sqlMapper);
@@ -1511,6 +1640,21 @@ public class DaoImplTest extends TestBase {
     }
 
     @Test
+    public void testCreateDao_DefaultMethodResolvesQueryId() throws Exception {
+        final SqlIdDefaultMethodDao dao = DaoImpl.createDao(SqlIdDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
+
+        assertEquals("SELECT 1", dao.firstSql());
+    }
+
+    @Test
+    public void testCreateDao_DefaultMethodRejectsMissingOrInvalidQueryId() throws SQLException {
+        assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao(MissingSqlIdDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao(InvalidSqlIdDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+    }
+
+    @Test
     public void testCreateDao_RejectsOutParameterWithNameAndPosition() throws SQLException {
         DataSource ds = mockDataSourceForDaoCreation();
 
@@ -1868,6 +2012,44 @@ public class DaoImplTest extends TestBase {
     public void testCreateDaoRejectsIncompatibleProcedureListContainerType() throws SQLException {
         assertThrows(UnsupportedOperationException.class,
                 () -> DaoImpl.createDao(InvalidProcedureListContainerDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+    }
+
+    @Test
+    public void testProcedureListAllResolvesInnermostEntityTypeAndRejectsShallowShape() throws Exception {
+        final Method daoMethod = ProcedureListAllDao.class.getMethod("callProc");
+        final Method typeResolver = DaoImpl.class.getDeclaredMethod("getFirstReturnEleEleEleType", Method.class);
+        typeResolver.setAccessible(true);
+
+        assertSame(TestEntity.class, typeResolver.invoke(null, daoMethod));
+
+        final Method queryFunctionFactory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class,
+                Map.class, boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
+        queryFunctionFactory.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> queryFunction = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) queryFunctionFactory
+                .invoke(null, TestEntity.class, daoMethod, null, null, null, false, false, false, QueryOperation.listAll, true, "ProcedureListAllDao.callProc");
+        final CallableQuery callableQuery = mock(CallableQuery.class);
+
+        queryFunction.apply(callableQuery, new Object[0]);
+
+        Mockito.verify(callableQuery).listAllResultSetsAndGetOutParameters(TestEntity.class);
+        assertDoesNotThrow(() -> DaoImpl.createDao(ProcedureListAllDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertDoesNotThrow(() -> DaoImpl.createDao(ProcedureListAllWithoutOutDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(ShallowProcedureListAllDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(InvalidOuterProcedureListAllDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(ShallowProcedureListAllWithMapperDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(ShallowProcedureListAllWithoutOutDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(ShallowProcedureListAllWithoutOutWithMapperDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(InvalidConcreteProcedureListAllDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(InvalidConcreteProcedureQueryAllDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
     }
 
     @Test

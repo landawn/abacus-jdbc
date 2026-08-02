@@ -85,8 +85,7 @@ public class SqlTransactionTest extends TestBase {
         final AtomicBoolean outsideCommandExecuted = new AtomicBoolean();
         final Runnable[] operations = { transaction::connection, transaction::commit, transaction::rollback, transaction::rollbackIfNotCommitted,
                 transaction::close, () -> transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false), transaction::decrementAndGetRef,
-                () -> transaction.runOutsideTransaction(() -> outsideCommandExecuted.set(true)),
-                () -> transaction.callOutsideTransaction(() -> {
+                () -> transaction.runOutsideTransaction(() -> outsideCommandExecuted.set(true)), () -> transaction.callOutsideTransaction(() -> {
                     outsideCommandExecuted.set(true);
                     return null;
                 }) };

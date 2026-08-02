@@ -44,6 +44,9 @@ import com.landawn.abacus.annotation.Beta;
  *   <li>Historical data that must remain immutable</li>
  * </ul>
  *
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
+ * incompatible changes, or even removal, in a future release.</p>
+ *
  * <p><b>&#9888; Warning:</b> This is an API capability restriction, not a database security or
  * integrity boundary. Enforce read-only access with database permissions and an appropriate
  * read-only transaction policy as well.</p>

@@ -22,7 +22,7 @@ import org.springframework.context.ApplicationContext;
 import com.landawn.abacus.annotation.Internal;
 
 /**
- * A utility class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
+ * A bridge class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
  *
  * <p>This class is used internally by the JDBC framework to integrate with Spring's dependency injection container,
  * enabling the framework to retrieve Spring-managed beans such as DataSources, TransactionManagers, and custom

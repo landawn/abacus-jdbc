@@ -1,7 +1,7 @@
-# abacus-jdbc API Index (v4.8.5)
+# abacus-jdbc API Index (v4.8.6)
 - Build: unknown
 - Java: 17
-- Generated: 2026-07-26
+- Generated: 2026-08-01
 
 ## Packages
 - com.landawn.abacus.jdbc — Core JDBC execution, mapping, transaction, data-transfer, and code-generation APIs.
@@ -41,7 +41,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is already closed
-  - `java.lang.IllegalArgumentException` — if closeHandler is null
+  - `java.lang.IllegalArgumentException` — if {@code closeHandler} is {@code null}
 ##### setNull(...) -> This
 - **Signature:** `public This setNull(final int parameterIndex, final int sqlType) throws SQLException`
 - **Summary:** Sets a SQL {@code NULL} value for the specified parameter.
@@ -1770,17 +1770,23 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 ##### query2ResultSets(...) -> Tuple2<R1, R2>
 - **Signature:** `@Beta public <R1, R2> Tuple2<R1, R2> query2ResultSets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1, final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws IllegalStateException, IllegalArgumentException, SQLException`
 - **Summary:** Retrieves at most two {@code ResultSets} from a stored procedure or multi-result query.
+- **Contract:**
+  - </p> <p> <b> Note: </b> When {@code closeAfterExecution(false)} has been set, any trailing results beyond the two consumed here are drained before this method returns so the statement can be safely reused.
+  - If that drain fails, the drain exception is added as a suppressed exception to the primary failure when the query itself failed, or thrown when the query otherwise succeeded.
 - **Parameters:**
   - `resultExtractor1` (`Jdbc.BiResultExtractor<? extends R1>`) — the extractor for the first {@code ResultSet} . ResultSet will be closed after extraction.
   - `resultExtractor2` (`Jdbc.BiResultExtractor<? extends R2>`) — the extractor for the second {@code ResultSet} . ResultSet will be closed after extraction.
 - **Returns:** A {@code Tuple2} containing the results from both ResultSets (may contain {@code null} if ResultSet not available)
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if any of the provided extractors is {@code null}
+  - `java.lang.IllegalArgumentException` — if {@code resultExtractor1} or {@code resultExtractor2} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 ##### query3ResultSets(...) -> Tuple3<R1, R2, R3>
 - **Signature:** `@Beta public <R1, R2, R3> Tuple3<R1, R2, R3> query3ResultSets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1, final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3) throws IllegalStateException, IllegalArgumentException, SQLException`
 - **Summary:** Retrieves at most three {@code ResultSets} from a stored procedure or multi-result query.
+- **Contract:**
+  - </p> <p> <b> Note: </b> When {@code closeAfterExecution(false)} has been set, any trailing results beyond the three consumed here are drained before this method returns so the statement can be safely reused.
+  - If that drain fails, the drain exception is added as a suppressed exception to the primary failure when the query itself failed, or thrown when the query otherwise succeeded.
 - **Parameters:**
   - `resultExtractor1` (`Jdbc.BiResultExtractor<? extends R1>`) — the extractor for the first {@code ResultSet} . ResultSet will be closed after extraction.
   - `resultExtractor2` (`Jdbc.BiResultExtractor<? extends R2>`) — the extractor for the second {@code ResultSet} . ResultSet will be closed after extraction.
@@ -1788,7 +1794,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A {@code Tuple3} containing the results from all three ResultSets (may contain {@code null} if ResultSet not available)
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if any of the provided extractors is {@code null}
+  - `java.lang.IllegalArgumentException` — if {@code resultExtractor1} , {@code resultExtractor2} , or {@code resultExtractor3} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 ##### queryAllResultSets(...) -> List<Dataset>
 - **Signature:** `public List<Dataset> queryAllResultSets() throws SQLException`
@@ -2733,7 +2739,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A tuple containing the number of rows affected and a list of generated keys. The list may be empty if no keys were generated.
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided key extractor is null
+  - `java.lang.IllegalArgumentException` — if {@code autoGeneratedKeyExtractor} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #updateAndReturnGeneratedKeys(BiRowMapper), #update()
 - **Signature:** `public <T> Tuple2<Integer, List<T>> updateAndReturnGeneratedKeys(final Jdbc.BiRowMapper<T> autoGeneratedKeyExtractor) throws IllegalStateException, IllegalArgumentException, SQLException`
@@ -2745,7 +2751,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A tuple containing the number of rows affected and a list of generated keys
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided key extractor is null
+  - `java.lang.IllegalArgumentException` — if {@code autoGeneratedKeyExtractor} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #updateAndReturnGeneratedKeys(RowMapper)
 ##### batchUpdate(...) -> int\[\]
@@ -2766,7 +2772,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A tuple containing an array of update counts and a list of generated keys
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided key extractor is null
+  - `java.lang.IllegalArgumentException` — if {@code autoGeneratedKeyExtractor} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #batchUpdate(), #batchUpdateAndReturnGeneratedKeys(BiRowMapper)
 - **Signature:** `public <T> Tuple2<int[], List<T>> batchUpdateAndReturnGeneratedKeys(final Jdbc.BiRowMapper<T> autoGeneratedKeyExtractor) throws IllegalStateException, IllegalArgumentException, SQLException`
@@ -2778,7 +2784,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A tuple containing an array of update counts and a list of generated keys
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided key extractor is null
+  - `java.lang.IllegalArgumentException` — if {@code autoGeneratedKeyExtractor} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #batchUpdateAndReturnGeneratedKeys(RowMapper)
 ##### largeUpdate(...) -> long
@@ -2875,7 +2881,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A ContinuableFuture representing the result of the asynchronous execution
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided SQL action is null
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null}
 - **See also:** #callAsync(Throwables.Function, Executor), #runAsync(Throwables.Consumer)
 - **Signature:** `@Beta public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action using this query instance with a custom executor.
@@ -2898,7 +2904,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** A ContinuableFuture representing the completion of the asynchronous execution
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided SQL action is null
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null}
 - **See also:** #runAsync(Throwables.Consumer, Executor), #callAsync(Throwables.Function)
 - **Signature:** `@Beta public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor) throws IllegalStateException, IllegalArgumentException`
 - **Summary:** Asynchronously executes the provided SQL action without returning a result using a custom executor.
@@ -3518,7 +3524,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** java.sql.Types
-- **Signature:** `public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws SQLException`
+- **Signature:** `public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an object value for the specified named parameter using a JDBC 4.2 {@link SQLType} .
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter
@@ -3526,8 +3532,9 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
   - `sqlType` (`SQLType`) — the {@link SQLType} to be used
 - **Returns:** this CallableQuery instance for method chaining
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code sqlType} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength) throws SQLException`
+- **Signature:** `public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an object value for the specified named parameter using a JDBC 4.2 {@link SQLType} and a scale/length.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter
@@ -3536,6 +3543,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
   - `scaleOrLength` (`int`) — for DECIMAL/NUMERIC types, the scale (number of digits after the decimal point); for stream-backed types (e.g. {@code LONGVARCHAR} ) the length of the data; for all other types this value is ignored
 - **Returns:** this CallableQuery instance for method chaining
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code sqlType} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public <T> CallableQuery setObject(final String parameterName, final T value, final Type<T> type) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an object value for the specified named parameter using a custom abacus {@link Type} handler, giving full control over how the Java value is converted to its SQL representation.
@@ -3900,7 +3908,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Returns:** a {@code Tuple4} containing: <ul> <li> First element: Extracted result from the first result set (or null) </li> <li> Second element: Extracted result from the second result set (or null) </li> <li> Third element: Extracted result from the third result set (or null) </li> <li> Fourth element: {@code Jdbc.OutParamResult} containing all OUT parameters </li> </ul>
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query has already been closed
-  - `java.lang.IllegalArgumentException` — if any of the result extractors is {@code null}
+  - `java.lang.IllegalArgumentException` — if {@code resultExtractor1} , {@code resultExtractor2} , or {@code resultExtractor3} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs or the stored procedure fails
 - **See also:** #query2ResultSetsAndGetOutParameters(BiResultExtractor, BiResultExtractor), #queryAllResultSetsAndGetOutParameters(BiResultExtractor)
 ##### listAndGetOutParameters(...) -> Tuple2<List<T>, Jdbc.OutParamResult>
@@ -4175,7 +4183,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
   - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
-  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `conn` (`Connection`) — the Connection to the database
   - `insertSql` (`String`) — the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
@@ -4209,7 +4217,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Summary:** Imports filtered data from a Dataset to a database table with custom column type mapping and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `conn` (`Connection`) — the Connection to the database
   - `insertSql` (`String`) — the SQL insert statement with placeholders; column order must match the Dataset
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
@@ -4244,7 +4252,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Summary:** Imports filtered data from a Dataset to a database table with a custom statement setter and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `conn` (`Connection`) — the Connection to the database
   - `insertSql` (`String`) — the SQL insert statement with placeholders
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
@@ -4288,7 +4296,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
   - `columnNames` (`Collection<String>`) — the collection of column names to be selected for import
-  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
@@ -4319,14 +4327,14 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Summary:** Imports filtered data from a Dataset to a database table using the provided PreparedStatement with custom column type mapping and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
   - `columnTypeMap` (`Map<String, ? extends Type>`) — a map specifying the types of the columns for type conversion
 - **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
+  - `java.lang.IllegalArgumentException` — if {@code filter} is {@code null} , {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public static int importData(final Dataset dataset, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter.
@@ -4352,14 +4360,14 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Summary:** Imports filtered data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter and batch processing.
 - **Parameters:**
   - `dataset` (`Dataset`) — the Dataset containing the data to be imported
-  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super Object[]>`) — a predicate to filter the rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed by this method)
   - `batchSize` (`int`) — the number of rows to be inserted in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch execution (must be {@code >= 0} )
   - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}
 - **Returns:** the number of rows successfully imported (after filtering)
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code parameterSetter} is {@code null} , {@code batchSize <= 0} , or {@code batchIntervalInMillis < 0}
+  - `java.lang.IllegalArgumentException` — if {@code filter} or {@code parameterSetter} is {@code null} , {@code batchSize <= 0} , or {@code batchIntervalInMillis < 0}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException`
 - **Summary:** Imports data from an Iterator to the database using the specified DataSource and SQL insert statement.
@@ -4449,7 +4457,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Summary:** Imports data from a CSV file to the database with row filtering capability.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
-  - `filter` (`Predicate<? super String[]>`) — a predicate to filter rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super String[]>`) — a predicate to filter rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
@@ -4495,14 +4503,14 @@ Utility class for database import/export operations, CSV processing, and data co
   - </p> <p> This method combines all import features: </p> <ul> <li> Custom data source (Reader) </li> <li> Row filtering before import </li> <li> Configurable batch processing </li> <li> Custom value mapping </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import CSV data with complex filtering and validation // Complex filter: valid email, age >= 18, allowed countries Set<String> allowedCountries = Set.of("US", "CA", "UK", "AU"); Predicate<String\[\]> complexFilter = row -> { // Validate email format (simple check) if (!row\[1\].contains("@")) return false; // Check age >= 18 try { if (Integer.parseInt(row\[2\]) < 18) return false; } catch (NumberFormatException e) { return false; } // Check allowed countries return allowedCountries.contains(row\[3\]); }; try (Reader reader = new FileReader("user_data.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)")) { long rowsImported = DataTransferUtil.importCsv(reader, complexFilter, stmt, 2000, 0, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setString(2, row\[1\].toLowerCase()); // normalize email query.setInt(3, Integer.parseInt(row\[2\])); query.setString(4, row\[3\]); }); System.out.println("Imported " + rowsImported + " valid users"); } } </pre>
 - **Parameters:**
   - `reader` (`Reader`) — the Reader to read the CSV data from
-  - `filter` (`Predicate<? super String[]>`) — a predicate to filter rows; only rows returning {@code true} will be imported. If {@code null} , every row is imported
+  - `filter` (`Predicate<? super String[]>`) — a predicate to filter rows; only rows returning {@code true} will be imported; must not be {@code null}
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
   - `batchSize` (`int`) — the number of rows to accumulate before executing a batch insert (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the pause duration in milliseconds between batch executions (must be {@code >= 0} )
   - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>`) — a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}
 - **Returns:** the total number of rows successfully imported (after filtering)
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code reader} or {@code parameterSetter} is {@code null} , {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , or a data row has more fields than the header
+  - `java.lang.IllegalArgumentException` — if {@code reader} , {@code filter} , or {@code parameterSetter} is {@code null} , {@code batchSize <= 0} , {@code batchIntervalInMillis < 0} , or a data row has more fields than the header
   - `java.sql.SQLException` — if a database access error occurs
 ##### exportCsv(...) -> long
 - **Signature:** `public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final File output) throws SQLException`
@@ -4702,7 +4710,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `selectSql` (`String`) — the SQL query to select data from the source data source
   - `targetDataSource` (`javax.sql.DataSource`) — the data source to which to copy data
   - `insertSql` (`String`) — the SQL query to insert data into the target data source
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement from the result set; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement from the result set; must not be {@code null}
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4716,7 +4724,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL query to insert data into the target data source
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a bi-consumer to set parameters on the prepared statement; must not be {@code null}
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4810,7 +4818,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `selectSql` (`String`) — the SQL query to select data from the source database
   - `targetConn` (`Connection`) — the connection to the target database
   - `insertSql` (`String`) — the SQL query to insert data into the target database
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; must not be {@code null}
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4824,7 +4832,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertSql` (`String`) — the SQL query to insert data into the target database
   - `batchSize` (`int`) — the number of rows to be copied in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the custom statement setter to set the parameters of the prepared statement; must not be {@code null}
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4837,7 +4845,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `insertStmt` (`PreparedStatement`) — the PreparedStatement used to insert data into the target
   - `batchSize` (`int`) — the number of rows to process in each batch (must be greater than 0)
   - `batchIntervalInMillis` (`long`) — the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0} )
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a BiConsumer that sets the parameters for the {@link PreparedQuery} from the ResultSet; if {@code null} , a default setter copies all columns by index
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — a BiConsumer that sets the parameters for the {@link PreparedQuery} from the ResultSet; must not be {@code null}
 - **Returns:** the number of rows copied
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
@@ -4972,7 +4980,7 @@ A fluent builder that configures and runs the import of a {@link Dataset} into a
 - **Signature:** `public DatasetImportBuilder filter(final Predicate<? super Object[]> filter)`
 - **Summary:** Imports only the rows for which the given predicate returns {@code true} .
 - **Parameters:**
-  - `filter` (`Predicate<? super Object[]>`) — the row filter; {@code null} imports every row
+  - `filter` (`Predicate<? super Object[]>`) — the row filter; must not be {@code null}
 - **Returns:** this builder
 ##### batchSize(...) -> DatasetImportBuilder
 - **Signature:** `public DatasetImportBuilder batchSize(final int batchSize)`
@@ -4996,7 +5004,7 @@ A fluent builder that configures and runs the import of a {@link Dataset} into a
 - **Signature:** `public DatasetImportBuilder parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)`
 - **Summary:** Supplies a custom setter that maps each row to the statement parameters, giving full control over how values are bound.
 - **Parameters:**
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>`) — a BiConsumer that sets the parameters of the {@link PreparedQuery} for each row; must not be {@code null}
 - **Returns:** this builder
 ##### to(...) -> int
 - **Signature:** `public int to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException`
@@ -5042,7 +5050,7 @@ A fluent builder that imports rows from an {@link Iterator} or a CSV {@link File
 - **Signature:** `public RowImportBuilder<T> filter(final Predicate<? super T> filter)`
 - **Summary:** Imports only the elements/rows for which the given predicate returns {@code true} .
 - **Parameters:**
-  - `filter` (`Predicate<? super T>`) — the row filter; {@code null} imports every row
+  - `filter` (`Predicate<? super T>`) — the row filter; must not be {@code null}
 - **Returns:** this builder
 ##### batchSize(...) -> RowImportBuilder<T>
 - **Signature:** `public RowImportBuilder<T> batchSize(final int batchSize)`
@@ -5060,7 +5068,7 @@ A fluent builder that imports rows from an {@link Iterator} or a CSV {@link File
 - **Signature:** `public RowImportBuilder<T> parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)`
 - **Summary:** Supplies a custom setter that binds each element to the insert statement parameters.
 - **Parameters:**
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — binds the parameters of the {@link PreparedQuery} for each element
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException>`) — binds the parameters of the {@link PreparedQuery} for each element; must not be {@code null}
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException`
@@ -5163,9 +5171,9 @@ A fluent builder that copies the rows of a SELECT query from a source {@link jav
 - **Signature:** `public CopyFromDataSource parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)`
 - **Summary:** Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters.
 - **Contract:**
-  - When {@code null} (the default), all columns are copied by index.
+  - When not configured, all columns are copied by index.
 - **Parameters:**
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter; must not be {@code null}
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException`
@@ -5214,9 +5222,9 @@ A fluent builder that copies the rows of a SELECT query between two {@link Conne
 - **Signature:** `public CopyFromConnection parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)`
 - **Summary:** Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters.
 - **Contract:**
-  - When {@code null} (the default), all columns are copied by index.
+  - When not configured, all columns are copied by index.
 - **Parameters:**
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter; must not be {@code null}
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final Connection targetConn, final String insertSql) throws SQLException`
@@ -5257,9 +5265,9 @@ A fluent builder that copies the rows produced by a source {@link PreparedStatem
 - **Signature:** `public CopyFromStatement parameterSetter(final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)`
 - **Summary:** Sets a custom setter mapping each source {@link ResultSet} row to the target insert parameters.
 - **Contract:**
-  - When {@code null} (the default), all columns are copied by index.
+  - When not configured, all columns are copied by index.
 - **Parameters:**
-  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter
+  - `parameterSetter` (`Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException>`) — the parameter setter; must not be {@code null}
 - **Returns:** this builder
 ##### to(...) -> long
 - **Signature:** `public long to(final PreparedStatement insertStmt) throws SQLException`
@@ -7174,7 +7182,7 @@ A factory for creating and managing {@link Handler} instances.
   - `afterInvokeAction` (`Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E>`) — the action to perform after the method completes (whether normally or with an exception).
 - **Returns:** a new {@code Handler} instance.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if either action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code beforeInvokeAction} or {@code afterInvokeAction} is {@code null} .
 
 #### Public Instance Methods
 - (none)
@@ -8758,7 +8766,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement} .
 - **Returns:** A new {@link PreparedQuery} instance wrapping the custom-created statement.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or any other argument is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code stmtCreator} is {@code null} , or if {@code sql} is {@code null} or empty.
   - `java.sql.SQLException` — if a database access error occurs.
 - **Signature:** `public static PreparedQuery prepareQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query using a provided {@link Connection} .
@@ -8820,7 +8828,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A factory function to create the {@link PreparedStatement} .
 - **Returns:** A new {@link PreparedQuery} instance.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or any other argument is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code conn} or {@code stmtCreator} is {@code null} , or if {@code sql} is {@code null} or empty.
   - `java.sql.SQLException` — if a database access error occurs.
 ##### prepareQueryForLargeResult(...) -> PreparedQuery
 - **Signature:** `@Beta public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException`
@@ -8917,7 +8925,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement} .
 - **Returns:** A new {@link NamedQuery} instance wrapping the custom-created statement.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, if any other argument is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters.
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code stmtCreator} is {@code null} , if {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
   - `java.sql.SQLException` — if a database access error occurs.
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException`
@@ -8977,7 +8985,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement} .
 - **Returns:** A new {@link NamedQuery} instance.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, if any other argument is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters.
+  - `java.lang.IllegalArgumentException` — if {@code conn} or {@code stmtCreator} is {@code null} , if {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
   - `java.sql.SQLException` — if a database access error occurs.
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query using the provided DataSource and ParsedSql object.
@@ -9046,7 +9054,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement} .
 - **Returns:** A new {@link NamedQuery} instance.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any argument is {@code null} , or if {@code namedSql} is invalid.
+  - `java.lang.IllegalArgumentException` — if {@code ds} , {@code namedSql} , or {@code stmtCreator} is {@code null} , or if {@code namedSql} is invalid.
   - `java.sql.SQLException` — if a database access error occurs.
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException`
@@ -9106,7 +9114,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement} .
 - **Returns:** A new {@link NamedQuery} instance.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any argument is {@code null} , or if {@code namedSql} is invalid.
+  - `java.lang.IllegalArgumentException` — if {@code conn} , {@code namedSql} , or {@code stmtCreator} is {@code null} , or if {@code namedSql} is invalid.
   - `java.sql.SQLException` — if a database access error occurs.
 ##### prepareNamedQueryForLargeResult(...) -> NamedQuery
 - **Signature:** `@Beta public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql) throws IllegalArgumentException, SQLException`
@@ -9423,25 +9431,27 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A {@link Dataset} containing the extracted data.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
-- **Signature:** `public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws SQLException`
+- **Signature:** `public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws IllegalArgumentException, SQLException`
 - **Summary:** Extracts data from the provided ResultSet using the specified RowFilter.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to extract data from, must not be {@code null} .
   - `filter` (`RowFilter`) — The RowFilter to apply while extracting data. This is a functional interface that tests each row; only rows for which {@code filter.test(rs)} returns {@code true} will be included in the result. Must not be {@code null} .
 - **Returns:** A {@link Dataset} containing the filtered data.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code rs} or {@code filter} is {@code null} .
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
 - **See also:** RowFilter, #extractData(ResultSet, RowFilter, RowExtractor)
-- **Signature:** `public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException`
+- **Signature:** `public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws IllegalArgumentException, SQLException`
 - **Summary:** Extracts data from the provided ResultSet using the specified RowExtractor.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to extract data from, must not be {@code null} .
   - `rowExtractor` (`RowExtractor`) — The RowExtractor to apply while extracting data. This is a functional interface that receives the current ResultSet and an output row array, allowing modification of the row data before it's added to the Dataset. Must not be {@code null} .
 - **Returns:** A {@link Dataset} containing the extracted and transformed data.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code rs} or {@code rowExtractor} is {@code null} .
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
 - **See also:** RowExtractor, #extractData(ResultSet, RowFilter, RowExtractor)
-- **Signature:** `public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException`
+- **Signature:** `public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws IllegalArgumentException, SQLException`
 - **Summary:** Extracts data from the provided ResultSet using both RowFilter and RowExtractor.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to extract data from, must not be {@code null} .
@@ -9449,6 +9459,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `rowExtractor` (`RowExtractor`) — The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array. Must not be {@code null} .
 - **Returns:** A {@link Dataset} containing the filtered and transformed data.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code rs} , {@code filter} , or {@code rowExtractor} is {@code null} .
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
 - **See also:** RowFilter, RowExtractor, #extractData(ResultSet, RowFilter), #extractData(ResultSet, RowExtractor)
 - **Signature:** `public static Dataset extractData(final ResultSet rs, final boolean closeResultSet) throws SQLException`
@@ -9469,7 +9480,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** A {@link Dataset} containing the extracted data.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
-- **Signature:** `public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet) throws SQLException`
+- **Signature:** `public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet) throws IllegalArgumentException, SQLException`
 - **Summary:** Extracts data from the provided ResultSet with offset, count, and filter.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to extract data from, must not be {@code null} .
@@ -9479,9 +9490,10 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `closeResultSet` (`boolean`) — Whether to close the ResultSet after extraction.
 - **Returns:** A {@link Dataset} containing the extracted data.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code rs} or {@code filter} is {@code null} , or if {@code offset} or {@code count} is negative.
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
 - **See also:** #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
-- **Signature:** `public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet) throws SQLException`
+- **Signature:** `public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet) throws IllegalArgumentException, SQLException`
 - **Summary:** Extracts data from the provided ResultSet with offset, count, and extractor.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to extract data from, must not be {@code null} .
@@ -9491,6 +9503,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `closeResultSet` (`boolean`) — Whether to close the ResultSet after extraction.
 - **Returns:** A {@link Dataset} containing the extracted and transformed data.
 - **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code rs} or {@code rowExtractor} is {@code null} , or if {@code offset} or {@code count} is negative.
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
 - **See also:** #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
 - **Signature:** `public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor, final boolean closeResultSet) throws IllegalArgumentException, SQLException`
@@ -9504,7 +9517,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `closeResultSet` (`boolean`) — Whether to close the ResultSet after extraction completes (or if an error occurs).
 - **Returns:** A {@link Dataset} containing the filtered and transformed data.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any argument is invalid (null or negative values).
+  - `java.lang.IllegalArgumentException` — if {@code rs} , {@code filter} , or {@code rowExtractor} is {@code null} , or if {@code offset} or {@code count} is negative.
   - `java.sql.SQLException` — if a database access error occurs while extracting data.
 - **See also:** RowFilter, RowExtractor, #extractData(ResultSet, RowFilter, RowExtractor)
 ##### stream(...) -> Stream<Object\[\]>
@@ -9512,6 +9525,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Summary:** Creates a lazy {@link Stream} over the rows of the provided {@link ResultSet} , with each row mapped to an {@code Object\[\]} containing the values of all columns of that row.
 - **Contract:**
   - <p> The {@code ResultSet} is consumed lazily as the stream is traversed; if you only consume a prefix of the stream the remaining rows remain unread.
+  - Close handlers run when the stream is closed \\u2014 explicitly, through try-with-resources, or automatically after a terminal operation completes; try-with-resources also covers streams abandoned before any terminal operation.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to stream; must not be {@code null} .
 - **Returns:** A {@link Stream} of {@code Object\[\]} , each array containing the column values of one row.
@@ -9530,7 +9544,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `rowMapper` (`RowMapper<? extends T>`) — The RowMapper to apply while extracting data. This mapper is called for each row in the ResultSet.
 - **Returns:** A {@link Stream} of the extracted results.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the provided arguments are invalid.
+  - `java.lang.IllegalArgumentException` — if {@code rs} or {@code rowMapper} is {@code null} .
 - **Signature:** `public static <T> Stream<T> stream(final ResultSet rs, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException`
 - **Summary:** Creates a stream from the provided ResultSet using the specified RowFilter and RowMapper.
 - **Parameters:**
@@ -9539,7 +9553,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `rowMapper` (`RowMapper<? extends T>`) — The RowMapper to apply while extracting data from filtered rows.
 - **Returns:** A {@link Stream} of the extracted results.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the provided arguments are invalid.
+  - `java.lang.IllegalArgumentException` — if {@code rs} , {@code rowFilter} , or {@code rowMapper} is {@code null} .
 - **Signature:** `public static <T> Stream<T> stream(final ResultSet rs, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException`
 - **Summary:** Creates a stream from the provided ResultSet using the specified BiRowMapper.
 - **Parameters:**
@@ -9547,7 +9561,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `rowMapper` (`BiRowMapper<? extends T>`) — The BiRowMapper to apply while extracting data. This mapper receives both the ResultSet and column labels.
 - **Returns:** A {@link Stream} of the extracted results.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the provided arguments are invalid.
+  - `java.lang.IllegalArgumentException` — if {@code rs} or {@code rowMapper} is {@code null} .
 - **Signature:** `public static <T> Stream<T> stream(final ResultSet rs, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException`
 - **Summary:** Creates a stream from the provided ResultSet using the specified BiRowFilter and BiRowMapper.
 - **Contract:**
@@ -9558,7 +9572,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `rowMapper` (`BiRowMapper<? extends T>`) — The BiRowMapper to apply while extracting data from filtered rows.
 - **Returns:** A {@link Stream} of the extracted results.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the provided arguments are invalid.
+  - `java.lang.IllegalArgumentException` — if {@code rs} , {@code rowFilter} , or {@code rowMapper} is {@code null} .
 - **Signature:** `public static <T> Stream<T> stream(final ResultSet rs, final int columnIndex) throws IllegalArgumentException`
 - **Summary:** Creates a stream from the provided ResultSet using the specified column index.
 - **Contract:**
@@ -9597,7 +9611,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `resultExtractor` (`ResultExtractor<R>`) — The ResultExtractor to apply while extracting data from each ResultSet.
 - **Returns:** A {@link Stream} of the extracted results.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the provided arguments are invalid.
+  - `java.lang.IllegalArgumentException` — if {@code stmt} or {@code resultExtractor} is {@code null} .
 - **Signature:** `@SuppressWarnings("resource") public static <R> Stream<R> streamAllResultSets(final Statement stmt, final BiResultExtractor<R> resultExtractor) throws IllegalArgumentException`
 - **Summary:** Extracts all ResultSets from the provided Statement and returns them as a Stream.
 - **Parameters:**
@@ -9605,7 +9619,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `resultExtractor` (`BiResultExtractor<R>`) — The BiResultExtractor to apply while extracting data.
 - **Returns:** A {@link Stream} of the extracted results.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the provided arguments are invalid.
+  - `java.lang.IllegalArgumentException` — if {@code stmt} or {@code resultExtractor} is {@code null} .
 ##### queryByPage(...) -> Stream<Dataset>
 - **Signature:** `@SuppressWarnings("rawtypes") public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize, final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter)`
 - **Summary:** Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query} .
@@ -9745,7 +9759,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Throwables.Runnable<Exception>`) — The SQL action to be executed asynchronously.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the specified SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 - **Signature:** `@Beta public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs two SQL actions in separate threads.
 - **Parameters:**
@@ -9753,7 +9767,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction2` (`Throwables.Runnable<Exception>`) — The second SQL action to be executed asynchronously.
 - **Returns:** A Tuple2 containing two ContinuableFuture objects representing the results of the asynchronous computations.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction1} or {@code sqlAction2} is {@code null} .
 - **Signature:** `@Beta public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1, final Throwables.Runnable<Exception> sqlAction2, final Throwables.Runnable<Exception> sqlAction3) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs three SQL actions in separate threads.
 - **Parameters:**
@@ -9762,7 +9776,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction3` (`Throwables.Runnable<Exception>`) — The third SQL action to be executed asynchronously.
 - **Returns:** A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction1} , {@code sqlAction2} , or {@code sqlAction3} is {@code null} .
 - **Signature:** `@Beta public static <T> ContinuableFuture<Void> runAsync(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with the given parameter.
 - **Parameters:**
@@ -9770,7 +9784,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Throwables.Consumer<? super T, Exception>`) — The SQL action to be executed with the parameter.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 - **Signature:** `@Beta public static <T, U> ContinuableFuture<Void> runAsync(final T parameter1, final U parameter2, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with two parameters.
 - **Parameters:**
@@ -9779,7 +9793,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Throwables.BiConsumer<? super T, ? super U, Exception>`) — The SQL action to be executed with the parameters.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 - **Signature:** `@Beta public static <A, B, C> ContinuableFuture<Void> runAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with three parameters.
 - **Parameters:**
@@ -9789,7 +9803,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Throwables.TriConsumer<? super A, ? super B, ? super C, Exception>`) — The SQL action to be executed with the parameters.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 ##### callAsync(...) -> ContinuableFuture<R>
 - **Signature:** `@Beta public static <R> ContinuableFuture<R> callAsync(final Callable<? extends R> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action and returns a result.
@@ -9797,7 +9811,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Callable<? extends R>`) — The SQL action that produces a result.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 - **Signature:** `@Beta public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls two SQL actions and returns their results.
 - **Parameters:**
@@ -9805,7 +9819,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction2` (`Callable<? extends R2>`) — The second SQL action that produces a result.
 - **Returns:** A Tuple2 containing two ContinuableFutures representing the results of the asynchronous computations.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction1} or {@code sqlAction2} is {@code null} .
 - **Signature:** `@Beta public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> callAsync(final Callable<? extends R1> sqlAction1, final Callable<? extends R2> sqlAction2, final Callable<? extends R3> sqlAction3) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls three SQL actions and returns their results.
 - **Parameters:**
@@ -9814,7 +9828,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction3` (`Callable<? extends R3>`) — The third SQL action that produces a result.
 - **Returns:** A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction1} , {@code sqlAction2} , or {@code sqlAction3} is {@code null} .
 - **Signature:** `@Beta public static <T, R> ContinuableFuture<R> callAsync(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with one parameter and returns a result.
 - **Parameters:**
@@ -9822,7 +9836,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Throwables.Function<? super T, ? extends R, Exception>`) — The SQL action that takes a parameter and produces a result.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 - **Signature:** `@Beta public static <T, U, R> ContinuableFuture<R> callAsync(final T parameter1, final U parameter2, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with two parameters and returns a result.
 - **Parameters:**
@@ -9831,7 +9845,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Throwables.BiFunction<? super T, ? super U, ? extends R, Exception>`) — The SQL action that takes two parameters and produces a result.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 - **Signature:** `@Beta public static <A, B, C, R> ContinuableFuture<R> callAsync(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with three parameters and returns a result.
 - **Parameters:**
@@ -9841,7 +9855,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `sqlAction` (`Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception>`) — The SQL action that takes three parameters and produces a result.
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if the SQL action is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
 ##### getOutParameters(...) -> OutParamResult
 - **Signature:** `public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException`
 - **Summary:** Retrieves the output parameters from the given CallableStatement.
@@ -10019,7 +10033,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Summary:** Retrieves the current SQL extractor function used to extract SQL statements from Statement objects.
 - **Parameters:**
   - (none)
-- **Returns:** The current SQL extractor function; never {@code null} (defaults to the built-in extractor, and a {@code null} passed to {@link #setSqlExtractor(Throwables.Function)} resets it to that default).
+- **Returns:** The current SQL extractor function; never {@code null}
 ##### setSqlExtractor(...) -> void
 - **Signature:** `public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor)`
 - **Summary:** Sets a custom SQL extractor function to extract SQL statements from Statement objects.
@@ -10027,7 +10041,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - This is useful when using custom Statement implementations or when the default extraction method doesn't work for your JDBC driver.
   - <p> <b> Usage Examples: </b> </p> <pre> {@code JdbcUtil.setSqlExtractor(statement -> { if (statement instanceof MyCustomStatement) { return ((MyCustomStatement) statement).getOriginalSql(); } return statement.toString(); }); } </pre>
 - **Parameters:**
-  - `sqlExtractor` (`Throwables.Function<Statement, String, SQLException>`) — The SQL extractor function to set; if {@code null} , the extractor is reset to the built-in default ( {@link #DEFAULT_SQL_EXTRACTOR} ) so that {@link #getSqlExtractor()} never returns {@code null} .
+  - `sqlExtractor` (`Throwables.Function<Statement, String, SQLException>`) — The SQL extractor function to set; must not be {@code null} .
 ##### getSqlLogHandler(...) -> TriConsumer<String, Long, Long>
 - **Signature:** `public static TriConsumer<String, Long, Long> getSqlLogHandler()`
 - **Summary:** Retrieves the current SQL log handler that processes SQL statements and their execution times.
@@ -10042,7 +10056,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Contract:**
   - <p> <b> Usage Examples: </b> </p> <pre> {@code JdbcUtil.setSqlLogHandler((sql, startTime, endTime) -> { long duration = endTime - startTime; if (duration > 1000) { // Log slow queries logger.warn("Slow query ({}ms): {}", duration, sql); } // Send metrics to monitoring system metricsCollector.recordSqlExecution(sql, duration); }); } </pre>
 - **Parameters:**
-  - `sqlLogHandler` (`TriConsumer<String, Long, Long>`) — The handler that receives: SQL statement, start time (ms), end time (ms).
+  - `sqlLogHandler` (`TriConsumer<String, Long, Long>`) — The handler that receives: SQL statement, start time (ms), end time (ms); must not be {@code null} .
 ##### setSqlPerfLogThresholdMillis(...) -> void
 - **Signature:** `public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis)`
 - **Summary:** Sets the minimum execution time threshold for SQL performance logging in the current thread.
@@ -10254,7 +10268,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `E` — if {@code sqlAction} throws an exception.
 - **See also:** #runWithoutUsingSpringTransaction(Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
 ##### setIdExtractorForDao(...) -> void
-- **Signature:** `public static <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException`
+- **Signature:** `public static synchronized <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException`
 - **Summary:** Registers a custom ID extractor for the specified {@link CrudDao} interface.
 - **Contract:**
   - Register a custom extractor when the default extraction (single column \\u2192 ID) does not fit your schema \\u2014 for example, when the entity has a composite ID that is returned across several generated columns.
@@ -10264,7 +10278,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code daoInterface} or {@code idExtractor} is {@code null} .
 - **See also:** #setIdExtractorForDao(Class, BiRowMapper)
-- **Signature:** `public static <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException`
+- **Signature:** `public static synchronized <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException`
 - **Summary:** Registers a custom ID extractor for the specified {@link CrudDao} interface using a {@link BiRowMapper} , which additionally receives the column labels of the generated-keys {@link ResultSet} .
 - **Contract:**
   - <p> Use this overload when extraction logic needs to dispatch on the names/positions of the generated columns (e.g., the driver returns a different column set depending on which auto-generated keys are configured).
@@ -10538,6 +10552,12 @@ Manages join relationships between entities in JDBC operations.
 - **See also:** JoinedBy, #getEntityJoinInfo(Class, Class, String)
 
 #### Public Instance Methods
+##### sourcePropNames(...) -> List<String>
+- **Signature:** `public List<String> sourcePropNames()`
+- **Summary:** Returns the source-entity properties whose values are required to load this join.
+- **Parameters:**
+  - (none)
+- **Returns:** an unmodifiable, non-empty list of source join-key property names
 ##### selectSqlPlan(...) -> Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
 - **Signature:** `public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> selectSqlPlan(final Dsl dsl)`
 - **Summary:** Retrieves the SQL plan for single-entity select operations.
@@ -11394,7 +11414,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Summary:** Sets multiple parameters from a Map containing parameter names and their values.
 - **Contract:**
   - <p> For each named parameter declared in the SQL, this method looks the name up in the map; if the map contains a matching key, its value is bound to that parameter using the default SQL type mapping (as if by {@code setObject} ).
-  - Named parameters that are absent from the map are left unbound and must be bound before the query is executed.
+  - Named parameters that are absent from the map are left untouched \\u2014 they keep any previously bound value or remain unbound \\u2014 so several calls can bind disjoint subsets; every parameter must be bound before the query is executed.
 - **Parameters:**
   - `parameters` (`Map<String, ?>`) — a map containing parameter names (without the ':' prefix) as keys and their values
 - **Returns:** this NamedQuery instance for method chaining
@@ -11452,7 +11472,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `@Beta @Override @SuppressWarnings("rawtypes") public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds a batch of parameters from an iterator for batch execution.
 - **Contract:**
-  - Each element provided by the iterator should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> Arrays or Collections for positional parameters </li> </ul> <p> The runtime type of the first non-null element normally determines how the remaining non-null elements are interpreted, so they should have the same parameter shape.
+  - Each element provided by the iterator should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> Arrays or Collections for positional parameters </li> </ul> <p> The runtime type of the first element (when it is non-null) determines how the remaining non-null elements are interpreted, so they should have the same parameter shape.
   - If the iterator is empty, this is a no-op and no batch is added.
   - A {@code null} element is only supported when the SQL has exactly one parameter placeholder \\u2014 a single named parameter appearing exactly once (it is bound as SQL {@code NULL} ); otherwise an {@link IllegalArgumentException} is thrown.
   - When the first element is {@code null} , each later non-null element is interpreted through {@link #setParameters(Object)} rather than being forced to a scalar value.
@@ -11510,7 +11530,7 @@ Execution modes selected through the {@code op} element of {@link com.landawn.ab
 - (none)
 
 ### Class SpringApplicationContext (com.landawn.abacus.jdbc.SpringApplicationContext)
-A utility class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
+A bridge class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified

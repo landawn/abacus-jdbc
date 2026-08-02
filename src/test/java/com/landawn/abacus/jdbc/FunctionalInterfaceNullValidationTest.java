@@ -75,7 +75,8 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
                 method -> method.getName().equals("to"));
         validationCount += assertNullFunctionalArgumentsRejected(Jdbc.HandlerFactory.class, () -> null, method -> true);
         validationCount += assertNullFunctionalArgumentsRejected(JdbcUtil.class, () -> null, method -> true);
-        validationCount += assertNullFunctionalArgumentsRejected(SqlTransaction.class, FunctionalInterfaceNullValidationTest::newSqlTransaction, method -> true);
+        validationCount += assertNullFunctionalArgumentsRejected(SqlTransaction.class, FunctionalInterfaceNullValidationTest::newSqlTransaction,
+                method -> true);
 
         // Guard against accidental silent filter/skip regressions if methods are skipped.
         assertEquals(259, validationCount);
@@ -107,9 +108,8 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
                 final String failureMessage = method.toGenericString() + " must reject null parameter at index " + targetParameterIndex;
                 final InvocationTargetException thrown = assertThrows(InvocationTargetException.class, () -> method.invoke(target, args), failureMessage);
 
-                assertTrue(thrown.getCause() instanceof IllegalArgumentException,
-                        () -> failureMessage + ", but threw " + (thrown.getCause() == null ? "null" : thrown.getCause().getClass().getName() + ": "
-                                + thrown.getCause().getMessage()));
+                assertTrue(thrown.getCause() instanceof IllegalArgumentException, () -> failureMessage + ", but threw "
+                        + (thrown.getCause() == null ? "null" : thrown.getCause().getClass().getName() + ": " + thrown.getCause().getMessage()));
                 validationCount++;
             }
         }

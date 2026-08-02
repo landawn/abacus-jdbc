@@ -27,6 +27,12 @@
  * Corresponding {@code Unchecked*} interfaces report database failures as unchecked SQL
  * exceptions.</p>
  *
+ * <p>The DAO contracts are composed from small sealed capability interfaces (such as
+ * {@code ReadOps}, {@code InsertOps}, {@code UpdateOps}, and {@code DeleteOps}) rooted at
+ * {@link com.landawn.abacus.jdbc.dao.DaoBase}, so each variant exposes exactly the operations
+ * its mutation policy allows — disallowed operations are absent from the type rather than
+ * failing with {@link UnsupportedOperationException} at runtime.</p>
+ *
  * <p>{@link com.landawn.abacus.jdbc.dao.JoinEntityHelper} and
  * {@link com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper} provide operations for entity
  * associations described by join metadata. Applications normally define a self-typed

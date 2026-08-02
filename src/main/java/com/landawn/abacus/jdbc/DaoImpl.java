@@ -720,6 +720,7 @@ final class DaoImpl {
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
         final Class<?> secondReturnEleType = getSecondReturnEleType(method);
         final Class<?> firstReturnEleEleType = getFirstReturnEleEleType(method);
+        final Class<?> firstReturnEleEleEleType = getFirstReturnEleEleEleType(method);
 
         final int paramLen = paramTypes.length;
         final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
@@ -784,6 +785,11 @@ final class DaoImpl {
                                 + " is not supported by the specified queryOperation: " + queryOperation);
                     }
 
+                    if (firstReturnEleEleType == null || !firstReturnEleEleType.isAssignableFrom(List.class)) {
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
+                    }
+
                     if (hasRowMapperOrExtractor) {
                         if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
@@ -806,15 +812,20 @@ final class DaoImpl {
                                     + " is not supported by the specified queryOperation: " + queryOperation);
                         }
                     } else {
-                        if (firstReturnEleEleType == null) {
+                        if (firstReturnEleEleEleType == null) {
                             throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
                                     + " is not supported by the specified queryOperation: " + queryOperation);
                         }
 
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSetsAndGetOutParameters(firstReturnEleEleType);
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSetsAndGetOutParameters(firstReturnEleEleEleType);
                     }
                 } else {
-                    if (!List.class.isAssignableFrom(returnType)) {
+                    if (!List.class.isAssignableFrom(returnType) || !returnType.isAssignableFrom(ArrayList.class)) {
+                        throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                                + " is not supported by the specified queryOperation: " + queryOperation);
+                    }
+
+                    if (firstReturnEleType == null || !firstReturnEleType.isAssignableFrom(List.class)) {
                         throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
                                 + " is not supported by the specified queryOperation: " + queryOperation);
                     }
@@ -839,16 +850,12 @@ final class DaoImpl {
                                     + " is not supported by the specified queryOperation: " + queryOperation);
                         }
                     } else {
-                        // For a return type of List<List<User>>, each result set's rows are mapped to the innermost element type (User),
-                        // so prefer firstReturnEleEleType; fall back to firstReturnEleType for a single-level List<User> declaration.
-                        final Class<?> rowType = firstReturnEleEleType != null ? firstReturnEleEleType : firstReturnEleType;
-
-                        if (rowType == null) {
+                        if (firstReturnEleEleType == null) {
                             throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
                                     + " is not supported by the specified queryOperation: " + queryOperation);
                         }
 
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSets(rowType);
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSets(firstReturnEleEleType);
                     }
                 }
             } else if (queryOperation == QueryOperation.queryAll) {
@@ -879,7 +886,7 @@ final class DaoImpl {
                     }
 
                 } else {
-                    if (!List.class.isAssignableFrom(returnType)) {
+                    if (!List.class.isAssignableFrom(returnType) || !returnType.isAssignableFrom(ArrayList.class)) {
                         throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
                                 + " is not supported by the specified queryOperation: " + queryOperation);
                     }
@@ -1330,6 +1337,31 @@ final class DaoImpl {
                                 : null));
     }
 
+    private static Class<?> getFirstReturnEleEleEleType(final Method method) {
+        final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
+        final ParameterizedType parameterizedReturnType = genericReturnType instanceof ParameterizedType ? (ParameterizedType) genericReturnType : null;
+        final java.lang.reflect.Type firstActualTypeArgument = parameterizedReturnType == null || N.isEmpty(parameterizedReturnType.getActualTypeArguments())
+                ? null
+                : parameterizedReturnType.getActualTypeArguments()[0];
+
+        if (!(firstActualTypeArgument instanceof ParameterizedType firstParameterizedType) || N.isEmpty(firstParameterizedType.getActualTypeArguments())) {
+            return null;
+        }
+
+        final java.lang.reflect.Type secondLevelType = firstParameterizedType.getActualTypeArguments()[0];
+
+        if (!(secondLevelType instanceof ParameterizedType secondParameterizedType) || N.isEmpty(secondParameterizedType.getActualTypeArguments())) {
+            return null;
+        }
+
+        final java.lang.reflect.Type thirdLevelType = secondParameterizedType.getActualTypeArguments()[0];
+
+        return thirdLevelType instanceof Class ? (Class<?>) thirdLevelType
+                : (thirdLevelType instanceof ParameterizedType && ((ParameterizedType) thirdLevelType).getRawType() instanceof Class
+                        ? (Class<?>) ((ParameterizedType) thirdLevelType).getRawType()
+                        : null);
+    }
+
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Object[]> createParametersSetter(final QueryInfo queryInfo, final String fullClassMethodName,
             final Method method, final Class<?>[] paramTypes, final int paramLen, final int fragmentParamLen, final int[] stmtParamIndexes,
@@ -1339,9 +1371,9 @@ final class DaoImpl {
 
         // ParametersSetter/BiParametersSetter/TriParametersSetter method parameters are detected but the
         // feature is not enabled at present: reject at DAO creation instead of building setters that are never used.
-        if ((paramLen - fragmentParamLen > 0 && Jdbc.ParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen]))
-                || (paramLen - fragmentParamLen > 1 && (Jdbc.BiParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])
-                        || Jdbc.TriParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])))) {
+        if (Stream.of(paramTypes)
+                .anyMatch(paramType -> Jdbc.ParametersSetter.class.isAssignableFrom(paramType) || Jdbc.BiParametersSetter.class.isAssignableFrom(paramType)
+                        || Jdbc.TriParametersSetter.class.isAssignableFrom(paramType))) {
             throw new UnsupportedOperationException(
                     "Setting parameters by 'ParametersSetter/BiParametersSetter/TriParametersSetter' is not enabled at present. Can't use it in method: "
                             + fullClassMethodName);
@@ -1357,11 +1389,14 @@ final class DaoImpl {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
 
             if (queryInfo.isProcedure) {
-                final String paramName = Stream.of(method.getParameterAnnotations()[stmtParamIndexes[0]])
-                        .select(Bind.class)
-                        .map(Bind::value)
-                        .first()
-                        .orElseNull();
+                final Bind bind = Stream.of(method.getParameterAnnotations()[stmtParamIndexes[0]]).select(Bind.class).first().orElseNull();
+
+                if (bind != null && Strings.isEmpty(bind.value())) {
+                    throw new UnsupportedOperationException(
+                            "In method: " + fullClassMethodName + ", @Bind on a procedure parameter must specify a non-empty name when named binding is used");
+                }
+
+                final String paramName = bind == null ? null : bind.value();
 
                 if (Strings.isNotEmpty(paramName)) {
                     parametersSetter = (preparedQuery, args) -> ((CallableQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
@@ -1380,11 +1415,14 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 }
             } else if (queryInfo.isNamedQuery) {
-                final String paramName = Stream.of(method.getParameterAnnotations()[stmtParamIndexes[0]])
-                        .select(Bind.class)
-                        .map(Bind::value)
-                        .first()
-                        .orElseNull();
+                final Bind bind = Stream.of(method.getParameterAnnotations()[stmtParamIndexes[0]]).select(Bind.class).first().orElseNull();
+
+                if (bind != null && Strings.isEmpty(bind.value())) {
+                    throw new UnsupportedOperationException(
+                            "In method: " + fullClassMethodName + ", @Bind on a named-query parameter must specify a non-empty name");
+                }
+
+                final String paramName = bind == null ? null : bind.value();
 
                 if (Strings.isNotEmpty(paramName)) {
                     validateNamedParameterBindings(queryInfo, N.asList(paramName), fullClassMethodName);
@@ -2045,7 +2083,7 @@ final class DaoImpl {
      *         DAO interface has invalid annotation configurations or generic type arguments
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
      *         incompatible return type for the declared {@link QueryOperation}, or a feature not yet enabled (e.g., cache on a
-     *         non-cacheable interface that supports update/delete operations, or a {@code RowMapper}/{@code ResultExtractor} parameter that is not the last method parameter)
+     *         non-cacheable interface that supports update/delete operations, or a {@code RowMapper}/{@code ResultExtractor} parameter on a custom {@code @Query} method)
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
@@ -2522,13 +2560,25 @@ final class DaoImpl {
 
             if (queryAnno != null && ((N.len(queryAnno.value()) > 1 || N.len(queryAnno.id()) > 1)
                     || (!Modifier.isAbstract(method.getModifiers()) && (paramLen > 0 && paramTypes[paramLen - 1].equals(String[].class))))) {
-                sqlList = Stream.of(queryAnno.value())
-                        .append(queryAnno.id())
+                sqlList = new ArrayList<>(Stream.of(queryAnno.value())
                         .map(Fn.strip())
                         .filter(Fn.notEmpty())
                         .map(it -> newSqlMapper.get(it) == null ? it : newSqlMapper.get(it).parameterizedSql())
-                        .map(sql -> sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql)
-                        .toList();
+                        .toList());
+
+                for (final String id : queryAnno.id()) {
+                    if (!RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(id).matches()) {
+                        throw new IllegalArgumentException("Invalid query identifier. Query ID doesn't match Java identifier specification: " + id);
+                    }
+
+                    if (newSqlMapper.get(id) == null || Strings.isEmpty(newSqlMapper.get(id).parameterizedSql())) {
+                        throw new IllegalArgumentException("No predefined SQL found by id: " + id);
+                    }
+
+                    sqlList.add(newSqlMapper.get(id).parameterizedSql());
+                }
+
+                sqlList.replaceAll(sql -> sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql);
             }
 
             final String[] sqls = N.isEmpty(sqlList) ? N.EMPTY_STRING_ARRAY : sqlList.toArray(new String[0]);
@@ -5197,8 +5247,8 @@ final class DaoImpl {
                     // Includes primitive AND wrapper update return types: the converter at the bottom of the isUpdate
                     // branch (LongFunction<?> updateResultConverter) already handles Boolean/Integer via ClassUtil.wrap,
                     // and isLargeUpdate explicitly recognizes Long.class for QueryOperation.DEFAULT — keeping the predicate
-                    // primitive-only meant those wrapper branches were unreachable and @Update methods declared with
-                    // Integer/Long/Boolean returns failed at the QueryOperation.DEFAULT dispatch with "Unsupported sql annotation".
+                    // primitive-only meant those wrapper branches were unreachable and update @Query methods declared with
+                    // Integer/Long/Boolean returns failed at the QueryOperation.DEFAULT dispatch with the "Unsupported combination" error.
                     final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class)
                             || returnType.equals(void.class) || returnType.equals(Integer.class) || returnType.equals(Long.class)
                             || returnType.equals(Boolean.class);
@@ -6816,11 +6866,12 @@ final class DaoImpl {
          * @param batchSize the number of statements per batch execution
          * @param queryOperation the {@link QueryOperation} operation type controlling execution behavior
          * @param isSingleParameter {@code true} if a single method parameter should be bound as-is rather than decomposed
-         * @param autoSetSysTimeParam {@code true} to automatically set system time parameters (e.g., create/update timestamps)
+         * @param autoSetSysTimeParam {@code true} to automatically bind the current time to the reserved named parameters
+         *        ({@code :now}, {@code :sysTime}, {@code :sysDate}) when they appear in the SQL
          * @param isSelect {@code true} if this is a SELECT statement
          * @param isInsert {@code true} if this is an INSERT statement
          * @param isProcedure {@code true} if this SQL represents a stored procedure call
-         * @param fragmentsContainNamedParameters {@code true} if any {@code @SqlFragment} parameters use named parameters
+         * @param fragmentsContainNamedParameters {@code true} if the SQL text injected via {@code @SqlFragment}/{@code @SqlFragmentList} parameters contains named parameters
          * @throws IllegalArgumentException if {@code sql} is blank, or if {@code fragmentsContainNamedParameters} is
          *         {@code true} but the SQL uses positional (?) parameters without named parameters
          */

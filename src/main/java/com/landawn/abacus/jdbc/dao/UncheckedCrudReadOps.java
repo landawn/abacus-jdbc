@@ -541,7 +541,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * }</pre>
      *
      * @param id the entity ID
-     * @param selectPropNames the properties to select, or {@code null} to select all
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
      * @return an {@code Optional} containing the entity with selected properties if found, otherwise empty
      * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
@@ -586,7 +587,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * }</pre>
      *
      * @param id the entity ID
-     * @param selectPropNames the properties to select, or {@code null} to select all
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
      * @return the entity with selected properties if found, otherwise {@code null}
      * @throws IllegalArgumentException if {@code id} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
@@ -596,7 +598,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException;
 
     /**
-     * Gets multiple entities by their IDs in batch using the default batch size.
+     * Gets multiple entities by their IDs in batch using the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -639,7 +641,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
 
     /**
      * Gets multiple entities by their IDs with only the specified properties selected.
-     * Uses the default batch size.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -649,7 +651,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * }</pre>
      *
      * @param ids the collection of entity IDs
-     * @param selectPropNames the properties to select, or {@code null} to select all
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
@@ -674,7 +677,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * }</pre>
      *
      * @param ids the collection of entity IDs
-     * @param selectPropNames the properties to select, or {@code null} to select all
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
      * @param batchSize the size of each batch
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
@@ -830,7 +834,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     }
 
     /**
-     * Batch refreshes multiple entities from the database using the default batch size.
+     * Batch refreshes multiple entities from the database using the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * Each entity must have its ID set.
      *
      * <p><b>Usage Examples:</b></p>
@@ -882,7 +886,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     }
 
     /**
-     * Batch refreshes only the specified properties of multiple entities using the default batch size.
+     * Batch refreshes only the specified properties of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

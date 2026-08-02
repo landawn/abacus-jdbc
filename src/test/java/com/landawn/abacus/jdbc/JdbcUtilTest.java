@@ -1922,9 +1922,18 @@ public class JdbcUtilTest extends TestBase {
         final Field isInSpringField = JdbcUtil.class.getDeclaredField("isInSpring");
         isInSpringField.setAccessible(true);
         final boolean originalIsInSpring = (boolean) isInSpringField.get(null);
+        final Connection springConnection = mock(Connection.class);
 
-        try {
-            assertDoesNotThrow(() -> JdbcUtil.isInTransaction(mockDataSource));
+        try (org.mockito.MockedStatic<org.springframework.jdbc.datasource.DataSourceUtils> dataSourceUtils = org.mockito.Mockito
+                .mockStatic(org.springframework.jdbc.datasource.DataSourceUtils.class)) {
+            isInSpringField.set(null, true);
+            dataSourceUtils.when(() -> org.springframework.jdbc.datasource.DataSourceUtils.getConnection(mockDataSource)).thenReturn(springConnection);
+            dataSourceUtils.when(() -> org.springframework.jdbc.datasource.DataSourceUtils.isConnectionTransactional(springConnection, mockDataSource))
+                    .thenThrow(new NoSuchMethodError("incompatible Spring API"));
+
+            assertFalse(JdbcUtil.isInTransaction(mockDataSource));
+            dataSourceUtils.verify(() -> org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(springConnection, mockDataSource));
+            verify(springConnection, never()).close();
         } finally {
             isInSpringField.set(null, originalIsInSpring);
         }
@@ -2214,6 +2223,85 @@ public class JdbcUtilTest extends TestBase {
         JdbcUtil.setIdExtractorForDao(TestDao.class, extractor);
         assertTrue(extractor == getIdExtractorPool().get(TestDao.class));
         getIdExtractorPool().remove(TestDao.class);
+    }
+
+    @Test
+    public void testIdExtractorRegistrationCannotRaceWithCachePublication() throws Exception {
+        interface CacheRaceDao extends CrudDao<IdedEntity, Long, CacheRaceDao> {
+        }
+
+        final BiRowMapper<Long> extractorA = (rs, labels) -> 1L;
+        final BiRowMapper<Long> extractorB = (rs, labels) -> 2L;
+        final java.util.concurrent.CountDownLatch builderPaused = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.CountDownLatch releaseBuilder = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.CountDownLatch setterDone = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        final com.landawn.abacus.util.NamingPolicy namingPolicy = com.landawn.abacus.util.NamingPolicy.values()[0];
+
+        JdbcUtil.setIdExtractorForDao(CacheRaceDao.class, extractorA);
+
+        final Thread builder = new Thread(() -> {
+            try (org.mockito.MockedStatic<com.landawn.abacus.query.QueryUtil> queryUtil = org.mockito.Mockito
+                    .mockStatic(com.landawn.abacus.query.QueryUtil.class, org.mockito.Mockito.CALLS_REAL_METHODS)) {
+                final java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+                queryUtil.when(() -> com.landawn.abacus.query.QueryUtil.propToColumnNameMap(org.mockito.ArgumentMatchers.eq(IdedEntity.class),
+                        org.mockito.ArgumentMatchers.any(com.landawn.abacus.util.NamingPolicy.class))).thenAnswer(invocation -> {
+                            if (calls.incrementAndGet() == 2) {
+                                builderPaused.countDown();
+                                releaseBuilder.await(5, TimeUnit.SECONDS);
+                            }
+
+                            return invocation.callRealMethod();
+                        });
+
+                JdbcUtil.getIdGeneratorGetterSetter(CacheRaceDao.class, IdedEntity.class, namingPolicy, Long.class);
+            } catch (final Throwable e) {
+                failure.compareAndSet(null, e);
+            }
+        }, "id-accessor-cache-builder");
+
+        final Thread setter = new Thread(() -> {
+            try {
+                JdbcUtil.setIdExtractorForDao(CacheRaceDao.class, extractorB);
+            } catch (final Throwable e) {
+                failure.compareAndSet(null, e);
+            } finally {
+                setterDone.countDown();
+            }
+        }, "id-accessor-registrar");
+
+        try {
+            builder.start();
+            assertTrue(builderPaused.await(5, TimeUnit.SECONDS));
+            setter.start();
+
+            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (setterDone.getCount() != 0 && setter.getState() != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+                Thread.yield();
+            }
+
+            assertEquals(Thread.State.BLOCKED, setter.getState(), "registration must wait for cache construction on the same monitor");
+            releaseBuilder.countDown();
+            builder.join(TimeUnit.SECONDS.toMillis(5));
+            setter.join(TimeUnit.SECONDS.toMillis(5));
+
+            assertFalse(builder.isAlive());
+            assertFalse(setter.isAlive());
+            assertNull(failure.get());
+
+            final com.landawn.abacus.util.Tuple.Tuple3<BiRowMapper<Long>, ?, ?> accessors = JdbcUtil.getIdGeneratorGetterSetter(CacheRaceDao.class,
+                    IdedEntity.class, namingPolicy, Long.class);
+            assertEquals(2L, accessors._1.apply(mockResultSet, List.of("id")));
+        } finally {
+            releaseBuilder.countDown();
+            builder.join(TimeUnit.SECONDS.toMillis(5));
+            setter.join(TimeUnit.SECONDS.toMillis(5));
+            getIdExtractorPool().remove(CacheRaceDao.class);
+
+            final Field cacheField = JdbcUtil.class.getDeclaredField("idGeneratorGetterSetterPool");
+            cacheField.setAccessible(true);
+            ((Map<?, ?>) cacheField.get(null)).keySet().removeIf(key -> key.toString().contains(CacheRaceDao.class.getName()));
+        }
     }
 
     //    @Test
@@ -4072,6 +4160,13 @@ public class JdbcUtilTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.splitQualifiedSqlIdentifier("`users`suffix", "tableName"));
 
         assertArrayEquals(new String[] { "schema.with.dot", "users" }, JdbcUtil.splitQualifiedSqlIdentifier("\"schema.with.dot\" . [users]", "tableName"));
+    }
+
+    @Test
+    public void testCheckColumnNameParsesEveryInputAsSingleIdentifier() {
+        assertEquals("users", SqlIdentifierUtil.checkColumnName("  users  ", null));
+        assertEquals("\"user.name\"", SqlIdentifierUtil.checkColumnName("\"user.name\"", null));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName("users.name", null));
     }
 
     @Test
