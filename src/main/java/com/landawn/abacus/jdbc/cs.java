@@ -159,6 +159,10 @@ public final class cs { // NOSONAR
      */
     public static final String filter = "filter";
     /**
+     * Parameter name for functions that finish a mapping or collection operation.
+     */
+    public static final String finisher = "finisher";
+    /**
      * Parameter name for function objects or functional interfaces.
      */
     public static final String func = "func";
@@ -234,6 +238,10 @@ public final class cs { // NOSONAR
      * Parameter name for collections of parameter values used in SQL query execution.
      */
     public static final String parameters = "parameters";
+    /**
+     * Parameter name for functions that set parameters on statements during data transfer.
+     */
+    public static final String parameterSetter = "parameterSetter";
     /**
      * Parameter name for functions that set multiple parameters on PreparedStatement objects.
      */
@@ -330,6 +338,14 @@ public final class cs { // NOSONAR
      * Parameter name for the SQL dialect used to generate a DAO's CRUD SQL.
      */
     public static final String sqlDialect = "sqlDialect";
+    /**
+     * Parameter name for functions that extract SQL text from statements.
+     */
+    public static final String sqlExtractor = "sqlExtractor";
+    /**
+     * Parameter name for handlers that process SQL log events.
+     */
+    public static final String sqlLogHandler = "sqlLogHandler";
     /**
      * Parameter name for Statement or PreparedStatement objects.
      */

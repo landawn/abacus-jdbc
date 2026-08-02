@@ -1026,23 +1026,12 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
-    public void testImportDataWithNullFilter() throws SQLException, Exception {
-        // Setup
+    public void testImportDataWithNullFilter() {
         List<String> selectColumnNames = Arrays.asList("col1");
-        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
-        when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(0)).thenReturn("value");
-        when(mockDataset.getColumnIndex("col1")).thenReturn(0);
-        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 
-        // Execute
-        int result = DataTransferUtil.importData(mockDataset, selectColumnNames, null, mockConnection, insertSql, 1, 0);
-
-        // Verify
-        assertEquals(1, result);
-        verify(mockPreparedStatement).addBatch();
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importData(mockDataset, selectColumnNames, null, mockConnection, insertSql, 1, 0));
     }
 
     @Test
@@ -1529,7 +1518,7 @@ public class DataTransferUtilTest extends TestBase {
         final Reader reader = new StringReader("");
         final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
 
-        final long result = DataTransferUtil.importCsv(reader, null, mockPreparedStatement, 1, 0L, stmtSetter);
+        final long result = DataTransferUtil.importCsv(reader, row -> true, mockPreparedStatement, 1, 0L, stmtSetter);
 
         assertEquals(0, result);
         verify(mockPreparedStatement, never()).addBatch();
@@ -1543,7 +1532,7 @@ public class DataTransferUtilTest extends TestBase {
         final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.importCsv(reader, null, mockPreparedStatement, 1, 1L, stmtSetter);
+        final long result = DataTransferUtil.importCsv(reader, row -> true, mockPreparedStatement, 1, 1L, stmtSetter);
 
         assertEquals(2, result);
         verify(mockPreparedStatement, times(2)).addBatch();
@@ -1648,14 +1637,14 @@ public class DataTransferUtilTest extends TestBase {
                 (Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException>) null));
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(List.<String> of().iterator(), mockPreparedStatement, 10, 0,
                 (Throwables.BiConsumer<? super PreparedQuery, ? super String, SQLException>) null));
-        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(new StringReader("header"), null, mockPreparedStatement, 10, 0,
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(new StringReader("header"), row -> true, mockPreparedStatement, 10, 0,
                 (Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>) null));
     }
 
     @Test
     public void testImportCsv_RowWiderThanHeaderHasDescriptiveFailure() throws SQLException {
         final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.importCsv(new StringReader("c1,c2\n1,2,3"), null, mockPreparedStatement, 10, 0, (query, row) -> {
+                () -> DataTransferUtil.importCsv(new StringReader("c1,c2\n1,2,3"), row -> true, mockPreparedStatement, 10, 0, (query, row) -> {
                     // Parsing must fail before the setter is invoked.
                 }));
 
@@ -1717,7 +1706,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.importCsv(reader, null, mockPreparedStatement, 10, 0L, stmtSetter);
+        final long result = DataTransferUtil.importCsv(reader, row -> true, mockPreparedStatement, 10, 0L, stmtSetter);
 
         assertEquals(1, result);
         // The setter received a header-width row: field 0 from the CSV, trailing positions padded with null.

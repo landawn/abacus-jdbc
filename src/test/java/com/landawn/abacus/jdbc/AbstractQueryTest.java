@@ -1939,21 +1939,18 @@ public class AbstractQueryTest extends TestBase {
         verify(second).close();
     }
 
-    // Regression for ISE-vs-IAE priority on thin delegating overloads (query(Class), list(Class),
-    // stream(Class), foreach(...)): they document "@throws IllegalStateException if this query is
-    // closed" but used to run checkArgNotNull before the delegate's assertNotClosed(), so a closed
-    // query with a null argument threw IllegalArgumentException. The closed-state check must win,
-    // matching the established ordering of queryForSingleValue(Class).
+    // Functional arguments are validated before query state, while ordinary Class arguments retain
+    // the established closed-state-first behavior.
     @Test
     @Tag("2025")
-    public void testDelegatingOverloads_ClosedQueryWithNullArg_ThrowsIllegalStateNotIllegalArgument() {
+    public void testDelegatingOverloads_ClosedQueryValidationPriority() {
         query.close();
 
         assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
         assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null));
         assertThrows(IllegalStateException.class, () -> query.stream((Class<String>) null));
-        assertThrows(IllegalStateException.class, () -> query.foreach((Consumer<DisposableObjArray>) null));
-        assertThrows(IllegalStateException.class, () -> query.foreach(String.class, null));
+        assertThrows(IllegalArgumentException.class, () -> query.foreach((Consumer<DisposableObjArray>) null));
+        assertThrows(IllegalArgumentException.class, () -> query.foreach(String.class, null));
     }
 
     @Test
@@ -1965,25 +1962,22 @@ public class AbstractQueryTest extends TestBase {
         assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null, 10));
     }
 
-    // Same ISE-vs-IAE priority regression for the @Beta queryThen*/listThen* delegating helpers: they
-    // used to run checkArgNotNull before delegating to query()/list(), so a closed query with a null
-    // functional argument threw IllegalArgumentException instead of the documented
-    // IllegalStateException. assertNotClosed() must run first, matching queryForSingleValue(Class).
+    // Functional arguments are always rejected before any closed-query state check.
     @Test
     @Tag("2025")
-    public void testQueryThenListThenHelpers_ClosedQueryWithNullArg_ThrowsIllegalStateNotIllegalArgument() {
+    public void testQueryThenListThenHelpers_ClosedQueryWithNullArg_ThrowsIllegalArgument() {
         query.close();
 
-        assertThrows(IllegalStateException.class, () -> query.queryThenApply(null));
-        assertThrows(IllegalStateException.class, () -> query.queryThenApply(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(null));
-        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.listThenApply(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.RowMapper<String>) rs -> "x", null));
-        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
-        assertThrows(IllegalStateException.class, () -> query.listThenAccept(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.RowMapper<String>) rs -> "x", null));
-        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
+        assertThrows(IllegalArgumentException.class, () -> query.queryThenApply(null));
+        assertThrows(IllegalArgumentException.class, () -> query.queryThenApply(String.class, null));
+        assertThrows(IllegalArgumentException.class, () -> query.queryThenAccept(null));
+        assertThrows(IllegalArgumentException.class, () -> query.queryThenAccept(String.class, null));
+        assertThrows(IllegalArgumentException.class, () -> query.listThenApply(String.class, null));
+        assertThrows(IllegalArgumentException.class, () -> query.listThenApply((Jdbc.RowMapper<String>) rs -> "x", null));
+        assertThrows(IllegalArgumentException.class, () -> query.listThenApply((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
+        assertThrows(IllegalArgumentException.class, () -> query.listThenAccept(String.class, null));
+        assertThrows(IllegalArgumentException.class, () -> query.listThenAccept((Jdbc.RowMapper<String>) rs -> "x", null));
+        assertThrows(IllegalArgumentException.class, () -> query.listThenAccept((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
     }
 
     // The open-query behavior is unchanged: a null argument still fails fast with

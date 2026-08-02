@@ -6759,6 +6759,8 @@ public final class JdbcUtil {
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
+        N.checkArgNotNull(filter, cs.filter);
+
         return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
     }
 
@@ -6790,6 +6792,8 @@ public final class JdbcUtil {
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException {
+        N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+
         return extractData(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, false);
     }
 
@@ -6828,6 +6832,9 @@ public final class JdbcUtil {
      * @see #extractData(ResultSet, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException {
+        N.checkArgNotNull(filter, cs.filter);
+        N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+
         return extractData(rs, 0, Integer.MAX_VALUE, filter, rowExtractor, false);
     }
 
@@ -6921,6 +6928,8 @@ public final class JdbcUtil {
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
             throws SQLException {
+        N.checkArgNotNull(filter, cs.filter);
+
         return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
@@ -6953,6 +6962,8 @@ public final class JdbcUtil {
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
             throws SQLException {
+        N.checkArgNotNull(rowExtractor, cs.rowExtractor);
+
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
     }
 
@@ -8023,6 +8034,8 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
+        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
+
         return queryByPage(ds, sql, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
@@ -8201,6 +8214,8 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final Connection conn, final String sql, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
+        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
+
         return queryByPage(conn, sql, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
@@ -10728,7 +10743,7 @@ public final class JdbcUtil {
      * String sql = extractor.apply(statement);
      * }</pre>
      *
-     * @return The current SQL extractor function; never {@code null} (defaults to the built-in extractor, and a {@code null} passed to {@link #setSqlExtractor(Throwables.Function)} resets it to that default).
+     * @return The current SQL extractor function; never {@code null}
      */
     public static Throwables.Function<Statement, String, SQLException> getSqlExtractor() {
         return JdbcUtil._sqlExtractor;
@@ -10749,11 +10764,13 @@ public final class JdbcUtil {
      * });
      * }</pre>
      *
-     * @param sqlExtractor The SQL extractor function to set; if {@code null}, the extractor is reset to the built-in default
-     *                     ({@link #DEFAULT_SQL_EXTRACTOR}) so that {@link #getSqlExtractor()} never returns {@code null}.
+     * @param sqlExtractor The SQL extractor function to set; must not be {@code null}.
+     * @throws IllegalArgumentException if {@code sqlExtractor} is {@code null}
      */
     public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
-        JdbcUtil._sqlExtractor = sqlExtractor == null ? DEFAULT_SQL_EXTRACTOR : sqlExtractor;
+        N.checkArgNotNull(sqlExtractor, cs.sqlExtractor);
+
+        JdbcUtil._sqlExtractor = sqlExtractor;
     }
 
     /**
@@ -10790,9 +10807,12 @@ public final class JdbcUtil {
      * });
      * }</pre>
      *
-     * @param sqlLogHandler The handler that receives: SQL statement, start time (ms), end time (ms).
+     * @param sqlLogHandler The handler that receives: SQL statement, start time (ms), end time (ms); must not be {@code null}.
+     * @throws IllegalArgumentException if {@code sqlLogHandler} is {@code null}
      */
     public static void setSqlLogHandler(final TriConsumer<String, Long, Long> sqlLogHandler) {
+        N.checkArgNotNull(sqlLogHandler, cs.sqlLogHandler);
+
         _sqlLogHandler = sqlLogHandler;
     }
 

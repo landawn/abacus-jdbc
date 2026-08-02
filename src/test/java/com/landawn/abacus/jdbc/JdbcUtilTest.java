@@ -100,6 +100,8 @@ public class JdbcUtilTest extends TestBase {
         final Field rsNoAbsoluteField = JdbcUtil.class.getDeclaredField("resultSetClassNotSupportAbsolute");
         rsNoAbsoluteField.setAccessible(true);
         ((Set<?>) rsNoAbsoluteField.get(null)).clear();
+        resetSqlLogHandler();
+        JdbcUtil.setSqlExtractor(JdbcUtil.DEFAULT_SQL_EXTRACTOR);
 
         mockDataSource = mock(DataSource.class);
         mockConnection = mock(Connection.class);
@@ -124,12 +126,18 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         // Clean up any thread-local state
         JdbcUtil.disableSqlLog();
         JdbcUtil.closeDaoCacheOnCurrentThread();
-        JdbcUtil.setSqlLogHandler(null);
-        JdbcUtil.setSqlExtractor(null);
+        resetSqlLogHandler();
+        JdbcUtil.setSqlExtractor(JdbcUtil.DEFAULT_SQL_EXTRACTOR);
+    }
+
+    private static void resetSqlLogHandler() throws Exception {
+        final Field sqlLogHandlerField = JdbcUtil.class.getDeclaredField("_sqlLogHandler");
+        sqlLogHandlerField.setAccessible(true);
+        sqlLogHandlerField.set(null, null);
     }
 
     @Test
@@ -1763,12 +1771,11 @@ public class JdbcUtilTest extends TestBase {
         JdbcUtil.setSqlLogHandler(handler);
         assertEquals(handler, JdbcUtil.getSqlLogHandler());
 
-        // Reset
-        JdbcUtil.setSqlLogHandler(null);
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.setSqlLogHandler(null));
     }
 
     @Test
-    public void testHandleSqlLogUsesMonotonicElapsedTimeForHandler() throws SQLException {
+    public void testHandleSqlLogUsesMonotonicElapsedTimeForHandler() throws Exception {
         final long[] timestamps = new long[2];
         final long startTimeMillis = 1_000L;
         final long startTimeNanos = System.nanoTime() - TimeUnit.MILLISECONDS.toNanos(25);
@@ -1781,7 +1788,7 @@ public class JdbcUtilTest extends TestBase {
         try {
             JdbcUtil.handleSqlLog(mockStatement, new SqlLogConfig(-1L, 128), startTimeMillis, startTimeNanos);
         } finally {
-            JdbcUtil.setSqlLogHandler(null);
+            resetSqlLogHandler();
         }
 
         assertEquals(startTimeMillis, timestamps[0]);

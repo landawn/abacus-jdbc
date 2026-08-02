@@ -2682,7 +2682,7 @@ public final class Jdbc {
             @SequentialOnly
             @Stateful
             public <R> RowMapper<R> to(final Throwables.Function<DisposableObjArray, R, SQLException> finisher) {
-                N.checkArgNotNull(finisher, "finisher");
+                N.checkArgNotNull(finisher, cs.finisher);
 
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
@@ -2739,7 +2739,7 @@ public final class Jdbc {
             @SequentialOnly
             @Stateful
             public <R> RowMapper<R> to(final Throwables.BiFunction<List<String>, DisposableObjArray, R, SQLException> finisher) {
-                N.checkArgNotNull(finisher, "finisher");
+                N.checkArgNotNull(finisher, cs.finisher);
 
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
