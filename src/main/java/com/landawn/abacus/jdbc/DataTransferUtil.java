@@ -3586,6 +3586,8 @@ public final class DataTransferUtil {
          * @throws SQLException if a database access error occurs
          */
         public int to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+            validateConfiguration();
+
             final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
             try {
@@ -3607,6 +3609,8 @@ public final class DataTransferUtil {
          * @throws SQLException if a database access error occurs
          */
         public int to(final Connection conn, final String insertSql) throws SQLException {
+            validateConfiguration();
+
             try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
                 return to(stmt);
             }
@@ -3623,6 +3627,20 @@ public final class DataTransferUtil {
          * @throws SQLException if a database access error occurs
          */
         public int to(final PreparedStatement stmt) throws SQLException {
+            validateConfiguration();
+
+            if (parameterSetter != null) {
+                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
+            } else if (N.notEmpty(columnTypeMap)) {
+                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+            } else {
+                final Collection<String> selectedColumnNames = N.isEmpty(columnNames) ? dataset.columnNames() : columnNames;
+
+                return importData(dataset, selectedColumnNames, filter, stmt, batchSize, batchIntervalInMillis);
+            }
+        }
+
+        private void validateConfiguration() {
             int configuredStrategies = 0;
 
             if (N.notEmpty(columnNames)) {
@@ -3641,15 +3659,8 @@ public final class DataTransferUtil {
                 throw new IllegalArgumentException("Only one of 'columns', 'columnTypes' or 'parameterSetter' can be configured for a single import");
             }
 
-            if (parameterSetter != null) {
-                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
-            } else if (N.notEmpty(columnTypeMap)) {
-                return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
-            } else {
-                final Collection<String> selectedColumnNames = N.isEmpty(columnNames) ? dataset.columnNames() : columnNames;
-
-                return importData(dataset, selectedColumnNames, filter, stmt, batchSize, batchIntervalInMillis);
-            }
+            N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0,
+                    "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative", batchSize, batchIntervalInMillis);
         }
     }
 
@@ -3834,6 +3845,8 @@ public final class DataTransferUtil {
          * @throws UncheckedIOException if an I/O error occurs reading the file/reader
          */
         public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+            validateConfiguration();
+
             final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
             try {
@@ -3856,6 +3869,8 @@ public final class DataTransferUtil {
          * @throws UncheckedIOException if an I/O error occurs reading the file/reader
          */
         public long to(final Connection conn, final String insertSql) throws SQLException {
+            validateConfiguration();
+
             try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
                 return to(stmt);
             }
@@ -3874,6 +3889,24 @@ public final class DataTransferUtil {
          * @throws UncheckedIOException if an I/O error occurs reading the file/reader
          */
         public long to(final PreparedStatement stmt) throws SQLException {
+            validateConfiguration();
+
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> setter = resolveSetter();
+
+            if (iter != null) {
+                return importData(iter, filter, stmt, batchSize, batchIntervalInMillis, setter);
+            } else if (file != null) {
+                try (Reader r = IOUtil.newFileReader(file)) {
+                    return importFromCsv(r, stmt, setter);
+                } catch (final IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            } else {
+                return importFromCsv(reader, stmt, setter);
+            }
+        }
+
+        private void validateConfiguration() {
             int configuredSources = 0;
 
             if (iter != null) {
@@ -3892,19 +3925,9 @@ public final class DataTransferUtil {
                 throw new IllegalStateException("Exactly one of 'iter', 'reader' or 'file' must be configured for a single import");
             }
 
-            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> setter = resolveSetter();
-
-            if (iter != null) {
-                return importData(iter, filter, stmt, batchSize, batchIntervalInMillis, setter);
-            } else if (file != null) {
-                try (Reader r = IOUtil.newFileReader(file)) {
-                    return importFromCsv(r, stmt, setter);
-                } catch (final IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            } else {
-                return importFromCsv(reader, stmt, setter);
-            }
+            resolveSetter();
+            N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0,
+                    "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative", batchSize, batchIntervalInMillis);
         }
 
         @SuppressWarnings({ "unchecked", "rawtypes" })

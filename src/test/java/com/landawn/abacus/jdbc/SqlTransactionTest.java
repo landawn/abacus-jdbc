@@ -22,7 +22,9 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.sql.DataSource;
 
@@ -74,6 +76,47 @@ public class SqlTransactionTest extends TestBase {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         assertSame(connection, transaction.connection());
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testThreadBoundOperationsRejectNonOwnerThread() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AtomicBoolean outsideCommandExecuted = new AtomicBoolean();
+        final Runnable[] operations = { transaction::connection, transaction::commit, transaction::rollback, transaction::rollbackIfNotCommitted,
+                transaction::close, () -> transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false), transaction::decrementAndGetRef,
+                () -> transaction.runOutsideTransaction(() -> outsideCommandExecuted.set(true)),
+                () -> transaction.callOutsideTransaction(() -> {
+                    outsideCommandExecuted.set(true);
+                    return null;
+                }) };
+
+        try {
+            for (int i = 0; i < operations.length; i++) {
+                final int operationIndex = i;
+                final AtomicReference<Throwable> failure = new AtomicReference<>();
+                final Thread thread = new Thread(() -> {
+                    try {
+                        operations[operationIndex].run();
+                    } catch (final Throwable e) {
+                        failure.set(e);
+                    }
+                }, "foreign-transaction-thread-" + operationIndex);
+
+                thread.start();
+                thread.join();
+
+                assertTrue(failure.get() instanceof IllegalStateException, "operation " + operationIndex + " must reject the foreign thread");
+            }
+
+            assertFalse(outsideCommandExecuted.get());
+            assertSame(transaction, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+            assertEquals(SqlTransaction.Status.ACTIVE, transaction.status());
+        } finally {
+            transaction.rollbackIfNotCommitted();
+        }
+
+        verify(connection).rollback();
     }
 
     @Test

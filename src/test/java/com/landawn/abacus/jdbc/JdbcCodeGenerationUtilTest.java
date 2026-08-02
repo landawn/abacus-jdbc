@@ -2273,8 +2273,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // Additional coverage for previously-uncovered lines in JdbcCodeGenerationUtil.
     // ----------------------------------------------------------------------------------------------------
 
-    // additionalClassBodySource with a multi-variable declaration ("int a, b") must be split on the
-    // first top-level comma; only the first variable ("a") is parsed (L494-496: commaIdx assignment + break).
+    // additionalClassBodySource with a multi-variable declaration ("int a, b") must include every
+    // declared instance field in the generated copy method.
     @Test
     public void testGenerateEntityClass_AdditionalFieldMultiVariableDeclaration() throws SQLException {
         setupFullGenerateEntityClassMock();
@@ -2286,11 +2286,25 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
 
-        // The raw declaration is emitted verbatim ...
         assertTrue(result.contains("private int a, b;"), result);
-        // ... but only the first variable ("a") is parsed for the copy method (top-level comma split).
         assertTrue(result.contains("copy.a = this.a;"), result);
-        assertFalse(result.contains("copy.b"), result);
+        assertTrue(result.contains("copy.b = this.b;"), result);
+    }
+
+    @Test
+    public void testGenerateEntityClass_InitializedAdditionalFieldMultiVariableDeclaration() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalClassBodySource("    private int low = Math.min(1, 2), high = Math.max(3, 4);")
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("private int low = Math.min(1, 2), high = Math.max(3, 4);"), result);
+        assertTrue(result.contains("copy.low = this.low;"), result);
+        assertTrue(result.contains("copy.high = this.high;"), result);
     }
 
     // entityName that is not a parseable SQL identifier (4-part "a.b.c.d") makes

@@ -1092,11 +1092,13 @@ public final class Jdbc {
             N.checkArgument(Beans.isBeanClass(targetClass), "{} is not a valid entity class with getter/setter methods", targetClass);
             N.checkArgNotEmpty(idPropNamesForMerge, cs.idPropNamesForMerge);
 
+            final List<String> configuredIdPropNamesForMerge = new ArrayList<>(idPropNamesForMerge);
+
             return rs -> {
                 final RowExtractor rowExtractor = RowExtractor.forType(targetClass);
                 final Dataset dataset = JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowExtractor, false);
 
-                return dataset.toMergedEntities(idPropNamesForMerge, dataset.columnNames(), targetClass);
+                return dataset.toMergedEntities(configuredIdPropNamesForMerge, dataset.columnNames(), targetClass);
             };
         }
 
@@ -7132,7 +7134,7 @@ public final class Jdbc {
          * @param beforeInvokeAction the action to perform before the method is called.
          * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception).
          * @return a new {@code Handler} instance.
-         * @throws IllegalArgumentException if either action is {@code null}.
+         * @throws IllegalArgumentException if {@code beforeInvokeAction} or {@code afterInvokeAction} is {@code null}.
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,

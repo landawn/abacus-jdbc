@@ -659,7 +659,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
         final Class<T> entityClass = targetEntityClass();
         final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.idPropNames(entityClass);
-        final Object firstId = N.firstElement(ids).get();
+        final Object firstId = ids.stream().filter(id -> id != null).findFirst().orElse(null);
         final boolean isEntityId = firstId instanceof EntityId;
         final boolean isMap = firstId instanceof Map;
         final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());
@@ -755,7 +755,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
         final Class<T> entityClass = targetEntityClass();
         final List<String> idPropNameList = entityClass == null ? N.emptyList() : QueryUtil.idPropNames(entityClass);
-        final Object firstId = N.firstElement(ids).get();
+        final Object firstId = ids.stream().filter(id -> id != null).findFirst().orElse(null);
         final boolean isEntityId = firstId instanceof EntityId;
         final boolean isMap = firstId instanceof Map;
         final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());

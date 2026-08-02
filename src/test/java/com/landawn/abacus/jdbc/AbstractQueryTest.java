@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -1939,8 +1940,7 @@ public class AbstractQueryTest extends TestBase {
         verify(second).close();
     }
 
-    // Functional arguments are validated before query state, while ordinary Class arguments retain
-    // the established closed-state-first behavior.
+    // Closed-query state is checked before input-parameter validation on execution methods.
     @Test
     @Tag("2025")
     public void testDelegatingOverloads_ClosedQueryValidationPriority() {
@@ -1949,8 +1949,8 @@ public class AbstractQueryTest extends TestBase {
         assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
         assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null));
         assertThrows(IllegalStateException.class, () -> query.stream((Class<String>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.foreach((Consumer<DisposableObjArray>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.foreach(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.foreach((Consumer<DisposableObjArray>) null));
+        assertThrows(IllegalStateException.class, () -> query.foreach(String.class, null));
     }
 
     @Test
@@ -1962,22 +1962,22 @@ public class AbstractQueryTest extends TestBase {
         assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null, 10));
     }
 
-    // Functional arguments are always rejected before any closed-query state check.
+    // Closed-query state is checked before null functional-argument validation.
     @Test
     @Tag("2025")
-    public void testQueryThenListThenHelpers_ClosedQueryWithNullArg_ThrowsIllegalArgument() {
+    public void testQueryThenListThenHelpers_ClosedQueryWithNullArg_ThrowsIllegalState() {
         query.close();
 
-        assertThrows(IllegalArgumentException.class, () -> query.queryThenApply(null));
-        assertThrows(IllegalArgumentException.class, () -> query.queryThenApply(String.class, null));
-        assertThrows(IllegalArgumentException.class, () -> query.queryThenAccept(null));
-        assertThrows(IllegalArgumentException.class, () -> query.queryThenAccept(String.class, null));
-        assertThrows(IllegalArgumentException.class, () -> query.listThenApply(String.class, null));
-        assertThrows(IllegalArgumentException.class, () -> query.listThenApply((Jdbc.RowMapper<String>) rs -> "x", null));
-        assertThrows(IllegalArgumentException.class, () -> query.listThenApply((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
-        assertThrows(IllegalArgumentException.class, () -> query.listThenAccept(String.class, null));
-        assertThrows(IllegalArgumentException.class, () -> query.listThenAccept((Jdbc.RowMapper<String>) rs -> "x", null));
-        assertThrows(IllegalArgumentException.class, () -> query.listThenAccept((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
+        assertThrows(IllegalStateException.class, () -> query.queryThenApply(null));
+        assertThrows(IllegalStateException.class, () -> query.queryThenApply(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(null));
+        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.listThenApply(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.RowMapper<String>) rs -> "x", null));
+        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
+        assertThrows(IllegalStateException.class, () -> query.listThenAccept(String.class, null));
+        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.RowMapper<String>) rs -> "x", null));
+        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
     }
 
     // The open-query behavior is unchanged: a null argument still fails fast with
@@ -2052,6 +2052,88 @@ public class AbstractQueryTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> query.onClose(null));
         assertTrue(query.isClosed);
         assertNull(registrationFailure.get());
+    }
+
+    @Test
+    public void testQuery2ResultSetsDrainsTrailingResultsWhenStatementIsReusable() throws SQLException {
+        final ResultSet rs1 = Mockito.mock(ResultSet.class);
+        final ResultSet rs2 = Mockito.mock(ResultSet.class);
+        final ResultSet rs3 = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
+        when(rs1.getMetaData()).thenReturn(metadata);
+        when(rs2.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(0);
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2, rs3);
+        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true);
+        when(preparedStatement.getMoreResults()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+        query.closeAfterExecution(false);
+
+        final com.landawn.abacus.util.Tuple.Tuple2<String, String> result = query.query2ResultSets((rs, labels) -> "first",
+                (rs, labels) -> "second");
+
+        assertEquals("first", result._1);
+        assertEquals("second", result._2);
+        verify(rs3).close();
+        verify(preparedStatement).getMoreResults();
+        verify(preparedStatement, never()).close();
+    }
+
+    @Test
+    public void testQuery3ResultSetsDrainsTrailingResultsWhenStatementIsReusable() throws SQLException {
+        final ResultSet rs1 = Mockito.mock(ResultSet.class);
+        final ResultSet rs2 = Mockito.mock(ResultSet.class);
+        final ResultSet rs3 = Mockito.mock(ResultSet.class);
+        final ResultSet rs4 = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
+        when(rs1.getMetaData()).thenReturn(metadata);
+        when(rs2.getMetaData()).thenReturn(metadata);
+        when(rs3.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(0);
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2, rs3, rs4);
+        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true, true);
+        when(preparedStatement.getMoreResults()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+        query.closeAfterExecution(false);
+
+        final com.landawn.abacus.util.Tuple.Tuple3<String, String, String> result = query.query3ResultSets((rs, labels) -> "first",
+                (rs, labels) -> "second", (rs, labels) -> "third");
+
+        assertEquals("first", result._1);
+        assertEquals("second", result._2);
+        assertEquals("third", result._3);
+        verify(rs4).close();
+        verify(preparedStatement).getMoreResults();
+        verify(preparedStatement, never()).close();
+    }
+
+    @Test
+    public void testQuery2ResultSetsPreservesExtractorFailureWhenDrainFails() throws SQLException {
+        final ResultSet rs1 = Mockito.mock(ResultSet.class);
+        final ResultSet rs2 = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
+        final SQLException extractorFailure = new SQLException("extractor failed");
+        final SQLException drainFailure = new SQLException("drain failed");
+        when(rs1.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(0);
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2);
+        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true);
+        when(preparedStatement.getMoreResults()).thenThrow(drainFailure);
+        query.closeAfterExecution(false);
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> query.query2ResultSets((rs, labels) -> {
+                    throw extractorFailure;
+                }, (rs, labels) -> "second"));
+
+        assertSame(extractorFailure, thrown);
+        assertArrayEquals(new Throwable[] { drainFailure }, thrown.getSuppressed());
+        verify(rs2).close();
+        verify(preparedStatement).getMoreResults();
+        verify(preparedStatement, never()).close();
     }
 
     @Test

@@ -550,36 +550,7 @@ public final class JdbcCodeGenerationUtil {
 
                             return Tuple.of(decl, skipInCopy);
                         })
-                        .map(declAndSkip -> {
-                            final String it = declAndSkip._1;
-                            final int assignmentIdx = it.indexOf('=');
-                            final String withoutInitializer = assignmentIdx >= 0 ? it.substring(0, assignmentIdx).trim() : it;
-                            // Split a multi-variable declaration (e.g. "int a, b") on its first top-level comma, but
-                            // ignore commas nested inside generic type arguments/brackets (e.g. "Map<String, Object>").
-                            int commaIdx = -1;
-                            int depth = 0;
-                            for (int i = 0, len = withoutInitializer.length(); i < len; i++) {
-                                final char ch = withoutInitializer.charAt(i);
-                                if (ch == '<' || ch == '(' || ch == '[') {
-                                    depth++;
-                                } else if (ch == '>' || ch == ')' || ch == ']') {
-                                    depth--;
-                                } else if (ch == ',' && depth <= 0) {
-                                    commaIdx = i;
-                                    break;
-                                }
-                            }
-                            final String declaration = commaIdx >= 0 ? withoutInitializer.substring(0, commaIdx).trim() : withoutInitializer.trim();
-                            final int idx = declaration.lastIndexOf(' ');
-
-                            // Reject declarations that don't split into a type/name pair (e.g. "private int;")
-                            // with a clear IAE instead of a StringIndexOutOfBoundsException from substring below.
-                            if (idx < 0) {
-                                throw new IllegalArgumentException("Cannot parse field declaration in additionalClassBodySource: " + declAndSkip._1);
-                            }
-
-                            return Tuple.of(declaration.substring(0, idx).trim(), declaration.substring(idx + 1).trim(), declAndSkip._2);
-                        })
+                        .flatMap(declAndSkip -> Stream.of(parseAdditionalFieldDeclaration(declAndSkip._1, declAndSkip._2)))
                         .toList();
 
         final Collection<String> excludedFields = configToUse.getExcludedFields();
@@ -2380,6 +2351,151 @@ public final class JdbcCodeGenerationUtil {
         return line;
     }
 
+    private static List<Tuple3<String, String, Boolean>> parseAdditionalFieldDeclaration(final String declaration, final boolean skipInCopy) {
+        final List<String> declarators = splitJavaDeclarators(declaration);
+        final List<Tuple3<String, String, Boolean>> result = new ArrayList<>(declarators.size());
+        String type = null;
+
+        for (int i = 0; i < declarators.size(); i++) {
+            final String declarator = stripTrailingArrayBrackets(stripJavaInitializer(declarators.get(i)));
+            final int nameStart = findJavaVariableNameStart(declarator);
+
+            if (nameStart < 0) {
+                throw new IllegalArgumentException("Cannot parse field declaration in additionalClassBodySource: " + declaration);
+            }
+
+            final String fieldName = declarator.substring(nameStart).trim();
+
+            if (i == 0) {
+                type = declarator.substring(0, nameStart).trim();
+
+                if (Strings.isEmpty(type)) {
+                    throw new IllegalArgumentException("Cannot parse field declaration in additionalClassBodySource: " + declaration);
+                }
+            } else if (nameStart != 0 && Strings.isNotEmpty(declarator.substring(0, nameStart).trim())) {
+                throw new IllegalArgumentException("Cannot parse field declaration in additionalClassBodySource: " + declaration);
+            }
+
+            result.add(Tuple.of(type, fieldName, skipInCopy));
+        }
+
+        return result;
+    }
+
+    private static List<String> splitJavaDeclarators(final String declaration) {
+        final List<String> result = new ArrayList<>();
+        int start = 0;
+        int angleDepth = 0;
+        int parenthesisDepth = 0;
+        int bracketDepth = 0;
+        int braceDepth = 0;
+        char quote = 0;
+
+        for (int i = 0, len = declaration.length(); i < len; i++) {
+            final char ch = declaration.charAt(i);
+
+            if (quote != 0) {
+                if (ch == '\\') {
+                    i++;
+                } else if (ch == quote) {
+                    quote = 0;
+                }
+            } else if (ch == '"' || ch == '\'') {
+                quote = ch;
+            } else if (ch == '<') {
+                angleDepth++;
+            } else if (ch == '>' && angleDepth > 0) {
+                angleDepth--;
+            } else if (ch == '(') {
+                parenthesisDepth++;
+            } else if (ch == ')') {
+                parenthesisDepth--;
+            } else if (ch == '[') {
+                bracketDepth++;
+            } else if (ch == ']') {
+                bracketDepth--;
+            } else if (ch == '{') {
+                braceDepth++;
+            } else if (ch == '}') {
+                braceDepth--;
+            } else if (ch == ',' && angleDepth == 0 && parenthesisDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                result.add(declaration.substring(start, i).trim());
+                start = i + 1;
+            }
+        }
+
+        result.add(declaration.substring(start).trim());
+        return result;
+    }
+
+    private static String stripJavaInitializer(final String declarator) {
+        int angleDepth = 0;
+        int parenthesisDepth = 0;
+        int bracketDepth = 0;
+        int braceDepth = 0;
+        char quote = 0;
+
+        for (int i = 0, len = declarator.length(); i < len; i++) {
+            final char ch = declarator.charAt(i);
+
+            if (quote != 0) {
+                if (ch == '\\') {
+                    i++;
+                } else if (ch == quote) {
+                    quote = 0;
+                }
+            } else if (ch == '"' || ch == '\'') {
+                quote = ch;
+            } else if (ch == '<') {
+                angleDepth++;
+            } else if (ch == '>' && angleDepth > 0) {
+                angleDepth--;
+            } else if (ch == '(') {
+                parenthesisDepth++;
+            } else if (ch == ')') {
+                parenthesisDepth--;
+            } else if (ch == '[') {
+                bracketDepth++;
+            } else if (ch == ']') {
+                bracketDepth--;
+            } else if (ch == '{') {
+                braceDepth++;
+            } else if (ch == '}') {
+                braceDepth--;
+            } else if (ch == '=' && angleDepth == 0 && parenthesisDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                return declarator.substring(0, i).trim();
+            }
+        }
+
+        return declarator.trim();
+    }
+
+    private static int findJavaVariableNameStart(final String declarator) {
+        int start = declarator.length();
+
+        while (start > 0 && Character.isJavaIdentifierPart(declarator.charAt(start - 1))) {
+            start--;
+        }
+
+        return start < declarator.length() && Character.isJavaIdentifierStart(declarator.charAt(start)) ? start : -1;
+    }
+
+    private static String stripTrailingArrayBrackets(final String declarator) {
+        String result = declarator.trim();
+
+        while (result.endsWith("]")) {
+            final int openBracket = result.lastIndexOf('[');
+
+            if (openBracket < 0 || Strings.isNotEmpty(result.substring(openBracket + 1, result.length() - 1).trim())) {
+                break;
+            }
+
+            result = result.substring(0, openBracket).trim();
+        }
+
+        return result;
+    }
+
     private static List<String> splitSqlList(final String sqlList, final String insertSql) {
         final List<String> result = new ArrayList<>();
         final StringBuilder token = Objectory.createStringBuilder();
@@ -2796,9 +2912,7 @@ public final class JdbcCodeGenerationUtil {
          * <p>Imports are auto-added only for generic {@code java.util} types used by these fields
          * (e.g. {@code List}, {@code Map}); any other type (such as {@code java.time.LocalDate} or a
          * custom class) must be listed in {@link #classNamesToImport} or referenced by its fully
-         * qualified name, otherwise the generated source will not compile. Declare one variable per
-         * declaration: for a multi-variable declaration like {@code "private int a, b;"} only the
-         * first variable participates in the generated {@code copy()} method.</p>
+         * qualified name, otherwise the generated source will not compile.</p>
          */
         private String additionalClassBodySource;
 

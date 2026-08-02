@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -990,6 +991,40 @@ public class JdbcUtilTest extends TestBase {
 
         ArithmeticException thrown = assertThrows(ArithmeticException.class, () -> JdbcUtil.executeLargeBatchUpdate(mockConnection, sql, params, 1));
         assertTrue(thrown.getMessage().contains("exceeds Long.MAX_VALUE"));
+    }
+
+    @Test
+    public void testExecuteBatchUpdateReportsAutoCommitRestorationFailure() throws SQLException {
+        final String sql = "UPDATE account SET status = ?";
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException restorationFailure = new SQLException("restore auto-commit failed");
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
+        org.mockito.Mockito.doNothing().doThrow(restorationFailure).when(mockConnection).setAutoCommit(anyBoolean());
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> JdbcUtil.executeBatchUpdate(mockConnection, sql, parameters, 2));
+
+        assertSame(restorationFailure, thrown);
+        verify(mockConnection).commit();
+        verify(mockConnection).setAutoCommit(true);
+        verify(mockPreparedStatement).close();
+    }
+
+    @Test
+    public void testExecuteLargeBatchUpdateReportsAutoCommitRestorationFailure() throws SQLException {
+        final String sql = "UPDATE account SET status = ?";
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SQLException restorationFailure = new SQLException("restore auto-commit failed");
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+        org.mockito.Mockito.doNothing().doThrow(restorationFailure).when(mockConnection).setAutoCommit(anyBoolean());
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> JdbcUtil.executeLargeBatchUpdate(mockConnection, sql, parameters, 2));
+
+        assertSame(restorationFailure, thrown);
+        verify(mockConnection).commit();
+        verify(mockConnection).setAutoCommit(true);
+        verify(mockPreparedStatement).close();
     }
 
     @Test

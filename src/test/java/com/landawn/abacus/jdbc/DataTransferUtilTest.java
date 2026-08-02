@@ -253,6 +253,36 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
+    public void testDatasetImportBuilderValidatesConfigurationBeforeGettingConnection() {
+        final DataSource dataSource = mock(DataSource.class);
+        final DataTransferUtil.DatasetImportBuilder builder = DataTransferUtil.importFrom(mockDataset)
+                .columns(List.of("col1"))
+                .parameterSetter((query, row) -> {
+                });
+
+        assertThrows(IllegalArgumentException.class, () -> builder.to(dataSource, "INSERT INTO test VALUES (?)"));
+        verifyNoInteractions(dataSource);
+    }
+
+    @Test
+    public void testRowImportBuilderValidatesSetterBeforeGettingConnection() {
+        final DataSource dataSource = mock(DataSource.class);
+        final DataTransferUtil.RowImportBuilder<String> builder = DataTransferUtil.importFrom(List.of("row").iterator());
+
+        assertThrows(IllegalArgumentException.class, () -> builder.to(dataSource, "INSERT INTO test VALUES (?)"));
+        verifyNoInteractions(dataSource);
+    }
+
+    @Test
+    public void testRowImportBuilderValidatesSetterBeforePreparingStatement() {
+        final Connection connection = mock(Connection.class);
+        final DataTransferUtil.RowImportBuilder<String> builder = DataTransferUtil.importFrom(List.of("row").iterator());
+
+        assertThrows(IllegalArgumentException.class, () -> builder.to(connection, "INSERT INTO test VALUES (?)"));
+        verifyNoInteractions(connection);
+    }
+
+    @Test
     public void testImportDataColumnTypeMapInvalidKeyIsRejectedEvenForEmptyDataset() throws SQLException {
         // Regression: a columnTypeMap key that is not a column of the dataset must be rejected per the documented
         // contract (@throws IllegalArgumentException), even when the dataset is empty. Previously the validation

@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -2170,6 +2171,22 @@ public class CallableQueryTest extends TestBase {
         CallableQuery result = callableQuery.setObject("price", val, JDBCType.DECIMAL, 2);
         assertSame(callableQuery, result);
         verify(callableStatement).setObject("price", val, JDBCType.DECIMAL, 2);
+    }
+
+    @Test
+    public void testSetObjectByNameNullSQLTypeRejectedBeforeDriverCall() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> callableQuery.setObject("amount", 123.45, (SQLType) null));
+
+        verify(callableStatement, never()).setObject("amount", 123.45, (SQLType) null);
+        verify(callableStatement).close();
+    }
+
+    @Test
+    public void testSetObjectByNameNullSQLTypeAndScaleRejectedBeforeDriverCall() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> callableQuery.setObject("amount", BigDecimal.ONE, (SQLType) null, 2));
+
+        verify(callableStatement, never()).setObject("amount", BigDecimal.ONE, (SQLType) null, 2);
+        verify(callableStatement).close();
     }
 
     // setObject(String, T, Type<T>) happy path — delegates to type.set(cstmt, name, value) — L1601, L1603, L1605

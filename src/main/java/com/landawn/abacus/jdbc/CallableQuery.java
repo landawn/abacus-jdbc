@@ -1578,9 +1578,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
      * @param sqlType the {@link SQLType} to be used
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null}
      * @throws SQLException if a database access error occurs
      */
-    public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws SQLException {
+    public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(sqlType, cs.sqlType);
+
         cstmt.setObject(parameterName, value, sqlType);
 
         return this;
@@ -1602,9 +1605,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                      for stream-backed types (e.g. {@code LONGVARCHAR}) the length of the data;
      *                      for all other types this value is ignored
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null}
      * @throws SQLException if a database access error occurs
      */
-    public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength) throws SQLException {
+    public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength)
+            throws IllegalArgumentException, SQLException {
+        checkArgNotNull(sqlType, cs.sqlType);
+
         cstmt.setObject(parameterName, value, sqlType, scaleOrLength);
 
         return this;
@@ -2516,9 +2523,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public <R> R executeThenApply(final Throwables.Function<? super CallableStatement, ? extends R, SQLException> func) throws SQLException { //NOSONAR
-        checkArgNotNull(func, cs.func);
-
         assertNotClosed();
+
+        checkArgNotNull(func, cs.func);
 
         return super.executeThenApply(func);
     }
@@ -2559,9 +2566,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public <R> R executeThenApply(final Throwables.BiFunction<? super CallableStatement, Boolean, ? extends R, SQLException> func) throws SQLException { //NOSONAR
-        checkArgNotNull(func, cs.func);
-
         assertNotClosed();
+
+        checkArgNotNull(func, cs.func);
 
         return super.executeThenApply(func);
     }
@@ -2626,9 +2633,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <R> R executeThenApply(final Throwables.TriFunction<? super CallableStatement, List<Jdbc.OutParam>, Boolean, ? extends R, SQLException> func)
             throws SQLException {
-        checkArgNotNull(func, cs.func);
-
         assertNotClosed();
+
+        checkArgNotNull(func, cs.func);
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
@@ -2681,9 +2688,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public void executeThenAccept(final Throwables.Consumer<? super CallableStatement, SQLException> consumer) throws SQLException { //NOSONAR
-        checkArgNotNull(consumer, cs.consumer);
-
         assertNotClosed();
+
+        checkArgNotNull(consumer, cs.consumer);
 
         super.executeThenAccept(consumer);
     }
@@ -2720,9 +2727,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     @Override
     public void executeThenAccept(final Throwables.BiConsumer<? super CallableStatement, Boolean, SQLException> consumer) throws SQLException { //NOSONAR
-        checkArgNotNull(consumer, cs.consumer);
-
         assertNotClosed();
+
+        checkArgNotNull(consumer, cs.consumer);
 
         super.executeThenAccept(consumer);
     }
@@ -2774,9 +2781,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public void executeThenAccept(final Throwables.TriConsumer<? super CallableStatement, List<Jdbc.OutParam>, Boolean, SQLException> consumer)
             throws SQLException {
-        checkArgNotNull(consumer, cs.consumer);
-
         assertNotClosed();
+
+        checkArgNotNull(consumer, cs.consumer);
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
@@ -2927,9 +2934,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(resultExtractor, cs.resultExtractor);
-
         assertNotClosed();
+
+        checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         try {
             R result = null;
@@ -2982,9 +2989,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(resultExtractor, cs.resultExtractor);
-
         assertNotClosed();
+
+        checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         try {
             R result = null;
@@ -3075,9 +3082,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(resultExtractor, cs.resultExtractor);
-
         assertNotClosed();
+
+        checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         ObjIteratorEx<ResultSet> iter = null;
 
@@ -3149,9 +3156,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(resultExtractor, cs.resultExtractor);
-
         assertNotClosed();
+
+        checkArgNotNull(resultExtractor, cs.resultExtractor);
 
         ObjIteratorEx<ResultSet> iter = null;
 
@@ -3226,10 +3233,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     @Beta
     public <R1, R2> Tuple3<R1, R2, Jdbc.OutParamResult> query2ResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(resultExtractor1, cs.resultExtractor1);
         checkArgNotNull(resultExtractor2, cs.resultExtractor2);
-
-        assertNotClosed();
 
         ObjIteratorEx<ResultSet> iter = null;
 
@@ -3310,7 +3317,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>Fourth element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if any of the result extractors is {@code null}
+     * @throws IllegalArgumentException if {@code resultExtractor1}, {@code resultExtractor2}, or {@code resultExtractor3} is {@code null}
      * @throws SQLException if a database access error occurs or the stored procedure fails
      * @see #query2ResultSetsAndGetOutParameters(BiResultExtractor, BiResultExtractor)
      * @see #queryAllResultSetsAndGetOutParameters(BiResultExtractor)
@@ -3319,11 +3326,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public <R1, R2, R3> Tuple4<R1, R2, R3, Jdbc.OutParamResult> query3ResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3)
             throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(resultExtractor1, cs.resultExtractor1);
         checkArgNotNull(resultExtractor2, cs.resultExtractor2);
         checkArgNotNull(resultExtractor3, cs.resultExtractor3);
-
-        assertNotClosed();
 
         ObjIteratorEx<ResultSet> iter = null;
 
@@ -3467,9 +3474,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(rowMapper, cs.rowMapper);
-
         assertNotClosed();
+
+        checkArgNotNull(rowMapper, cs.rowMapper);
 
         try {
             final List<T> result = new ArrayList<>();
@@ -3533,10 +3540,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-
-        assertNotClosed();
 
         try {
             final List<T> result = new ArrayList<>();
@@ -3603,9 +3610,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(rowMapper, cs.rowMapper);
-
         assertNotClosed();
+
+        checkArgNotNull(rowMapper, cs.rowMapper);
 
         try {
             final List<T> result = new ArrayList<>();
@@ -3684,10 +3691,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-
-        assertNotClosed();
 
         try {
             final List<T> result = new ArrayList<>();
@@ -3830,9 +3837,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultSetsAndGetOutParameters(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(rowMapper, cs.rowMapper);
-
         assertNotClosed();
+
+        checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
 
@@ -3908,10 +3915,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultSetsAndGetOutParameters(final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-
-        assertNotClosed();
 
         ObjIteratorEx<ResultSet> iter = null;
 
@@ -3992,9 +3999,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultSetsAndGetOutParameters(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
-        checkArgNotNull(rowMapper, cs.rowMapper);
-
         assertNotClosed();
+
+        checkArgNotNull(rowMapper, cs.rowMapper);
 
         ObjIteratorEx<ResultSet> iter = null;
 
@@ -4090,10 +4097,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public <T> Tuple2<List<List<T>>, Jdbc.OutParamResult> listAllResultSetsAndGetOutParameters(final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-
-        assertNotClosed();
 
         ObjIteratorEx<ResultSet> iter = null;
 

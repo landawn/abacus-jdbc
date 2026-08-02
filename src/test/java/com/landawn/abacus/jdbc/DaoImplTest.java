@@ -309,6 +309,11 @@ public class DaoImplTest extends TestBase {
         boolean notExistsExplicit();
     }
 
+    interface SqlMapperValueIdDao {
+        @Query("findByName")
+        List<TestEntity> findByName();
+    }
+
     interface RollbackMaskDao extends Dao<TestEntity, RollbackMaskDao> {
         IllegalStateException PRIMARY_FAILURE = new IllegalStateException("primary DAO failure");
 
@@ -887,6 +892,31 @@ public class DaoImplTest extends TestBase {
         com.landawn.abacus.query.ParsedSql parsed = com.landawn.abacus.query.ParsedSql.parse("SELECT 1");
         DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1", parsed, 0, 0, false, 0, QueryOperation.DEFAULT, false, false, true, false, false, false);
         assertEquals(parsed, qi.parsedSql);
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Test
+    public void testQueryValueSqlMapperIdRetainsParsedSqlAndAttributes() throws Exception {
+        final com.landawn.abacus.query.SqlMapper sqlMapper = mock(com.landawn.abacus.query.SqlMapper.class);
+        final com.landawn.abacus.query.ParsedSql parsedSql = com.landawn.abacus.query.ParsedSql.parse("SELECT * FROM test_entity WHERE name = :name");
+        Mockito.when(sqlMapper.get("findByName")).thenReturn(parsedSql);
+        Mockito.when(sqlMapper.attributes("findByName"))
+                .thenReturn(com.landawn.abacus.util.ImmutableMap.wrap(Map.of(com.landawn.abacus.query.SqlMapper.TIMEOUT, "37",
+                        com.landawn.abacus.query.SqlMapper.FETCH_SIZE, "41", com.landawn.abacus.query.SqlMapper.BATCH_SIZE, "43")));
+        final java.lang.reflect.Field field = DaoImpl.class.getDeclaredField("sqlAnnoMap");
+        field.setAccessible(true);
+        final java.util.function.BiFunction<java.lang.annotation.Annotation, com.landawn.abacus.query.SqlMapper, DaoImpl.QueryInfo> resolver =
+                (java.util.function.BiFunction) ((Map) field.get(null)).get(Query.class);
+        final Query query = SqlMapperValueIdDao.class.getMethod("findByName").getAnnotation(Query.class);
+
+        final DaoImpl.QueryInfo queryInfo = resolver.apply(query, sqlMapper);
+
+        assertSame(parsedSql, queryInfo.parsedSql);
+        assertEquals(parsedSql.parameterizedSql(), queryInfo.sql);
+        assertEquals(37, queryInfo.queryTimeout);
+        assertEquals(41, queryInfo.fetchSize);
+        assertEquals(43, queryInfo.batchSize);
+        assertTrue(queryInfo.isNamedQuery);
     }
 
     // QueryInfo: fragmentsContainNamedParameters=true with named SQL -> isNamedQuery=true

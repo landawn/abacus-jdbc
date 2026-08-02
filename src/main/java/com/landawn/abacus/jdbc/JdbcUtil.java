@@ -3206,7 +3206,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance wrapping the custom-created statement.
-     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or any other argument is {@code null}.
+     * @throws IllegalArgumentException if {@code ds} or {@code stmtCreator} is {@code null}, or if {@code sql} is {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
@@ -3402,7 +3402,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param stmtCreator A factory function to create the {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or any other argument is {@code null}.
+     * @throws IllegalArgumentException if {@code conn} or {@code stmtCreator} is {@code null}, or if {@code sql} is {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
@@ -3741,7 +3741,7 @@ public final class JdbcUtil {
      * @param namedSql The SQL query with named parameters (e.g., {@code :paramName}).
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link NamedQuery} instance wrapping the custom-created statement.
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, if any other argument is {@code null}, or if {@code namedSql} contains positional (unnamed) parameters.
+     * @throws IllegalArgumentException if {@code ds} or {@code stmtCreator} is {@code null}, if {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
      * @throws SQLException if a database access error occurs.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3946,7 +3946,7 @@ public final class JdbcUtil {
      * @param namedSql The SQL query with named parameters (e.g., {@code :paramName}).
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, if any other argument is {@code null}, or if {@code namedSql} contains positional (unnamed) parameters.
+     * @throws IllegalArgumentException if {@code conn} or {@code stmtCreator} is {@code null}, if {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
      * @throws SQLException if a database access error occurs.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
@@ -4217,7 +4217,7 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if any argument is {@code null}, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if {@code ds}, {@code namedSql}, or {@code stmtCreator} is {@code null}, or if {@code namedSql} is invalid.
      * @throws SQLException if a database access error occurs.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4414,7 +4414,7 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if any argument is {@code null}, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if {@code conn}, {@code namedSql}, or {@code stmtCreator} is {@code null}, or if {@code namedSql} is invalid.
      * @throws SQLException if a database access error occurs.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
@@ -5774,9 +5774,13 @@ public final class JdbcUtil {
                     try {
                         conn.setAutoCommit(true);
                     } catch (final SQLException | RuntimeException | Error e) {
-                        // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
+                        // A successful batch/commit must not be reported as successful while leaving the
+                        // caller-owned connection in manual-commit mode. Preserve an earlier failure when
+                        // there is one; otherwise make the restoration failure visible to the caller.
                         if (completionFailure != null) {
                             addSuppressedIfDistinct(completionFailure, e);
+                        } else {
+                            throw e;
                         }
 
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
@@ -6045,9 +6049,13 @@ public final class JdbcUtil {
                     try {
                         conn.setAutoCommit(true);
                     } catch (final SQLException | RuntimeException | Error e) {
-                        // Don't mask the batch failure or the commit result; pools reset auto-commit on checkout.
+                        // A successful batch/commit must not be reported as successful while leaving the
+                        // caller-owned connection in manual-commit mode. Preserve an earlier failure when
+                        // there is one; otherwise make the restoration failure visible to the caller.
                         if (completionFailure != null) {
                             addSuppressedIfDistinct(completionFailure, e);
+                        } else {
+                            throw e;
                         }
 
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
@@ -6758,7 +6766,7 @@ public final class JdbcUtil {
      * @see RowFilter
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
-    public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(filter, cs.filter);
 
         return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
@@ -6791,7 +6799,7 @@ public final class JdbcUtil {
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
-    public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rowExtractor, cs.rowExtractor);
 
         return extractData(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, false);
@@ -6824,14 +6832,15 @@ public final class JdbcUtil {
      * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
      *                     Must not be {@code null}.
      * @return A {@link Dataset} containing the filtered and transformed data.
-     * @throws IllegalArgumentException if any argument is {@code null}.
+     * @throws IllegalArgumentException if {@code rs}, {@code filter}, or {@code rowExtractor} is {@code null}.
      * @throws SQLException if a database access error occurs while extracting data.
      * @see RowFilter
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter)
      * @see #extractData(ResultSet, RowExtractor)
      */
-    public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(rowExtractor, cs.rowExtractor);
 
@@ -6922,12 +6931,12 @@ public final class JdbcUtil {
      *               returns {@code true} will be included. Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted data.
-     * @throws IllegalArgumentException if any argument is invalid (null or negative values).
+     * @throws IllegalArgumentException if {@code rs} or {@code filter} is {@code null}, or if {@code offset} or {@code count} is negative.
      * @throws SQLException if a database access error occurs while extracting data.
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(filter, cs.filter);
 
         return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
@@ -6956,12 +6965,12 @@ public final class JdbcUtil {
      *                     Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted and transformed data.
-     * @throws IllegalArgumentException if any argument is invalid (null or negative values).
+     * @throws IllegalArgumentException if {@code rs} or {@code rowExtractor} is {@code null}, or if {@code offset} or {@code count} is negative.
      * @throws SQLException if a database access error occurs while extracting data.
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rowExtractor, cs.rowExtractor);
 
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
@@ -6999,7 +7008,7 @@ public final class JdbcUtil {
      *                     Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction completes (or if an error occurs).
      * @return A {@link Dataset} containing the filtered and transformed data.
-     * @throws IllegalArgumentException if any argument is invalid (null or negative values).
+     * @throws IllegalArgumentException if {@code rs}, {@code filter}, or {@code rowExtractor} is {@code null}, or if {@code offset} or {@code count} is negative.
      * @throws SQLException if a database access error occurs while extracting data.
      * @see RowFilter
      * @see RowExtractor
@@ -7219,7 +7228,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to create a stream from.
      * @param rowMapper The RowMapper to apply while extracting data. This mapper is called for each row in the ResultSet.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code rs} or {@code rowMapper} is {@code null}.
      */
     public static <T> Stream<T> stream(final ResultSet rs, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
@@ -7342,7 +7351,7 @@ public final class JdbcUtil {
      * @param rowFilter The RowFilter to apply while filtering rows. Only rows for which this filter returns {@code true} will be included.
      * @param rowMapper The RowMapper to apply while extracting data from filtered rows.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code rs}, {@code rowFilter}, or {@code rowMapper} is {@code null}.
      */
     public static <T> Stream<T> stream(final ResultSet rs, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
@@ -7444,7 +7453,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to create a stream from.
      * @param rowMapper The BiRowMapper to apply while extracting data. This mapper receives both the ResultSet and column labels.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code rs} or {@code rowMapper} is {@code null}.
      */
     public static <T> Stream<T> stream(final ResultSet rs, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
@@ -7591,7 +7600,7 @@ public final class JdbcUtil {
      * @param rowFilter The BiRowFilter to apply while filtering rows. Both ResultSet and column labels are provided.
      * @param rowMapper The BiRowMapper to apply while extracting data from filtered rows.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code rs}, {@code rowFilter}, or {@code rowMapper} is {@code null}.
      */
     public static <T> Stream<T> stream(final ResultSet rs, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException {
@@ -7808,7 +7817,7 @@ public final class JdbcUtil {
      * @param stmt The Statement to extract ResultSets from.
      * @param resultExtractor The ResultExtractor to apply while extracting data from each ResultSet.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code stmt} or {@code resultExtractor} is {@code null}.
      */
     @SuppressWarnings("resource")
     public static <R> Stream<R> streamAllResultSets(final Statement stmt, final ResultExtractor<R> resultExtractor) throws IllegalArgumentException {
@@ -7856,7 +7865,7 @@ public final class JdbcUtil {
      * @param stmt The Statement to extract ResultSets from.
      * @param resultExtractor The BiResultExtractor to apply while extracting data.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code stmt} or {@code resultExtractor} is {@code null}.
      */
     @SuppressWarnings("resource")
     public static <R> Stream<R> streamAllResultSets(final Statement stmt, final BiResultExtractor<R> resultExtractor) throws IllegalArgumentException {
@@ -9479,7 +9488,7 @@ public final class JdbcUtil {
      *
      * @param sqlAction The SQL action to be executed asynchronously.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the specified SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static ContinuableFuture<Void> runAsync(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
@@ -9508,7 +9517,7 @@ public final class JdbcUtil {
      * @param sqlAction1 The first SQL action to be executed asynchronously.
      * @param sqlAction2 The second SQL action to be executed asynchronously.
      * @return A Tuple2 containing two ContinuableFuture objects representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException if any of the SQL actions are {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction1} or {@code sqlAction2} is {@code null}.
      */
     @Beta
     public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1,
@@ -9542,7 +9551,7 @@ public final class JdbcUtil {
      * @param sqlAction2 The second SQL action to be executed asynchronously.
      * @param sqlAction3 The third SQL action to be executed asynchronously.
      * @return A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException if any of the SQL actions are {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction1}, {@code sqlAction2}, or {@code sqlAction3} is {@code null}.
      */
     @Beta
     public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1,
@@ -9573,7 +9582,7 @@ public final class JdbcUtil {
      * @param parameter The parameter to be passed to the SQL action.
      * @param sqlAction The SQL action to be executed with the parameter.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static <T> ContinuableFuture<Void> runAsync(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction)
@@ -9603,7 +9612,7 @@ public final class JdbcUtil {
      * @param parameter2 The second parameter to be passed to the SQL action.
      * @param sqlAction The SQL action to be executed with the parameters.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static <T, U> ContinuableFuture<Void> runAsync(final T parameter1, final U parameter2,
@@ -9638,7 +9647,7 @@ public final class JdbcUtil {
      * @param parameter3 The third parameter to be passed to the SQL action.
      * @param sqlAction The SQL action to be executed with the parameters.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static <A, B, C> ContinuableFuture<Void> runAsync(final A parameter1, final B parameter2, final C parameter3,
@@ -9665,7 +9674,7 @@ public final class JdbcUtil {
      * @param <R> The type of the result.
      * @param sqlAction The SQL action that produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static <R> ContinuableFuture<R> callAsync(final Callable<? extends R> sqlAction) throws IllegalArgumentException {
@@ -9695,7 +9704,7 @@ public final class JdbcUtil {
      * @param sqlAction1 The first SQL action that produces a result.
      * @param sqlAction2 The second SQL action that produces a result.
      * @return A Tuple2 containing two ContinuableFutures representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException if any of the SQL actions are {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction1} or {@code sqlAction2} is {@code null}.
      */
     @Beta
     public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> callAsync(final Callable<? extends R1> sqlAction1,
@@ -9732,7 +9741,7 @@ public final class JdbcUtil {
      * @param sqlAction2 The second SQL action that produces a result.
      * @param sqlAction3 The third SQL action that produces a result.
      * @return A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException if any of the SQL actions are {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction1}, {@code sqlAction2}, or {@code sqlAction3} is {@code null}.
      */
     @Beta
     public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> callAsync(final Callable<? extends R1> sqlAction1,
@@ -9763,7 +9772,7 @@ public final class JdbcUtil {
      * @param parameter The parameter to pass to the SQL action.
      * @param sqlAction The SQL action that takes a parameter and produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static <T, R> ContinuableFuture<R> callAsync(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
@@ -9795,7 +9804,7 @@ public final class JdbcUtil {
      * @param parameter2 The second parameter to pass to the SQL action.
      * @param sqlAction The SQL action that takes two parameters and produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static <T, U, R> ContinuableFuture<R> callAsync(final T parameter1, final U parameter2,
@@ -9831,7 +9840,7 @@ public final class JdbcUtil {
      * @param parameter3 The third parameter to pass to the SQL action.
      * @param sqlAction The SQL action that takes three parameters and produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException if the SQL action is {@code null}.
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      */
     @Beta
     public static <A, B, C, R> ContinuableFuture<R> callAsync(final A parameter1, final B parameter2, final C parameter3,

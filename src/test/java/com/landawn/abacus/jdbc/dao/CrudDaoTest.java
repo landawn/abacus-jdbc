@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -150,6 +151,18 @@ public class CrudDaoTest extends TestBase {
         when(dao.count(ArgumentMatchers.any(Condition.class))).thenReturn(Integer.MAX_VALUE, 1);
 
         assertThrows(ArithmeticException.class, () -> dao.count(ids));
+    }
+
+    @Test
+    public void testBatchGetAndCountAllowNullAsFirstSingleColumnId() throws SQLException {
+        final IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final List<Long> ids = Arrays.asList(null, 1L);
+        Mockito.doReturn(IdAnnotatedEntity.class).when(dao).targetEntityClass();
+        Mockito.doReturn(List.of()).when(dao).list(ArgumentMatchers.<Collection<String>> isNull(), ArgumentMatchers.any(Condition.class));
+        when(dao.count(ArgumentMatchers.any(Condition.class))).thenReturn(1);
+
+        assertEquals(List.of(), dao.batchGet(ids, null, 10));
+        assertEquals(1, dao.count(ids));
     }
 
     @Test

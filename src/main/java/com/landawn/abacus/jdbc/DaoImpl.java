@@ -338,11 +338,13 @@ final class DaoImpl {
                         + Stream.of(tmp.id()).filter(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches()).toList());
             }
 
-            if (!Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null) {
-                sql = sqlMapper.get(sql).parameterizedSql();
+            final String valueSqlId = !Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : null;
+
+            if (valueSqlId != null) {
+                sql = sqlMapper.get(valueSqlId).parameterizedSql();
             }
 
-            final String id = N.notEmpty(tmp.id()) ? tmp.id()[0] : Strings.isNotEmpty(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : null;
+            final String id = N.notEmpty(tmp.id()) ? tmp.id()[0] : valueSqlId;
 
             if (Strings.isNotEmpty(id)) {
                 if (sqlMapper == null || sqlMapper.get(id) == null || Strings.isEmpty(sqlMapper.get(id).parameterizedSql())) {

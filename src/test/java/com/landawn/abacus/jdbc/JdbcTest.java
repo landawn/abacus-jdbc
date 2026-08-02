@@ -3029,6 +3029,25 @@ public class JdbcTest extends TestBase {
         assertTrue(result.isEmpty());
     }
 
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testResultExtractorToMergedListCopiesIdPropNames() throws SQLException {
+        final List<String> idPropNames = new ArrayList<>(List.of("id"));
+        final Jdbc.ResultExtractor<List<TestEntity>> extractor = Jdbc.ResultExtractor.toMergedList(TestEntity.class, idPropNames);
+        idPropNames.set(0, "missing");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getLong(1)).thenReturn(1L);
+        when(mockResultSet.getString(2)).thenReturn("John");
+        when(mockResultSet.getInt(3)).thenReturn(25);
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("John");
+        when(mockResultSet.getObject(3)).thenReturn(25);
+
+        final List<TestEntity> result = extractor.apply(mockResultSet);
+
+        assertEquals(1, result.size());
+    }
+
     @Test
     public void testResultExtractorToDataset_WithEntityClass() throws SQLException {
         when(mockResultSet.next()).thenReturn(false);

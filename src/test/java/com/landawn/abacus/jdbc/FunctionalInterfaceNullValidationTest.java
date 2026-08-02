@@ -33,12 +33,19 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
 
+/**
+ * Reflectively verifies that every public method with a {@link FunctionalInterface} parameter
+ * rejects {@code null} for that parameter with {@link IllegalArgumentException}.
+ *
+ * <p>{@link JdbcCodeGenerationUtil.EntityCodeConfig} converter setters intentionally accept {@code null}
+ * (optional config → default converters) and are therefore excluded.</p>
+ */
 public class FunctionalInterfaceNullValidationTest extends TestBase {
-
-    private static final Set<String> AFFECTED_JDBC_UTIL_METHODS = Set.of("extractData", "queryByPage", "setSqlExtractor", "setSqlLogHandler");
 
     static final class TestQuery extends AbstractQuery<PreparedStatement, TestQuery> {
         TestQuery(final PreparedStatement stmt) {
@@ -47,11 +54,12 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
     }
 
     @Test
-    public void testAffectedPublicMethodsRejectNullFunctionalArguments() throws Exception {
+    public void testPublicMethodsRejectNullFunctionalArguments() throws Exception {
         int validationCount = 0;
 
         validationCount += assertNullFunctionalArgumentsRejected(AbstractQuery.class, FunctionalInterfaceNullValidationTest::newTestQuery, method -> true);
         validationCount += assertNullFunctionalArgumentsRejected(CallableQuery.class, FunctionalInterfaceNullValidationTest::newCallableQuery, method -> true);
+        validationCount += assertNullFunctionalArgumentsRejected(NamedQuery.class, FunctionalInterfaceNullValidationTest::newNamedQuery, method -> true);
         validationCount += assertNullFunctionalArgumentsRejected(DataTransferUtil.class, () -> null, method -> true);
         validationCount += assertNullFunctionalArgumentsRejected(DataTransferUtil.DatasetImportBuilder.class,
                 () -> DataTransferUtil.importFrom(mock(RowDataset.class)), method -> true);
@@ -65,10 +73,12 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
                 () -> DataTransferUtil.copyFrom(mock(PreparedStatement.class)), method -> true);
         validationCount += assertNullFunctionalArgumentsRejected(Jdbc.RowMapper.RowMapperBuilder.class, Jdbc.RowMapper::builder,
                 method -> method.getName().equals("to"));
-        validationCount += assertNullFunctionalArgumentsRejected(JdbcUtil.class, () -> null,
-                method -> AFFECTED_JDBC_UTIL_METHODS.contains(method.getName()));
+        validationCount += assertNullFunctionalArgumentsRejected(Jdbc.HandlerFactory.class, () -> null, method -> true);
+        validationCount += assertNullFunctionalArgumentsRejected(JdbcUtil.class, () -> null, method -> true);
+        validationCount += assertNullFunctionalArgumentsRejected(SqlTransaction.class, FunctionalInterfaceNullValidationTest::newSqlTransaction, method -> true);
 
-        assertEquals(204, validationCount);
+        // Guard against accidental silent filter/skip regressions if methods are skipped.
+        assertEquals(259, validationCount);
     }
 
     private static int assertNullFunctionalArgumentsRejected(final Class<?> declaringClass, final ThrowingSupplier<?> targetSupplier,
@@ -98,7 +108,8 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
                 final InvocationTargetException thrown = assertThrows(InvocationTargetException.class, () -> method.invoke(target, args), failureMessage);
 
                 assertTrue(thrown.getCause() instanceof IllegalArgumentException,
-                        () -> failureMessage + ", but threw " + thrown.getCause().getClass().getName());
+                        () -> failureMessage + ", but threw " + (thrown.getCause() == null ? "null" : thrown.getCause().getClass().getName() + ": "
+                                + thrown.getCause().getMessage()));
                 validationCount++;
             }
         }
@@ -212,6 +223,29 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
         when(stmt.getConnection()).thenReturn(mock(Connection.class));
 
         return new CallableQuery(stmt);
+    }
+
+    private static NamedQuery newNamedQuery() throws Exception {
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        final ParsedSql parsedSql = mock(ParsedSql.class);
+
+        when(stmt.getConnection()).thenReturn(mock(Connection.class));
+        when(parsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
+        when(parsedSql.parameterCount()).thenReturn(1);
+        when(parsedSql.originalSql()).thenReturn("SELECT 1 WHERE id = :param1");
+
+        return new NamedQuery(stmt, parsedSql);
+    }
+
+    private static SqlTransaction newSqlTransaction() throws Exception {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+
+        return new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, false);
     }
 
     @FunctionalInterface
