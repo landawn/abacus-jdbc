@@ -127,7 +127,10 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.exists(condition)).thenReturn(false);
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        when(dao.list(eq("name"), same(condition), ArgumentMatchers.<Jdbc.RowMapper<String>> any())).thenReturn(List.of("alice"));
+        // Stub the Collection overload that the single-prop default eventually delegates to.
+        // Avoid when(...any()...) on the default list(String, Condition, RowMapper) overload — CALLS_REAL_METHODS
+        // would invoke the real default with a null matcher argument and fail null validation.
+        Mockito.doReturn(List.of("alice")).when(dao).list(eq(List.of("name")), same(condition), ArgumentMatchers.<Jdbc.RowMapper<?>> any());
 
         assertTrue(dao.notExists(condition));
         assertEquals(List.of("alice"), dao.list("name", condition));

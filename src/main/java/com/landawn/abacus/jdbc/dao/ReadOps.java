@@ -27,6 +27,7 @@ import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.PreparedQuery;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
@@ -1108,10 +1109,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowMapper function to map the property value
      * @return a list of mapped values, or an empty list if no record matches the condition
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      * @throws SQLException if a database access error occurs
      */
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rowMapper, cs.rowMapper);
+
         return list(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
@@ -1125,11 +1129,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter predicate to filter values
      * @param rowMapper function to map filtered values
      * @return a list of filtered and mapped values, or an empty list if no record matches or passes the filter
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException {
+            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rowFilter, cs.rowFilter);
+        N.checkArgNotNull(rowMapper, cs.rowMapper);
+
         return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }
 
@@ -1333,10 +1340,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowMapper function to map property values
      * @return lazy stream of mapped values
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
-    default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) {
+    default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException {
+        N.checkArgNotNull(rowMapper, cs.rowMapper);
+
         return stream(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
@@ -1351,11 +1361,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter predicate to filter values
      * @param rowMapper function to map filtered values
      * @return lazy stream of filtered and mapped values
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper) {
+            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException {
+        N.checkArgNotNull(rowFilter, cs.rowFilter);
+        N.checkArgNotNull(rowMapper, cs.rowMapper);
+
         return stream(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }
 
@@ -1616,12 +1629,15 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rowConsumer, cs.rowConsumer);
+
         forEach(selectPropNames, cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
     }
 
@@ -1633,12 +1649,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
+    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rowConsumer, cs.rowConsumer);
+
         forEach(cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
     }
 

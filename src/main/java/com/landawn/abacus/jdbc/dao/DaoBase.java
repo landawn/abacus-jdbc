@@ -402,6 +402,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction) {
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
+
         return callAsync(sqlAction, executor());
     }
 
@@ -464,6 +466,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction) {
+        N.checkArgNotNull(sqlAction, cs.sqlAction);
+
         return runAsync(sqlAction, executor());
     }
 

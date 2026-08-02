@@ -186,12 +186,15 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the SQL query string
      * @param stmtCreator function to create the PreparedStatement with custom options
      * @return a PreparedQuery instance
+     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(stmtCreator, cs.stmtCreator);
+
         return JdbcUtil.prepareQuery(dataSource(), sql, stmtCreator);
     }
 
@@ -289,12 +292,15 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the named SQL query string
      * @param stmtCreator function to create the PreparedStatement
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(stmtCreator, cs.stmtCreator);
+
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, stmtCreator);
     }
 
@@ -304,12 +310,15 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the pre-parsed named query
      * @param stmtCreator function to create the PreparedStatement
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(stmtCreator, cs.stmtCreator);
+
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, stmtCreator);
     }
 
@@ -344,12 +353,15 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the stored procedure call string
      * @param stmtCreator function to create the CallableStatement
      * @return a CallableQuery instance
+     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
     default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
-            throws SQLException {
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(stmtCreator, cs.stmtCreator);
+
         return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
     }
 
