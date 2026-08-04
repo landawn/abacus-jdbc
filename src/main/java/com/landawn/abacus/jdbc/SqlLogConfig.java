@@ -143,10 +143,10 @@ final class SqlLogConfig {
      * SqlLogConfig config = new SqlLogConfig(false, 1000);
      *
      * // Later, enable general SQL logging
-     * config.set(true, 2000);
+     * config.setSqlLogEnabled(true, 2000);
      *
      * // Disable SQL logging
-     * config.set(false, 1000);
+     * config.setSqlLogEnabled(false, 1000);
      * }</pre>
      *
      * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable.
@@ -154,7 +154,7 @@ final class SqlLogConfig {
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
      *                        to 4, the smallest length the truncation marker supports.
      */
-    void set(final boolean isEnabled, final int maxSqlLogLength) {
+    void setSqlLogEnabled(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
         this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
         this.sqlPerfLogThresholdMillis = Long.MAX_VALUE;
@@ -169,13 +169,13 @@ final class SqlLogConfig {
      * SqlLogConfig config = new SqlLogConfig(true, 1000);
      *
      * // Switch to performance-based logging for queries over 500ms
-     * config.set(500L, 2000);
+     * config.setSqlPerfLogThresholdMillis(500L, 2000);
      *
      * // Change threshold to 1 second
-     * config.set(1000L, 2000);
+     * config.setSqlPerfLogThresholdMillis(1000L, 2000);
      *
      * // Log all queries based on execution time (threshold = 0)
-     * config.set(0L, 2000);
+     * config.setSqlPerfLogThresholdMillis(0L, 2000);
      * }</pre>
      *
      * @param sqlPerfLogThresholdMillis the minimum execution time in milliseconds for logging.
@@ -187,7 +187,7 @@ final class SqlLogConfig {
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
      *                        to 4, the smallest length the truncation marker supports.
      */
-    void set(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
+    void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
         this.isEnabled = false;
         this.sqlPerfLogThresholdMillis = sqlPerfLogThresholdMillis;
         this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);

@@ -982,7 +982,7 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static String createQueryByTableName(final String tableName, final ProductInfo dbProductInfo) {
-        return "SELECT * FROM " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " WHERE 1 > 2";
+        return "SELECT * FROM " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " WHERE 1 > 2";
     }
 
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
@@ -1102,7 +1102,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ",
-                    " FROM " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo));
+                    " FROM " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1177,7 +1177,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ", " FROM "
-                    + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + (Strings.isEmpty(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
+                    + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + (Strings.isEmpty(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1243,7 +1243,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + "(",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1319,7 +1319,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + "(",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1388,7 +1388,7 @@ public final class JdbcCodeGenerationUtil {
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + "(",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1468,7 +1468,7 @@ public final class JdbcCodeGenerationUtil {
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + "(",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1533,7 +1533,7 @@ public final class JdbcCodeGenerationUtil {
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
+            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?").join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1603,7 +1603,7 @@ public final class JdbcCodeGenerationUtil {
 
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
+            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(updateColumnLabelList)
                             .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?")
                             .join(", ")
@@ -1727,7 +1727,7 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET "
+            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?").join(", ")
                     + whereSection;
         } catch (final SQLException e) {
@@ -1800,7 +1800,7 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
                     .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
                     .join(", ");
         } catch (final SQLException e) {
@@ -1872,7 +1872,7 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
             checkNamedParameterColumnLabels(Stream.of(updateColumnLabelList).append(resolvedKeyColumnName).toList(), tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(updateColumnLabelList)
+            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(updateColumnLabelList)
                     .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
                     .join(", ") + " WHERE " + SqlIdentifierUtil.checkColumnName(resolvedKeyColumnName, dbProductInfo, false) + " = :"
                     + Strings.toCamelCase(resolvedKeyColumnName);
@@ -1994,7 +1994,7 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            return "UPDATE " + SqlIdentifierUtil.checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
                     .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
                     .join(", ") + whereSection;
 
@@ -2112,7 +2112,7 @@ public final class JdbcCodeGenerationUtil {
                 throw new IllegalArgumentException("Missing table name in SQL: " + insertSql);
             }
 
-            final String checkedTableName = SqlIdentifierUtil.checkTableName(tableName, dbProductInfo);
+            final String checkedTableName = SqlIdentifierUtil.renderTableName(tableName, dbProductInfo);
 
             final int idx3 = findClosingParenthesis(insertSql, idx2);
             final List<String> columnNames = splitSqlList(insertSql.substring(idx2 + 1, idx3), insertSql);

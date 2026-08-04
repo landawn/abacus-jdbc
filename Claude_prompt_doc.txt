@@ -24,21 +24,36 @@ TASK: Start multiple agents to generate comprehensive Javadoc for all public met
 
 
 ------
-Task: Use multiple agents to perform a thorough deep line by line review for javadocs in all the classes under folder: ./src/main/java
+   Task: Review and improve Javadoc. Add documentation to undocumented members only; do not change any executable
+   code.
 
-	-- Use multiple parallel agents to review the existing Javadoc comments in all classes under ./src/main/java. This is a review of what's already written — do not add Javadoc to undocumented members, and do not change any executable code.
+   Principle: Document the contract, not the implementation. Describe what a member does and the guarantees it
+   makes (inputs, outputs, preconditions, side effects, thread-safety, nullability) — not how it does it
+   internally.
 
-	-- Partition the work across agents by directory/package (or by class-family groups) so the entire tree under ./src/main/java is covered with no overlap and no gaps. Each agent reviews its assigned files line by line.
+   Review each member against the following criteria:
 
-	-- Evaluate every Javadoc comment (class, method, constructor, field) against three criteria:
-	    1. Document the CONTRACT, not the implementation: what it does, not how
-		2. Accuracy — Does the prose correctly describe the actual behavior? Do @param, @return, @throws tags match the real method signature, parameter names, return type, and thrown exceptions? Flag stale, copy-paste, contradictory, or wrong descriptions; missing/extra/misnamed @param; @return on void (or missing on non-void); undocumented or incorrectly documented thrown exceptions; broken or wrong {@link} / @see references.
-		3. Clarity — Is the wording unambiguous, grammatically correct, and complete? Flag confusing phrasing, typos, incomplete sentences, and descriptions that restate the method name without adding information.
-		4. Consistency — Is terminology, phrasing, tag ordering, and formatting consistent across the codebase? Pay special attention to cross-variant consistency: this code is largely template-generated, so analogous members across sibling classes (e.g. CharTuple vs. LongTuple, the primitive-type variants, the arity variants) should document the same concept with the same wording. Flag any variant whose Javadoc diverges from its siblings.
+   1. Accuracy — The prose must correctly describe actual behavior. Verify:
+       • @param names and descriptions match the real method signature; flag missing, extra, or misnamed tags.
+       • @return is present on non-void methods and absent on void/constructors.
+       • @throws/@exception documents every checked exception thrown, with correct trigger conditions; flag
+         undocumented or incorrectly documented throws.
+       • {@link} and @see references resolve and point to the right targets.
+       • Flag stale, copy-pasted, contradictory, or simply wrong descriptions.
 
-	-- Output: Each agent reports its findings as a structured list — grouped by file, citing file_path:line_number, with: (a) the criterion violated, (b) the exact problem, and (c) a suggested correction. Then consolidate all agents' findings into a single deduplicated report, ordered by file, and summarize the most common/systemic issues at the top.
+   2. Clarity — Wording must be unambiguous, grammatically correct, and complete. Flag confusing phrasing, typos,
+      incomplete sentences, and vacuous descriptions that merely restate the method name without adding
+      information.
 
-	-- Then go ahead to fix all the found issues.
+   3. Consistency — Terminology, phrasing, tag ordering, and formatting should be uniform across the codebase.
+      Cross-variant consistency matters most: this code is largely template-generated, so analogous members across
+      sibling classes (e.g. CharTuple vs. LongTuple, primitive-type variants, arity variants) must document the
+      same concept with the same wording. Flag any variant whose Javadoc diverges from its siblings.
+
+   4. Code samples — Any <pre>{@code ...} example in the Javadoc must be correct and compilable in principle (valid
+      syntax, right method names/signatures, accurate output), and must demonstrate idiomatic usage that reflects
+      the intended design. Flag samples that are wrong, misleading, or show poor practice.
+
 
 
 

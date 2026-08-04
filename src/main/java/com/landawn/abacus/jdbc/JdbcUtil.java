@@ -10552,7 +10552,7 @@ public final class JdbcUtil {
             }
         }
 
-        config.set(enabled, maxSqlLogLength);
+        config.setSqlLogEnabled(enabled, maxSqlLogLength);
     }
 
     /**
@@ -10875,7 +10875,7 @@ public final class JdbcUtil {
             }
         }
 
-        config.set(sqlPerfLogThresholdMillis, maxSqlLogLength);
+        config.setSqlPerfLogThresholdMillis(sqlPerfLogThresholdMillis, maxSqlLogLength);
         // }
     }
 

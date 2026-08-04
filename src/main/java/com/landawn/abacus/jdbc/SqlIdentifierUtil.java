@@ -213,9 +213,8 @@ final class SqlIdentifierUtil {
      * @param tableName the raw, caller-supplied table name; may be qualified and may use delimiters
      * @param dbProductInfo the resolved database product, or {@code null} if it is unknown
      * @return the rendered table name
-     * @throws IllegalArgumentException if {@code tableName} is not a valid qualified identifier
      */
-    static String checkTableName(final String tableName, final ProductInfo dbProductInfo) {
+    static String renderTableName(final String tableName, final ProductInfo dbProductInfo) {
         final String quote = quoteString(dbProductInfo);
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
         final boolean[] explicitlyDelimitedParts = explicitlyDelimitedIdentifierParts(tableName, parts.length);
@@ -246,7 +245,7 @@ final class SqlIdentifierUtil {
      * @return the rendered column name
      * @throws IllegalArgumentException if {@code columnName} is blank or is not a single identifier
      */
-    static String checkColumnName(final String columnName, final ProductInfo dbProductInfo) {
+    static String renderColumnName(final String columnName, final ProductInfo dbProductInfo) {
         N.checkArgNotBlank(columnName, cs.columnName);
 
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(columnName, "columnName");

@@ -4164,9 +4164,9 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testCheckColumnNameParsesEveryInputAsSingleIdentifier() {
-        assertEquals("users", SqlIdentifierUtil.checkColumnName("  users  ", null));
-        assertEquals("\"user.name\"", SqlIdentifierUtil.checkColumnName("\"user.name\"", null));
-        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName("users.name", null));
+        assertEquals("users", SqlIdentifierUtil.renderColumnName("  users  ", null));
+        assertEquals("\"user.name\"", SqlIdentifierUtil.renderColumnName("\"user.name\"", null));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName("users.name", null));
     }
 
     @Test

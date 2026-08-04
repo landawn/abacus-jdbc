@@ -3015,14 +3015,14 @@ public final class DataTransferUtil {
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
+            sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo))
+        sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo))
                 .append(SK._SPACE)
                 .append(SK.FROM)
                 .append(SK._SPACE)
-                .append(SqlIdentifierUtil.checkTableName(tableName, dbProductInfo));
+                .append(SqlIdentifierUtil.renderTableName(tableName, dbProductInfo));
 
         return sb.toString();
     }
@@ -3039,7 +3039,7 @@ public final class DataTransferUtil {
                 .append(SK._SPACE)
                 .append(SK.INTO)
                 .append(SK._SPACE)
-                .append(SqlIdentifierUtil.checkTableName(tableName, dbProductInfo))
+                .append(SqlIdentifierUtil.renderTableName(tableName, dbProductInfo))
                 .append(SK._PARENTHESIS_L);
 
         final Iterator<String> iter = columnNames.iterator();
@@ -3047,10 +3047,10 @@ public final class DataTransferUtil {
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
+            sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(SqlIdentifierUtil.checkColumnName(iter.next(), dbProductInfo))
+        sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo))
                 .append(SK._PARENTHESIS_R)
                 .append(SK._SPACE)
                 .append(SK.VALUES)
@@ -4194,7 +4194,7 @@ public final class DataTransferUtil {
      * into a target table, using explicit SELECT and INSERT SQL.
      *
      * <p>The returned {@link CopyFromDataSource} lets you configure {@code fetchSize}, {@code batchSize},
-     * {@code batchIntervalInMillis} and a custom {@code parameterSetter} through chained calls, then run the copy
+     * {@code batchDelay} and a custom {@code parameterSetter} through chained calls, then run the copy
      * with {@link CopyFromDataSource#to(javax.sql.DataSource, String)}. It is an ergonomic alternative to the
      * positional {@code copy(DataSource, String, ..., DataSource, String, ...)} overloads.</p>
      *
