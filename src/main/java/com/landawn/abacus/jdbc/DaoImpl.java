@@ -3141,6 +3141,45 @@ final class DaoImpl {
                                 return null;
                             }
 
+                            if (!isNoId) {
+                                final boolean hasDefaultIdEntity = N.anyMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
+                                final boolean hasExplicitIdEntity = N.anyMatch(entities, entity -> !isDefaultIdTester.test(idGetter.apply(entity)));
+
+                                if (hasDefaultIdEntity && hasExplicitIdEntity) {
+                                    // A single JDBC batch cannot alternate between the INSERT shape that omits the ID and the one that includes it.
+                                    // Execute contiguous same-shape runs so explicit IDs do not force null/default IDs into the ID column, while preserving write order.
+                                    final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                    Throwable failure = null;
+
+                                    try {
+                                        final List<Object> run = new ArrayList<>();
+                                        boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
+
+                                        for (final Object entity : entities) {
+                                            final boolean entityUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(entity));
+
+                                            if (entityUsesDefaultIdSql != runUsesDefaultIdSql) {
+                                                executeBatchSave(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run, batchSize);
+                                                run.clear();
+                                                runUsesDefaultIdSql = entityUsesDefaultIdSql;
+                                            }
+
+                                            run.add(entity);
+                                        }
+
+                                        executeBatchSave(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run, batchSize);
+                                        tran.commit();
+                                    } catch (final Throwable e) { //NOSONAR
+                                        failure = e;
+                                        throw e;
+                                    } finally {
+                                        JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
+                                    }
+
+                                    return null;
+                                }
+                            }
+
                             final ParsedSql namedInsertSql = isNoId || N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)))
                                     ? namedInsertWithoutIdSQL
                                     : namedInsertWithIdSQL;
@@ -4683,6 +4722,45 @@ final class DaoImpl {
                                 }
 
                                 allDefaultIdValue = false;
+                            }
+
+                            if (!allDefaultIdValue) {
+                                final boolean hasDefaultIdEntity = N.anyMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
+
+                                if (hasDefaultIdEntity) {
+                                    // Preserve the caller's iteration order: explicit IDs can affect database identity state before a later generated-ID insert.
+                                    final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                    Throwable failure = null;
+
+                                    try {
+                                        final List<Object> run = new ArrayList<>();
+                                        boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
+
+                                        for (final Object entity : entities) {
+                                            final boolean entityUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(entity));
+
+                                            if (entityUsesDefaultIdSql != runUsesDefaultIdSql) {
+                                                executeBatchInsertRun(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run,
+                                                        batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester, idSetter, daoLogger);
+                                                run.clear();
+                                                runUsesDefaultIdSql = entityUsesDefaultIdSql;
+                                            }
+
+                                            run.add(entity);
+                                        }
+
+                                        executeBatchInsertRun(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run, batchSize,
+                                                generatedKeyColumnNames, keyExtractor, isDefaultIdTester, idSetter, daoLogger);
+                                        tran.commit();
+                                    } catch (final Throwable e) { //NOSONAR
+                                        failure = e;
+                                        throw e;
+                                    } finally {
+                                        JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
+                                    }
+
+                                    return Stream.of(entities).map(idGetter).toList();
+                                }
                             }
 
                             final ParsedSql namedInsertSql = allDefaultIdValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
@@ -7162,6 +7240,61 @@ final class DaoImpl {
         daoLogger.info("Created Dao proxy(interface={}, targetTableName={}, methods={})", daoClassName, targetTableName, methodInvokerMap.size());
 
         return daoInstance;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static void executeBatchSave(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize)
+            throws SQLException {
+        if (entities.size() <= batchSize) {
+            proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
+        } else {
+            try (NamedQuery namedQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
+                Stream.of(entities).split(batchSize).forEach(batch -> namedQuery.addBatchParameters(batch).batchUpdate());
+            }
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static List<Object> executeBatchInsert(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
+            final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester) throws Exception {
+        if (entities.size() <= batchSize) {
+            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
+                    .addBatchParameters(entities)
+                    .batchInsert(keyExtractor, isDefaultIdTester);
+        } else {
+            try (NamedQuery namedQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames).closeAfterExecution(false)) {
+                return Seq.of(entities)
+                        .split(batchSize)
+                        .flatmap(batch -> namedQuery.addBatchParameters(batch).batchInsert(keyExtractor, isDefaultIdTester))
+                        .toList();
+            }
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static void executeBatchInsertRun(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
+            final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester,
+            final BiConsumer<Object, Object> idSetter, final Logger daoLogger) throws Exception {
+        List<Object> ids = executeBatchInsert(proxy, namedInsertSql, entities, batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester);
+
+        if (JdbcUtil.isAllNullIds(ids)) {
+            ids = new ArrayList<>();
+        }
+
+        setReturnedIds(entities, ids, idSetter, daoLogger);
+    }
+
+    private static void setReturnedIds(final Collection<?> entities, final List<Object> ids, final BiConsumer<Object, Object> idSetter,
+            final Logger daoLogger) {
+        if (N.notEmpty(ids) && ids.size() == entities.size()) {
+            int idx = 0;
+
+            for (final Object entity : entities) {
+                idSetter.accept(ids.get(idx++), entity);
+            }
+        } else if (N.notEmpty(ids) && daoLogger.isWarnEnabled()) {
+            daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(), entities.size());
+        }
     }
 
     /**

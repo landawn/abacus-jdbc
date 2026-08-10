@@ -538,26 +538,6 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(Arrays.asList("id"), cols);
     }
 
-    @Test
-    public void testGetColumnNamesRejectsCatalogAndSchemaWildcardFalsePositive() throws Exception {
-        final ResultSet colsRs = mock(ResultSet.class);
-        when(mockDatabaseMetaData.getColumns("my_cat", "my_app", "users", null)).thenReturn(colsRs);
-        when(colsRs.next()).thenReturn(true, false);
-        when(colsRs.getString("TABLE_NAME")).thenReturn("users");
-        when(colsRs.getString("TABLE_SCHEM")).thenReturn("myXapp");
-        when(colsRs.getString("TABLE_CAT")).thenReturn("myXcat");
-        when(colsRs.getString("COLUMN_NAME")).thenReturn("wrong_id");
-
-        final java.lang.reflect.Method method = JdbcUtil.class.getDeclaredMethod("getColumnNamesFromMetadata", DatabaseMetaData.class, String.class,
-                String.class, String.class);
-        method.setAccessible(true);
-
-        @SuppressWarnings("unchecked")
-        final List<String> columns = (List<String>) method.invoke(null, mockDatabaseMetaData, "my_cat", "my_app", "users");
-
-        assertTrue(columns.isEmpty());
-    }
-
     // When neither the metadata lookups nor the SELECT fallback yield any column, a SQLException is
     // raised (JdbcUtil L1886); getColumns returning null also exercises the rs==null guard (L1911).
     @Test
@@ -569,6 +549,23 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(0);
 
         assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "ghost_table"));
+    }
+
+    @Test
+    public void testGetColumnNames_DelimitedNameRequiresExactMetadataMatchAndNoUnquotedFallback() throws SQLException {
+        final ResultSet columns = mock(ResultSet.class);
+        when(mockConnection.getCatalog()).thenReturn(null);
+        when(mockConnection.getSchema()).thenReturn(null);
+        when(mockDatabaseMetaData.getColumns(null, null, "mixedCase", null)).thenReturn(columns);
+        when(columns.next()).thenReturn(true, false);
+        when(columns.getString("TABLE_NAME")).thenReturn("MIXEDCASE");
+        when(columns.getString("COLUMN_NAME")).thenReturn("wrong_id");
+
+        assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "\"mixedCase\""));
+
+        verify(mockDatabaseMetaData, never()).getColumns(null, null, "MIXEDCASE", null);
+        verify(mockDatabaseMetaData, never()).getColumns(null, null, "mixedcase", null);
+        verify(mockConnection, never()).prepareStatement("SELECT * FROM mixedCase WHERE 1 > 2");
     }
 
     @Test
@@ -921,6 +918,26 @@ public class JdbcUtilTest extends TestBase {
 
         int affected = JdbcUtil.executeUpdate(mockDataSource, sql, "John", 1L);
         assertEquals(1, affected);
+    }
+
+    @Test
+    public void testPrepareStmtRejectsMissingRequiredParametersAndClosesStatement() throws SQLException {
+        final IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.prepareStmt(mockConnection, "SELECT * FROM users WHERE id = ?"));
+
+        assertTrue(error.getMessage().contains("requires 1 parameter"));
+        verify(mockPreparedStatement).close();
+        verify(mockPreparedStatement, never()).executeQuery();
+    }
+
+    @Test
+    public void testPrepareCallAllowsOutOnlyParameterForLaterRegistration() throws SQLException {
+        final CallableStatement result = JdbcUtil.prepareCall(mockConnection, "{? = call getUserId()}");
+
+        assertSame(mockCallableStatement, result);
+        result.registerOutParameter(1, Types.INTEGER);
+        verify(mockCallableStatement).registerOutParameter(1, Types.INTEGER);
+        verify(mockCallableStatement, never()).close();
     }
 
     @Test
@@ -1343,7 +1360,8 @@ public class JdbcUtilTest extends TestBase {
         final ResultSet tableRs = mock(ResultSet.class);
 
         when(mockDatabaseMetaData.getTables(null, null, "sales.data", null)).thenReturn(tableRs);
-        when(tableRs.next()).thenReturn(true);
+        when(tableRs.next()).thenReturn(true, false);
+        when(tableRs.getString("TABLE_NAME")).thenReturn("sales.data");
 
         assertTrue(JdbcUtil.tableExists(mockConnection, "\"sales.data\""));
     }
@@ -3897,44 +3915,6 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(0, thrown.getSuppressed().length);
     }
 
-    // Regression: tableExists(metadata, ...) used to verify only TABLE_NAME when the pattern contained
-    // a wildcard, so a request for "my_app.users" matched "users" in any schema (e.g., "myXapp") because
-    // schemaPattern's `_` is also a JDBC wildcard. The fix verifies TABLE_SCHEM on hit as well.
-    @Test
-    public void testTableExists_SchemaWildcardVerifiedAgainstActualSchemaName() throws Exception {
-        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
-        final ResultSet rows = mock(ResultSet.class);
-        when(metadata.getTables(null, "my_app", "users", null)).thenReturn(rows);
-        // One matching row: same table name, but wrong schema (wildcard expansion matched "myXapp").
-        when(rows.next()).thenReturn(true).thenReturn(false);
-        when(rows.getString("TABLE_NAME")).thenReturn("users");
-        when(rows.getString("TABLE_SCHEM")).thenReturn("myXapp");
-
-        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("tableExists", DatabaseMetaData.class, String.class, String.class, String.class);
-        m.setAccessible(true);
-
-        Object result = m.invoke(null, metadata, null, "my_app", "users");
-
-        assertEquals(Boolean.FALSE, result, "wildcard expansion to wrong schema must be rejected");
-    }
-
-    @Test
-    public void testTableExists_SchemaWildcardAcceptsRealSchemaMatch() throws Exception {
-        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
-        final ResultSet rows = mock(ResultSet.class);
-        when(metadata.getTables(null, "my_app", "users", null)).thenReturn(rows);
-        when(rows.next()).thenReturn(true).thenReturn(false);
-        when(rows.getString("TABLE_NAME")).thenReturn("users");
-        when(rows.getString("TABLE_SCHEM")).thenReturn("MY_APP"); // case-insensitive match
-
-        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("tableExists", DatabaseMetaData.class, String.class, String.class, String.class);
-        m.setAccessible(true);
-
-        Object result = m.invoke(null, metadata, null, "my_app", "users");
-
-        assertEquals(Boolean.TRUE, result, "actual schema match must still return true");
-    }
-
     // Regression: streamAllResultSets(stmt) hardcoded isFirstResultSet=true. If the user called
     // stmt.execute(...) and the first result was an update count (so stmt.getResultSet() returns null),
     // the iterator broke out of its loop and the stream terminated empty even when more ResultSets
@@ -4174,13 +4154,44 @@ public class JdbcUtilTest extends TestBase {
         final ResultSet tableRows = mock(ResultSet.class);
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(mockDatabaseMetaData.getTables(null, null, "mixedCase", null)).thenReturn(tableRows);
-        when(tableRows.next()).thenReturn(true);
+        when(tableRows.next()).thenReturn(true, false);
+        when(tableRows.getString("TABLE_NAME")).thenReturn("mixedCase");
         when(mockPreparedStatement.execute()).thenThrow(new SQLException("table not found", "42S02"));
 
         assertFalse(JdbcUtil.dropTableIfExists(mockConnection, "\"mixedCase\""));
 
         verify(mockConnection).prepareStatement("DROP TABLE \"mixedCase\"");
         verify(mockConnection, never()).prepareStatement("DROP TABLE mixedCase");
+    }
+
+    @Test
+    public void testTableExists_DelimitedNameRequiresExactMetadataMatchAndNoUnquotedFallback() throws SQLException {
+        final ResultSet tables = mock(ResultSet.class);
+        when(mockConnection.getCatalog()).thenReturn(null);
+        when(mockConnection.getSchema()).thenReturn(null);
+        when(mockDatabaseMetaData.getTables(null, null, "mixedCase", null)).thenReturn(tables);
+        when(tables.next()).thenReturn(true, false);
+        when(tables.getString("TABLE_NAME")).thenReturn("MIXEDCASE");
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "\"mixedCase\""));
+
+        verify(mockDatabaseMetaData, never()).getTables(null, null, "MIXEDCASE", null);
+        verify(mockDatabaseMetaData, never()).getTables(null, null, "mixedcase", null);
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM mixedCase WHERE 1 > 2");
+    }
+
+    @Test
+    public void testTableExists_MixedQualifiedNamePreservesExactCatalogAndSchemaOnly() throws SQLException {
+        final ResultSet tables = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getTables("mixedCatalog", "mixedSchema", "users", null)).thenReturn(tables);
+        when(tables.next()).thenReturn(true, true, false);
+        when(tables.getString("TABLE_SCHEM")).thenReturn("mixedSchema", "MIXEDSCHEMA");
+        when(tables.getString("TABLE_CAT")).thenReturn("MIXEDCATALOG");
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "\"mixedCatalog\".\"mixedSchema\".users"));
+
+        verify(mockDatabaseMetaData).getTables("mixedCatalog", "mixedSchema", "USERS", null);
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM mixedCatalog.mixedSchema.users WHERE 1 > 2");
     }
 
     // ------------------------------------------------------------------------

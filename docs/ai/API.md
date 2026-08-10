@@ -14295,12 +14295,10 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UncheckedSQLException`
-- **Summary:** Creates a PreparedQuery with the option to generate keys for INSERT statements.
-- **Contract:**
-  - When generateKeys is {@code true} , auto-generated keys can be retrieved after execution.
+- **Summary:** Creates a PreparedQuery using a custom statement creator function.
 - **Parameters:**
   - `sql` (`String`) — the SQL query string
-  - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — {@code true} to return generated keys, {@code false} otherwise
+  - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — function to create the PreparedStatement with custom options
 - **Returns:** a PreparedQuery instance
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
@@ -14330,42 +14328,42 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws UncheckedSQLException`
-- **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
+- **Summary:** Creates a NamedQuery from a pre-parsed SQL object with key generation option.
 - **Parameters:**
-  - `namedSql` (`ParsedSql`) — the named SQL query string
+  - `namedSql` (`ParsedSql`) — the pre-parsed named query
   - `generateKeys` (`boolean`) — {@code true} to return generated keys, {@code false} otherwise
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws UncheckedSQLException`
-- **Summary:** Creates a NamedQuery that will return specific columns as generated keys.
+- **Summary:** Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.
 - **Parameters:**
-  - `namedSql` (`ParsedSql`) — the named SQL query string
+  - `namedSql` (`ParsedSql`) — the pre-parsed named query
   - `generatedKeyColumnIndexes` (`int[]`) — array of column indexes to return
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws UncheckedSQLException`
-- **Summary:** Creates a NamedQuery that will return specific named columns as generated keys.
+- **Summary:** Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.
 - **Parameters:**
-  - `namedSql` (`ParsedSql`) — the named SQL query string
+  - `namedSql` (`ParsedSql`) — the pre-parsed named query
   - `generatedKeyColumnNames` (`String[]`) — array of column names to return
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UncheckedSQLException`
-- **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
+- **Summary:** Creates a NamedQuery using a custom statement creator function.
 - **Parameters:**
   - `namedSql` (`String`) — the named SQL query string
-  - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — {@code true} to return generated keys, {@code false} otherwise
+  - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — function to create the PreparedStatement
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UncheckedSQLException`
-- **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
+- **Summary:** Creates a NamedQuery from a pre-parsed SQL with custom statement creation.
 - **Parameters:**
-  - `namedSql` (`ParsedSql`) — the named SQL query string
-  - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — {@code true} to return generated keys, {@code false} otherwise
+  - `namedSql` (`ParsedSql`) — the pre-parsed named query
+  - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — function to create the PreparedStatement
 - **Returns:** a NamedQuery instance
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs

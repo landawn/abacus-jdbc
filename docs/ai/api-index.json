@@ -55230,7 +55230,7 @@
                 {
                   "name": "stmtCreator",
                   "type": "Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>",
-                  "javadoc": "{@code true} to return generated keys, {@code false} otherwise",
+                  "javadoc": "function to create the PreparedStatement with custom options",
                   "nullability": "unspecified"
                 }
               ],
@@ -55240,11 +55240,9 @@
                   "condition": "if a database access error occurs"
                 }
               ],
-              "javadoc_summary": "Creates a PreparedQuery with the option to generate keys for INSERT statements.",
+              "javadoc_summary": "Creates a PreparedQuery using a custom statement creator function.",
               "returns": "a PreparedQuery instance",
-              "contract": [
-                "When generateKeys is {@code true} , auto-generated keys can be retrieved after execution."
-              ],
+              "contract": [],
               "examples": [],
               "see_also": []
             },
@@ -55370,7 +55368,7 @@
                 {
                   "name": "namedSql",
                   "type": "ParsedSql",
-                  "javadoc": "the named SQL query string",
+                  "javadoc": "the pre-parsed named query",
                   "nullability": "unspecified"
                 },
                 {
@@ -55386,7 +55384,7 @@
                   "condition": "if a database access error occurs"
                 }
               ],
-              "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
+              "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL object with key generation option.",
               "returns": "a NamedQuery instance",
               "contract": [],
               "examples": [],
@@ -55406,7 +55404,7 @@
                 {
                   "name": "namedSql",
                   "type": "ParsedSql",
-                  "javadoc": "the named SQL query string",
+                  "javadoc": "the pre-parsed named query",
                   "nullability": "unspecified"
                 },
                 {
@@ -55422,7 +55420,7 @@
                   "condition": "if a database access error occurs"
                 }
               ],
-              "javadoc_summary": "Creates a NamedQuery that will return specific columns as generated keys.",
+              "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.",
               "returns": "a NamedQuery instance",
               "contract": [],
               "examples": [],
@@ -55442,7 +55440,7 @@
                 {
                   "name": "namedSql",
                   "type": "ParsedSql",
-                  "javadoc": "the named SQL query string",
+                  "javadoc": "the pre-parsed named query",
                   "nullability": "unspecified"
                 },
                 {
@@ -55458,7 +55456,7 @@
                   "condition": "if a database access error occurs"
                 }
               ],
-              "javadoc_summary": "Creates a NamedQuery that will return specific named columns as generated keys.",
+              "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.",
               "returns": "a NamedQuery instance",
               "contract": [],
               "examples": [],
@@ -55484,7 +55482,7 @@
                 {
                   "name": "stmtCreator",
                   "type": "Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>",
-                  "javadoc": "{@code true} to return generated keys, {@code false} otherwise",
+                  "javadoc": "function to create the PreparedStatement",
                   "nullability": "unspecified"
                 }
               ],
@@ -55494,7 +55492,7 @@
                   "condition": "if a database access error occurs"
                 }
               ],
-              "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
+              "javadoc_summary": "Creates a NamedQuery using a custom statement creator function.",
               "returns": "a NamedQuery instance",
               "contract": [],
               "examples": [],
@@ -55514,13 +55512,13 @@
                 {
                   "name": "namedSql",
                   "type": "ParsedSql",
-                  "javadoc": "the named SQL query string",
+                  "javadoc": "the pre-parsed named query",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "stmtCreator",
                   "type": "Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>",
-                  "javadoc": "{@code true} to return generated keys, {@code false} otherwise",
+                  "javadoc": "function to create the PreparedStatement",
                   "nullability": "unspecified"
                 }
               ],
@@ -55530,7 +55528,7 @@
                   "condition": "if a database access error occurs"
                 }
               ],
-              "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
+              "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL with custom statement creation.",
               "returns": "a NamedQuery instance",
               "contract": [],
               "examples": [],

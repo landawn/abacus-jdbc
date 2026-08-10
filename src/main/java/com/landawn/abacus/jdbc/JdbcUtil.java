@@ -1969,7 +1969,8 @@ public final class JdbcUtil {
      *
      * <p>This method first consults {@link DatabaseMetaData#getColumns} (trying the connection's
      * current schema — and, for an unqualified name, all schemas — with the table name as supplied,
-     * and upper- and lower-case variants). If the metadata lookup yields no match and all name parts
+     * and, for an unquoted table part, upper- and lower-case variants). Explicitly delimited parts are
+     * matched case-sensitively. If the metadata lookup yields no match and all name parts
      * are simple identifiers (letters, digits, {@code _} and {@code $}), it falls back to running an
      * empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column
      * names from the result set metadata; quoted or otherwise exotic names have no such fallback.</p>
@@ -2000,25 +2001,38 @@ public final class JdbcUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
 
         final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
+        final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
         final String catalog;
         final String schema;
         final String table;
+        final boolean catalogDelimited;
+        final boolean schemaDelimited;
+        final boolean tableDelimited;
         final String fallbackQualifiedTableName;
 
         if (nameParts.length == 1) {
             catalog = conn.getCatalog();
             schema = null; // unqualified: try the connection's current schema first, then all schemas.
             table = nameParts[0];
+            catalogDelimited = false;
+            schemaDelimited = false;
+            tableDelimited = delimitedNameParts[0];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, null, table);
         } else if (nameParts.length == 2) {
             catalog = conn.getCatalog();
             schema = nameParts[0];
             table = nameParts[1];
+            catalogDelimited = false;
+            schemaDelimited = delimitedNameParts[0];
+            tableDelimited = delimitedNameParts[1];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, schema, table);
         } else if (nameParts.length == 3) {
             catalog = nameParts[0];
             schema = nameParts[1];
             table = nameParts[2];
+            catalogDelimited = delimitedNameParts[0];
+            schemaDelimited = delimitedNameParts[1];
+            tableDelimited = delimitedNameParts[2];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(catalog, schema, table);
         } else {
             throw new IllegalArgumentException("Invalid table name: " + tableName);
@@ -2045,29 +2059,29 @@ public final class JdbcUtil {
         final String upperCaseTable = table.toUpperCase(Locale.ROOT);
         final String lowerCaseTable = table.toLowerCase(Locale.ROOT);
 
-        List<String> columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table);
+        List<String> columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table, catalogDelimited, schemaDelimited, tableDelimited);
 
         if (N.isEmpty(columnNameList) && retryWithAllSchemas) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table);
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table, catalogDelimited, false, tableDelimited);
         }
 
-        if (N.isEmpty(columnNameList)) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, upperCaseTable);
+        if (N.isEmpty(columnNameList) && !tableDelimited) {
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, upperCaseTable, catalogDelimited, schemaDelimited, false);
         }
 
-        if (N.isEmpty(columnNameList)) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, lowerCaseTable);
+        if (N.isEmpty(columnNameList) && !tableDelimited) {
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, lowerCaseTable, catalogDelimited, schemaDelimited, false);
         }
 
-        if (N.isEmpty(columnNameList) && retryWithAllSchemas) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, upperCaseTable);
+        if (N.isEmpty(columnNameList) && !tableDelimited && retryWithAllSchemas) {
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, upperCaseTable, catalogDelimited, false, false);
         }
 
-        if (N.isEmpty(columnNameList) && retryWithAllSchemas) {
-            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, lowerCaseTable);
+        if (N.isEmpty(columnNameList) && !tableDelimited && retryWithAllSchemas) {
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, lowerCaseTable, catalogDelimited, false, false);
         }
 
-        if (N.isEmpty(columnNameList) && Strings.isNotEmpty(fallbackQualifiedTableName)) {
+        if (N.isEmpty(columnNameList) && !hasDelimitedIdentifierPart(tableName) && Strings.isNotEmpty(fallbackQualifiedTableName)) {
             columnNameList = getColumnNamesBySelect(conn, fallbackQualifiedTableName);
         }
 
@@ -2078,20 +2092,9 @@ public final class JdbcUtil {
         return columnNameList;
     }
 
-    /**
-     * Returns the column names of a single table via {@link DatabaseMetaData#getColumns}. Because the metadata
-     * arguments are treated as patterns, rows whose catalog, schema, or table do not match the requested values
-     * (case-insensitively) are discarded, and only the columns of the first matching table are returned.
-     *
-     * @param metadata The database metadata to query.
-     * @param catalog The catalog to match, or {@code null} to match any catalog.
-     * @param schemaPattern The schema to match, or {@code null} to match any schema.
-     * @param tableNamePattern The table name to match (case-insensitive).
-     * @return The column names in ordinal order, or an empty list if no matching table is found.
-     * @throws SQLException if a database access error occurs.
-     */
     private static List<String> getColumnNamesFromMetadata(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
-            final String tableNamePattern) throws SQLException {
+            final String tableNamePattern, final boolean catalogCaseSensitive, final boolean schemaCaseSensitive, final boolean tableCaseSensitive)
+            throws SQLException {
         final ResultSet rs = metadata.getColumns(catalog, schemaPattern, tableNamePattern, null);
 
         if (rs == null) {
@@ -2112,8 +2115,9 @@ public final class JdbcUtil {
 
                 // JDBC metadata arguments are patterns, so verify every requested identifier against
                 // the concrete row before accepting columns returned through '_'/'%' expansion.
-                if (!tableNamePattern.equalsIgnoreCase(tableNameInMetadata) || (schemaPattern != null && !schemaPattern.equalsIgnoreCase(schemaInMetadata))
-                        || (catalog != null && !catalog.equalsIgnoreCase(catalogInMetadata))) {
+                if (!identifierMatches(tableNamePattern, tableNameInMetadata, tableCaseSensitive)
+                        || !identifierMatches(schemaPattern, schemaInMetadata, schemaCaseSensitive)
+                        || !identifierMatches(catalog, catalogInMetadata, catalogCaseSensitive)) {
                     continue;
                 }
 
@@ -2131,6 +2135,11 @@ public final class JdbcUtil {
 
             return columnNameList;
         }
+    }
+
+    /** Returns whether an actual metadata identifier matches the requested identifier. */
+    private static boolean identifierMatches(final String requested, final String actual, final boolean caseSensitive) {
+        return requested == null || (caseSensitive ? requested.equals(actual) : requested.equalsIgnoreCase(actual));
     }
 
     /**
@@ -5302,13 +5311,14 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
-        if (N.notEmpty(parameters)) {
-            try {
-                setParameters(parsedSql, stmt, parameters);
-            } catch (final Exception e) {
-                closeQuietly(stmt);
-                throw e;
-            }
+        try {
+            // Always validate the parameter count. Skipping this call for a null/empty array
+            // lets SQL containing placeholders reach the driver with unbound parameters,
+            // even though setParameters has a deterministic validation error for that case.
+            setParameters(parsedSql, stmt, parameters);
+        } catch (final Exception e) {
+            closeQuietly(stmt);
+            throw e;
         }
 
         return stmt;
@@ -5332,6 +5342,9 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
+        // Callable placeholders may be OUT-only and therefore have no input value to bind.
+        // Parameter direction is supplied later through registerOutParameter(), so an empty
+        // array cannot be treated as a missing-input error here.
         if (N.notEmpty(parameters)) {
             try {
                 setParameters(parsedSql, stmt, parameters);
@@ -9075,8 +9088,9 @@ public final class JdbcUtil {
      *
      * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's current schema
      * — and, for an unqualified name, all schemas — with the table name as supplied, then upper- and
-     * lower-case variants). If metadata lookup yields no match,
-     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
+     * lower-case variants for an unquoted table part). Explicitly delimited parts are matched case-sensitively.
+     * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
+     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated.</p>
      *
@@ -9115,8 +9129,9 @@ public final class JdbcUtil {
      *
      * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's current schema
      * — and, for an unqualified name, all schemas — with the table name as supplied, then upper- and
-     * lower-case variants). If metadata lookup yields no match,
-     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
+     * lower-case variants for an unquoted table part). Explicitly delimited parts are matched case-sensitively.
+     * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
+     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated.</p>
      *
@@ -9144,22 +9159,35 @@ public final class JdbcUtil {
 
         try {
             final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
+            final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
             final String catalog;
             final String schema;
             final String table;
+            final boolean catalogDelimited;
+            final boolean schemaDelimited;
+            final boolean tableDelimited;
 
             if (nameParts.length == 1) {
                 catalog = conn.getCatalog();
                 schema = null;
                 table = nameParts[0];
+                catalogDelimited = false;
+                schemaDelimited = false;
+                tableDelimited = delimitedNameParts[0];
             } else if (nameParts.length == 2) {
                 catalog = conn.getCatalog();
                 schema = nameParts[0];
                 table = nameParts[1];
+                catalogDelimited = false;
+                schemaDelimited = delimitedNameParts[0];
+                tableDelimited = delimitedNameParts[1];
             } else if (nameParts.length == 3) {
                 catalog = nameParts[0];
                 schema = nameParts[1];
                 table = nameParts[2];
+                catalogDelimited = delimitedNameParts[0];
+                schemaDelimited = delimitedNameParts[1];
+                tableDelimited = delimitedNameParts[2];
             } else {
                 throw new IllegalArgumentException("Invalid table name: " + tableName);
             }
@@ -9185,15 +9213,18 @@ public final class JdbcUtil {
             final String upperCaseTable = table.toUpperCase(Locale.ROOT);
             final String lowerCaseTable = table.toLowerCase(Locale.ROOT);
 
-            if (tableExists(metadata, catalog, schemaToUse, table) || (retryWithAllSchemas && tableExists(metadata, catalog, null, table))) {
+            if (tableExists(metadata, catalog, schemaToUse, table, catalogDelimited, schemaDelimited, tableDelimited)
+                    || (retryWithAllSchemas && tableExists(metadata, catalog, null, table, catalogDelimited, false, tableDelimited))) {
                 return true;
             }
 
-            if (tableExists(metadata, catalog, schemaToUse, upperCaseTable) || tableExists(metadata, catalog, schemaToUse, lowerCaseTable)) {
+            if (!tableDelimited && (tableExists(metadata, catalog, schemaToUse, upperCaseTable, catalogDelimited, schemaDelimited, false)
+                    || tableExists(metadata, catalog, schemaToUse, lowerCaseTable, catalogDelimited, schemaDelimited, false))) {
                 return true;
             }
 
-            if (retryWithAllSchemas && (tableExists(metadata, catalog, null, upperCaseTable) || tableExists(metadata, catalog, null, lowerCaseTable))) {
+            if (!tableDelimited && retryWithAllSchemas && (tableExists(metadata, catalog, null, upperCaseTable, catalogDelimited, false, false)
+                    || tableExists(metadata, catalog, null, lowerCaseTable, catalogDelimited, false, false))) {
                 return true;
             }
 
@@ -9202,7 +9233,9 @@ public final class JdbcUtil {
             // "catalog.table" is not equivalent to an unqualified table in the current catalog.
             final String safeQualifiedTableName = buildSimpleQualifiedTableName(nameParts.length == 3 ? catalog : null, schema, table);
 
-            if (Strings.isNotEmpty(safeQualifiedTableName)) {
+            // splitQualifiedSqlIdentifier removes delimiters. Never feed those stripped parts to
+            // unquoted fallback SQL: "mixedCase" and mixedCase can identify different tables.
+            if (!hasDelimitedIdentifierPart(tableName) && Strings.isNotEmpty(safeQualifiedTableName)) {
                 try {
                     execute(conn, "SELECT 1 FROM " + safeQualifiedTableName + " WHERE 1 > 2");
                     return true;
@@ -9221,20 +9254,8 @@ public final class JdbcUtil {
         }
     }
 
-    /**
-     * Returns {@code true} if {@link DatabaseMetaData#getTables} finds the requested table. When the schema or
-     * table name contains the pattern wildcard {@code '_'} or {@code '%'}, returned rows are verified against the
-     * requested values (case-insensitively) to reject wildcard-expansion false positives.
-     *
-     * @param metadata The database metadata to query.
-     * @param catalog The catalog to search, or {@code null} to search all catalogs.
-     * @param schemaPattern The schema to match, or {@code null} to match any schema.
-     * @param tableNamePattern The table name to match.
-     * @return {@code true} if a matching table exists.
-     * @throws SQLException if a database access error occurs.
-     */
-    private static boolean tableExists(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern)
-            throws SQLException {
+    private static boolean tableExists(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern,
+            final boolean catalogCaseSensitive, final boolean schemaCaseSensitive, final boolean tableCaseSensitive) throws SQLException {
         final ResultSet rs = metadata.getTables(catalog, schemaPattern, tableNamePattern, null);
 
         if (rs == null) {
@@ -9246,28 +9267,39 @@ public final class JdbcUtil {
         // (or schema) happens to match the wildcard expansion (e.g., looking up "users_log" matches
         // "usersXlog"; looking up "my_app.users" matches "myXapp.users"). When either argument contains
         // a wildcard meta-character, verify the returned TABLE_NAME and TABLE_SCHEM actually match
-        // (case-insensitive) the requested values; otherwise rely on rows.next().
+        // (case-insensitive) the requested values. Explicitly delimited identifiers must also be
+        // compared to the returned metadata exactly, even when no wildcard is present.
         final boolean tableNameHasWildcard = tableNamePattern != null && (tableNamePattern.indexOf('_') >= 0 || tableNamePattern.indexOf('%') >= 0);
         final boolean schemaHasWildcard = schemaPattern != null && (schemaPattern.indexOf('_') >= 0 || schemaPattern.indexOf('%') >= 0);
+        final boolean verifyTableName = tableNameHasWildcard || tableCaseSensitive;
+        final boolean verifySchema = schemaHasWildcard || schemaCaseSensitive;
 
         try (ResultSet rows = rs) {
-            if (!tableNameHasWildcard && !schemaHasWildcard) {
+            if (!verifyTableName && !verifySchema && !catalogCaseSensitive) {
                 return rows.next();
             }
 
             while (rows.next()) {
-                if (tableNameHasWildcard) {
+                if (verifyTableName) {
                     final String tableNameInMetadata = rows.getString("TABLE_NAME");
 
-                    if (tableNameInMetadata == null || !tableNameInMetadata.equalsIgnoreCase(tableNamePattern)) {
+                    if (!identifierMatches(tableNamePattern, tableNameInMetadata, tableCaseSensitive)) {
                         continue;
                     }
                 }
 
-                if (schemaHasWildcard) {
+                if (verifySchema) {
                     final String schemaInMetadata = rows.getString("TABLE_SCHEM");
 
-                    if (schemaInMetadata == null || !schemaInMetadata.equalsIgnoreCase(schemaPattern)) {
+                    if (!identifierMatches(schemaPattern, schemaInMetadata, schemaCaseSensitive)) {
+                        continue;
+                    }
+                }
+
+                if (catalogCaseSensitive) {
+                    final String catalogInMetadata = rows.getString("TABLE_CAT");
+
+                    if (!identifierMatches(catalog, catalogInMetadata, true)) {
                         continue;
                     }
                 }

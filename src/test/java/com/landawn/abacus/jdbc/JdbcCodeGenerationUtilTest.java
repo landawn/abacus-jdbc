@@ -2328,6 +2328,38 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testGenerateEntityClass_AdditionalFieldInitializerContainingSemicolon() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalClassBodySource("    private String first = \"a;b\", second = \"c\";")
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("copy.first = this.first;"), result);
+        assertTrue(result.contains("copy.second = this.second;"), result);
+    }
+
+    @Test
+    public void testGenerateEntityClass_MultipleAdditionalFieldDeclarationsOnOneLine() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .className("OrderHistory")
+                .additionalClassBodySource("    private int first; private int second;")
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("copy.first = this.first;"), result);
+        assertTrue(result.contains("copy.second = this.second;"), result);
+    }
+
+    @Test
     public void testGenerateEntityClass_RelationalInitializerDoesNotHideFollowingField() throws SQLException {
         setupFullGenerateEntityClassMock();
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()

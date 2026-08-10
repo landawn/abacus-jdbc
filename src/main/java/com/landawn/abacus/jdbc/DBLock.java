@@ -282,69 +282,73 @@ public final class DBLock implements AutoCloseable {
             JdbcUtil.releaseConnection(conn, ds);
         }
 
-        final Runnable refreshTask = () -> {
-            if (!targetCodePool.isEmpty()) {
-                try {
-                    final Connection refreshConn = JdbcUtil.getConnection(ds);
+        scheduledFuture = scheduledExecutor.scheduleWithFixedDelay(this::refreshLocks, 1000L, 1000L, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Refreshes every lock currently held by this instance. Kept package-private so the refresh
+     * cycle can be exercised deterministically without waiting for the shared scheduler.
+     */
+    void refreshLocks() {
+        if (targetCodePool.isEmpty()) {
+            return;
+        }
+
+        try {
+            final Connection refreshConn = JdbcUtil.getConnection(ds);
+            try {
+                int refreshed = 0;
+                int staleRemoved = 0;
+                int failed = 0;
+
+                // Iterate the ConcurrentHashMap directly: its iteration is weakly consistent and the
+                // stale-entry removal below is the atomic remove(key, value), so no point-in-time
+                // snapshot is needed.
+                for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
+                    final LockInfo info = entry.getValue();
+
+                    // Guard each entry individually: a JDBC driver or DataSource may report a transient
+                    // failure as either SQLException or RuntimeException. Neither form may abort the
+                    // batch and leave all later locks un-refreshed.
                     try {
-                        int refreshed = 0;
-                        int staleRemoved = 0;
-                        int failed = 0;
+                        final Timestamp now = Dates.currentTimestamp();
+                        final Timestamp expiry = expiryTimestamp(now, info.liveTime());
 
-                        // Iterate the ConcurrentHashMap directly: its iteration is weakly consistent and the
-                        // stale-entry removal below is the atomic remove(key, value), so no point-in-time
-                        // snapshot is needed.
-                        for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
-                            final LockInfo info = entry.getValue();
+                        final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code());
 
-                            // Guard each entry individually: one failing refresh (e.g. a transient DB error
-                            // for a single target) must not abort the entire batch and leave the remaining
-                            // locks un-refreshed.
-                            try {
-                                final Timestamp now = Dates.currentTimestamp();
-                                final Timestamp expiry = expiryTimestamp(now, info.liveTime());
-
-                                final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code());
-
-                                if (updated == 0) {
-                                    // Remove from pool only if the cached lock instance is still present
-                                    if (targetCodePool.remove(entry.getKey(), info)) {
-                                        staleRemoved++;
-
-                                        if (logger.isWarnEnabled()) {
-                                            logger.warn("Removed stale lock from pool(target={})", entry.getKey());
-                                        }
-                                    }
-                                } else {
-                                    refreshed++;
-                                }
-                            } catch (final SQLException e) {
-                                failed++;
+                        if (updated == 0) {
+                            // Remove from pool only if the cached lock instance is still present
+                            if (targetCodePool.remove(entry.getKey(), info)) {
+                                staleRemoved++;
 
                                 if (logger.isWarnEnabled()) {
-                                    logger.warn(e, "Failed to refresh DB lock(target={})", entry.getKey());
+                                    logger.warn("Removed stale lock from pool(target={})", entry.getKey());
                                 }
                             }
+                        } else {
+                            refreshed++;
                         }
+                    } catch (final Exception e) {
+                        failed++;
 
-                        if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0 || failed > 0)) {
-                            logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, failed={}, active={})", refreshed, staleRemoved, failed,
-                                    targetCodePool.size());
+                        if (logger.isWarnEnabled()) {
+                            logger.warn(e, "Failed to refresh DB lock(target={})", entry.getKey());
                         }
-                    } finally {
-                        // releaseConnection belongs in finally so a per-entry failure (or any other exception
-                        // escaping the loop) still releases the refresh connection.
-                        JdbcUtil.releaseConnection(refreshConn, ds);
-                    }
-                } catch (final Exception e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn(e, "Error occurred in DB lock refresh task(active={})", targetCodePool.size());
                     }
                 }
-            }
-        };
 
-        scheduledFuture = scheduledExecutor.scheduleWithFixedDelay(refreshTask, 1000L, 1000L, TimeUnit.MILLISECONDS);
+                if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0 || failed > 0)) {
+                    logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, failed={}, active={})", refreshed, staleRemoved, failed,
+                            targetCodePool.size());
+                }
+            } finally {
+                JdbcUtil.releaseConnection(refreshConn, ds);
+            }
+        } catch (final Exception e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(e, "Error occurred in DB lock refresh task(active={})", targetCodePool.size());
+            }
+        }
     }
 
     /**

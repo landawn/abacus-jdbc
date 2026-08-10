@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -538,6 +540,30 @@ public class DBLockTest extends TestBase {
             // Always clear the interrupt flag for subsequent tests, regardless of assertion outcome.
             Thread.interrupted();
         }
+    }
+
+    @Test
+    public void testRefreshLocks_RuntimeFailureForOneTargetDoesNotSkipLaterTargets() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 0, 1);
+        assertNotNull(fixture.lock.tryLock("refresh-fails", 60_000L, 50L));
+        assertNotNull(fixture.lock.tryLock("refresh-succeeds", 60_000L, 50L));
+
+        // Force deterministic iteration order. A RuntimeException on the first target used to
+        // escape the per-entry SQLException catch and abort the refresh cycle before the second
+        // target was processed.
+        final Map<String, Object> acquired = targetCodePool(fixture.lock);
+        final Map<String, Object> ordered = new LinkedHashMap<>();
+        ordered.put("refresh-fails", acquired.get("refresh-fails"));
+        ordered.put("refresh-succeeds", acquired.get("refresh-succeeds"));
+        setField(fixture.lock, "targetCodePool", ordered);
+
+        clearInvocations(fixture.preparedStatement);
+        when(fixture.preparedStatement.executeUpdate()).thenThrow(new IllegalStateException("transient driver failure")).thenReturn(1);
+
+        fixture.lock.refreshLocks();
+
+        verify(fixture.preparedStatement, times(2)).executeUpdate();
+        assertEquals(2, targetCodePool(fixture.lock).size());
     }
 
     // Live in-memory H2 DB exercises the real constructor (table creation, dead-lock cleanup,

@@ -558,8 +558,13 @@ public final class JdbcCodeGenerationUtil {
                         // .peek(Fn.println())
                         .filter(Fn.notEmpty())
                         .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
-                        .map(line -> {
-                            String decl = Strings.substringBetween(line, " ", ";").trim();
+                        // One physical line may contain multiple declarations. Split only at top-level
+                        // semicolons so literals and nested initializer expressions remain intact.
+                        .flatMap(line -> Stream.of(splitJavaFieldDeclarations(line)))
+                        .map(Strings::strip)
+                        .filter(declaration -> Strings.startsWithAny(declaration, "private ", "protected ", "public "))
+                        .map(declaration -> {
+                            String decl = declaration.substring(declaration.indexOf(' ') + 1).trim();
                             boolean skipInCopy = false;
 
                             // Strip remaining modifiers so the parsed "type" is the bare type ("private static
@@ -2456,6 +2461,64 @@ public final class JdbcCodeGenerationUtil {
         }
 
         return line;
+    }
+
+    /**
+     * Splits one physical source line into top-level field declarations, excluding their terminal
+     * semicolons. Semicolons inside literals, comments, or nested initializer expressions are ignored.
+     */
+    private static List<String> splitJavaFieldDeclarations(final String line) {
+        final List<String> result = new ArrayList<>();
+        int start = 0;
+        int parenthesisDepth = 0;
+        int bracketDepth = 0;
+        int braceDepth = 0;
+        char quote = 0;
+        boolean inBlockComment = false;
+
+        for (int i = 0, len = line.length(); i < len; i++) {
+            final char ch = line.charAt(i);
+
+            if (inBlockComment) {
+                if (ch == '*' && i + 1 < len && line.charAt(i + 1) == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+            } else if (quote != 0) {
+                if (ch == '\\' && i + 1 < len) {
+                    i++;
+                } else if (ch == quote) {
+                    quote = 0;
+                }
+            } else if (ch == '/' && i + 1 < len && line.charAt(i + 1) == '*') {
+                inBlockComment = true;
+                i++;
+            } else if (ch == '"' || ch == '\'') {
+                quote = ch;
+            } else if (ch == '(') {
+                parenthesisDepth++;
+            } else if (ch == ')') {
+                parenthesisDepth--;
+            } else if (ch == '[') {
+                bracketDepth++;
+            } else if (ch == ']') {
+                bracketDepth--;
+            } else if (ch == '{') {
+                braceDepth++;
+            } else if (ch == '}') {
+                braceDepth--;
+            } else if (ch == ';' && parenthesisDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                final String declaration = line.substring(start, i).trim();
+
+                if (Strings.isNotEmpty(declaration)) {
+                    result.add(declaration);
+                }
+
+                start = i + 1;
+            }
+        }
+
+        return result;
     }
 
     /**
