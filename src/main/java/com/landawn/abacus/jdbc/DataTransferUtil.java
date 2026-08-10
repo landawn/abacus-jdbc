@@ -195,10 +195,19 @@ import com.landawn.abacus.util.Throwables;
  */
 public final class DataTransferUtil {
 
+    /**
+     * Logs the row counts of import, export and copy operations.
+     */
     private static final Logger logger = LoggerFactory.getLogger(DataTransferUtil.class);
 
+    /**
+     * The characters of {@link Strings#NULL} written to CSV output in place of a {@code null} value.
+     */
     static final char[] NULL_CHAR_ARRAY = Strings.NULL.toCharArray();
 
+    /**
+     * Prevents instantiation; this is a utility class with only static members.
+     */
     private DataTransferUtil() {
         // Utility class - prevent instantiation.
     }
@@ -323,7 +332,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql,
@@ -362,7 +371,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code filter} is {@code null}, {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter, final Connection conn,
@@ -440,7 +449,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
@@ -484,7 +493,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code filter} is {@code null}, {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
@@ -553,7 +562,7 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
@@ -593,7 +602,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code filter} or {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or
      *         {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
@@ -686,7 +695,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt, final int batchSize,
@@ -726,7 +735,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code filter} is {@code null}, {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         or any name in {@code columnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter,
@@ -816,7 +825,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
@@ -860,7 +869,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code filter} is {@code null}, {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
      *         any key in {@code columnTypeMap} is not a column of the dataset, or a mapped {@link Type} is {@code null}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @SuppressWarnings({ "rawtypes", "null" })
     @Deprecated
@@ -983,7 +992,7 @@ public final class DataTransferUtil {
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1023,7 +1032,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code filter} or {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or
      *         {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
@@ -1173,7 +1182,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
-     * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize,
@@ -1252,7 +1261,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
-     * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1411,7 +1420,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
-     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(conn, insertSql)}.
+     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
@@ -1508,7 +1517,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
-     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1556,7 +1565,7 @@ public final class DataTransferUtil {
      *         {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading the file
-     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
@@ -1699,7 +1708,7 @@ public final class DataTransferUtil {
      *         {@code batchSize <= 0}, {@code batchIntervalInMillis < 0}, or a data row has more fields than the header
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
-     * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1768,7 +1777,7 @@ public final class DataTransferUtil {
      *         {@code batchSize <= 0}, {@code batchIntervalInMillis < 0}, or a data row has more fields than the header
      * @throws SQLException if a database access error occurs
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
-     * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchDelay(...).to(stmt)}.
+     * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
     public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
@@ -1843,6 +1852,15 @@ public final class DataTransferUtil {
         return result;
     }
 
+    /**
+     * Parses one CSV data line into {@code output}, converting a field-count overflow into an
+     * {@link IllegalArgumentException}.
+     *
+     * @param lineParser the CSV line parser that tokenizes {@code line} into {@code output}
+     * @param line the raw CSV line to parse
+     * @param output the array receiving the parsed column values; sized to the header's column count
+     * @throws IllegalArgumentException if the line contains more fields than the header has columns
+     */
     private static void parseCsvRow(final BiConsumer<String, String[]> lineParser, final String line, final String[] output) {
         try {
             lineParser.accept(line, output);
@@ -2400,6 +2418,12 @@ public final class DataTransferUtil {
         return result;
     }
 
+    /**
+     * Supplies the default parameter setter used by the {@code copy(...)} methods when none is configured: binds
+     * every column of the current {@link ResultSet} row to the {@link PreparedQuery} by index. Each supplied
+     * setter caches the column count on first use, so it is not thread-safe and must only be reused for result
+     * sets with the same number of columns.
+     */
     private static final Supplier<Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>> supplierOfStmtSetterByRS = () -> new Throwables.BiConsumer<>() {
         private int columnCount = -1;
 
@@ -2760,7 +2784,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code fetchSize < 0}, {@code batchSize <= 0}, or
      *         {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchDelay(...).parameterSetter(parameterSetter).to(targetDataSource, insertSql)}.
+     * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchInterval(...).parameterSetter(parameterSetter).to(targetDataSource, insertSql)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
@@ -3000,6 +3024,15 @@ public final class DataTransferUtil {
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetConn, insertSql, batchSize);
     }
 
+    /**
+     * Builds the {@code SELECT} statement reading {@code columnNames} (or all columns when empty) from
+     * {@code tableName}, rendering identifiers for the database product of {@code conn}.
+     *
+     * @param conn the connection used to determine the database product for identifier rendering
+     * @param tableName the source table name
+     * @param columnNames the columns to select; {@code null} or empty selects all columns of the table
+     * @return the SELECT SQL statement
+     */
     private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> columnNames) {
         if (N.isEmpty(columnNames)) {
             return JdbcCodeGenerationUtil.generateSelectSql(conn, tableName);
@@ -3027,6 +3060,16 @@ public final class DataTransferUtil {
         return sb.toString();
     }
 
+    /**
+     * Builds the {@code INSERT} statement writing {@code columnNames} (or all columns when empty) into
+     * {@code tableName}, rendering identifiers for the database product of {@code conn} and emitting one
+     * {@code ?} placeholder per column.
+     *
+     * @param conn the connection used to determine the database product for identifier rendering
+     * @param tableName the target table name
+     * @param columnNames the columns to insert; {@code null} or empty inserts all columns of the table
+     * @return the INSERT SQL statement
+     */
     private static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> columnNames) {
         if (N.isEmpty(columnNames)) {
             return JdbcCodeGenerationUtil.generateInsertSql(conn, tableName);
@@ -3222,7 +3265,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code fetchSize < 0}, {@code batchSize <= 0}, or
      *         {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchDelay(...).parameterSetter(parameterSetter).to(targetConn, insertSql)}.
+     * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchInterval(...).parameterSetter(parameterSetter).to(targetConn, insertSql)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
@@ -3283,7 +3326,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #copyFrom(PreparedStatement)} instead: {@code copyFrom(selectStmt).batchSize(batchSize).batchDelay(...).parameterSetter(parameterSetter).to(insertStmt)}.
+     * @deprecated use {@link #copyFrom(PreparedStatement)} instead: {@code copyFrom(selectStmt).batchSize(batchSize).batchInterval(...).parameterSetter(parameterSetter).to(insertStmt)}.
      */
     @Deprecated
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final int batchSize, final long batchIntervalInMillis,
@@ -3336,12 +3379,26 @@ public final class DataTransferUtil {
         }
     }
 
+    /**
+     * Sleeps for {@code batchIntervalInMillis} before the next batch execution, but only when at least one batch
+     * has already been executed and the interval is positive; otherwise does nothing.
+     *
+     * @param hasExecutedBatch whether a batch has already been executed
+     * @param batchIntervalInMillis the pause in milliseconds; no pause when {@code <= 0}
+     */
     private static void pauseBeforeSubsequentBatch(final boolean hasExecutedBatch, final long batchIntervalInMillis) {
         if (hasExecutedBatch && batchIntervalInMillis > 0) {
             N.sleepUninterruptibly(batchIntervalInMillis);
         }
     }
 
+    /**
+     * Converts a batch delay to milliseconds.
+     *
+     * @param delay the delay between batch executions; must not be {@code null} or negative
+     * @return the delay in milliseconds
+     * @throws IllegalArgumentException if {@code delay} is {@code null}, negative, or too large to represent in milliseconds
+     */
     private static long toBatchIntervalMillis(final Duration delay) {
         N.checkArgNotNull(delay, "delay");
         N.checkArgument(!delay.isNegative(), "delay must not be negative: %s", delay);
@@ -3353,10 +3410,30 @@ public final class DataTransferUtil {
         }
     }
 
+    /**
+     * Configures {@code stmt} for reading a large result set using the default fetch size
+     * ({@link JdbcUtil#DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET}).
+     *
+     * @param conn the connection used to determine the database product
+     * @param stmt the statement to configure
+     * @throws SQLException if a database access error occurs
+     * @see #setFetchForLargeResult(Connection, PreparedStatement, int)
+     */
     private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt) throws SQLException {
         setFetchForLargeResult(conn, stmt, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
     }
 
+    /**
+     * Configures {@code stmt} for reading a large result set: sets a forward-only fetch direction and applies
+     * {@code fetchSize}, except on MySQL/MariaDB where {@link Integer#MIN_VALUE} is set instead to enable
+     * row-by-row streaming as required by those drivers.
+     *
+     * @param conn the connection used to determine the database product
+     * @param stmt the statement to configure
+     * @param fetchSize the fetch size hint; must not be negative
+     * @throws IllegalArgumentException if {@code fetchSize} is negative
+     * @throws SQLException if a database access error occurs
+     */
     private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
         N.checkArgNotNegative(fetchSize, "fetchSize");
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
@@ -3390,7 +3467,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * ColumnGetter<Object> getter = (rs, columnIndex) -> rs.getObject(columnIndex);
      * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter =
-     *     DataTransferUtil.resultSetParameterSetter(getter);
+     *     DataTransferUtil.newResultSetParameterSetter(getter);
      *
      * // Use in copy operation
      * long copied = DataTransferUtil.copy(sourceConn, selectSql, targetConn, insertSql, setter);
@@ -3404,7 +3481,7 @@ public final class DataTransferUtil {
     @Beta
     @SequentialOnly
     @Stateful
-    public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> resultSetParameterSetter(final ColumnGetter<?> columnGetter) {
+    public static Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> newResultSetParameterSetter(final ColumnGetter<?> columnGetter) {
         N.checkArgNotNull(columnGetter, cs.columnGetter);
 
         return new Throwables.BiConsumer<>() {
@@ -3474,13 +3551,36 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#importFrom(Dataset)
      */
     public static final class DatasetImportBuilder {
+        /**
+         * The Dataset whose rows will be imported; never {@code null}.
+         */
         private final Dataset dataset;
+        /**
+         * The columns to import, or {@code null} to import all dataset columns in order.
+         */
         private Collection<String> columnNames;
+        /**
+         * The row filter applied before binding; accepts every row by default.
+         */
         private Predicate<? super Object[]> filter = row -> true;
+        /**
+         * The number of rows inserted per batch; must be greater than 0 when the import runs.
+         */
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        /**
+         * The pause in milliseconds between consecutive batch executions; 0 means no pause.
+         */
         private long batchIntervalInMillis = 0;
+        /**
+         * The per-column {@link Type} map used to coerce values while binding; mutually exclusive with
+         * {@link #columnNames} and {@link #parameterSetter}.
+         */
         @SuppressWarnings("rawtypes")
         private Map<String, ? extends Type> columnTypeMap;
+        /**
+         * The custom setter binding each row to the statement parameters; mutually exclusive with
+         * {@link #columnNames} and {@link #columnTypeMap}.
+         */
         private Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter;
 
         /**
@@ -3541,7 +3641,7 @@ public final class DataTransferUtil {
          * @return this builder
          * @throws IllegalArgumentException if {@code delay} is {@code null}, negative, or too large to represent in milliseconds
          */
-        public DatasetImportBuilder batchDelay(final Duration delay) {
+        public DatasetImportBuilder batchInterval(final Duration delay) {
             batchIntervalInMillis = toBatchIntervalMillis(delay);
 
             return this;
@@ -3645,6 +3745,13 @@ public final class DataTransferUtil {
             }
         }
 
+        /**
+         * Validates the builder configuration before a terminal {@code to(...)} runs.
+         *
+         * @throws IllegalArgumentException if more than one value-mapping strategy ({@code columns},
+         *         {@code columnTypes}, {@code parameterSetter}) is configured, or {@code batchSize <= 0},
+         *         or {@code batchIntervalInMillis} is negative
+         */
         private void validateConfiguration() {
             int configuredStrategies = 0;
 
@@ -3760,12 +3867,35 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#importCsvFrom(File)
      */
     public static final class RowImportBuilder<T> {
+        /**
+         * The iterator whose elements are imported, or {@code null} when a CSV source is used; exactly one of
+         * {@link #iter}, {@link #reader} and {@link #file} is set.
+         */
         private final Iterator<? extends T> iter;
+        /**
+         * The reader supplying CSV data, or {@code null}; not closed by this builder.
+         */
         private final Reader reader;
+        /**
+         * The CSV file to import, or {@code null}.
+         */
         private final File file;
+        /**
+         * The filter applied to each element before binding; accepts every element by default.
+         */
         private Predicate<? super T> filter = row -> true;
+        /**
+         * The number of rows inserted per batch; must be greater than 0 when the import runs.
+         */
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        /**
+         * The pause in milliseconds between consecutive batch executions; 0 means no pause.
+         */
         private long batchIntervalInMillis = 0;
+        /**
+         * The custom setter binding each element to the statement parameters; must be configured before a
+         * terminal {@code to(...)} call.
+         */
         private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter;
 
         /**
@@ -3815,7 +3945,7 @@ public final class DataTransferUtil {
          * @return this builder
          * @throws IllegalArgumentException if {@code delay} is {@code null}, negative, or too large to represent in milliseconds
          */
-        public RowImportBuilder<T> batchDelay(final Duration delay) {
+        public RowImportBuilder<T> batchInterval(final Duration delay) {
             batchIntervalInMillis = toBatchIntervalMillis(delay);
 
             return this;
@@ -3911,6 +4041,13 @@ public final class DataTransferUtil {
             }
         }
 
+        /**
+         * Validates the builder configuration before a terminal {@code to(...)} runs.
+         *
+         * @throws IllegalStateException if not exactly one row source ({@code iter}, {@code reader} or {@code file}) is set
+         * @throws IllegalArgumentException if {@code parameterSetter} is not configured, {@code batchSize <= 0},
+         *         or {@code batchIntervalInMillis} is negative
+         */
         private void validateConfiguration() {
             int configuredSources = 0;
 
@@ -3935,6 +4072,17 @@ public final class DataTransferUtil {
                     "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative", batchSize, batchIntervalInMillis);
         }
 
+        /**
+         * Imports the CSV rows read from {@code r} into {@code stmt}. The first line is treated as a header and
+         * skipped; the reader is not closed by this method.
+         *
+         * @param r the reader supplying CSV data; not closed by this method
+         * @param stmt the insert statement; not closed by this method
+         * @param setter the setter binding each parsed {@code String[]} row to the statement parameters
+         * @return the number of rows imported
+         * @throws SQLException if a database access error occurs
+         * @throws UncheckedIOException if an I/O error occurs while reading
+         */
         @SuppressWarnings({ "unchecked", "rawtypes" })
         private long importFromCsv(final Reader r, final PreparedStatement stmt,
                 final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> setter) throws SQLException {
@@ -3943,6 +4091,12 @@ public final class DataTransferUtil {
                     (Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException>) (Throwables.BiConsumer) setter);
         }
 
+        /**
+         * Returns the configured parameter setter.
+         *
+         * @return the configured parameter setter
+         * @throws IllegalArgumentException if no {@code parameterSetter} has been configured
+         */
         private Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> resolveSetter() {
             if (parameterSetter == null) {
                 throw new IllegalArgumentException("'parameterSetter' must be configured before calling to(...)");
@@ -4047,11 +4201,31 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#exportCsvFrom(javax.sql.DataSource, String)
      */
     public static final class CsvExportBuilder {
+        /**
+         * The DataSource to obtain a connection from, or {@code null}; exactly one of {@link #dataSource},
+         * {@link #conn}, {@link #stmt} and {@link #rs} is set.
+         */
         private final javax.sql.DataSource dataSource;
+        /**
+         * The Connection to run the query against, or {@code null}; not closed by this builder.
+         */
         private final Connection conn;
+        /**
+         * The PreparedStatement to execute, or {@code null}; not closed by this builder.
+         */
         private final PreparedStatement stmt;
+        /**
+         * The ResultSet to export, or {@code null}; not closed by this builder.
+         */
         private final ResultSet rs;
+        /**
+         * The SELECT query to run when the source is a DataSource or Connection; {@code null} when a statement
+         * or result set is supplied.
+         */
         private final String selectSql;
+        /**
+         * The columns to export, or {@code null} to export all result columns.
+         */
         private Collection<String> columnNames;
 
         /**
@@ -4120,6 +4294,16 @@ public final class DataTransferUtil {
             return export(r -> exportCsv(r, columnNames, output));
         }
 
+        /**
+         * Runs the export against the single configured query source, obtaining and releasing the connection,
+         * statement and result set as appropriate for the source kind.
+         *
+         * @param exporter writes the result set rows to the CSV target
+         * @return the number of rows exported
+         * @throws IllegalStateException if not exactly one query source ({@code dataSource}, {@code conn},
+         *         {@code stmt} or {@code rs}) is configured
+         * @throws SQLException if a database access error occurs
+         */
         private long export(final ResultSetExporter exporter) throws SQLException {
             int configuredSources = 0;
 
@@ -4168,6 +4352,15 @@ public final class DataTransferUtil {
             }
         }
 
+        /**
+         * Executes {@link #selectSql} on the given connection with settings tuned for large result sets and
+         * exports the rows. The connection is not closed by this method.
+         *
+         * @param c the connection to run the query on; not closed by this method
+         * @param exporter writes the result set rows to the CSV target
+         * @return the number of rows exported
+         * @throws SQLException if a database access error occurs
+         */
         private long exportFromConnection(final Connection c, final ResultSetExporter exporter) throws SQLException {
             final ParsedSql sql = ParsedSql.parse(selectSql);
             final PreparedStatement st = JdbcUtil.prepareStatement(c, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -4183,8 +4376,18 @@ public final class DataTransferUtil {
             }
         }
 
+        /**
+         * Strategy that writes the rows of a {@link ResultSet} to a CSV target.
+         */
         @FunctionalInterface
         private interface ResultSetExporter {
+            /**
+             * Writes the rows of {@code rs} to the CSV target; the result set is not closed by this method.
+             *
+             * @param rs the result set to export
+             * @return the number of rows exported
+             * @throws SQLException if a database access error occurs
+             */
             long export(ResultSet rs) throws SQLException;
         }
     }
@@ -4194,7 +4397,7 @@ public final class DataTransferUtil {
      * into a target table, using explicit SELECT and INSERT SQL.
      *
      * <p>The returned {@link CopyFromDataSource} lets you configure {@code fetchSize}, {@code batchSize},
-     * {@code batchDelay} and a custom {@code parameterSetter} through chained calls, then run the copy
+     * {@code batchInterval} and a custom {@code parameterSetter} through chained calls, then run the copy
      * with {@link CopyFromDataSource#to(javax.sql.DataSource, String)}. It is an ergonomic alternative to the
      * positional {@code copy(DataSource, String, ..., DataSource, String, ...)} overloads.</p>
      *
@@ -4229,7 +4432,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * long copied = DataTransferUtil.copyFrom(sourceConn, "SELECT * FROM orders")
      *         .batchSize(1000)
-     *         .batchDelay(Duration.ofMillis(100))
+     *         .batchInterval(Duration.ofMillis(100))
      *         .to(targetConn, "INSERT INTO orders_archive VALUES (?, ?, ?, ?)");
      * }</pre>
      *
@@ -4340,7 +4543,7 @@ public final class DataTransferUtil {
      * A fluent builder that copies the rows of a SELECT query from a source {@link javax.sql.DataSource} into a
      * target table. Obtain an instance via {@link DataTransferUtil#copyFrom(javax.sql.DataSource, String)}, chain
      * any of the optional configuration methods ({@link #fetchSize(int)}, {@link #batchSize(int)},
-     * {@link #batchDelay(Duration)}, {@link #parameterSetter(Throwables.BiConsumer)}), then call the terminal
+     * {@link #batchInterval(Duration)}, {@link #parameterSetter(Throwables.BiConsumer)}), then call the terminal
      * {@link #to(javax.sql.DataSource, String)} to run the copy. Each configuration method returns {@code this}.
      *
      * <p>Connections are obtained from the source and target data sources and released back to them when the
@@ -4349,11 +4552,30 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#copyFrom(javax.sql.DataSource, String)
      */
     public static final class CopyFromDataSource {
+        /**
+         * The data source to read from; never {@code null}.
+         */
         private final javax.sql.DataSource sourceDataSource;
+        /**
+         * The SELECT query producing the rows to copy; never {@code null}.
+         */
         private final String selectSql;
+        /**
+         * The JDBC fetch-size hint for reading the source; must be {@code >= 0} when the copy runs.
+         */
         private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET;
+        /**
+         * The number of rows inserted into the target per batch; must be greater than 0 when the copy runs.
+         */
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        /**
+         * The pause in milliseconds between consecutive batch executions; 0 means no pause.
+         */
         private long batchIntervalInMillis = 0;
+        /**
+         * The custom setter mapping each source row to the insert parameters, or {@code null} to copy all
+         * columns by index.
+         */
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
         /**
@@ -4398,7 +4620,7 @@ public final class DataTransferUtil {
          * @return this builder
          * @throws IllegalArgumentException if {@code delay} is {@code null}, negative, or too large to represent in milliseconds
          */
-        public CopyFromDataSource batchDelay(final Duration delay) {
+        public CopyFromDataSource batchInterval(final Duration delay) {
             batchIntervalInMillis = toBatchIntervalMillis(delay);
 
             return this;
@@ -4438,7 +4660,7 @@ public final class DataTransferUtil {
     /**
      * A fluent builder that copies the rows of a SELECT query between two {@link Connection}s. Obtain an instance
      * via {@link DataTransferUtil#copyFrom(Connection, String)}, chain any of the optional configuration methods
-     * ({@link #fetchSize(int)}, {@link #batchSize(int)}, {@link #batchDelay(Duration)},
+     * ({@link #fetchSize(int)}, {@link #batchSize(int)}, {@link #batchInterval(Duration)},
      * {@link #parameterSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(Connection, String)} to run
      * the copy. Each configuration method returns {@code this}.
      *
@@ -4447,11 +4669,30 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#copyFrom(Connection, String)
      */
     public static final class CopyFromConnection {
+        /**
+         * The connection to read from; never {@code null}.
+         */
         private final Connection sourceConn;
+        /**
+         * The SELECT query producing the rows to copy; never {@code null}.
+         */
         private final String selectSql;
+        /**
+         * The JDBC fetch-size hint for reading the source; must be {@code >= 0} when the copy runs.
+         */
         private int fetchSize = JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET;
+        /**
+         * The number of rows inserted into the target per batch; must be greater than 0 when the copy runs.
+         */
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        /**
+         * The pause in milliseconds between consecutive batch executions; 0 means no pause.
+         */
         private long batchIntervalInMillis = 0;
+        /**
+         * The custom setter mapping each source row to the insert parameters, or {@code null} to copy all
+         * columns by index.
+         */
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
         /**
@@ -4496,7 +4737,7 @@ public final class DataTransferUtil {
          * @return this builder
          * @throws IllegalArgumentException if {@code delay} is {@code null}, negative, or too large to represent in milliseconds
          */
-        public CopyFromConnection batchDelay(final Duration delay) {
+        public CopyFromConnection batchInterval(final Duration delay) {
             batchIntervalInMillis = toBatchIntervalMillis(delay);
 
             return this;
@@ -4536,7 +4777,7 @@ public final class DataTransferUtil {
     /**
      * A fluent builder that copies the rows produced by a source {@link PreparedStatement} into a target
      * {@link PreparedStatement}. Obtain an instance via {@link DataTransferUtil#copyFrom(PreparedStatement)}, chain
-     * any of the optional configuration methods ({@link #batchSize(int)}, {@link #batchDelay(Duration)},
+     * any of the optional configuration methods ({@link #batchSize(int)}, {@link #batchInterval(Duration)},
      * {@link #parameterSetter(Throwables.BiConsumer)}), then call the terminal {@link #to(PreparedStatement)} to run the
      * copy. Each configuration method returns {@code this}.
      *
@@ -4546,9 +4787,22 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#copyFrom(PreparedStatement)
      */
     public static final class CopyFromStatement {
+        /**
+         * The statement producing the rows to copy; not closed by the copy.
+         */
         private final PreparedStatement selectStmt;
+        /**
+         * The number of rows inserted into the target per batch; must be greater than 0 when the copy runs.
+         */
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        /**
+         * The pause in milliseconds between consecutive batch executions; 0 means no pause.
+         */
         private long batchIntervalInMillis = 0;
+        /**
+         * The custom setter mapping each source row to the insert parameters, or {@code null} to copy all
+         * columns by index.
+         */
         private Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter;
 
         /**
@@ -4579,7 +4833,7 @@ public final class DataTransferUtil {
          * @return this builder
          * @throws IllegalArgumentException if {@code delay} is {@code null}, negative, or too large to represent in milliseconds
          */
-        public CopyFromStatement batchDelay(final Duration delay) {
+        public CopyFromStatement batchInterval(final Duration delay) {
             batchIntervalInMillis = toBatchIntervalMillis(delay);
 
             return this;
@@ -4627,9 +4881,21 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#copyTable(javax.sql.DataSource, String)
      */
     public static final class CopyTableFromDataSource {
+        /**
+         * The data source to read from; never {@code null}.
+         */
         private final javax.sql.DataSource sourceDataSource;
+        /**
+         * The name of the source table; never blank.
+         */
         private final String sourceTableName;
+        /**
+         * The columns to copy, or {@code null} to copy all columns of the source table.
+         */
         private Collection<String> columnNames;
+        /**
+         * The number of rows copied per batch; must be greater than 0 when the copy runs.
+         */
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
 
         /**
@@ -4694,9 +4960,21 @@ public final class DataTransferUtil {
      * @see DataTransferUtil#copyTable(Connection, String)
      */
     public static final class CopyTableFromConnection {
+        /**
+         * The connection to read from; never {@code null}.
+         */
         private final Connection sourceConn;
+        /**
+         * The name of the source table; never blank.
+         */
         private final String sourceTableName;
+        /**
+         * The columns to copy, or {@code null} to copy all columns of the source table.
+         */
         private Collection<String> columnNames;
+        /**
+         * The number of rows copied per batch; must be greater than 0 when the copy runs.
+         */
         private int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
 
         /**

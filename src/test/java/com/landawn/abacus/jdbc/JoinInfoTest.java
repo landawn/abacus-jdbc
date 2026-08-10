@@ -47,7 +47,7 @@ import com.landawn.abacus.util.function.IntFunction;
 @Tag("2025")
 public class JoinInfoTest extends TestBase {
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface UserDao extends Dao<UserEntity, UserDao> {
     }
 
@@ -101,7 +101,7 @@ public class JoinInfoTest extends TestBase {
 
         assertEquals(1, joinInfoMap.size());
         assertTrue(joinInfoMap.containsKey("orders"));
-        assertTrue(joinInfoMap.get("orders").allowJoiningByNullOrDefaultValue);
+        assertTrue(joinInfoMap.get("orders").allowNullOrDefaultJoinKeys);
     }
 
     @Test
@@ -184,11 +184,11 @@ public class JoinInfoTest extends TestBase {
     }
 
     // Entity with 2-column join (exercises srcPropInfos.length == 2 code path)
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface OrderItemDao extends Dao<OrderItemEntity, OrderItemDao> {
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface UserRoleUserDao extends Dao<UserRoleUserEntity, UserRoleUserDao> {
     }
 
@@ -667,7 +667,7 @@ public class JoinInfoTest extends TestBase {
         }
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface SingleJoinDao extends Dao<SingleJoinEntity, SingleJoinDao> {
     }
 
@@ -829,13 +829,13 @@ public class JoinInfoTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> joinInfo.batchDeleteSqlPlan(Dsl.PSB));
     }
 
-    // getJoinPropValue throws when join value is null/default and allowJoiningByNullOrDefaultValue=false (L1026-1028)
+    // getJoinPropValue throws when join value is null/default and allowNullOrDefaultJoinKeys=false (L1026-1028)
     interface UserStrictDao extends Dao<UserEntity, UserStrictDao> {
     }
 
     @Test
     public void testParamSetter_NullJoinValue_NotAllowed_Throws() {
-        // UserStrictDao has no @DaoConfig allowJoiningByNullOrDefaultValue -> defaults to false.
+        // UserStrictDao has no @DaoConfig allowNullOrDefaultJoinKeys -> defaults to false.
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserStrictDao.class, UserEntity.class, "user_entity_strict", "orders");
         final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.selectSqlPlan(PSC);
         final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
@@ -846,19 +846,19 @@ public class JoinInfoTest extends TestBase {
     }
 
     // setJoinPropEntities for a non-List collection prop (Set) (L978-981)
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface SetUserDao extends Dao<SetUserEntity, SetUserDao> {
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = false)
+    @DaoConfig(allowNullOrDefaultJoinKeys = false)
     interface AllowFalseDao extends Dao<UserEntity, AllowFalseDao> {
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface CollectionUserDao extends Dao<CollectionUserEntity, CollectionUserDao> {
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface ConcreteListUserDao extends Dao<ConcreteListUserEntity, ConcreteListUserDao> {
     }
 
@@ -963,7 +963,7 @@ public class JoinInfoTest extends TestBase {
     }
 
     // setJoinPropEntities for Map property (L988-991)
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface MapUserDao extends Dao<MapUserEntity, MapUserDao> {
     }
 
@@ -1089,7 +1089,7 @@ public class JoinInfoTest extends TestBase {
     }
 
     // 3-column composite key — exercises srcPropInfos.length == 3 branch (L671-683)
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface ThreeColParentDao extends Dao<ThreeColParent, ThreeColParentDao> {
     }
 
@@ -1183,7 +1183,7 @@ public class JoinInfoTest extends TestBase {
     }
 
     // 4-column composite key — exercises srcPropInfos.length > 3 branch (L685-702)
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface FourColParentDao extends Dao<FourColParent, FourColParentDao> {
     }
 
@@ -1486,12 +1486,12 @@ public class JoinInfoTest extends TestBase {
         org.mockito.Mockito.verify(stmt).setLong(1, 5L);
     }
 
-    // DaoConfig with allowJoiningByNullOrDefaultValue=false (L1075)
+    // DaoConfig with allowNullOrDefaultJoinKeys=false (L1075)
     @Test
     public void testDaoConfig_AllowJoiningFalse() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(AllowFalseDao.class, UserEntity.class, "user_entity_allow_false", "orders");
         assertNotNull(joinInfo);
-        assertFalse(joinInfo.allowJoiningByNullOrDefaultValue);
+        assertFalse(joinInfo.allowNullOrDefaultJoinKeys);
     }
 
     // A load with no matching joined entity must replace a stale association with an empty value.
@@ -1574,7 +1574,7 @@ public class JoinInfoTest extends TestBase {
 
     // ---- Three-column direct join: exercises the srcPropInfos.length > 2 param-setter branch (JoinInfo L526-530) ----
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface ThreeColDao extends Dao<ThreeColEntity, ThreeColDao> {
     }
 
@@ -1742,7 +1742,7 @@ public class JoinInfoTest extends TestBase {
     // builder (JoinInfo L422 in the eager build and L447 in the dynamic lambda) — the existing M2M
     // fixtures all collide (UserRoleLink.roleId vs RoleLookupEntity.roleId), so only the true branch
     // was covered before.
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface UserPermDao extends Dao<UserPermEntity, UserPermDao> {
     }
 

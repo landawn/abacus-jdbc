@@ -119,6 +119,10 @@ public final class JoinInfo {
     // Per-SqlBuilder factory functions, keyed by builder DSL (PSC/PAC/PLC). The Tuple4 slots are:
     //   _1 = select(columns), _2 = selectFrom(entityClass), _3 = update(entityClass), _4 = deleteFrom(entityClass).
     // Referenced as entry.getValue()._1.._4 throughout the constructor.
+    /**
+     * Maps each supported {@link Dsl} ({@code PSC}, {@code PAC}, {@code PLC}) to the SQL builder
+     * factory functions used to generate this join's select, update, and delete statements.
+     */
     static final Map<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> sqlBuilderFuncMap = new HashMap<>();
 
     static {
@@ -129,29 +133,100 @@ public final class JoinInfo {
         sqlBuilderFuncMap.put(PLC, Tuple.of(PLC::select, PLC::selectFrom, PLC::update, PLC::deleteFrom));
     }
 
+    /**
+     * The source entity class that declares the {@code @JoinedBy} join property.
+     */
     final Class<?> entityClass;
+    /**
+     * The database table name of the source entity.
+     */
     final String tableName;
+    /**
+     * Parsed bean metadata of {@link #entityClass}.
+     */
     final BeanInfo entityInfo;
+    /**
+     * Metadata of the {@code @JoinedBy}-annotated property on the source entity that holds the joined entities.
+     */
     final PropInfo joinPropInfo;
+    /**
+     * The source-entity join-key properties whose values are bound as parameters when loading or
+     * deleting joined entities; never empty, aligned by index with {@link #referencedPropInfos}.
+     */
     final PropInfo[] srcPropInfos;
+    /**
+     * Unmodifiable list of the names of {@link #srcPropInfos}, exposed by {@link #sourcePropNames()}.
+     */
     private final List<String> sourcePropNames;
+    /**
+     * The referenced-entity join-key properties matched against {@link #srcPropInfos}; never empty.
+     */
     final PropInfo[] referencedPropInfos;
+    /**
+     * The type of the joined (referenced) entity, resolved from the element type of a collection
+     * join property or the value type of a map join property.
+     */
     final Type<?> referencedEntityType;
+    /**
+     * The class of the joined (referenced) entity.
+     */
     final Class<?> referencedEntityClass;
+    /**
+     * Parsed bean metadata of {@link #referencedEntityClass}.
+     */
     final BeanInfo referencedBeanInfo;
+    /**
+     * Extracts the join key from a source entity: a single property value for a single-column join,
+     * otherwise a {@code Tuple} or {@code List} of values. Applies the null/default join-value check.
+     */
     final Function<Object, Object> srcEntityKeyExtractor;
+    /**
+     * Extracts the join key from a referenced (joined) entity, mirroring {@link #srcEntityKeyExtractor};
+     * used to group fetched join entities by key.
+     */
     final Function<Object, Object> referencedEntityKeyExtractor;
+    /**
+     * Whether this join goes through an intermediate (middle) join table; {@code false} for a direct join.
+     */
     final boolean isManyToManyJoin;
-    final boolean allowJoiningByNullOrDefaultValue;
+    /**
+     * Whether join operations are permitted when a source join-key value is {@code null} or its type
+     * default; derived from {@code @DaoConfig(allowNullOrDefaultJoinKeys = ...)} on the DAO class.
+     */
+    final boolean allowNullOrDefaultJoinKeys;
 
+    /**
+     * Per-{@link Dsl} cache backing {@link #selectSqlPlan(Dsl)}: {@code _1} builds the single-entity
+     * SELECT SQL from the requested select property names, {@code _2} binds one source entity's join key(s).
+     */
     private final Map<Dsl, Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>> selectSqlBuilderAndParamSetterPool = new HashMap<>();
 
+    /**
+     * Per-{@link Dsl} cache backing {@link #batchSelectSqlPlan(Dsl)}: {@code _1} builds the multi-entity
+     * SELECT SQL from the select property names and batch size, {@code _2} binds the join keys of every
+     * source entity in the batch.
+     */
     private final Map<Dsl, Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchSelectSqlBuilderAndParamSetterPool = new HashMap<>();
 
+    /**
+     * Per-{@link Dsl} cache of the UPDATE statement that resets the referenced join-key column(s) to
+     * their type default (unlinking the joined entities), paired with the parameter setter that binds
+     * one source entity's join key(s).
+     */
     private final Map<Dsl, Tuple2<String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new HashMap<>();
 
+    /**
+     * Per-{@link Dsl} cache backing {@link #deleteSqlPlan(Dsl)}: {@code _1} is the single-entity delete SQL,
+     * {@code _2} the middle (join) table delete SQL ({@code null} in the current implementation), {@code _3}
+     * the parameter setter that binds one source entity's join key(s).
+     */
     private final Map<Dsl, Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
 
+    /**
+     * Per-{@link Dsl} cache backing {@link #batchDeleteSqlPlan(Dsl)}: {@code _1} builds the delete SQL for a
+     * given batch size, {@code _2} builds the middle (join) table delete SQL ({@code null} in the current
+     * implementation), {@code _3} binds the join keys of every source entity in the batch.
+     */
     private final Map<Dsl, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSqlBuilderAndParamSetterPool = new HashMap<>();
 
     /**
@@ -184,7 +259,7 @@ public final class JoinInfo {
      * @param entityClass the entity class containing the join property, must not be {@code null}.
      * @param tableName the database table name for the entity, must not be {@code null}.
      * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}.
-     * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are {@code null} or default;
+     * @param allowNullOrDefaultJoinKeys if {@code true}, allows join operations when join property values are {@code null} or default;
      *                                         if {@code false}, an {@code IllegalArgumentException} is thrown later from the generated
      *                                         parameter setters and source-key extractors when a null or default join value is encountered.
      *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class.
@@ -198,12 +273,12 @@ public final class JoinInfo {
      * @see com.landawn.abacus.jdbc.annotation.DaoConfig
      * @see #isManyToManyJoin()
      */
-    JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowJoiningByNullOrDefaultValue) {
+    JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowNullOrDefaultJoinKeys) {
         N.checkArgNotNull(entityClass, "entityClass");
         N.checkArgNotNull(tableName, "tableName");
         N.checkArgNotNull(joinEntityPropName, "joinEntityPropName");
 
-        this.allowJoiningByNullOrDefaultValue = allowJoiningByNullOrDefaultValue;
+        this.allowNullOrDefaultJoinKeys = allowNullOrDefaultJoinKeys;
         this.entityClass = entityClass;
         this.tableName = tableName;
         entityInfo = ParserUtil.getBeanInfo(entityClass);
@@ -395,7 +470,7 @@ public final class JoinInfo {
 
                 selectSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
 
-                final List<String> middleSelectWords = SqlParser.parse(middleSelectSql);
+                final List<String> middleSelectWords = SqlParser.tokenize(middleSelectSql);
                 // Anchor token extraction on SELECT/FROM/WHERE keywords rather than fixed offsets.
                 // The pre-fix code used .get(2)/.get(10)/.get(14), which assumed every column slot
                 // emits ` AS "alias"`. SqlBuilder omits AS when the column name already equals the
@@ -413,7 +488,7 @@ public final class JoinInfo {
 
                 final int fromIndex = leftSelectSql.lastIndexOf(" FROM ");
                 N.checkState(fromIndex >= 0, "Cannot locate FROM in left SELECT SQL: %s", leftSelectSql);
-                final List<String> leftSelectLastWords = SqlParser.parse(leftSelectSql.substring(fromIndex + 6));
+                final List<String> leftSelectLastWords = SqlParser.tokenize(leftSelectSql.substring(fromIndex + 6));
                 final String leftTableName = leftSelectLastWords.get(0);
                 // Keyword-anchored like the middle-SELECT extraction above (fixed offsets break when AS aliases shift token positions).
                 final String leftCondPropNameRaw = nextNonBlankToken(leftSelectLastWords, indexOfKeyword(leftSelectLastWords, "WHERE"));
@@ -432,7 +507,7 @@ public final class JoinInfo {
                 // Flat scan over all tokens catches the column at any position; false positives are
                 // implausible because the middle FK column name wouldn't appear as an unrelated SQL
                 // keyword or literal in the referenced entity's SELECT clause.
-                final boolean hasSameColumnName = SqlParser.parse(leftSelectSql.substring(0, fromIndex))
+                final boolean hasSameColumnName = SqlParser.tokenize(leftSelectSql.substring(0, fromIndex))
                         .stream()
                         .anyMatch(middleSelectPropNameRaw::equalsIgnoreCase);
 
@@ -950,7 +1025,7 @@ public final class JoinInfo {
      *                                  with keys derived from the junction table instead.
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
-     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}.
+     *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
      *
      * @see #setJoinPropEntities(Collection, Map)
      */
@@ -1002,7 +1077,7 @@ public final class JoinInfo {
      *                            (the source key for one-to-many; the junction-table-derived key for many-to-many).
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
-     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}.
+     *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
@@ -1067,18 +1142,32 @@ public final class JoinInfo {
         return isManyToManyJoin;
     }
 
+    /**
+     * Returns the value of the given source join-key property on the given entity.
+     *
+     * @param propInfo one of {@link #srcPropInfos}.
+     * @param entity the source entity to read the join-key value from.
+     * @return the property value, possibly {@code null} or a type default when such values are allowed.
+     * @throws IllegalArgumentException if the value is {@code null} or its type default and
+     *                                  {@link #allowNullOrDefaultJoinKeys} is {@code false}.
+     */
     private Object getJoinPropValue(final PropInfo propInfo, final Object entity) {
         final Object value = propInfo.getPropValue(entity);
 
-        if (!allowJoiningByNullOrDefaultValue && JdbcUtil.isNullOrDefault(value)) {
+        if (!allowNullOrDefaultJoinKeys && JdbcUtil.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
                     + ". Annotate the Dao class for " + ClassUtil.getCanonicalClassName(entityClass)
-                    + " with @DaoConfig(allowJoiningByNullOrDefaultValue = true) to allow null/default join values");
+                    + " with @DaoConfig(allowNullOrDefaultJoinKeys = true) to allow null/default join values");
         }
 
         return value;
     }
 
+    /**
+     * Global cache backing {@link #getEntityJoinInfo(Class, Class, String)}: DAO class to
+     * (entity class, table name) to (join property name to {@code JoinInfo}). Cached maps are
+     * unmodifiable once built.
+     */
     private static final Map<Class<?>, Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>>> daoEntityJoinInfoPool = new ConcurrentHashMap<>();
 
     /**
@@ -1113,7 +1202,7 @@ public final class JoinInfo {
      * }</pre>
      *
      * <p>Whether join operations are permitted when a join key value is {@code null} or its type default is
-     * derived from the {@code @DaoConfig(allowJoiningByNullOrDefaultValue = ...)} setting on {@code daoClass}
+     * derived from the {@code @DaoConfig(allowNullOrDefaultJoinKeys = ...)} setting on {@code daoClass}
      * (defaults to {@code false} when the annotation is absent).</p>
      *
      * @param daoClass the DAO class associated with the entity, must not be {@code null}.
@@ -1138,7 +1227,7 @@ public final class JoinInfo {
 
         return entityJoinInfoMap.computeIfAbsent(key, k -> {
             final DaoConfig anno = daoClass.getAnnotation(DaoConfig.class);
-            final boolean allowJoiningByNullOrDefaultValue = anno != null && anno.allowJoiningByNullOrDefaultValue();
+            final boolean allowNullOrDefaultJoinKeys = anno != null && anno.allowNullOrDefaultJoinKeys();
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
             final Map<String, JoinInfo> map = new LinkedHashMap<>();
@@ -1148,7 +1237,7 @@ public final class JoinInfo {
                     continue;
                 }
 
-                map.put(propInfo.name, new JoinInfo(entityClass, tableName, propInfo.name, allowJoiningByNullOrDefaultValue));
+                map.put(propInfo.name, new JoinInfo(entityClass, tableName, propInfo.name, allowNullOrDefaultJoinKeys));
             }
 
             return Collections.unmodifiableMap(map);
@@ -1212,6 +1301,11 @@ public final class JoinInfo {
         return joinInfo;
     }
 
+    /**
+     * Global cache backing {@link #getJoinEntityPropNamesByType(Class, Class, String, Class)}:
+     * (DAO class, entity class, table name) to (referenced entity class to join property names).
+     * Cached maps and lists are unmodifiable once built.
+     */
     private static final Map<Tuple3<Class<?>, Class<?>, String>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
 
     /**

@@ -47,7 +47,7 @@ TASK: Start multiple agents to generate comprehensive Javadoc for all public met
 
    3. Consistency — Terminology, phrasing, tag ordering, and formatting should be uniform across the codebase.
       Cross-variant consistency matters most: this code is largely template-generated, so analogous members across
-      sibling classes (e.g. CharTuple vs. LongTuple, primitive-type variants, arity variants) must document the
+      sibling classes must document the
       same concept with the same wording. Flag any variant whose Javadoc diverges from its siblings.
 
    4. Code samples — Any <pre>{@code ...} example in the Javadoc must be correct and compilable in principle (valid

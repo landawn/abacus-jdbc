@@ -69,7 +69,7 @@ import com.landawn.abacus.util.Strings;
  * </ul>
  *
  * <p><b>Thread Safety:</b> Instances are thread-safe. Multiple threads may concurrently invoke
- * {@link #lock(String, long, long, long)} and {@link #unlock(String, String)} on the same
+ * {@link #tryLock(String, long, long, long)} and {@link #unlock(String, String)} on the same
  * {@code DBLock} instance. Each acquisition is keyed by its {@code target} and protected by a
  * unique per-acquisition {@code code}, so only the holder that supplies the matching {@code code}
  * can release a given lock.</p>
@@ -91,7 +91,7 @@ import com.landawn.abacus.util.Strings;
  *     long lockLiveTimeMillis = 60 * 1000;       // Lock for 1 minute
  *     long acquisitionTimeoutMillis = 5 * 1000;  // Try to acquire for up to 5 seconds
  *
- *     String lockCode = dbLock.lock(resourceId, lockLiveTimeMillis, acquisitionTimeoutMillis);
+ *     String lockCode = dbLock.tryLock(resourceId, lockLiveTimeMillis, acquisitionTimeoutMillis);
  *
  *     if (lockCode != null) {
  *         try {
@@ -120,6 +120,9 @@ import com.landawn.abacus.util.Strings;
  */
 public final class DBLock implements AutoCloseable {
 
+    /**
+     * Logger for this class.
+     */
     private static final Logger logger = LoggerFactory.getLogger(DBLock.class);
 
     /**
@@ -144,8 +147,16 @@ public final class DBLock implements AutoCloseable {
      */
     public static final int DEFAULT_TIMEOUT = 3 * 1000;
 
+    /**
+     * Maximum idle time in milliseconds (1 minute). A lock row whose {@code update_time}
+     * is older than this is considered stale and may be removed.
+     */
     private static final int MAX_IDLE_TIME = 60 * 1000;
 
+    /**
+     * Shared scheduled executor that runs the periodic lock-refresh task of every
+     * {@code DBLock} instance; initialized once in the static initializer.
+     */
     static final ScheduledExecutorService scheduledExecutor;
     static {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(8);
@@ -155,20 +166,50 @@ public final class DBLock implements AutoCloseable {
         scheduledExecutor = MoreExecutors.getExitingScheduledExecutorService(executor);
     }
 
+    /**
+     * The data source used to obtain connections for all lock-table operations.
+     */
     private final DataSource ds;
 
+    /**
+     * Handle of the periodic lock-refresh task scheduled by the constructor;
+     * cancelled and awaited in {@link #close()}.
+     */
     private final ScheduledFuture<?> scheduledFuture;
 
+    /**
+     * Registry of the locks currently held by this instance, mapping each lock target
+     * to its {@link LockInfo}; maintained by {@code tryLock}/{@code unlock} and the refresh task.
+     */
     private final Map<String, LockInfo> targetCodePool = new ConcurrentHashMap<>();
 
+    /**
+     * SQL statement that deletes the expired or stale lock row of a target (a row whose
+     * {@code expiry_time} has passed or that has not been refreshed within {@link #MAX_IDLE_TIME}).
+     */
     private final String removeExpiredLockSQL;
 
+    /**
+     * SQL statement that acquires a lock by inserting a new row for the target;
+     * the insert fails while another holder's row for the same target exists.
+     */
     private final String lockSQL;
 
+    /**
+     * SQL statement that releases a lock by deleting its row, matching both target and lock code.
+     */
     private final String unlockSQL;
 
+    /**
+     * SQL statement that refreshes a held lock's {@code update_time} and {@code expiry_time},
+     * keeping it alive beyond its original lease.
+     */
     private final String refreshSQL;
 
+    /**
+     * Flag set once {@link #close()} has been invoked; lock/unlock operations called afterwards
+     * throw {@link IllegalStateException}. Marked {@code volatile} for cross-thread visibility.
+     */
     private volatile boolean isClosed = false;
 
     /**
@@ -319,7 +360,7 @@ public final class DBLock implements AutoCloseable {
      * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
      *     String resourceIdentifier = "report_generation_task";
      *
-     *     String lockCode = dbLock.lock(resourceIdentifier);
+     *     String lockCode = dbLock.tryLock(resourceIdentifier);
      *
      *     if (lockCode != null) {
      *         try {
@@ -343,12 +384,12 @@ public final class DBLock implements AutoCloseable {
      *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty.
-     * @see #lock(String, long, long)
+     * @see #tryLock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
      * @see #DEFAULT_TIMEOUT
      */
-    public String lock(final String target) {
-        return lock(target, DEFAULT_LOCK_LIVE_TIME, DEFAULT_TIMEOUT);
+    public String tryLock(final String target) {
+        return tryLock(target, DEFAULT_LOCK_LIVE_TIME, DEFAULT_TIMEOUT);
     }
 
     /**
@@ -364,7 +405,7 @@ public final class DBLock implements AutoCloseable {
      *     String resourceIdentifier = "data_export_job";
      *     long customTimeout = 15 * 1000;  // Wait up to 15 seconds
      *
-     *     String lockCode = dbLock.lock(resourceIdentifier, customTimeout);
+     *     String lockCode = dbLock.tryLock(resourceIdentifier, customTimeout);
      *
      *     if (lockCode != null) {
      *         try {
@@ -388,11 +429,11 @@ public final class DBLock implements AutoCloseable {
      *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty, or {@code timeout} is negative.
-     * @see #lock(String, long, long)
+     * @see #tryLock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
      */
-    public String lock(final String target, final long timeout) {
-        return lock(target, DEFAULT_LOCK_LIVE_TIME, timeout);
+    public String tryLock(final String target, final long timeout) {
+        return tryLock(target, DEFAULT_LOCK_LIVE_TIME, timeout);
     }
 
     /**
@@ -411,7 +452,7 @@ public final class DBLock implements AutoCloseable {
      *     long lockDuration = 10 * 60 * 1000;  // Lock for 10 minutes
      *     long waitTimeout = 30 * 1000;        // Wait up to 30 seconds to acquire
      *
-     *     String lockCode = dbLock.lock(resourceIdentifier, lockDuration, waitTimeout);
+     *     String lockCode = dbLock.tryLock(resourceIdentifier, lockDuration, waitTimeout);
      *
      *     if (lockCode != null) {
      *         try {
@@ -438,17 +479,17 @@ public final class DBLock implements AutoCloseable {
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
      *         {@code liveTime} is not positive, or {@code timeout} is negative.
-     * @see #lock(String, long, long, long)
+     * @see #tryLock(String, long, long, long)
      */
-    public String lock(final String target, final long liveTime, final long timeout) {
-        return lock(target, liveTime, timeout, 0);
+    public String tryLock(final String target, final long liveTime, final long timeout) {
+        return tryLock(target, liveTime, timeout, 0);
     }
 
     /**
      * Attempts to acquire a distributed lock on the specified target resource with full control
      * over lock duration, acquisition timeout, and retry behavior.
      *
-     * <p>This is the most flexible {@code lock} method. It tries to acquire the lock by inserting
+     * <p>This is the most flexible {@code tryLock} method. It tries to acquire the lock by inserting
      * a new record into the lock table. If the initial attempt fails (meaning another process
      * holds the lock), it will repeatedly retry after {@code retryInterval} milliseconds until
      * the total {@code timeout} is reached. Before each acquisition attempt, it removes any expired
@@ -469,7 +510,7 @@ public final class DBLock implements AutoCloseable {
      *     long acquisitionTimeout = 10 * 1000;  // Wait up to 10 seconds
      *     long retryInterval = 500;             // Retry every 500 milliseconds
      *
-     *     String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval);
+     *     String lockCode = dbLock.tryLock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval);
      *
      *     if (lockCode != null) {
      *         try {
@@ -499,7 +540,7 @@ public final class DBLock implements AutoCloseable {
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
      *         {@code liveTime} is not positive, or {@code timeout} or {@code retryInterval} is negative.
      */
-    public String lock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException {
+    public String tryLock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException {
         assertNotClosed();
         N.checkArgNotEmpty(target, "target");
         N.checkArgPositive(liveTime, "liveTime");
@@ -602,12 +643,28 @@ public final class DBLock implements AutoCloseable {
         return null;
     }
 
+    /**
+     * Computes the expiry timestamp of a lock acquired or refreshed at {@code now} with the
+     * given live time. The result saturates at {@link Long#MAX_VALUE} milliseconds to avoid
+     * overflow when {@code now + liveTime} would exceed it.
+     *
+     * @param now the current timestamp.
+     * @param liveTime the lock live time in milliseconds.
+     * @return the timestamp at which the lock expires.
+     */
     private static Timestamp expiryTimestamp(final Timestamp now, final long liveTime) {
         final long nowTime = now.getTime();
 
         return Dates.createTimestamp(liveTime > Long.MAX_VALUE - nowTime ? Long.MAX_VALUE : nowTime + liveTime);
     }
 
+    /**
+     * Deletes the expired or stale lock row for the given target, if one exists, so that the
+     * target can be locked again. Any failure is logged and suppressed so it never interferes
+     * with lock acquisition.
+     *
+     * @param target the lock target whose expired lock should be removed.
+     */
     private void removeExpiredLock(final String target) {
         try {
             final Timestamp now = Dates.currentTimestamp();
@@ -638,7 +695,7 @@ public final class DBLock implements AutoCloseable {
      * <pre>{@code
      * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
      *     String resourceIdentifier = "configuration_update";
-     *     String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000);   // Acquire lock for 30s, wait 5s
+     *     String lockCode = dbLock.tryLock(resourceIdentifier, 30000, 5000);   // Acquire lock for 30s, wait 5s
      *
      *     if (lockCode != null) {
      *         try {
@@ -705,7 +762,7 @@ public final class DBLock implements AutoCloseable {
      * encountered while releasing an individual lock is logged and suppressed, so {@code close()}
      * never propagates such failures to the caller.</p>
      *
-     * <p>Once closed, any subsequent attempts to call {@code lock()} or {@code unlock()}
+     * <p>Once closed, any subsequent attempts to call {@code tryLock()} or {@code unlock()}
      * methods on this instance will result in an {@link IllegalStateException}.</p>
      *
      * <p>This method is idempotent: calling it multiple times on an already closed
@@ -716,7 +773,7 @@ public final class DBLock implements AutoCloseable {
      * <pre>{@code
      * try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) {
      *     // Perform operations using the DBLock instance
-     *     String lockCode = dbLock.lock("some_resource");
+     *     String lockCode = dbLock.tryLock("some_resource");
      *     if (lockCode != null) {
      *         try {
      *             // ... critical section ...
@@ -770,12 +827,22 @@ public final class DBLock implements AutoCloseable {
         logger.info("Closed DBLock");
     }
 
+    /**
+     * Verifies that this {@code DBLock} instance has not been closed.
+     *
+     * @throws IllegalStateException if {@link #close()} has already been called.
+     */
     private void assertNotClosed() {
         if (isClosed) {
             throw new IllegalStateException("This DBLock has been closed");
         }
     }
 
+    /**
+     * Holds the state of a lock acquired by this instance: the unique {@code code} identifying
+     * the lock and its {@code liveTime} (lease-expiry window in milliseconds) used by the
+     * background refresh task.
+     */
     private record LockInfo(String code, long liveTime) {
 
     }

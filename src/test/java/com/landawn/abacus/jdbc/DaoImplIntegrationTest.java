@@ -233,13 +233,13 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
-    // insert returns the generated key; gett / get / exists round-trip the row.
+    // insert returns the generated key; getOrNull / get / exists round-trip the row.
     @Test
     public void testInsertAndGet() throws SQLException {
         final Long id = dao.insert(newUser("Ada", "Lovelace", 36));
         assertNotNull(id);
 
-        final UserAccount loaded = dao.gett(id);
+        final UserAccount loaded = dao.getOrNull(id);
         assertNotNull(loaded);
         assertEquals("Ada", loaded.getFirstName());
         assertEquals(36, loaded.getAge());
@@ -255,7 +255,7 @@ public class DaoImplIntegrationTest extends TestBase {
     public void testGet_SelectPropNames() throws SQLException {
         final Long id = dao.insert(newUser("Grace", "Hopper", 45));
 
-        final UserAccount loaded = dao.gett(id, List.of("id", "firstName"));
+        final UserAccount loaded = dao.getOrNull(id, List.of("id", "firstName"));
         assertNotNull(loaded);
         assertEquals("Grace", loaded.getFirstName());
         // lastName was not selected.
@@ -267,16 +267,16 @@ public class DaoImplIntegrationTest extends TestBase {
     public void testUpdateVariants() throws SQLException {
         final Long id = dao.insert(newUser("Alan", "Turing", 41));
 
-        final UserAccount u = dao.gett(id);
+        final UserAccount u = dao.getOrNull(id);
         u.setAge(42);
         assertEquals(1, dao.update(u));
-        assertEquals(42, dao.gett(id).getAge());
+        assertEquals(42, dao.getOrNull(id).getAge());
 
         assertEquals(1, dao.update("lastName", "T.", id));
-        assertEquals("T.", dao.gett(id).getLastName());
+        assertEquals("T.", dao.getOrNull(id).getLastName());
 
         assertEquals(1, dao.update(Map.of("firstName", "Alan M.", "age", 43), id));
-        final UserAccount after = dao.gett(id);
+        final UserAccount after = dao.getOrNull(id);
         assertEquals("Alan M.", after.getFirstName());
         assertEquals(43, after.getAge());
     }
@@ -290,7 +290,7 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(1, dao.deleteById(id1));
         assertFalse(dao.exists(id1));
 
-        final UserAccount u2 = dao.gett(id2);
+        final UserAccount u2 = dao.getOrNull(id2);
         assertEquals(1, dao.delete(u2));
         assertFalse(dao.exists(id2));
     }
@@ -313,7 +313,7 @@ public class DaoImplIntegrationTest extends TestBase {
             u.setAge(u.getAge() + 100);
         }
         assertEquals(5, dao.batchUpdate(loaded));
-        assertEquals(130, dao.gett(ids.get(0)).getAge());
+        assertEquals(130, dao.getOrNull(ids.get(0)).getAge());
 
         assertEquals(5, dao.batchDelete(loaded));
         assertEquals(0, dao.count(Filters.eq("lastName", "User")));
@@ -344,7 +344,7 @@ public class DaoImplIntegrationTest extends TestBase {
         final UserAccount again = newUser("Up", "Sert-Updated", 51);
         final UserAccount updated = dao.upsert(again, List.of("firstName"));
         assertEquals(inserted.getId(), updated.getId());
-        assertEquals("Sert-Updated", dao.gett(inserted.getId()).getLastName());
+        assertEquals("Sert-Updated", dao.getOrNull(inserted.getId()).getLastName());
         assertEquals(1, dao.count(Filters.eq("firstName", "Up")));
     }
 
@@ -363,7 +363,7 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(3, result.size());
 
         assertEquals(3, dao.count(Filters.eq("lastName", "New").or(Filters.eq("firstName", "Keep"))));
-        assertEquals("Updated", dao.gett(existingId).getLastName());
+        assertEquals("Updated", dao.getOrNull(existingId).getLastName());
     }
 
     // batchUpsert with a COMPOSITE unique-prop key drives the multi-prop EntityId path
@@ -382,7 +382,7 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(3, result.size());
 
         // the existing row was updated in place (same id), not duplicated.
-        assertEquals(71, dao.gett(existingId).getAge());
+        assertEquals(71, dao.getOrNull(existingId).getAge());
         assertEquals(3, dao.count(Filters.eq("firstName", "Multi").or(Filters.eq("lastName", "Key"))));
     }
 
@@ -408,10 +408,10 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(existingId, dao.list(Filters.eq("firstName", "Dup")).get(0).getId());
     }
 
-    // gett with an unknown id returns null and exists is false (no-row branch).
+    // getOrNull with an unknown id returns null and exists is false (no-row branch).
     @Test
     public void testGet_UnknownId_ReturnsNull() throws SQLException {
-        assertEquals(null, dao.gett(123456789L));
+        assertEquals(null, dao.getOrNull(123456789L));
         assertFalse(dao.exists(123456789L));
     }
 
@@ -445,19 +445,19 @@ public class DaoImplIntegrationTest extends TestBase {
         final Integer intResult = wrapDao.bumpAgeReturnInteger(11, id);
         assertNotNull(intResult);
         assertEquals(Integer.valueOf(1), intResult);
-        assertEquals(11, dao.gett(id).getAge());
+        assertEquals(11, dao.getOrNull(id).getAge());
 
         // Long return — receives the raw long count.
         final Long longResult = wrapDao.bumpAgeReturnLong(12, id);
         assertNotNull(longResult);
         assertEquals(Long.valueOf(1L), longResult);
-        assertEquals(12, dao.gett(id).getAge());
+        assertEquals(12, dao.getOrNull(id).getAge());
 
         // Boolean return — receives true when at least one row was affected.
         final Boolean boolResult = wrapDao.bumpAgeReturnBoolean(13, id);
         assertNotNull(boolResult);
         assertTrue(boolResult);
-        assertEquals(13, dao.gett(id).getAge());
+        assertEquals(13, dao.getOrNull(id).getAge());
 
         // And the false branch: an UPDATE that affects zero rows must return Boolean.FALSE, not throw.
         final Boolean noMatch = wrapDao.bumpAgeReturnBoolean(99, 999999L);
@@ -744,11 +744,11 @@ public class DaoImplIntegrationTest extends TestBase {
         assertNotNull(id);
 
         // update(entity, propNamesToUpdate): only "age" is persisted; lastName change is ignored.
-        final UserAccount loaded = dao.gett(id);
+        final UserAccount loaded = dao.getOrNull(id);
         loaded.setAge(16);
         loaded.setLastName("Ignored");
         assertEquals(1, dao.update(loaded, List.of("age")));
-        final UserAccount after = dao.gett(id);
+        final UserAccount after = dao.getOrNull(id);
         assertEquals(16, after.getAge());
         assertEquals("Props", after.getLastName());
 
@@ -966,7 +966,7 @@ public class DaoImplIntegrationTest extends TestBase {
 
         final Long id = dao.findFirst(Filters.eq("firstName", "N1")).get().getId();
         assertEquals(1, nDao.updateAgeNamed(99, id));
-        assertEquals(99, dao.gett(id).getAge());
+        assertEquals(99, dao.getOrNull(id).getAge());
 
         assertEquals(1, nDao.deleteNamed("Dml"));
         assertEquals(0, dao.count(Filters.eq("lastName", "Dml")));

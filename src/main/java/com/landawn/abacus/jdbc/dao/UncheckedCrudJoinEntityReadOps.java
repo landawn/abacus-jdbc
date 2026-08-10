@@ -37,7 +37,7 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the
  * corresponding {@code @JoinedBy} properties of the entity instance returned by each {@code get},
- * {@code gett}, and {@code batchGet} method. When a method accepts a collection of join entity classes,
+ * {@code getOrNull}, and {@code batchGet} method. When a method accepts a collection of join entity classes,
  * a {@code null} or empty collection results in no join entities being loaded.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -52,7 +52,7 @@ import com.landawn.abacus.util.u.Optional;
  * Optional<User> user = userDao.get(userId, true);
  *
  * // Get user with specific related entities
- * User userWithOrders = userDao.gett(userId, Order.class);
+ * User userWithOrders = userDao.getOrNull(userId, Order.class);
  *
  * // Batch get users with their profiles
  * List<User> users = userDao.batchGet(
@@ -99,7 +99,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     @Beta
     @Override
     default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, joinEntityClass));
+        return Optional.ofNullable(getOrNull(id, joinEntityClass));
     }
 
     /**
@@ -124,7 +124,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     @Beta
     @Override
     default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
     /**
@@ -155,7 +155,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
             throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, sourceSelectPropNames, joinEntityClass));
+        return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClass));
     }
 
     /**
@@ -187,7 +187,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, sourceSelectPropNames, joinEntityClasses));
+        return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClasses));
     }
 
     /**
@@ -219,7 +219,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, sourceSelectPropNames, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, includeAllJoinEntities));
     }
 
     /**
@@ -230,7 +230,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders, returns null if not found
-     * User user = userDao.gett(userId, Order.class);
+     * User user = userDao.getOrNull(userId, Order.class);
      * if (user != null) {
      *     // Process user with loaded orders
      * }
@@ -245,8 +245,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      */
     @Beta
     @Override
-    default T gett(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id);
+    default T getOrNull(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, UncheckedSQLException {
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null) {
             loadJoinEntities(result, joinEntityClass);
@@ -264,7 +264,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with all relationships
-     * User user = userDao.gett(userId, true);
+     * User user = userDao.getOrNull(userId, true);
      * if (user != null) {
      *     // All relationships are loaded
      * }
@@ -279,8 +279,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      */
     @Beta
     @Override
-    default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id);
+    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -297,7 +297,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal data and profile
-     * User user = userDao.gett(
+     * User user = userDao.getOrNull(
      *     userId,
      *     Arrays.asList("id", "name"),
      *     UserProfile.class
@@ -315,9 +315,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      */
     @Beta
     @Override
-    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
+    default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
 
         if (result != null) {
             loadJoinEntities(result, joinEntityClass);
@@ -335,7 +335,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with specific fields and multiple relationships
-     * User user = userDao.gett(
+     * User user = userDao.getOrNull(
      *     userId,
      *     Arrays.asList("id", "name", "email"),
      *     Arrays.asList(Order.class, Payment.class, Review.class)
@@ -353,9 +353,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      */
     @Beta
     @Override
-    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
+    default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
 
         if (result != null && N.notEmpty(joinEntityClasses)) {
             for (final Class<?> joinEntityClass : joinEntityClasses) {
@@ -375,7 +375,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with core fields and all relationships
-     * User user = userDao.gett(
+     * User user = userDao.getOrNull(
      *     userId,
      *     Arrays.asList("id", "name", "email", "verified"),
      *     true  // load all join entities
@@ -393,10 +393,10 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      */
     @Beta
     @Override
-    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
+    default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudReadOps(this)
-                .gett(id, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames);
+                .getOrNull(id, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);

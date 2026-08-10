@@ -39,7 +39,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * user.setEmail("newemail@example.com");
      * user.setLastModified(new java.util.Date());
      * int updatedRows = userDao.update(user);

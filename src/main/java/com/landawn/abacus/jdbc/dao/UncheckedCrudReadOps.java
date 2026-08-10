@@ -528,7 +528,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Override
     default Optional<T> get(final ID id) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id));
+        return Optional.ofNullable(getOrNull(id));
     }
 
     /**
@@ -550,7 +550,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, selectPropNames));
+        return Optional.ofNullable(getOrNull(id, selectPropNames));
     }
 
     /**
@@ -559,7 +559,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * if (user != null) {
      *     processUser(user);
      * }
@@ -572,7 +572,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    T gett(final ID id) throws DuplicateResultException, UncheckedSQLException;
+    T getOrNull(final ID id) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Retrieves the entity with the specified ID, selecting only the specified properties.
@@ -580,7 +580,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId, Arrays.asList("id", "email", "status"));
+     * User user = userDao.getOrNull(userId, Arrays.asList("id", "email", "status"));
      * if (user != null && "ACTIVE".equals(user.getStatus())) {
      *     sendEmail(user.getEmail());
      * }
@@ -595,7 +595,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException;
+    T getOrNull(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Gets multiple entities by their IDs in batch using the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).

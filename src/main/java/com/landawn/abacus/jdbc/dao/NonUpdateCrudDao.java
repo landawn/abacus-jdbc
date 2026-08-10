@@ -39,7 +39,7 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p><b>Supported Operations:</b></p>
  * <ul>
- *   <li><b>Read by ID:</b> {@code get(ID)}, {@code gett(ID)}, {@code queryForBoolean/Int/Long/String(propName, ID)}</li>
+ *   <li><b>Read by ID:</b> {@code get(ID)}, {@code getOrNull(ID)}, {@code queryForBoolean/Int/Long/String(propName, ID)}</li>
  *   <li><b>Query Operations:</b> {@code list(Condition)}, {@code findFirst(Condition)}, {@code findOnlyOne(Condition)}</li>
  *   <li><b>Aggregate Operations:</b> {@code count(Condition)}, {@code exists(Condition)}</li>
  *   <li><b>Insert Operations:</b> {@code insert(entity)}, {@code batchInsert(entities)}</li>
@@ -69,7 +69,7 @@ import com.landawn.abacus.annotation.Beta;
  *
  * // Read by ID operations
  * com.landawn.abacus.util.u.Optional<Transaction> transaction = transactionDao.get(txnId); // Returns Abacus Optional
- * Transaction txn2 = transactionDao.gett(txnId);   // Returns null if not found
+ * Transaction txn2 = transactionDao.getOrNull(txnId);   // Returns null if not found
  *
  * // Query single property by ID
  * com.landawn.abacus.util.u.Nullable<String> status = transactionDao.queryForString("status", txnId);

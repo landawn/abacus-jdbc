@@ -1342,13 +1342,13 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
-    public void testRowConsumerOneOff() throws SQLException {
+    public void testRowConsumerForDisposableObjArray() throws SQLException {
         when(mockResultSet.getObject(1)).thenReturn(1);
         when(mockResultSet.getObject(2)).thenReturn("John");
         when(mockResultSet.getObject(3)).thenReturn(25);
 
         List<Object> results = new ArrayList<>();
-        Jdbc.RowConsumer consumer = Jdbc.RowConsumer.oneOff(arr -> {
+        Jdbc.RowConsumer consumer = Jdbc.RowConsumer.forDisposableObjArray(arr -> {
             for (int i = 0; i < arr.length(); i++) {
                 results.add(arr.get(i));
             }
@@ -1363,13 +1363,13 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
-    public void testRowConsumerOneOff_WithEntityClass() throws SQLException {
+    public void testRowConsumerForDisposableObjArray_WithEntityClass() throws SQLException {
         when(mockResultSet.getLong(1)).thenReturn(99L);
         when(mockResultSet.getString(2)).thenReturn("Kim");
         when(mockResultSet.getObject(3)).thenReturn(null);
 
         List<Object> results = new ArrayList<>();
-        Jdbc.RowConsumer consumer = Jdbc.RowConsumer.oneOff(TestEntity.class, arr -> {
+        Jdbc.RowConsumer consumer = Jdbc.RowConsumer.forDisposableObjArray(TestEntity.class, arr -> {
             for (int i = 0; i < arr.length(); i++) {
                 results.add(arr.get(i));
             }
@@ -1429,14 +1429,14 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
-    public void testBiRowConsumerOneOff() throws SQLException {
+    public void testBiRowConsumerForDisposableObjArray() throws SQLException {
         when(mockResultSet.getObject(1)).thenReturn(1);
         when(mockResultSet.getObject(2)).thenReturn("John");
 
         List<Object> results = new ArrayList<>();
         List<String> capturedLabels = new ArrayList<>();
 
-        Jdbc.BiRowConsumer consumer = Jdbc.BiRowConsumer.oneOff((cols, arr) -> {
+        Jdbc.BiRowConsumer consumer = Jdbc.BiRowConsumer.forDisposableObjArray((cols, arr) -> {
             capturedLabels.addAll(cols);
             for (int i = 0; i < arr.length(); i++) {
                 results.add(arr.get(i));
@@ -1453,7 +1453,7 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
-    public void testBiRowConsumerOneOff_WithEntityClass() throws SQLException {
+    public void testBiRowConsumerForDisposableObjArray_WithEntityClass() throws SQLException {
         when(mockResultSet.getLong(1)).thenReturn(5L);
         when(mockResultSet.getString(2)).thenReturn("Leo");
         when(mockResultSet.getObject(3)).thenReturn(null);
@@ -1461,7 +1461,7 @@ public class JdbcTest extends TestBase {
         List<Object> results = new ArrayList<>();
         List<String> capturedLabels = new ArrayList<>();
 
-        Jdbc.BiRowConsumer consumer = Jdbc.BiRowConsumer.oneOff(TestEntity.class, (cols, arr) -> {
+        Jdbc.BiRowConsumer consumer = Jdbc.BiRowConsumer.forDisposableObjArray(TestEntity.class, (cols, arr) -> {
             capturedLabels.addAll(cols);
             for (int i = 0; i < arr.length(); i++) {
                 results.add(arr.get(i));

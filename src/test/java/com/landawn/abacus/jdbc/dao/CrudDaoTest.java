@@ -120,13 +120,13 @@ public class CrudDaoTest extends TestBase {
         TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(9L)).thenReturn(entity);
+        when(dao.getOrNull(9L)).thenReturn(entity);
 
         Optional<TestEntity> result = dao.get(9L);
 
         assertTrue(result.isPresent());
         assertSame(entity, result.orElseNull());
-        verify(dao).gett(9L);
+        verify(dao).getOrNull(9L);
     }
 
     @Test
@@ -182,7 +182,7 @@ public class CrudDaoTest extends TestBase {
         TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(10L, List.of("name"))).thenReturn(entity);
+        when(dao.getOrNull(10L, List.of("name"))).thenReturn(entity);
 
         Optional<TestEntity> result = dao.get(10L, List.of("name"));
 
@@ -577,7 +577,7 @@ public class CrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(3L);
 
-        when(dao.gett(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(null);
+        when(dao.getOrNull(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(null);
 
         assertFalse(dao.refresh(entity, List.of("name")));
     }
@@ -607,7 +607,7 @@ public class CrudDaoTest extends TestBase {
         dbEntity.setId(5L);
         dbEntity.setName("fresh");
 
-        when(dao.gett(ArgumentMatchers.anyLong(), ArgumentMatchers.anyCollection())).thenReturn(dbEntity);
+        when(dao.getOrNull(ArgumentMatchers.anyLong(), ArgumentMatchers.anyCollection())).thenReturn(dbEntity);
 
         assertTrue(dao.refresh(entity, List.of("name")));
         assertEquals("fresh", entity.getName());

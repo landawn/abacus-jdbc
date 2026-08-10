@@ -49,7 +49,7 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p>Both entities declare a <b>single</b> {@code @JoinedBy} property so the {@code size() == 1}
  * single-property branches (which the two-property model in {@code JoinEntityHelperIntegrationTest}
- * skips) are reached. Rows are seeded with raw JDBC so the (non-crud) DAOs need not expose insert/gett
+ * skips) are reached. Rows are seeded with raw JDBC so the (non-crud) DAOs need not expose insert/getOrNull
  * by id; entity instances are built in Java with the id set and handed to the load/delete methods.</p>
  */
 @TestInstance(Lifecycle.PER_CLASS)
@@ -124,7 +124,7 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
         }
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     public interface DJUserDao extends UncheckedDao<DJUser, DJUserDao>, UncheckedJoinEntityHelper<DJUser, DJUserDao> {
     }
 
@@ -197,7 +197,7 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
         }
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     public interface CJUserDao extends Dao<CJUser, CJUserDao>, JoinEntityHelper<CJUser, CJUserDao> {
     }
 

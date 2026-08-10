@@ -127,7 +127,7 @@ public class ReadOnlyJoinEntityHelperIntegrationTest extends TestBase {
      * join loading. Extending {@code UncheckedReadOnlyCrudDao} means insert/update/delete are absent at
      * compile time, while {@code UncheckedReadOnlyCrudJoinEntityHelper} supplies the join reads.
      */
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     public interface RoUserDao extends UncheckedReadOnlyCrudDao<RoUser, Long, RoUserDao>, UncheckedReadOnlyCrudJoinEntityHelper<RoUser, Long, RoUserDao> {
     }
 
@@ -195,19 +195,19 @@ public class ReadOnlyJoinEntityHelperIntegrationTest extends TestBase {
         assertFalse(CrudDao.class.isAssignableFrom(RoUserDao.class));
     }
 
-    /** {@code gett(id)} + {@code loadJoinEntities} / {@code loadAllJoinEntities} run through the generalized cast. */
+    /** {@code getOrNull(id)} + {@code loadJoinEntities} / {@code loadAllJoinEntities} run through the generalized cast. */
     @Test
     public void testReadOnlyCrudJoinDao_loadJoins() {
         final long id = seedUser("Reader", 10.0, 20.0, 30.0);
 
-        final RoUser u = roUserDao.gett(id);
+        final RoUser u = roUserDao.getOrNull(id);
         assertNotNull(u);
         assertEquals("Reader", u.getName());
 
         roUserDao.loadJoinEntities(u, RoOrder.class);
         assertEquals(3, u.getOrders().size());
 
-        final RoUser u2 = roUserDao.gett(id);
+        final RoUser u2 = roUserDao.getOrNull(id);
         roUserDao.loadAllJoinEntities(u2);
         assertEquals(3, u2.getOrders().size());
     }

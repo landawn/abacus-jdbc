@@ -309,7 +309,7 @@ public class JdbcTest {
         System.out.println(userFromDB);
 
         try {
-            final String sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").build().query();
+            final String sql = PSC.update(User.class).set(N.asList("firstName", "lastName")).where("id = ?").build().query();
 
             conn = dataSource.getConnection();
             stmt = conn.prepareStatement(sql);
@@ -361,7 +361,7 @@ public class JdbcTest {
                 .findOnlyOne(User.class) // or findFirst/list/stream/... a lot more we can do.
                 .ifPresent(System.out::println);
 
-        sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").build().query();
+        sql = PSC.update(User.class).set(N.asList("firstName", "lastName")).where("id = ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setString(1, "Tom")
                 .setString(2, "Hanks")
@@ -385,7 +385,7 @@ public class JdbcTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
@@ -411,7 +411,7 @@ public class JdbcTest {
         final List<User> entities = userDao12.prepareQuery("select * from user2").list(User.class);
         assertEquals(user.getEmail(), entities.get(0).getEmail());
 
-        final User userFromDB = userDao12.gett(100L);
+        final User userFromDB = userDao12.getOrNull(100L);
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
@@ -432,7 +432,7 @@ public class JdbcTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
@@ -444,7 +444,7 @@ public class JdbcTest {
             // ignore
         }
 
-        assertEquals("Forrest", userDao.gett(100L).getFirstName());
+        assertEquals("Forrest", userDao.getOrNull(100L).getFirstName());
 
         try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
@@ -452,10 +452,10 @@ public class JdbcTest {
             tran.commit();
         }
 
-        assertEquals("Tom", userDao.gett(100L).getFirstName());
+        assertEquals("Tom", userDao.getOrNull(100L).getFirstName());
 
         userDao.deleteById(100L);
-        assertNull(userDao.gett(100L));
+        assertNull(userDao.getOrNull(100L));
 
         // In you're in Spring and want to use Spring transaction management,
         // then don't need to call beginTransaction because Spring transaction is integrated and supported.

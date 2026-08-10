@@ -1898,8 +1898,8 @@ public class JdbcUtilTest extends TestBase {
     public void testScopedExecutionHelpersRejectNullCallbacks() {
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.runWithSqlLogDisabled((Throwables.Runnable<Exception>) null));
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.callWithSqlLogDisabled((Throwables.Callable<Object, Exception>) null));
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.runWithoutUsingSpringTransaction((Throwables.Runnable<Exception>) null));
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.callWithoutUsingSpringTransaction((Throwables.Callable<Object, Exception>) null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.runIgnoringSpringTransaction((Throwables.Runnable<Exception>) null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.callIgnoringSpringTransaction((Throwables.Callable<Object, Exception>) null));
     }
 
     @Test
@@ -2055,7 +2055,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testRunWithoutUsingSpringTransaction() {
         final boolean[] executed = { false };
-        JdbcUtil.runWithoutUsingSpringTransaction(() -> {
+        JdbcUtil.runIgnoringSpringTransaction(() -> {
             executed[0] = true;
         });
         assertTrue(executed[0]);
@@ -2063,7 +2063,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testCallWithoutUsingSpringTransaction() {
-        String result = JdbcUtil.callWithoutUsingSpringTransaction(() -> "test");
+        String result = JdbcUtil.callIgnoringSpringTransaction(() -> "test");
         assertEquals("test", result);
     }
 
@@ -3190,7 +3190,7 @@ public class JdbcUtilTest extends TestBase {
     public void testGetDBProductInfo_DataSource_SQLException() throws SQLException {
         when(mockDataSource.getConnection()).thenThrow(new SQLException("connection failed"));
 
-        JdbcUtil.runWithoutUsingSpringTransaction(() -> {
+        JdbcUtil.runIgnoringSpringTransaction(() -> {
             assertThrows(UncheckedSQLException.class, () -> JdbcUtil.getDBProductInfo(mockDataSource));
         });
     }

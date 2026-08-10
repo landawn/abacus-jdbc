@@ -126,6 +126,11 @@ import lombok.ToString;
 @SuppressWarnings("java:S1192")
 public final class Jdbc {
 
+    /**
+     * Shared cache of {@link ColumnGetter} instances keyed by target type, used when a getter is resolved
+     * dynamically (e.g. by {@code ColumnGetter.forType(Type)}). Pre-populated with the standard mappings for
+     * primitive and common reference types.
+     */
     static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
 
     static {
@@ -151,6 +156,9 @@ public final class Jdbc {
         COLUMN_GETTER_POOL.put(N.typeOf(Object.class), ColumnGetter.GET_OBJECT);
     }
 
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     */
     private Jdbc() {
         // utility class - prevent instantiation.
     }
@@ -1136,15 +1144,15 @@ public final class Jdbc {
          * }</pre>
          *
          * @param entityClassForExtractor the class used to map fields from columns
-         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name.
+         * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name.
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
          * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or not a bean/entity class
          */
-        static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
+        static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndPropNameMap) {
             N.checkArgNotNull(entityClassForExtractor, cs.entityClassForExtractor);
             N.checkArgument(Beans.isBeanClass(entityClassForExtractor), "{} is not a valid entity class with getter/setter methods", entityClassForExtractor);
 
-            return rs -> JdbcUtil.extractData(rs, RowExtractor.forType(entityClassForExtractor, prefixAndFieldNameMap));
+            return rs -> JdbcUtil.extractData(rs, RowExtractor.forType(entityClassForExtractor, prefixAndPropNameMap));
         }
 
         /**
@@ -2231,6 +2239,10 @@ public final class Jdbc {
          */
         @SequentialOnly
         class RowMapperBuilder {
+            /**
+             * Configured getters keyed by 1-based column index; index {@code 0} holds the default getter applied
+             * to columns without a specific configuration.
+             */
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             /**
@@ -2446,6 +2458,16 @@ public final class Jdbc {
                 return this;
             }
 
+            /**
+             * Resolves the {@code ColumnGetter} to apply to each column of a {@code ResultSet}, using the
+             * configured getters and falling back to the default getter (key {@code 0}) for unconfigured columns.
+             *
+             * @param columnCount the number of columns in the {@code ResultSet}
+             * @param configuredColumnGetters the getters configured on this builder, keyed by 1-based column index;
+             *        key {@code 0} holds the default getter
+             * @return an array of {@code ColumnGetter}s, one per column, in column order
+             * @throws IllegalArgumentException if a configured column index exceeds {@code columnCount}
+             */
             private ColumnGetter<?>[] initColumnGetter(final int columnCount, final Map<Integer, ColumnGetter<?>> configuredColumnGetters) { //NOSONAR
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
                 final ColumnGetter<?> defaultColumnGetter = configuredColumnGetters.get(0);
@@ -3436,16 +3458,16 @@ public final class Jdbc {
          *
          * @param <T> target entity type
          * @param entityClass the class to map rows to
-         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
+         * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndFieldNameMap} is
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndPropNameMap} is
          *         non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
          *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
          */
         @SequentialOnly
         @Stateful
-        static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndFieldNameMap) {
-            return to(entityClass, prefixAndFieldNameMap, false);
+        static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndPropNameMap) {
+            return to(entityClass, prefixAndPropNameMap, false);
         }
 
         /**
@@ -3457,31 +3479,31 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
-         * <p>A non-empty {@code prefixAndFieldNameMap} is defensively copied when this method is called;
+         * <p>A non-empty {@code prefixAndPropNameMap} is defensively copied when this method is called;
          * later changes to the caller's map do not alter the returned mapper.</p>
          *
          * @param <T> target entity type
          * @param entityClass the class to map rows to
-         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
+         * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndFieldNameMap} is
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndPropNameMap} is
          *         non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
          *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
          */
         @SequentialOnly
         @Stateful
-        static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndFieldNameMap,
+        static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndPropNameMap,
                 final boolean ignoreUnmatchedColumns) {
-            if (N.isEmpty(prefixAndFieldNameMap)) {
+            if (N.isEmpty(prefixAndPropNameMap)) {
                 return to(entityClass, ignoreUnmatchedColumns);
             }
 
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not an entity class", entityClass);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-            final Map<String, String> configuredPrefixAndFieldNameMap = new HashMap<>(prefixAndFieldNameMap);
+            final Map<String, String> configuredprefixAndPropNameMap = new HashMap<>(prefixAndPropNameMap);
 
             return new BiRowMapper<>() {
                 private String[] columnLabels = null;
@@ -3516,8 +3538,7 @@ public final class Jdbc {
                             }
 
                             if (propInfos[i] == null) {
-                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], configuredPrefixAndFieldNameMap,
-                                        columnLabelList);
+                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], configuredprefixAndPropNameMap, columnLabelList);
                                 propInfos[i] = JdbcUtil.getSubPropInfo(entityClass, newColumnName);
 
                                 if (propInfos[i] == null) {
@@ -4165,7 +4186,13 @@ public final class Jdbc {
          */
         @SequentialOnly
         class BiRowMapperBuilder {
+            /**
+             * The getter applied to columns for which no specific getter has been configured.
+             */
             private final ColumnGetter<?> defaultColumnGetter;
+            /**
+             * Configured getters keyed by column name.
+             */
             private final Map<String, ColumnGetter<?>> columnGetterMap;
 
             /**
@@ -4772,7 +4799,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Efficiently process each row without allocating a new array per row.
-         * RowConsumer consumer = RowConsumer.oneOff(rowValues -> {
+         * RowConsumer consumer = RowConsumer.forDisposableObjArray(rowValues -> {
          *     // 'rowValues' is a reusable view of the current row's column values; do not store a reference to it.
          *     System.out.println(rowValues);
          * });
@@ -4786,7 +4813,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer oneOff(final Consumer<DisposableObjArray> consumer) {
+        static RowConsumer forDisposableObjArray(final Consumer<DisposableObjArray> consumer) {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new RowConsumer() {
@@ -4828,7 +4855,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer oneOff(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) {
+        static RowConsumer forDisposableObjArray(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) {
             N.checkArgNotNull(entityClass, cs.entityClass);
             N.checkArgNotNull(consumer, cs.consumer);
 
@@ -4989,7 +5016,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static BiRowConsumer oneOff(final BiConsumer<List<String>, DisposableObjArray> consumer) {
+        static BiRowConsumer forDisposableObjArray(final BiConsumer<List<String>, DisposableObjArray> consumer) {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new BiRowConsumer() {
@@ -5031,7 +5058,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static BiRowConsumer oneOff(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer) {
+        static BiRowConsumer forDisposableObjArray(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer) {
             N.checkArgNotNull(entityClass, cs.entityClass);
             N.checkArgNotNull(consumer, cs.consumer);
 
@@ -5372,14 +5399,14 @@ public final class Jdbc {
          * queries or in parallel streams.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
-         * @param prefixAndFieldNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
+         * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
          * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor forType(final Class<?> entityClassForFetch, final Map<String, String> prefixAndFieldNameMap) {
-            return forType(entityClassForFetch, null, prefixAndFieldNameMap);
+        static RowExtractor forType(final Class<?> entityClassForFetch, final Map<String, String> prefixAndPropNameMap) {
+            return forType(entityClassForFetch, null, prefixAndPropNameMap);
         }
 
         /**
@@ -5413,23 +5440,23 @@ public final class Jdbc {
          * mapped columns. A {@code null} or undersized output array is rejected with
          * {@link IllegalArgumentException} before any values are written.</p>
          *
-         * <p>Non-empty {@code columnLabels} and {@code prefixAndFieldNameMap} inputs are defensively copied when
+         * <p>Non-empty {@code columnLabels} and {@code prefixAndPropNameMap} inputs are defensively copied when
          * this method is called; later caller mutations do not change the returned extractor.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
          * @param columnLabels an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet}.
-         * @param prefixAndFieldNameMap an optional map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
+         * @param prefixAndPropNameMap an optional map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
          * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndFieldNameMap) {
+        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndPropNameMap) {
             N.checkArgument(Beans.isBeanClass(entityClassForFetch), "{} is not a valid entity class with getter/setter methods", entityClassForFetch);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClassForFetch);
             final List<String> configuredColumnLabels = N.isEmpty(columnLabels) ? null : new ArrayList<>(columnLabels);
-            final Map<String, String> configuredPrefixAndFieldNameMap = N.isEmpty(prefixAndFieldNameMap) ? null : new HashMap<>(prefixAndFieldNameMap);
+            final Map<String, String> configuredprefixAndPropNameMap = N.isEmpty(prefixAndPropNameMap) ? null : new HashMap<>(prefixAndPropNameMap);
 
             return new RowExtractor() {
                 private Type<?>[] columnTypes = null;
@@ -5464,8 +5491,7 @@ public final class Jdbc {
                             }
 
                             if (propInfo == null) {
-                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], configuredPrefixAndFieldNameMap,
-                                        columnLabelList);
+                                final String newColumnName = JdbcUtil.checkPrefix(entityInfo, columnLabels[i], configuredprefixAndPropNameMap, columnLabelList);
 
                                 propInfo = JdbcUtil.getSubPropInfo(entityClassForFetch, newColumnName);
 
@@ -5569,6 +5595,10 @@ public final class Jdbc {
          * @see RowExtractor#builder(ColumnGetter)
          */
         class RowExtractorBuilder {
+            /**
+             * Configured getters keyed by 1-based column index; index {@code 0} holds the default getter applied
+             * to columns without a specific configuration.
+             */
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             /**
@@ -6033,6 +6063,9 @@ public final class Jdbc {
      * @see ColumnOne
      */
     public static final class Columns {
+        /**
+         * Private constructor to prevent instantiation of this utility class.
+         */
         private Columns() {
             // utility class - prevent instantiation
         }
@@ -6290,10 +6323,17 @@ public final class Jdbc {
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(1, x);
 
+            /**
+             * Private constructor to prevent instantiation of this utility class.
+             */
             private ColumnOne() {
                 // utility class - prevent instantiation
             }
 
+            /**
+             * Cache of shared {@code RowMapper} instances keyed by target type, used by {@code ColumnOne.get(Type)}
+             * to reuse mappers for repeated lookups of the same type.
+             */
             @SuppressWarnings("rawtypes")
             static final Map<Type<?>, RowMapper> rowMapperPool = new ObjectPool<>(1024);
 
@@ -6609,7 +6649,13 @@ public final class Jdbc {
     @EqualsAndHashCode
     @ToString
     public static final class OutParamResult {
+        /**
+         * The output parameter definitions; a defensive copy of the list passed to the constructor.
+         */
         private final List<OutParam> outParams;
+        /**
+         * The retrieved output parameter values, keyed by parameter index or name.
+         */
         private final Map<Object, Object> outParamValues;
 
         /**
@@ -6798,12 +6844,22 @@ public final class Jdbc {
      */
     public static final class HandlerFactory {
 
+        /**
+         * Shared no-op {@code Handler} instance; performs no action before or after a DAO method invocation.
+         */
         @SuppressWarnings("rawtypes")
         static final Handler EMPTY = new Handler() {
             // Do nothing.
         };
 
+        /**
+         * Registry of {@code Handler} instances keyed by qualifier (canonical class name).
+         */
         private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>();
+        /**
+         * The Spring application context used to look up handlers as beans, or {@code null} when Spring
+         * is not available on the classpath.
+         */
         private static final SpringApplicationContext springAppContext;
 
         static {
@@ -7158,6 +7214,9 @@ public final class Jdbc {
             };
         }
 
+        /**
+         * Private constructor to prevent instantiation of this utility class.
+         */
         private HandlerFactory() {
             // utility class - prevent instantiation.
         }
@@ -7358,6 +7417,10 @@ public final class Jdbc {
      * @see DaoCache#create(int, long)
      */
     public static final class DefaultDaoCache implements DaoCache {
+        /**
+         * The backing pool storing cached results by cache key, enforcing the capacity limit and
+         * TTL/idle-time eviction configured at construction.
+         */
         private final KeyedObjectPool<String, PoolableAdapter<Object>> pool;
 
         /**
@@ -7625,6 +7688,13 @@ public final class Jdbc {
 
     }
 
+    /**
+     * Checks whether the given DAO cache key references the specified table.
+     *
+     * @param defaultCacheKey the cache key to inspect; the table name embedded in it, if any, is compared
+     * @param tableName the table name to match
+     * @return {@code true} if the cache key contains a table name equal to {@code tableName} (ignoring case), {@code false} otherwise
+     */
     private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) {
         final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SEPARATOR);
 

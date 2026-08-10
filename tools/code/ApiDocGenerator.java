@@ -8,8 +8,10 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDate;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -19,7 +21,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
@@ -169,9 +179,11 @@ public final class ApiDocGenerator {
         String returns;
         Map<String, String> paramDocs = new LinkedHashMap<>();
         Map<String, String> throwsDocs = new LinkedHashMap<>();
+        List<String> throwsOrder = new ArrayList<>();
         List<String> seeAlso = new ArrayList<>();
         List<String> contract = new ArrayList<>();
         String performance;
+        boolean inheritsDocumentation;
     }
 
     private static int methodOrder;
@@ -210,6 +222,8 @@ public final class ApiDocGenerator {
 
         final DocTrees docTrees = DocTrees.instance(task);
         final Trees trees = Trees.instance(task);
+        final Elements elements = task.getElements();
+        final Types types = task.getTypes();
         final SourcePositions sourcePositions = trees.getSourcePositions();
 
         final Map<String, PackageInfoData> packageMap = new LinkedHashMap<>();
@@ -271,7 +285,7 @@ public final class ApiDocGenerator {
             for (final Tree t : ud.unit.getTypeDecls()) {
                 if (t instanceof ClassTree ct) {
                     typeOrder = collectType(TreePath.getPath(ud.unit, ct), ud, null, null, packageMap, typesByPackage, allTypes, docTrees, sourcePositions,
-                            typeOrder);
+                            elements, types, typeOrder);
                 }
             }
         }
@@ -292,7 +306,7 @@ public final class ApiDocGenerator {
 
     private static int collectType(final TreePath typePath, final UnitData unitData, final TypeInfo parentType, final String enclosingFqn,
             final Map<String, PackageInfoData> packageMap, final Map<String, Map<String, String>> typesByPackage, final Map<String, String> allTypes,
-            final DocTrees docTrees, final SourcePositions sourcePositions, final int startOrder) {
+            final DocTrees docTrees, final SourcePositions sourcePositions, final Elements elements, final Types types, final int startOrder) {
         int nextOrder = startOrder;
         final ClassTree classTree = (ClassTree) typePath.getLeaf();
         if (!isPublicType(classTree, parentType)) {
@@ -370,7 +384,7 @@ public final class ApiDocGenerator {
                     if (!isPublicMethod(methodTree, classTree)) {
                         continue;
                     }
-                    final DocInfo methodDoc = readDoc(docTrees, new TreePath(typePath, methodTree));
+                    final DocInfo methodDoc = readMethodDoc(docTrees, new TreePath(typePath, methodTree), elements, types);
                     final MethodInfo method = new MethodInfo();
                     method.order = methodOrder++;
                     method.name = methodTree.getName().toString();
@@ -394,7 +408,7 @@ public final class ApiDocGenerator {
                 }
             } else if (member instanceof ClassTree nested) {
                 nextOrder = collectType(new TreePath(typePath, nested), unitData, type, fqn, packageMap, typesByPackage, allTypes, docTrees, sourcePositions,
-                        nextOrder);
+                        elements, types, nextOrder);
             }
         }
 
@@ -777,6 +791,7 @@ public final class ApiDocGenerator {
         }
 
         final DocInfo doc = new DocInfo();
+        doc.inheritsDocumentation = comment.toString().contains("{@inheritDoc}");
         doc.summary = normalizeDocText(comment.getFirstSentence());
         final String body = normalizeDocText(comment.getFullBody());
         if (!isBlank(body)) {
@@ -809,6 +824,7 @@ public final class ApiDocGenerator {
                     final ThrowsTree t = (ThrowsTree) tag;
                     final String key = normalize(t.getExceptionName().toString());
                     final String value = normalizeDocText(t.getDescription());
+                    doc.throwsOrder.add(key);
                     doc.throwsDocs.put(key, value);
                     doc.throwsDocs.putIfAbsent(simpleName(key), value);
                 }
@@ -828,6 +844,218 @@ public final class ApiDocGenerator {
             }
         }
         return doc;
+    }
+
+    /**
+     * Reads the effective Javadoc for a method, including documentation inherited from the
+     * nearest overridden declaration. The standard DocTrees API exposes the source comment with
+     * {@code {@inheritDoc}} still present, so the generator has to perform this merge explicitly.
+     */
+    private static DocInfo readMethodDoc(final DocTrees docTrees, final TreePath methodPath, final Elements elements, final Types types) {
+        final Element element = docTrees.getElement(methodPath);
+
+        if (!(element instanceof ExecutableElement method) || !(method.getEnclosingElement() instanceof TypeElement owner)) {
+            return readDoc(docTrees, methodPath);
+        }
+
+        return readEffectiveMethodDoc(docTrees, methodPath, method, owner, elements, types, new LinkedHashSet<>());
+    }
+
+    private static DocInfo readEffectiveMethodDoc(final DocTrees docTrees, final TreePath methodPath, final ExecutableElement method, final TypeElement owner,
+            final Elements elements, final Types types, final Set<String> visitedMethods) {
+        final String methodKey = owner.getQualifiedName() + "#" + method;
+
+        if (!visitedMethods.add(methodKey)) {
+            return readDoc(docTrees, methodPath);
+        }
+
+        final DocInfo localDoc = readDoc(docTrees, methodPath);
+        final ExecutableElement overriddenMethod = findOverriddenMethod(method, owner, docTrees, elements, types);
+
+        if (overriddenMethod == null || !(overriddenMethod.getEnclosingElement() instanceof TypeElement overriddenOwner)) {
+            return localDoc;
+        }
+
+        final TreePath overriddenPath = docTrees.getPath(overriddenMethod);
+        final DocInfo inheritedDoc = readEffectiveMethodDoc(docTrees, overriddenPath, overriddenMethod, overriddenOwner, elements, types, visitedMethods);
+
+        return mergeMethodDocs(localDoc, inheritedDoc, method, overriddenMethod);
+    }
+
+    private static ExecutableElement findOverriddenMethod(final ExecutableElement method, final TypeElement owner, final DocTrees docTrees,
+            final Elements elements, final Types types) {
+        final Deque<TypeElement> typesToVisit = new ArrayDeque<>();
+        final Set<String> visitedTypes = new LinkedHashSet<>();
+        addDirectSupertypes(owner, types, typesToVisit);
+
+        while (!typesToVisit.isEmpty()) {
+            final TypeElement supertype = typesToVisit.removeFirst();
+
+            if (!visitedTypes.add(supertype.getQualifiedName().toString())) {
+                continue;
+            }
+
+            for (final Element member : supertype.getEnclosedElements()) {
+                if (member.getKind() == ElementKind.METHOD && member instanceof ExecutableElement candidate
+                        && overrides(method, candidate, owner, docTrees, elements, types)) {
+                    return candidate;
+                }
+            }
+
+            addDirectSupertypes(supertype, types, typesToVisit);
+        }
+
+        return null;
+    }
+
+    private static void addDirectSupertypes(final TypeElement type, final Types types, final Deque<TypeElement> target) {
+        try {
+            for (final TypeMirror supertype : types.directSupertypes(type.asType())) {
+                final Element element = types.asElement(supertype);
+
+                if (element instanceof TypeElement typeElement) {
+                    target.addLast(typeElement);
+                }
+            }
+        } catch (final RuntimeException ignored) {
+            // Continue with the documentation available from the current declaration when javac
+            // cannot complete an external type on the generator's lightweight source classpath.
+        }
+    }
+
+    private static boolean overrides(final ExecutableElement method, final ExecutableElement candidate, final TypeElement owner, final DocTrees docTrees,
+            final Elements elements, final Types types) {
+        if (!method.getSimpleName().contentEquals(candidate.getSimpleName()) || method.getParameters().size() != candidate.getParameters().size()) {
+            return false;
+        }
+
+        try {
+            if (elements.overrides(method, candidate, owner)) {
+                return true;
+            }
+        } catch (final RuntimeException ignored) {
+            // Fall through to source-level matching when javac cannot complete a type on the
+            // generator's lightweight source classpath.
+        }
+
+        boolean hasIncompleteType = false;
+
+        for (int i = 0; i < method.getParameters().size(); i++) {
+            final TypeMirror methodParameterType = method.getParameters().get(i).asType();
+            final TypeMirror candidateParameterType = candidate.getParameters().get(i).asType();
+
+            if (methodParameterType.getKind() == TypeKind.ERROR || candidateParameterType.getKind() == TypeKind.ERROR) {
+                hasIncompleteType = true;
+                if (!sameSourceParameterType(method, candidate, i, docTrees)) {
+                    return false;
+                }
+                continue;
+            }
+
+            try {
+                if (!types.isSameType(types.erasure(methodParameterType), types.erasure(candidateParameterType))) {
+                    return false;
+                }
+            } catch (final RuntimeException ignored) {
+                if (!sameSourceParameterType(method, candidate, i, docTrees)) {
+                    return false;
+                }
+            }
+        }
+
+        // A complete semantic model already returned false above. Matching source signatures are
+        // used only when at least one parameter type could not be completed by javac.
+        return hasIncompleteType;
+    }
+
+    private static boolean sameSourceParameterType(final ExecutableElement method, final ExecutableElement candidate, final int parameterIndex,
+            final DocTrees docTrees) {
+        final TreePath methodPath = docTrees.getPath(method);
+        final TreePath candidatePath = docTrees.getPath(candidate);
+
+        if (methodPath != null && candidatePath != null && methodPath.getLeaf() instanceof MethodTree methodTree
+                && candidatePath.getLeaf() instanceof MethodTree candidateTree) {
+            final String methodType = normalize(methodTree.getParameters().get(parameterIndex).getType().toString());
+            final String candidateType = normalize(candidateTree.getParameters().get(parameterIndex).getType().toString());
+            return Objects.equals(methodType, candidateType);
+        }
+
+        return Objects.equals(normalize(method.getParameters().get(parameterIndex).asType().toString()),
+                normalize(candidate.getParameters().get(parameterIndex).asType().toString()));
+    }
+
+    private static DocInfo mergeMethodDocs(final DocInfo localDoc, final DocInfo inheritedDoc, final ExecutableElement method,
+            final ExecutableElement overriddenMethod) {
+        if (inheritedDoc == null) {
+            return localDoc;
+        }
+
+        final DocInfo result = copyDoc(localDoc);
+        result.summary = inheritText(result.summary, inheritedDoc.summary);
+        result.returns = inheritText(result.returns, inheritedDoc.returns);
+
+        final int parameterCount = Math.min(method.getParameters().size(), overriddenMethod.getParameters().size());
+        for (int i = 0; i < parameterCount; i++) {
+            final String parameterName = method.getParameters().get(i).getSimpleName().toString();
+            final String overriddenParameterName = overriddenMethod.getParameters().get(i).getSimpleName().toString();
+            final String localText = result.paramDocs.get(parameterName);
+            final String inheritedText = inheritedDoc.paramDocs.get(overriddenParameterName);
+
+            if (isBlank(localText) || containsInheritDoc(localText)) {
+                result.paramDocs.put(parameterName, inheritText(localText, inheritedText));
+            }
+        }
+
+        // Inherited throw descriptions are used only to describe exceptions declared by the
+        // overriding method. They are deliberately not added to throwsOrder: an unchecked
+        // override must not regain a checked exception merely because its parent documents one.
+        inheritedDoc.throwsDocs.forEach(result.throwsDocs::putIfAbsent);
+
+        if ((localDoc == null || localDoc.inheritsDocumentation) && result.contract.isEmpty()) {
+            result.contract.addAll(inheritedDoc.contract);
+        }
+        if ((localDoc == null || localDoc.inheritsDocumentation) && isBlank(result.performance)) {
+            result.performance = inheritedDoc.performance;
+        }
+
+        return result;
+    }
+
+    private static DocInfo copyDoc(final DocInfo source) {
+        final DocInfo copy = new DocInfo();
+
+        if (source == null) {
+            return copy;
+        }
+
+        copy.summary = source.summary;
+        copy.since = source.since;
+        copy.deprecatedMessage = source.deprecatedMessage;
+        copy.returns = source.returns;
+        copy.paramDocs.putAll(source.paramDocs);
+        copy.throwsDocs.putAll(source.throwsDocs);
+        copy.throwsOrder.addAll(source.throwsOrder);
+        copy.seeAlso.addAll(source.seeAlso);
+        copy.contract.addAll(source.contract);
+        copy.performance = source.performance;
+        copy.inheritsDocumentation = source.inheritsDocumentation;
+
+        return copy;
+    }
+
+    private static String inheritText(final String localText, final String inheritedText) {
+        if (isBlank(localText)) {
+            return inheritedText;
+        }
+        if (!containsInheritDoc(localText)) {
+            return localText;
+        }
+
+        return normalize(localText.replace("{@inheritDoc}", isBlank(inheritedText) ? "" : inheritedText));
+    }
+
+    private static boolean containsInheritDoc(final String text) {
+        return text != null && text.contains("{@inheritDoc}");
     }
 
     private static String normalizeDocText(final List<? extends DocTree> trees) {
@@ -856,12 +1084,14 @@ public final class ApiDocGenerator {
     private static List<ThrowInfo> readThrows(final MethodTree methodTree, final DocInfo doc, final UnitData unitData,
             final Map<String, Map<String, String>> typesByPackage, final Map<String, String> allTypes, final TypeInfo ownerType) {
         final List<ThrowInfo> out = new ArrayList<>();
+        final Set<String> documentedTypes = new LinkedHashSet<>();
         final Set<String> ownerTypeParams = ownerType.typeParams.stream().map(tp -> tp.name).collect(Collectors.toSet());
         final Set<String> methodTypeParams = methodTree.getTypeParameters().stream().map(tp -> tp.getName().toString()).collect(Collectors.toSet());
         for (final ExpressionTree thrownType : methodTree.getThrows()) {
             final String declared = normalize(thrownType.toString());
             final ThrowInfo t = new ThrowInfo();
             t.type = resolveExceptionType(declared, unitData, typesByPackage, allTypes, ownerTypeParams, methodTypeParams);
+            documentedTypes.add(t.type);
             if (doc != null) {
                 String condition = doc.throwsDocs.get(declared);
                 if (isBlank(condition)) {
@@ -871,7 +1101,28 @@ public final class ApiDocGenerator {
             }
             out.add(t);
         }
+
+        if (doc != null) {
+            for (final String documented : doc.throwsOrder) {
+                final String resolved = resolveExceptionType(documented, unitData, typesByPackage, allTypes, ownerTypeParams, methodTypeParams);
+
+                if (documentedTypes.stream().anyMatch(existing -> sameExceptionType(existing, resolved))) {
+                    continue;
+                }
+
+                final ThrowInfo t = new ThrowInfo();
+                t.type = resolved;
+                t.condition = doc.throwsDocs.get(documented);
+                out.add(t);
+                documentedTypes.add(resolved);
+            }
+        }
+
         return out;
+    }
+
+    private static boolean sameExceptionType(final String left, final String right) {
+        return Objects.equals(left, right) || Objects.equals(simpleName(left), simpleName(right));
     }
 
     private static String resolveExceptionType(final String declared, final UnitData unitData, final Map<String, Map<String, String>> typesByPackage,
@@ -1207,6 +1458,7 @@ public final class ApiDocGenerator {
             out.put("deprecated", deprecatedJson(value.deprecated));
         }
         out.put("params", value.params.stream().map(ApiDocGenerator::paramJson).collect(Collectors.toList()));
+        out.put("throws", value.throwsList.stream().map(ApiDocGenerator::throwJson).collect(Collectors.toList()));
         return out;
     }
 
@@ -1228,6 +1480,9 @@ public final class ApiDocGenerator {
         }
         if (!isBlank(value.javadocSummary)) {
             out.put("javadoc_summary", value.javadocSummary);
+        }
+        if (!isBlank(value.returns)) {
+            out.put("returns", value.returns);
         }
         out.put("contract", value.contract == null ? List.of() : value.contract);
         if (!isBlank(value.performance)) {

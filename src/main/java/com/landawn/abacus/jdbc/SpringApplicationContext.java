@@ -69,6 +69,11 @@ import com.landawn.abacus.annotation.Internal;
 @Internal
 public final class SpringApplicationContext {
 
+    /**
+     * Process-wide holder for the Spring {@link ApplicationContext} injected by Spring; shared by
+     * all instances and {@code null} until injection has occurred. Marked {@code volatile} so
+     * lookups on threads other than the injecting one observe the initialized context.
+     */
     // Held statically so that registering ANY SpringApplicationContext bean makes the context visible
     // to the framework's internally constructed instance too: Jdbc.HandlerFactory builds its own
     // instance in a static initializer, which Spring never injects. Spring ignores @Autowired on

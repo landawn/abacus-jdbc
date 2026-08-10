@@ -96,7 +96,7 @@ import com.landawn.abacus.util.Throwables;
  * final com.landawn.abacus.jdbc.SqlTransaction tran =
  *         JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
- *     User user = userDao.gett(id);
+ *     User user = userDao.getOrNull(id);
  *     userDao.update(user);
  *     tran.commit();
  * } finally {

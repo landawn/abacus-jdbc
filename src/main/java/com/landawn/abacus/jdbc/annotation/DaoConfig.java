@@ -56,7 +56,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     }
  * }
  *
- * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+ * @DaoConfig(allowNullOrDefaultJoinKeys = true)
  * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
  *     // Framework-managed @JoinedBy joins are allowed even when the join key is null:
  *     // use inherited JoinEntityHelper methods (for example, loadJoinEntities or loadAllJoinEntities).
@@ -168,7 +168,7 @@ public @interface DaoConfig {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+     * @DaoConfig(allowNullOrDefaultJoinKeys = true)
      * public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> {
      *     // @JoinedBy-driven joins are allowed even if the join key is null or zero:
      *     // use inherited JoinEntityHelper methods (for example, loadJoinEntities or loadAllJoinEntities).
@@ -178,7 +178,7 @@ public @interface DaoConfig {
      * @return {@code true} to allow framework-managed joins when join key values are null or default;
      *         {@code false} (default) to throw an exception in that case
      */
-    boolean allowJoiningByNullOrDefaultValue() default false;
+    boolean allowNullOrDefaultJoinKeys() default false;
 
     /**
      * Controls the default column-selection behavior of built-in {@code Dataset}-returning

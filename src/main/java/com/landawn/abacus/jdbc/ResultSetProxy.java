@@ -103,8 +103,25 @@ import com.landawn.abacus.util.Throwables;
 @Internal
 final class ResultSetProxy implements ResultSet {
 
+    /**
+     * Lazily-initialized cache of the {@link ColumnGetter} strategy selected for each column index,
+     * used by {@link #getObject(int)}. Sized to the column count plus one so it can be indexed
+     * directly by the 1-based JDBC column index; an entry stays {@code null} until the first
+     * non-null value is read for that column.
+     */
     private ColumnGetter<?>[] columnGetters;
+
+    /**
+     * Lazily-initialized cache of the getter function selected for each column label, used by
+     * {@link #getObject(String)}. An entry is stored for a label only after the first non-null
+     * value is read for it.
+     */
     private Map<String, Throwables.Function<ResultSet, Object, SQLException>> columnGettersByLabel;
+
+    /**
+     * The wrapped {@link ResultSet} to which every operation is delegated. Not validated at
+     * construction time; a {@code null} delegate fails on the first delegated operation.
+     */
     private final ResultSet delegate;
 
     /**

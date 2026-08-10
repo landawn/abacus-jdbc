@@ -306,7 +306,7 @@ public class DaoTest {
         final List<User> dbUsers = LongStream.range(1, 1000)
                 .boxed()
                 .parallel()
-                .map(Fn.ff(it -> userDao.gett(it)))
+                .map(Fn.ff(it -> userDao.getOrNull(it)))
                 .onEach(it -> it.setCreateTime(null))
                 .sortedBy(User::getId)
                 .toList();
@@ -520,14 +520,14 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = userDao.gett(100L);
+        User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         userDao.deleteById(100L);
 
         final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = userDao.gett(id);
+        userFromDB = userDao.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -543,18 +543,18 @@ public class DaoTest {
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
         final long id = user.getId();
-        final User userFromDB = noUpdateUserDao.gett(id);
+        final User userFromDB = noUpdateUserDao.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> noUpdateUserDao.gett(id)).printResult();
+        Profiler.run(1, 10000, 1, () -> noUpdateUserDao.getOrNull(id)).printResult();
 
         userDao.delete(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> noUpdateUserDao.gett(id)).printResult();
+        Profiler.run(1, 10000, 1, () -> noUpdateUserDao.getOrNull(id)).printResult();
 
         userDao.delete(userFromDB);
     }
@@ -564,7 +564,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList(s.id, s.firstName, s.lastName, s.email));
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -597,7 +597,7 @@ public class DaoTest {
                 final User user = User.builder().id(idx).firstName("Forrest").lastName("Gump").email("123@email.com").build();
                 userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-                assertNotNull(userDao.gett(idx));
+                assertNotNull(userDao.getOrNull(idx));
 
                 userDao.deleteById(idx);
 
@@ -624,7 +624,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -647,14 +647,14 @@ public class DaoTest {
     //        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
     //        userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
     //
-    //        User userFromDB = userDao.gett(100L, true);
+    //        User userFromDB = userDao.getOrNull(100L, true);
     //        System.out.println(userFromDB);
     //        assertNotNull(userFromDB);
     //
     //        userDao.deleteById(100L);
     //
     //        long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
-    //        userFromDB = userDao.gett(id);
+    //        userFromDB = userDao.getOrNull(id);
     //        System.out.println(userFromDB);
     //        assertNotNull(userFromDB);
     //
@@ -697,7 +697,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList(s.id, s.firstName, s.lastName, s.email));
 
-        User userFromDB = userDao.gett(100L);
+        User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -708,7 +708,7 @@ public class DaoTest {
         userDao.deleteById(100L);
 
         final long id = userDao.insert(user, N.asList(s.firstName, s.lastName, s.email));
-        userFromDB = userDao.gett(id);
+        userFromDB = userDao.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
         userDao.deleteById(id);
@@ -743,7 +743,7 @@ public class DaoTest {
     //
     //        noUpdateUserDao.save(user);
     //
-    //        final User userFromDB = readOnlyUserDao.gett(100L);
+    //        final User userFromDB = readOnlyUserDao.getOrNull(100L);
     //        System.out.println(userFromDB);
     //
     //        try {
@@ -777,34 +777,34 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = userDao.gett(100L);
+        User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         userFromDB.setFirstName("updatedFN");
         userDao.update(userFromDB, Filters.eq("firstName", "Forrest"));
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertEquals("updatedFN", userFromDB.getFirstName());
 
         userFromDB.setFirstName("updatedFN2");
         userDao.update(userFromDB, Filters.eq("lastName", "Gump").and(Filters.eq("id", userFromDB.getId())));
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertEquals("updatedFN2", userFromDB.getFirstName());
 
         userDao.update(N.asMap("firstName", "updatedFN3"), userFromDB.getId());
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertEquals("updatedFN3", userFromDB.getFirstName());
 
         userDao.deleteById(100L);
 
         final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = userDao.gett(id);
+        userFromDB = userDao.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
         userDao.deleteById(id);
@@ -817,7 +817,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = userDao.gett(100L);
+        User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -833,7 +833,7 @@ public class DaoTest {
         userDao.deleteById(100L);
 
         final long id = userDao.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = userDao.gett(id);
+        userFromDB = userDao.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
         userDao.deleteById(id);
@@ -846,7 +846,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 100; i++) {
@@ -877,7 +877,7 @@ public class DaoTest {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         assertEquals(1, userDao.batchDeleteByIds(N.repeat(100L, 1)));
@@ -890,7 +890,7 @@ public class DaoTest {
         user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         assertEquals(1, userDao.batchDelete(N.repeat(userFromDB, 1)));
@@ -910,7 +910,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -944,7 +944,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -1006,7 +1006,7 @@ public class DaoTest {
         user.setId(101);
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -1059,7 +1059,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
@@ -1094,7 +1094,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        final User userFromDB = userDao.gett(100L);
+        final User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
@@ -1134,7 +1134,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        User userFromDB = userDao.gett(100L);
+        User userFromDB = userDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
@@ -1147,22 +1147,22 @@ public class DaoTest {
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         Beans.copy(userFromDB);
         userDao.loadAllJoinEntitiesIfAbsent(userFromDB);
         System.out.println(userFromDB);
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         Beans.copy(userFromDB);
         userDao.loadJoinEntities(userFromDB, Device.class);
         System.out.println(userFromDB);
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         Beans.copy(userFromDB);
         userDao.loadJoinEntitiesIfAbsent(userFromDB, Address.class);
         System.out.println(userFromDB);
 
-        userFromDB = userDao.gett(100L);
+        userFromDB = userDao.getOrNull(100L);
         Beans.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB, true);
         System.out.println(userFromDB);
@@ -1184,7 +1184,7 @@ public class DaoTest {
             final User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
             userDao.insertWithId(user);
 
-            final User userFromDB = userDao.gett(100L + i);
+            final User userFromDB = userDao.getOrNull(100L + i);
             System.out.println(userFromDB);
             users.add(userFromDB);
 
@@ -1234,7 +1234,7 @@ public class DaoTest {
     @Test
     public void test_SqlParser() {
         final String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
-        SqlParser.parse(sql).forEach(Fn.println());
+        SqlParser.tokenize(sql).forEach(Fn.println());
     }
 
     @Test
@@ -1243,14 +1243,14 @@ public class DaoTest {
         Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
         employeeDao.insert(employee);
 
-        Employee employeeFromDB = employeeDao.gett(employee.getEmployeeId());
+        Employee employeeFromDB = employeeDao.getOrNull(employee.getEmployeeId());
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
         Project project = Project.builder().projectId(1000).title("Project X").startDate(Dates.currentJUDatePlus(3, TimeUnit.DAYS)).build();
         projectDao.insert(project);
 
-        final Project projectFromDB = projectDao.gett(project.getProjectId());
+        final Project projectFromDB = projectDao.getOrNull(project.getProjectId());
         projectDao.loadAllJoinEntities(projectFromDB);
         System.out.println(projectFromDB);
 
@@ -1261,15 +1261,15 @@ public class DaoTest {
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
-        List<Employee> employeesFromDB = N.asList(employeeDao.gett(employee.getEmployeeId()), employeeDao.gett(employee.getEmployeeId()));
+        List<Employee> employeesFromDB = N.asList(employeeDao.getOrNull(employee.getEmployeeId()), employeeDao.getOrNull(employee.getEmployeeId()));
         employeeDao.loadAllJoinEntities(employeesFromDB);
         System.out.println(employeesFromDB);
 
-        employeeFromDB = employeeDao.gett(employee.getEmployeeId());
+        employeeFromDB = employeeDao.getOrNull(employee.getEmployeeId());
         employeeDao.loadJoinEntities(employeeFromDB, Project.class, N.asList("title"));
         System.out.println(employeeFromDB);
 
-        employeesFromDB = N.asList(employeeDao.gett(employee.getEmployeeId()), employeeDao.gett(employee.getEmployeeId()));
+        employeesFromDB = N.asList(employeeDao.getOrNull(employee.getEmployeeId()), employeeDao.getOrNull(employee.getEmployeeId()));
         employeeDao.loadJoinEntities(employeesFromDB, Project.class, N.asList("title"));
         System.out.println(employeesFromDB);
 
@@ -1308,10 +1308,10 @@ public class DaoTest {
         System.out.println(projects);
 
         assertTrue(employeeProjectDao.exists(entityId));
-        assertNotNull(employeeProjectDao.gett(entityId));
+        assertNotNull(employeeProjectDao.getOrNull(entityId));
 
         assertTrue(employeeProjectDao2.exists(entityId2));
-        assertNotNull(employeeProjectDao2.gett(entityId2));
+        assertNotNull(employeeProjectDao2.getOrNull(entityId2));
 
         assertEquals(employees.size(), employeeDao.deleteAllJoinEntities(employees));
         assertEquals(0, employeeDao.deleteAllJoinEntities(employees));
@@ -1329,7 +1329,7 @@ public class DaoTest {
         employeeProjectDao2.deleteById(entityId2);
 
         assertFalse(employeeProjectDao.exists(entityId));
-        assertNull(employeeProjectDao.gett(entityId));
+        assertNull(employeeProjectDao.getOrNull(entityId));
     }
 
     @Test
@@ -1396,11 +1396,11 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(a -> N.println(a.join(", "))));
-        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(User.class, a -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.RowConsumer.forDisposableObjArray(a -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.RowConsumer.forDisposableObjArray(User.class, a -> N.println(a.join(", "))));
 
-        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff((cls, a) -> N.println(a.join(", "))));
-        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff(User.class, (cls, a) -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.forDisposableObjArray((cls, a) -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.forDisposableObjArray(User.class, (cls, a) -> N.println(a.join(", "))));
 
         userDao.stream(Filters.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray()).forEach(Fn.println());
         userDao.stream(Filters.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
@@ -1416,7 +1416,7 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         myUserDaoA.save(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = myUserDaoA.gett(100L);
+        User userFromDB = myUserDaoA.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -1427,7 +1427,7 @@ public class DaoTest {
         myUserDaoA.deleteById(100L);
 
         final long id = myUserDaoA.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = myUserDaoA.gett(id);
+        userFromDB = myUserDaoA.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
         myUserDaoA.deleteById(id);

@@ -402,7 +402,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Load all orders for this user
      * userDao.loadJoinEntities(user, Order.class);
      * // Now user.getOrders() will contain the loaded orders
@@ -424,7 +424,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Load orders but only fetch id, orderDate, and total
      * userDao.loadJoinEntities(
      *     user,
@@ -522,7 +522,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Specifically load the "orders" property
      * userDao.loadJoinEntities(user, "orders");
      * // Load the "profile" property
@@ -557,7 +557,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Load orders property with only specific fields
      * userDao.loadJoinEntities(
      *     user,
@@ -669,7 +669,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Load specific join properties
      * userDao.loadJoinEntities(
      *     user,
@@ -699,7 +699,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Load multiple properties in parallel
      * userDao.loadJoinEntities(
      *     user,
@@ -731,7 +731,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * java.util.concurrent.ExecutorService customExecutor =
      *     java.util.concurrent.Executors.newFixedThreadPool(4);
      * try {
@@ -881,7 +881,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Load all related entities (orders, profile, addresses, etc.)
      * userDao.loadAllJoinEntities(user);
      * }</pre>
@@ -901,7 +901,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * // Load all join entities in parallel for better performance
      * userDao.loadAllJoinEntities(user, true);
      * }</pre>
@@ -927,7 +927,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * java.util.concurrent.ExecutorService customPool =
      *     new java.util.concurrent.ForkJoinPool(8);
      * try {

@@ -102,14 +102,33 @@ import com.landawn.abacus.util.N;
 @SuppressWarnings("resource")
 public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuery> {
 
+    /**
+     * Minimum number of parameter placeholders above which named-parameter lookup switches from a linear
+     * scan of {@link #parameterNames} to a lazily built {@link #paramNameIndexMap}.
+     */
     static final int MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP = 5;
 
+    /**
+     * The parsed form of the named SQL: the positional SQL actually prepared on the statement,
+     * the original named SQL, and the parameter metadata derived from it.
+     */
     private final ParsedSql namedSql;
 
+    /**
+     * The parameter names in placeholder order, one entry per placeholder; a name used several times
+     * in the SQL appears once per occurrence. Never {@code null}.
+     */
     private final List<String> parameterNames;
 
+    /**
+     * The total number of parameter placeholders in the SQL, equal to {@code parameterNames.size()}.
+     */
     private final int parameterCount;
 
+    /**
+     * Lazily built index from parameter name to its 1-based parameter positions, used only when
+     * {@code parameterCount >= MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP}; {@code null} until first needed.
+     */
     private Map<String, IntList> paramNameIndexMap;
 
     /**
@@ -135,6 +154,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
     }
 
+    /**
+     * Builds {@link #paramNameIndexMap}, mapping each parameter name to the 1-based positions of all
+     * its occurrences in placeholder order. No-op-safe to call once; overwrites any existing map.
+     */
     private void initParamNameIndexMap() {
         paramNameIndexMap = N.newHashMap(parameterCount);
         int index = 1;
@@ -146,11 +169,25 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
     }
 
+    /**
+     * Creates the exception reporting that a named parameter does not exist in this query's SQL;
+     * the message lists the available parameter names and the original SQL.
+     *
+     * @param parameterName the unknown parameter name
+     * @return a new {@link IllegalArgumentException} to be thrown by the caller
+     */
     private IllegalArgumentException namedParameterNotFound(final String parameterName) {
         return new IllegalArgumentException(
                 "Named parameter not found: " + parameterName + ". Available named parameters: " + parameterNames + ". SQL: " + namedSql.originalSql());
     }
 
+    /**
+     * Creates the "named parameter not found" exception and closes this query (and its statement),
+     * suppressing any close failure into the exception, so the caller can simply throw the result.
+     *
+     * @param parameterName the unknown parameter name
+     * @return the {@link IllegalArgumentException} to throw after this query has been closed
+     */
     private IllegalArgumentException closeAfterNamedParameterNotFound(final String parameterName) {
         final IllegalArgumentException failure = namedParameterNotFound(parameterName);
         closeSuppressingFailure(failure);
@@ -4358,6 +4395,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return this;
     }
 
+    /**
+     * Adds one batch entry with the single parameter set to {@code null}, for a {@code null} element
+     * encountered while iterating batch parameters. Only supported when the SQL has exactly one
+     * parameter placeholder.
+     *
+     * @throws IllegalArgumentException if {@code parameterCount} is not exactly {@code 1}
+     * @throws SQLException if a database access error occurs while clearing or setting the parameter
+     */
     private void addNullBatchParameter() throws SQLException {
         if (parameterCount != 1) {
             throw new IllegalArgumentException(

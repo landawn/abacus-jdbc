@@ -225,19 +225,40 @@ import com.landawn.abacus.util.stream.Stream;
 @SuppressWarnings({ "deprecation", "java:S1192", "resource", "unused" })
 final class DaoImpl {
 
+    /**
+     * Prevents instantiation; this is a utility class with only static members.
+     */
     private DaoImpl() {
         // utility class - prevent instantiation.
     }
 
+    /** Literal {@code "1"} used as the selected column in generated exists queries. */
     private static final String _1 = "1";
 
+    /** Shared JSON parser used to serialize/deserialize cached query results when JSON cache serialization applies. */
     private static final JsonParser jsonParser = ParserFactory.createJsonParser();
+
+    /**
+     * Shared Kryo parser used to deep-copy cached query results; {@code null} when Kryo is not available on the classpath.
+     */
     private static final KryoParser kryoParser = ParserFactory.isKryoParserAvailable() ? ParserFactory.createKryoParser() : null;
 
+    /**
+     * JSON serialization config without root brackets or string quotation, used to splice array/collection values
+     * (e.g. {@code @SqlFragmentList} parameters) into SQL text.
+     */
     private static final JsonSerConfig jsc_no_bracket = JsonSerConfig.create().setStringQuotation(JdbcUtil.CHAR_ZERO).setBracketRootValue(false);
 
+    /**
+     * Marks whether the current thread is already executing inside a DAO method invocation, so nested DAO calls
+     * can be distinguished from outermost ones (e.g. for {@code @Handler} invocation semantics).
+     */
     static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
+    /**
+     * Process-wide cache of created DAO proxies keyed by {@link DaoCacheKey}; repeated creation requests with the
+     * same configuration return the same proxy instance.
+     */
     @SuppressWarnings("rawtypes")
     private static final Map<DaoCacheKey, DaoBase> daoPool = new ConcurrentHashMap<>();
 
@@ -247,12 +268,19 @@ final class DaoImpl {
      * share a proxy merely because their identity hash codes collide.
      */
     private static final class DaoCacheKey {
+        /** The DAO interface the proxy implements; compared by reference identity. */
         private final Class<?> daoInterface;
+        /** The target table name override, or {@code null} when the table name is derived from the entity class. */
         private final String targetTableName;
+        /** The data source backing the DAO; compared by reference identity. */
         private final Object dataSource;
+        /** The SQL dialect DSL; compared by reference identity. */
         private final Object dsl;
+        /** The SQL mapper holding pre-defined SQL statements, or {@code null}; compared by reference identity. */
         private final Object sqlMapper;
+        /** The DAO cache, or {@code null}; compared by reference identity. */
         private final Object daoCache;
+        /** The executor for asynchronous operations, or {@code null}; compared by reference identity. */
         private final Object executor;
 
         DaoCacheKey(final Class<?> daoInterface, final String targetTableName, final Object dataSource, final Object dsl, final Object sqlMapper,
@@ -294,7 +322,9 @@ final class DaoImpl {
 
     /** Identity-based key for the smaller cache used while resolving DAOs for joined entities. */
     private static final class JoinEntityDaoCacheKey {
+        /** The referenced (joined) entity class; compared by reference identity. */
         private final Class<?> entityClass;
+        /** The data source the join DAO is bound to; compared by reference identity. */
         private final javax.sql.DataSource dataSource;
 
         JoinEntityDaoCacheKey(final Class<?> entityClass, final javax.sql.DataSource dataSource) {
@@ -313,6 +343,11 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Maps each supported SQL annotation type (e.g. {@link Query}) to a factory that builds the {@link QueryInfo}
+     * for an annotated DAO method from the annotation and an optional {@link SqlMapper}. Populated once in a static
+     * initializer and effectively immutable afterwards.
+     */
     private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SqlMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
     static {
@@ -383,6 +418,10 @@ final class DaoImpl {
         });
     }
 
+    /**
+     * Maps the supported value-holder types (the {@code u.Optional}/{@code u.Nullable} family and the
+     * {@code java.util.Optional} family) to a predicate testing whether an instance holds a value.
+     */
     @SuppressWarnings("rawtypes")
     private static final Map<Class<?>, Predicate> isValuePresentMap = N.newHashMap(20);
 
@@ -408,16 +447,27 @@ final class DaoImpl {
         isValuePresentMap.putAll(tmp);
     }
 
+    /** Tests whether a type is immutable (assignable to {@link Immutable}), e.g. to decide if cached results need copying. */
     private static final Predicate<? super Class<?>> isImmutableTester = Immutable.class::isAssignableFrom;
 
+    /**
+     * Return types that must never be cached: live or single-use values ({@link Iterator}, streams) and
+     * {@code void}/{@code Void}.
+     */
     private static final Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
             EntryStream.class, Stream.class, Seq.class);
 
+    /** Binds a collection of arguments to a parameterized query via {@link AbstractQuery#setParameters(Collection)}. */
     @SuppressWarnings("rawtypes")
     private static final Jdbc.BiParametersSetter<AbstractQuery, Collection> collParamsSetter = AbstractQuery::setParameters;
 
+    /** Binds a bean or map argument to a named query via {@link NamedQuery#setParameters(Object)}. */
     private static final Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = NamedQuery::setParameters; // NOSONAR
 
+    /**
+     * Method-name prefixes identifying single-result (non-list) queries when the declared {@link QueryOperation}
+     * is {@code DEFAULT}.
+     */
     private static final Set<String> singleQueryPrefix = N.toSet("get", "findFirst", "findOne", "findOnlyOne", "selectFirst", "selectOne", "selectOnlyOne",
             "exist", "notExist", "has", "is");
 
@@ -470,6 +520,13 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Returns a DSL that renders parameterized SQL: {@code dsl} itself if its policy is already
+     * {@link SqlPolicy#PARAMETERIZED_SQL}, otherwise a copy rebuilt with that policy.
+     *
+     * @param dsl the source DSL; must not be {@code null}
+     * @return a DSL whose SQL policy is {@link SqlPolicy#PARAMETERIZED_SQL}
+     */
     private static Dsl parameterizedDsl(final Dsl dsl) {
         if (dsl.sqlDialect().sqlPolicy() == SqlPolicy.PARAMETERIZED_SQL) {
             return dsl;
@@ -478,6 +535,13 @@ final class DaoImpl {
         return dslWithPolicy(dsl, SqlPolicy.PARAMETERIZED_SQL);
     }
 
+    /**
+     * Returns a DSL that renders named-parameter SQL: {@code dsl} itself if its policy is already
+     * {@link SqlPolicy#NAMED_SQL}, otherwise a copy rebuilt with that policy.
+     *
+     * @param dsl the source DSL; must not be {@code null}
+     * @return a DSL whose SQL policy is {@link SqlPolicy#NAMED_SQL}
+     */
     private static Dsl namedDsl(final Dsl dsl) {
         if (dsl.sqlDialect().sqlPolicy() == SqlPolicy.NAMED_SQL) {
             return dsl;
@@ -486,6 +550,14 @@ final class DaoImpl {
         return dslWithPolicy(dsl, SqlPolicy.NAMED_SQL);
     }
 
+    /**
+     * Returns a DSL rendering with the given SQL policy while preserving all other dialect customizations of
+     * {@code dsl}.
+     *
+     * @param dsl the source DSL; must not be {@code null}
+     * @param sqlPolicy the SQL rendering policy to apply
+     * @return a DSL with the requested policy
+     */
     private static Dsl dslWithPolicy(final Dsl dsl, final SqlPolicy sqlPolicy) {
         // Preserve all dialect customizations (including the named-parameter handler and tokenizer configuration)
         // when only the rendering policy needs to change.
@@ -606,6 +678,20 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Determines whether the method should be dispatched as an exists query (a boolean row-existence check). It is
+     * an exists query when {@link QueryOperation#exists} is declared (which requires a {@code boolean}/{@code Boolean}
+     * return type), or, for {@link QueryOperation#DEFAULT}, when the method returns {@code boolean}/{@code Boolean},
+     * its name starts with {@code exists}/{@code exist}/{@code notExists}/{@code notExist} followed by an upper-case
+     * letter or nothing, and it has no trailing row-mapper or result-extractor parameter.
+     *
+     * @param method the DAO method to inspect
+     * @param queryOperation the operation type declared for the method
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
+     * @return {@code true} if the method should be dispatched as an exists query
+     * @throws UnsupportedOperationException if {@link QueryOperation#exists} is declared but the return type is not
+     *         {@code boolean} or {@code Boolean}
+     */
     private static boolean isExistsQuery(final Method method, final QueryOperation queryOperation, final String fullClassMethodName) {
         final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
@@ -638,11 +724,28 @@ final class DaoImpl {
                 || isNotExistsMethodName(methodName));
     }
 
+    /**
+     * Returns {@code true} if the method name starts with {@code notExists} or {@code notExist}, followed by an
+     * upper-case letter or nothing.
+     *
+     * @param methodName the DAO method name to test
+     * @return {@code true} if the name denotes a not-exists query
+     */
     private static boolean isNotExistsMethodName(final String methodName) {
         return (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
                 || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8))));
     }
 
+    /**
+     * Returns {@code true} if the method should be dispatched with find-first semantics (at most the first row is
+     * read): either explicitly via {@link QueryOperation#findFirst}, or, for {@link QueryOperation#DEFAULT}, whenever
+     * the method name does not claim stricter at-most-one-row semantics ({@code findOnlyOne}/{@code selectOnlyOne}/
+     * {@code queryForSingle}/{@code queryForUnique}).
+     *
+     * @param method the DAO method to inspect
+     * @param queryOperation the operation type declared for the method
+     * @return {@code true} if the method is a find-first query
+     */
     private static boolean isFindFirst(final Method method, final QueryOperation queryOperation) {
         if (queryOperation == QueryOperation.findFirst) {
             return true;
@@ -652,6 +755,15 @@ final class DaoImpl {
                 || method.getName().startsWith("queryForSingle") || method.getName().startsWith("queryForUnique"));
     }
 
+    /**
+     * Returns {@code true} if the method must enforce at-most-one-row semantics: either explicitly via
+     * {@link QueryOperation#findOnlyOne}, or, for {@link QueryOperation#DEFAULT}, when the method name starts with
+     * {@code findOnlyOne} or {@code selectOnlyOne}.
+     *
+     * @param method the DAO method to inspect
+     * @param queryOperation the operation type declared for the method
+     * @return {@code true} if the method is a find-only-one query
+     */
     private static boolean isFindOnlyOne(final Method method, final QueryOperation queryOperation) {
         if (queryOperation == QueryOperation.findOnlyOne) {
             return true;
@@ -661,6 +773,15 @@ final class DaoImpl {
         return queryOperation == QueryOperation.DEFAULT && (method.getName().startsWith("findOnlyOne") || method.getName().startsWith("selectOnlyOne"));
     }
 
+    /**
+     * Returns {@code true} if the method must enforce unique-result semantics (exactly at most one row, failing on
+     * duplicates): either explicitly via {@link QueryOperation#queryForUnique}, or, for
+     * {@link QueryOperation#DEFAULT}, when the method name starts with {@code queryForUnique}.
+     *
+     * @param method the DAO method to inspect
+     * @param queryOperation the operation type declared for the method
+     * @return {@code true} if the method is a query-for-unique query
+     */
     private static boolean isQueryForUnique(final Method method, final QueryOperation queryOperation) {
         if (queryOperation == QueryOperation.queryForUnique) {
             return true;
@@ -669,14 +790,35 @@ final class DaoImpl {
         return queryOperation == QueryOperation.DEFAULT && method.getName().startsWith("queryForUnique");
     }
 
+    /** Return types holding at most one value: the {@code u.Nullable}/{@code u.Optional} and {@code java.util.Optional} families. */
     private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.wrap((N.toSet(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
             u.OptionalChar.class, u.OptionalByte.class, u.OptionalShort.class, u.OptionalInt.class, u.OptionalLong.class, u.OptionalFloat.class,
             u.OptionalDouble.class, java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class)));
 
+    /**
+     * Returns {@code true} if the return type holds a single value: one of the optional/nullable types in
+     * {@link #singleReturnTypeSet}, or a primitive (wrapper) type.
+     *
+     * @param returnType the return type to test
+     * @return {@code true} if the return type is a single-value type
+     */
     private static boolean isSingleReturnType(final Class<?> returnType) {
         return singleReturnTypeSet.contains(returnType) || ClassUtil.isPrimitiveType(ClassUtil.unwrap(returnType));
     }
 
+    /**
+     * Builds the execution function for a single-value (non-list) return type. The returned function executes the
+     * prepared query and converts the result to {@code returnType}: the matching {@code queryForXxx} variant for the
+     * optional primitive types, and {@code queryForSingleValue}/{@code queryForUniqueValue} (falling back to the
+     * type's default value when no row is found) for plain scalar types, honoring the uniqueness contract of
+     * find-only-one/query-for-unique methods.
+     *
+     * @param <R> the result type
+     * @param returnType the single-value return type of the DAO method
+     * @param method the DAO method, used to determine uniqueness semantics
+     * @param queryOperation the operation type declared for the method
+     * @return a function executing a prepared query and returning the single result value
+     */
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createSingleQueryFunction(final Class<?> returnType, final Method method,
             final QueryOperation queryOperation) {
@@ -710,6 +852,28 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Validates the DAO method's return type against its declared {@link QueryOperation} and builds the function
+     * that executes the prepared query and maps the result accordingly (list, single value, map keyed by id,
+     * procedure result sets with out parameters, stream, etc.). Incompatible return-type/operation combinations are
+     * rejected eagerly here, at proxy-creation time, rather than at first invocation.
+     *
+     * @param <R> the result type
+     * @param entityClass the entity class of the DAO
+     * @param method the DAO method to build the query function for
+     * @param mappedByKey the property name from {@code @MappedByKey}, or {@code null}
+     * @param mergedByIds the id property names from {@code @MergedById}, or {@code null}
+     * @param prefixFieldMap the column-prefix-to-field mapping used for result mapping, or {@code null}
+     * @param fetchColumnByEntityClass {@code true} to fetch columns derived from the entity class
+     * @param hasRowMapperOrExtractor {@code true} if the method declares a row-mapper or result-extractor parameter
+     * @param hasRowFilter {@code true} if the method declares a row-filter parameter
+     * @param queryOperation the operation type declared for the method
+     * @param isProcedure {@code true} if the SQL is a stored procedure call
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
+     * @return a function executing a prepared query and returning the mapped result
+     * @throws UnsupportedOperationException if the return type is not supported by the declared
+     *         {@link QueryOperation}, or a required generic element type cannot be resolved
+     */
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createQueryFunctionByMethod(final Class<?> entityClass,
             final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMap,
@@ -1271,6 +1435,14 @@ final class DaoImpl {
 
     // Fails DAO creation instead of every invocation when a raw or wildcard generic return type (e.g.
     // List, Stream, Nullable<?>) leaves the element type unresolved.
+    /**
+     * Ensures the element type of a generic return type was resolved.
+     *
+     * @param firstReturnEleType the resolved first element type, or {@code null} if unresolvable
+     * @param returnType the method's return type, used for the error message
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
+     * @throws UnsupportedOperationException if {@code firstReturnEleType} is {@code null}
+     */
     private static void checkReturnEleTypeResolved(final Class<?> firstReturnEleType, final Class<?> returnType, final String fullClassMethodName) {
         if (firstReturnEleType == null) {
             throw new UnsupportedOperationException("The element type of the return type: " + returnType + " in method: " + fullClassMethodName
@@ -1278,11 +1450,26 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Returns {@code true} if query result rows can be materialized into the given class directly: a bean or record
+     * class, or a {@code Map}, {@code List}, or {@code Object[]} type.
+     *
+     * @param cls the candidate target class
+     * @return {@code true} if the class is a supported find/list result target
+     */
     private static boolean isFindOrListTargetClass(final Class<?> cls) {
         return Beans.isBeanClass(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
                 || Beans.isRecordClass(cls);
     }
 
+    /**
+     * Resolves the raw class of the first type argument of the method's generic return type (e.g. {@code User} in
+     * {@code List<User>} or the key type in {@code Map<K, V>}).
+     *
+     * @param method the method whose generic return type is inspected
+     * @return the raw class of the first type argument, or {@code null} if the return type is not parameterized or
+     *         the argument cannot be resolved to a class
+     */
     private static Class<?> getFirstReturnEleType(final Method method) {
         final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
 
@@ -1299,6 +1486,14 @@ final class DaoImpl {
                                 : null));
     }
 
+    /**
+     * Resolves the raw class of the second type argument of the method's generic return type (e.g. the value type in
+     * {@code Map<K, V>} or the second element of a {@code Tuple2}).
+     *
+     * @param method the method whose generic return type is inspected
+     * @return the raw class of the second type argument, or {@code null} if there is no second type argument or it
+     *         cannot be resolved to a class
+     */
     private static Class<?> getSecondReturnEleType(final Method method) {
         final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
 
@@ -1315,6 +1510,14 @@ final class DaoImpl {
                                 : null));
     }
 
+    /**
+     * Resolves the raw class two generic levels into the method's return type: the first type argument of the first
+     * type argument (e.g. {@code User} in {@code List<List<User>>}).
+     *
+     * @param method the method whose generic return type is inspected
+     * @return the raw class at the second nesting level, or {@code null} if the return type is not parameterized two
+     *         levels deep or the type cannot be resolved to a class
+     */
     private static Class<?> getFirstReturnEleEleType(final Method method) {
         final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
 
@@ -1337,6 +1540,14 @@ final class DaoImpl {
                                 : null));
     }
 
+    /**
+     * Resolves the raw class three generic levels into the method's return type: the first type argument of the
+     * first type argument of the first type argument (e.g. {@code User} in {@code List<List<List<User>>>}).
+     *
+     * @param method the method whose generic return type is inspected
+     * @return the raw class at the third nesting level, or {@code null} if the return type is not parameterized three
+     *         levels deep or the type cannot be resolved to a class
+     */
     private static Class<?> getFirstReturnEleEleEleType(final Method method) {
         final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
         final ParameterizedType parameterizedReturnType = genericReturnType instanceof ParameterizedType ? (ParameterizedType) genericReturnType : null;
@@ -1362,6 +1573,27 @@ final class DaoImpl {
                         : null);
     }
 
+    /**
+     * Builds the setter that binds a DAO method's argument array to its prepared query, based on the query's
+     * parameter positions, named-parameter bindings, and batch/fragment configuration. When the SQL contains the
+     * reserved system-time named parameters and auto-binding is enabled, the returned setter also binds the current
+     * time (one clock reading shared by all of them) to those parameters. Named-parameter bindings are validated
+     * eagerly here, at proxy-creation time.
+     *
+     * @param queryInfo the parsed metadata of the method's SQL query
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
+     * @param method the DAO method
+     * @param paramTypes the method's parameter types
+     * @param paramLen the number of method parameters
+     * @param fragmentParamLen the number of SQL-fragment parameters
+     * @param stmtParamIndexes indexes of the method parameters that bind to statement parameters
+     * @param bindListParamFlags flags marking method parameters annotated with {@code @BindList}
+     * @param stmtParamLen the number of statement-bound parameters
+     * @return the parameters setter, or {@link Jdbc.BiParametersSetter#DO_NOTHING} when there is nothing to bind
+     * @throws UnsupportedOperationException if a {@code ParametersSetter}/{@code BiParametersSetter}/
+     *         {@code TriParametersSetter} method parameter is used (not enabled at present), or if named-parameter
+     *         bindings are invalid
+     */
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Object[]> createParametersSetter(final QueryInfo queryInfo, final String fullClassMethodName,
             final Method method, final Class<?>[] paramTypes, final int paramLen, final int fragmentParamLen, final int[] stmtParamIndexes,
@@ -1630,6 +1862,17 @@ final class DaoImpl {
         return parametersSetter == null ? Jdbc.BiParametersSetter.DO_NOTHING : parametersSetter;
     }
 
+    /**
+     * Validates the {@code @Bind} names of a named-query method: every name must be non-empty, no two method
+     * parameters may bind to the same name, and the bound names must exactly cover the named parameters in the SQL
+     * (excluding the reserved system-time parameters when they are auto-set).
+     *
+     * @param queryInfo the parsed metadata of the method's SQL query
+     * @param boundParamNames the {@code @Bind} names declared on the method's parameters
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
+     * @throws UnsupportedOperationException if a binding name is empty, duplicated, missing from the SQL, or has no
+     *         matching named parameter in the SQL
+     */
     private static void validateNamedParameterBindings(final QueryInfo queryInfo, final Collection<String> boundParamNames, final String fullClassMethodName) {
         final Set<String> boundParamNameSet = new HashSet<>();
         final List<String> duplicateParamNames = new ArrayList<>();
@@ -1670,6 +1913,15 @@ final class DaoImpl {
 
     // A procedure whose SQL uses named parameters is prepared as a CallableQuery, not a NamedQuery;
     // both declare named setters but share no common interface for them.
+    /**
+     * Sets a named timestamp parameter on the prepared query, dispatching to {@link CallableQuery} or
+     * {@link NamedQuery} as appropriate.
+     *
+     * @param preparedQuery the query to bind; must be a {@link CallableQuery} or {@link NamedQuery}
+     * @param parameterName the named parameter to set
+     * @param value the timestamp value to bind
+     * @throws SQLException if setting the parameter fails
+     */
     private static void setSysTimestampParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName,
             final java.sql.Timestamp value) throws SQLException {
         if (preparedQuery instanceof CallableQuery) {
@@ -1679,6 +1931,15 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Sets a named date parameter on the prepared query, dispatching to {@link CallableQuery} or
+     * {@link NamedQuery} as appropriate.
+     *
+     * @param preparedQuery the query to bind; must be a {@link CallableQuery} or {@link NamedQuery}
+     * @param parameterName the named parameter to set
+     * @param value the date value to bind
+     * @throws SQLException if setting the parameter fails
+     */
     private static void setSysDateParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName, final java.sql.Date value)
             throws SQLException {
         if (preparedQuery instanceof CallableQuery) {
@@ -1688,6 +1949,31 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Creates and configures the {@link AbstractQuery} for one DAO method invocation: substitutes SQL-fragment
+     * parameters into the SQL text, opens a parameterized, named, or callable query against the DAO's data source,
+     * registers procedure out parameters, applies fetch direction/size and query timeout derived from the query
+     * metadata and operation type, and binds the method arguments (or configures the batch action for batch
+     * queries). On any failure, a partially prepared query is closed before the error is rethrown.
+     *
+     * @param proxy the DAO proxy providing the data source
+     * @param queryInfo the parsed metadata of the method's SQL query
+     * @param mergedByIdAnno the {@code @MergedById} annotation on the method, or {@code null}
+     * @param returnType the method's return type
+     * @param args the invocation arguments
+     * @param fragmentParamIndexes indexes of the SQL-fragment parameters, or {@code null}
+     * @param fragmentAnnos the fragment annotations and their placeholders, or {@code null}
+     * @param fragmentMappers mappers converting fragment argument values to SQL text, or {@code null}
+     * @param returnGeneratedKeys {@code true} to prepare the query for generated-key retrieval
+     * @param generatedKeyColumnNames the generated key column names, or {@code null}
+     * @param outParameterList the procedure out parameters to register, or {@code null}
+     * @param parametersSetter the setter binding {@code args} to the query
+     * @param isExistsQueryMethod {@code true} if the method is an exists query
+     * @param isSingleReturnTypeMethod {@code true} if the method returns a single value
+     * @param isListQueryMethod {@code true} if the method is a list query
+     * @return the prepared and configured query; the caller is responsible for closing it
+     * @throws SQLException if preparing or configuring the query fails
+     */
     @SuppressWarnings({ "rawtypes", "unused" })
     private static AbstractQuery prepareQuery(final DaoBase proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final Class<?> returnType,
             final Object[] args, final int[] fragmentParamIndexes, final Tuple2<Annotation, String>[] fragmentAnnos,
@@ -1804,6 +2090,18 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Applies a row-count limit to a condition, returning the condition to use. A non-positive {@code count} leaves
+     * the condition unchanged, and an existing limit (standalone or inside a {@code Criteria}) is always preserved.
+     * Otherwise a limit of {@code count} is added; when {@code skipLimitWithoutOrderBy} is {@code true} the limit is
+     * dropped instead if the resulting condition has no {@code ORDER BY} (for dialects that cannot render a limit
+     * without one).
+     *
+     * @param cond the condition to limit, or {@code null}
+     * @param count the maximum row count; non-positive means no framework-added limit
+     * @param skipLimitWithoutOrderBy {@code true} to skip adding a limit when there is no {@code ORDER BY}
+     * @return the condition with the limit applied as described
+     */
     private static Condition handleLimit(final Condition cond, final int count, final boolean skipLimitWithoutOrderBy) {
         // A non-positive count means "no framework-added limit": return the condition unchanged. Any existing Limit
         // (standalone or inside a Criteria) is preserved as-is and rendered per dialect later by the SQL builder.
@@ -1851,6 +2149,13 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Sums the positive entries of a JDBC batch update-count array, ignoring zero and negative entries
+     * (e.g. {@link java.sql.Statement#SUCCESS_NO_INFO}).
+     *
+     * @param updateCounts the per-statement update counts returned by a batch execution
+     * @return the total number of affected rows
+     */
     private static long sumUpdateCounts(final int[] updateCounts) {
         long total = 0;
 
@@ -1863,6 +2168,14 @@ final class DaoImpl {
         return total;
     }
 
+    /**
+     * Sums the positive entries of a JDBC large-batch update-count array, ignoring zero and negative entries
+     * (e.g. {@link java.sql.Statement#SUCCESS_NO_INFO}).
+     *
+     * @param updateCounts the per-statement update counts returned by a batch execution
+     * @return the total number of affected rows
+     * @throws ArithmeticException if the total overflows a {@code long}
+     */
     private static long sumUpdateCounts(final long[] updateCounts) {
         long total = 0;
 
@@ -1875,6 +2188,16 @@ final class DaoImpl {
         return total;
     }
 
+    /**
+     * Returns the id extractor for the given DAO: the extractor declared on the DAO interface if present, otherwise
+     * {@code defaultIdExtractor}. The resolved extractor is stored in {@code idExtractorHolder} so subsequent calls
+     * reuse it.
+     *
+     * @param idExtractorHolder holder caching the resolved extractor between calls
+     * @param defaultIdExtractor the fallback extractor when the DAO declares none
+     * @param dao the DAO whose declared id extractor is looked up
+     * @return the id extractor to use
+     */
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiRowMapper<Object> getIdExtractor(final Holder<Jdbc.BiRowMapper<Object>> idExtractorHolder,
             final Jdbc.BiRowMapper<Object> defaultIdExtractor, final DaoBase dao) {
@@ -1891,6 +2214,15 @@ final class DaoImpl {
         return keyExtractor;
     }
 
+    /**
+     * Logs the elapsed time of a DAO method invocation at INFO level when DAO method performance logging is globally
+     * allowed, the {@code @PerfLog} threshold is non-negative, and the elapsed time meets that threshold.
+     *
+     * @param daoLogger the logger of the DAO class
+     * @param simpleClassMethodName the simple class and method name included in the log message
+     * @param perfLogAnno the effective {@code @PerfLog} annotation supplying the threshold
+     * @param startTimeNanos the invocation start time in {@link System#nanoTime()} units
+     */
     private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final PerfLog perfLogAnno, final long startTimeNanos) {
         if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.daoMethodPerfLogThresholdMillis() >= 0 && daoLogger.isInfoEnabled()) {
             final long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
@@ -1901,6 +2233,17 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Resolves the table name used for generated CRUD SQL: the explicit {@code targetTableName} when non-empty,
+     * otherwise the entity's declared table name, otherwise the entity class's simple name converted with
+     * {@code namingPolicy}.
+     *
+     * @param entityClass the entity class
+     * @param entityInfo the entity's bean metadata
+     * @param namingPolicy the naming policy used to derive the table name from the class name
+     * @param targetTableName the explicit table name override, or {@code null}/empty
+     * @return the table name to use
+     */
     private static String getTableName(final Class<?> entityClass, final BeanInfo entityInfo, final NamingPolicy namingPolicy, final String targetTableName) {
         if (Strings.isNotEmpty(targetTableName)) {
             return targetTableName;
@@ -1909,6 +2252,15 @@ final class DaoImpl {
         return entityInfo.tableName.orElseGet(() -> namingPolicy.convert(ClassUtil.getSimpleClassName(entityClass)));
     }
 
+    /**
+     * Validates a condition for a {@code paginate} operation: it must be non-{@code null} and carry an
+     * {@code ORDER BY} (either on the {@code Criteria} or in its literal form). Returns the condition unchanged.
+     *
+     * @param <T> the condition type
+     * @param cond the condition to validate
+     * @return the same condition
+     * @throws IllegalArgumentException if {@code cond} is {@code null} or has no {@code ORDER BY}
+     */
     private static <T extends Condition> T checkCondForPaginate(final T cond) {
         N.checkArgNotNull(cond, "Condition for \"paginate\" cannot be null");
 
@@ -1921,6 +2273,16 @@ final class DaoImpl {
         return cond;
     }
 
+    /**
+     * Finds the SQL-fragment annotation ({@code @SqlFragment}, {@code @SqlFragmentList}, or {@code @BindList})
+     * declared on the given method parameter and returns it together with its normalized placeholder name.
+     *
+     * @param method the DAO method
+     * @param paramIndex the index of the parameter to inspect
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
+     * @return the fragment annotation and its placeholder name
+     * @throws IllegalArgumentException if the parameter carries none of the supported fragment annotations
+     */
     private static Tuple2<Annotation, String> resolveFragmentAnnoAndPlaceholder(final Method method, final int paramIndex, final String fullClassMethodName) {
         final Annotation[] annotations = method.getParameterAnnotations()[paramIndex];
 
@@ -1941,6 +2303,20 @@ final class DaoImpl {
                 + " is expected to be annotated with @SqlFragment/@SqlFragmentList/@BindList.");
     }
 
+    /**
+     * Derives the placeholder name for a SQL-fragment parameter: the configured annotation value when non-empty,
+     * otherwise the Java parameter name (which requires compilation with {@code -parameters}). The result is
+     * wrapped in braces ({@code {name}}) unless it already is.
+     *
+     * @param configuredName the annotation value, or empty to use the Java parameter name
+     * @param method the DAO method
+     * @param paramIndex the index of the annotated parameter
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
+     * @param annotationType the fragment annotation type, used for error messages
+     * @return the placeholder name enclosed in braces
+     * @throws UnsupportedOperationException if no name can be derived (empty value and parameter names not
+     *         available, or a still-empty placeholder)
+     */
     private static String normalizeSqlFragmentPlaceholder(final String configuredName, final Method method, final int paramIndex,
             final String fullClassMethodName, final Class<? extends Annotation> annotationType) {
         String placeholderName = configuredName;
@@ -1974,6 +2350,17 @@ final class DaoImpl {
         return resolveDaoTypeArguments(daoInterface, new HashMap<>(), crudDao);
     }
 
+    /**
+     * Recursive worker for {@link #resolveDaoTypeArguments(Class, boolean)}: walks the interface hierarchy of
+     * {@code type}, accumulating type-variable bindings from parameterized supertypes, until the terminal DAO
+     * interface ({@link DaoBase} itself, or a CRUD ops interface carrying the entity/ID types) is found.
+     *
+     * @param type the interface type to resolve, possibly parameterized
+     * @param inheritedBindings type-variable bindings accumulated from already-visited supertypes
+     * @param crudDao {@code true} if resolving a CRUD DAO (entity and ID type arguments expected)
+     * @return the resolved type arguments of the terminal DAO interface, or {@code null} if it is not reachable
+     *         from {@code type}
+     */
     private static Type[] resolveDaoTypeArguments(final Type type, final Map<TypeVariable<?>, Type> inheritedBindings, final boolean crudDao) {
         final Class<?> rawType;
         final Map<TypeVariable<?>, Type> bindings = new HashMap<>(inheritedBindings);
@@ -2017,6 +2404,14 @@ final class DaoImpl {
         return null;
     }
 
+    /**
+     * Follows a chain of type-variable bindings to the concrete bound type, guarding against cyclic bindings.
+     * A type that is not a type variable, or whose variable is unbound, is returned unchanged.
+     *
+     * @param type the type to resolve
+     * @param bindings the accumulated type-variable bindings
+     * @return the resolved type
+     */
     private static Type resolveBoundType(final Type type, final Map<TypeVariable<?>, Type> bindings) {
         Type resolvedType = type;
         final Set<Type> visitedTypes = new HashSet<>();
@@ -2034,6 +2429,10 @@ final class DaoImpl {
         return resolvedType;
     }
 
+    /**
+     * Cache of DAOs resolved for join operations, keyed by {@link JoinEntityDaoCacheKey} (referenced entity class
+     * plus data source identity).
+     */
     @SuppressWarnings("rawtypes")
     private static final Map<JoinEntityDaoCacheKey, DaoBase> joinEntityDaoPool = new ConcurrentHashMap<>();
 
@@ -2630,7 +3029,7 @@ final class DaoImpl {
                             if (!SqlParser.isReadOnlyQuery(sqlToCheck)) {
                                 throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO");
                             }
-                        } else if (!SqlParser.isNoUpdateQuery(sqlToCheck)) {
+                        } else if (!SqlParser.isReadOrInsertQuery(sqlToCheck)) {
                             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a non-update DAO");
                         }
                     }
@@ -2863,7 +3262,7 @@ final class DaoImpl {
                             N.checkArgNotNull(cond, cs.cond);
 
                             final Condition limitedCond = handleLimit(cond, -1, false);
-                            final SP sp = singleQuerySqlBuilderFunc.apply(AbstractQueryBuilder.COUNT_ALL, limitedCond);
+                            final SP sp = singleQuerySqlBuilderFunc.apply(SK.COUNT_ALL, limitedCond);
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForInt().orElseZero();
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
@@ -4746,7 +5145,7 @@ final class DaoImpl {
                                         return Optional.empty();
                                     });
                         };
-                    } else if (methodName.equals("gett")) {
+                    } else if (methodName.equals("getOrNull")) {
                         if (paramLen == 1) {
                             call = (proxy, args) -> {
                                 final Object id = args[0];
@@ -5277,7 +5676,7 @@ final class DaoImpl {
                     // restriction here at DAO-creation time with the same SqlParser checks the gate uses.
                     if (isReadOnlyDao && !SqlParser.isReadOnlyQuery(query)) {
                         throw new UnsupportedOperationException("Only SELECT queries are supported in a read-only DAO. Method: " + fullClassMethodName);
-                    } else if (isNonUpdateDao && !SqlParser.isNoUpdateQuery(query)) {
+                    } else if (isNonUpdateDao && !SqlParser.isReadOrInsertQuery(query)) {
                         throw new UnsupportedOperationException(
                                 "Only SELECT and INSERT queries are supported in a non-update DAO. Method: " + fullClassMethodName);
                     }
@@ -6837,18 +7236,31 @@ final class DaoImpl {
      * proxy initialization and reused for every invocation of the associated DAO method.</p>
      */
     static final class QueryInfo {
+        /** The SQL text with any single trailing semicolon stripped; never blank. */
         final String sql;
+        /** The parsed form of {@link #sql}. */
         final ParsedSql parsedSql;
+        /** The query timeout in seconds; a negative value means not set. */
         final int queryTimeout;
+        /** The JDBC fetch size hint; only applied when positive. */
         final int fetchSize;
+        /** Whether the query is executed as a batch operation. */
         final boolean isBatch;
+        /** The number of statements per batch execution. */
         final int batchSize;
+        /** The operation type controlling execution behavior. */
         final QueryOperation queryOperation;
+        /** Whether a single method parameter is bound as-is rather than decomposed. */
         final boolean isSingleParameter;
+        /** Whether the reserved named parameters ({@code :now}, {@code :sysTime}, {@code :sysDate}) are auto-bound to the current time. */
         final boolean autoSetSysTimeParam;
+        /** Whether this is a SELECT statement. */
         final boolean isSelect;
+        /** Whether this is an INSERT statement. */
         final boolean isInsert;
+        /** Whether this SQL represents a stored procedure call. */
         final boolean isProcedure;
+        /** Whether the SQL uses named parameters (derived from the parsed SQL or the fragment hint). */
         final boolean isNamedQuery;
 
         /**

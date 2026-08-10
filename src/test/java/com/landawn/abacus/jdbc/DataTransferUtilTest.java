@@ -967,7 +967,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
 
         // Execute
-        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.resultSetParameterSetter(columnGetter);
+        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.newResultSetParameterSetter(columnGetter);
         assertNotNull(setter);
         setter.accept(preparedQuery, mockResultSet);
 
@@ -982,7 +982,7 @@ public class DataTransferUtilTest extends TestBase {
         PreparedQuery preparedQuery = mock(PreparedQuery.class);
         when(mockResultSetMetaData.getColumnCount()).thenReturn(0);
 
-        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.resultSetParameterSetter(columnGetter);
+        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil.newResultSetParameterSetter(columnGetter);
         assertNotNull(setter);
         setter.accept(preparedQuery, mockResultSet);
 
@@ -991,14 +991,14 @@ public class DataTransferUtilTest extends TestBase {
 
     @Test
     public void testResultSetParameterSetterRejectsNullColumnGetterImmediately() {
-        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.resultSetParameterSetter(null));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.newResultSetParameterSetter(null));
     }
 
     @Test
     public void testFluentBuildersAreCanonicalApi() throws NoSuchMethodException {
         assertFalse(DataTransferUtil.class.getMethod("importFrom", Dataset.class).isAnnotationPresent(Deprecated.class));
         assertFalse(DataTransferUtil.DatasetImportBuilder.class.getMethod("columns", Collection.class).isAnnotationPresent(Deprecated.class));
-        assertFalse(DataTransferUtil.DatasetImportBuilder.class.getMethod("batchDelay", Duration.class).isAnnotationPresent(Deprecated.class));
+        assertFalse(DataTransferUtil.DatasetImportBuilder.class.getMethod("batchInterval", Duration.class).isAnnotationPresent(Deprecated.class));
         assertFalse(
                 DataTransferUtil.DatasetImportBuilder.class.getMethod("parameterSetter", Throwables.BiConsumer.class).isAnnotationPresent(Deprecated.class));
 
@@ -1580,13 +1580,14 @@ public class DataTransferUtilTest extends TestBase {
                         .to(targetStmt));
     }
 
-    // CopyFromStatement.batchDelay rejects a negative duration immediately.
+    // CopyFromStatement.batchInterval rejects a negative duration immediately.
     // (DataTransferUtil L3075).
     @Test
     public void testCopyFromStatement_NegativeBatchInterval_Throws() {
         final PreparedStatement targetStmt = mock(PreparedStatement.class);
 
-        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchDelay(Duration.ofMillis(-1)).to(targetStmt));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchInterval(Duration.ofMillis(-1)).to(targetStmt));
     }
 
     @Test
@@ -1692,8 +1693,8 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
-    public void testBatchDelayTooLargeForMillisecondsIsRejectedAsIllegalArgument() {
-        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchDelay(Duration.ofSeconds(Long.MAX_VALUE)));
+    public void testbatchIntervalTooLargeForMillisecondsIsRejectedAsIllegalArgument() {
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyFrom(mockPreparedStatement).batchInterval(Duration.ofSeconds(Long.MAX_VALUE)));
     }
 
     // BUG FIX: the deprecated exportCsv(stmt, columnNames, File) overload executed the SELECT before

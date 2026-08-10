@@ -100,7 +100,7 @@ import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fn.BiConsumers;
+import com.landawn.abacus.util.BiConsumers;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.ImmutableMap;
@@ -198,8 +198,15 @@ import lombok.experimental.Accessors;
 @SuppressWarnings({ "java:S1192", "java:S6539", "resource" })
 public final class JdbcUtil {
 
+    /**
+     * Internal logger for this class's diagnostic messages (e.g., failures in cleanup or observability paths).
+     */
     static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
+    /**
+     * Dedicated logger (name {@code "com.landawn.abacus.SQL"}) for SQL execution and performance log entries,
+     * allowing SQL logging to be configured independently of the module's diagnostic logging.
+     */
     static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.SQL");
 
     /**
@@ -290,31 +297,66 @@ public final class JdbcUtil {
         return stmtToUse.toString();
     };
 
+    /**
+     * Shared {@link JsonParser} instance available for JSON (de)serialization within the JDBC module.
+     */
     static final JsonParser jsonParser = ParserFactory.createJsonParser();
 
+    /**
+     * Shared {@link KryoParser} used, among other things, to serialize DAO cache-key arguments;
+     * {@code null} when Kryo is not available on the classpath.
+     */
     static final KryoParser kryoParser = ParserFactory.isKryoParserAvailable() ? ParserFactory.createKryoParser() : null;
 
+    /**
+     * Reserved named parameter ({@code "now"}) that is automatically bound to the current timestamp at execution time.
+     */
     static final String PN_NOW = "now";
 
+    /**
+     * Reserved named parameter ({@code "sysTime"}) that is automatically bound to the current timestamp at execution time.
+     */
     static final String PN_SYS_TIME = "sysTime";
 
+    /**
+     * Reserved named parameter ({@code "sysDate"}) that is automatically bound to the current date at execution time.
+     */
     static final String PN_SYS_DATE = "sysDate";
 
+    /**
+     * The reserved named parameters ({@code now}, {@code sysTime}, {@code sysDate}) that are bound automatically,
+     * and therefore are not required to be supplied by the caller.
+     */
     static final Set<String> SYS_DATE_TIME_NAME_SET = Set.of(PN_NOW, PN_SYS_TIME, PN_SYS_DATE);
 
+    /**
+     * The zero character, used as a "no quotation" marker in serialization configurations
+     * (a character that never occurs in the serialized text).
+     */
     static final char CHAR_ZERO = 0;
 
+    /**
+     * Shared executor backing the asynchronous query and DAO operations (e.g., {@code callAsync} and DAO async methods).
+     */
     static final AsyncExecutor asyncExecutor = new AsyncExecutor(//
             N.max(64, IOUtil.CPU_CORES * 8), // coreThreadPoolSize
             N.max(128, IOUtil.CPU_CORES * 16), // maxThreadPoolSize
             180L, TimeUnit.SECONDS);
 
+    /**
+     * Default {@link BiParametersSetter} that binds an {@code Object[]} of parameters positionally
+     * via {@link PreparedStatement#setObject(int, Object)} (1-based parameter indexes).
+     */
     static final BiParametersSetter<? super PreparedQuery, ? super Object[]> DEFAULT_STMT_SETTER = (stmt, parameters) -> {
         for (int i = 0, len = parameters.length; i < len; i++) {
             stmt.setObject(i + 1, parameters[i]);
         }
     };
 
+    /**
+     * SQLState codes that indicate a "table does not exist" error across supported databases;
+     * consulted by {@link #isTableNotExistsException(Throwable)}.
+     */
     private static final Set<String> sqlStateForTableNotExists = N.newHashSet();
 
     static {
@@ -324,12 +366,22 @@ public final class JdbcUtil {
         sqlStateForTableNotExists.add("42704"); // DB2
     }
 
+    /**
+     * Method-name prefixes identifying DAO methods as (read-only) query operations.
+     */
     static final Set<String> QUERY_METHOD_NAME_SET = N.toSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "load",
             "exist", "notExist", "count");
 
+    /**
+     * Method-name prefixes identifying DAO methods as update (write) operations.
+     */
     static final Set<String> UPDATE_METHOD_NAME_SET = N.toSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
             "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
 
+    /**
+     * The public, non-static update methods declared by the built-in DAO interfaces in the DAO package,
+     * excluding methods annotated with {@link NonDBOperation}; used to recognize update operations on DAO proxies.
+     */
     static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
             .filter(DaoBase.class::isAssignableFrom)
             .flatMapArray(Class::getDeclaredMethods)
@@ -338,48 +390,106 @@ public final class JdbcUtil {
             .filter(it -> N.anyMatch(UPDATE_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
             .toImmutableSet();
 
+    /**
+     * Returns {@code true} if the given method's name starts with one of the {@link #QUERY_METHOD_NAME_SET} prefixes.
+     */
     static final Predicate<Method> IS_QUERY_METHOD = method -> N.anyMatch(QUERY_METHOD_NAME_SET,
             it -> Strings.isNotEmpty(it) && Strings.startsWith(method.getName(), it));
 
+    /**
+     * Returns {@code true} if the given method's name starts with one of the {@link #UPDATE_METHOD_NAME_SET} prefixes.
+     */
     static final Predicate<Method> IS_UPDATE_METHOD = method -> N.anyMatch(UPDATE_METHOD_NAME_SET,
             it -> Strings.isNotEmpty(it) && Strings.startsWith(method.getName(), it));
 
+    /**
+     * The currently active SQL extractor used for SQL logging; initially {@link #DEFAULT_SQL_EXTRACTOR}
+     * and replaceable via {@link #setSqlExtractor(Throwables.Function)}.
+     */
     static volatile Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR; //NOSONAR
 
+    /**
+     * Per-thread configuration holding whether general SQL logging (logging every executed statement) is enabled
+     * and the maximum length of logged SQL.
+     */
     static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = ThreadLocal.withInitial(() -> new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH));
 
+    /**
+     * Per-thread configuration holding the SQL performance-log threshold in milliseconds
+     * and the maximum length of logged SQL.
+     */
     static final ThreadLocal<SqlLogConfig> sqlPerfLogThresholdMillis_TL = ThreadLocal
             .withInitial(() -> new SqlLogConfig(DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS, DEFAULT_MAX_SQL_LOG_LENGTH));
 
+    /**
+     * Per-thread flag that, when {@code true}, disables participation in Spring-managed transactions
+     * for JDBC operations on the current thread.
+     */
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
 
+    /**
+     * Global master switch for SQL logging; when {@code false}, SQL logging is disabled regardless of per-thread settings.
+     */
     static volatile boolean isSqlLogAllowed = true;
 
+    /**
+     * Global master switch for SQL performance logging; when {@code false}, no SQL-PERF entries are written
+     * regardless of per-thread settings.
+     */
     static volatile boolean isSqlPerfLogAllowed = true;
 
+    /**
+     * Global master switch for DAO method performance logging.
+     */
     static volatile boolean isDaoMethodPerfLogAllowed = true;
 
+    /**
+     * Whether Spring JDBC ({@code org.springframework.jdbc}) is present on the classpath; detected once during class initialization.
+     */
     static volatile boolean isInSpring = true;
 
+    /**
+     * Optional global callback invoked after each statement execution with the SQL text, the start time in
+     * milliseconds, and the end time in milliseconds; {@code null} when no handler is registered.
+     */
     static volatile TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
 
     @SuppressWarnings("rawtypes")
     // Keyed by (daoInterface, entityClass, idType): the cached key extractor depends on the DAO interface's
     // registration in idExtractorPool, so DAOs sharing the same entity/id types must not share entries.
+    /**
+     * Cache of per-DAO (generated-key extractor, id getter, id setter) triples, keyed by
+     * (DAO interface, entity class, id type) and then by {@link NamingPolicy}.
+     */
     private static final Map<Tuple3<Class<?>, Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
+    /**
+     * Id extractors registered per DAO interface; an extractor reads the entity id from a generated-keys {@link ResultSet}.
+     */
     @SuppressWarnings("rawtypes")
     private static final Map<Class<? extends Dao>, BiRowMapper<?>> idExtractorPool = new ConcurrentHashMap<>();
 
     // Memoizes one Dsl per SqlDialect value so createDao(Class, DataSource, SqlDialect) hands DaoImpl a stable
     // Dsl identity: Dsl.forDialect only returns a shared instance for the ~15 canonical dialects, so without this
     // a non-canonical dialect would yield a fresh Dsl on every call and defeat DaoImpl's identity-keyed proxy cache.
+    /**
+     * Cached {@link Dsl} instances keyed by {@link SqlDialect}, shared by the DAOs created for each dialect.
+     */
     private static final Map<SqlDialect, Dsl> dslPool = new ConcurrentHashMap<>();
 
+    /**
+     * Separator ({@code "#"}) used to join the segments (full method name, table name, parameter key) of generated DAO cache keys.
+     */
     static final String CACHE_KEY_SEPARATOR = "#";
 
+    /**
+     * The DAO cache bound to the current thread, or {@code null} when DAO result caching is not enabled on this thread.
+     */
     static final ThreadLocal<Jdbc.DaoCache> localThreadCache_TL = new ThreadLocal<>();
 
+    /**
+     * The innermost {@link DaoCacheScope} currently open on the current thread, used to enforce last-opened, first-closed nesting.
+     */
     private static final ThreadLocal<DaoCacheScope> daoCacheScope_TL = new ThreadLocal<>();
 
     static {
@@ -390,6 +500,9 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Prevents instantiation; this is a utility class with only static members.
+     */
     private JdbcUtil() {
         // utility class - prevent instantiation.
     }
@@ -745,6 +858,9 @@ public final class JdbcUtil {
         return createConnection(cls, url, user, password);
     }
 
+    /**
+     * Driver classes already registered with {@link DriverManager}; used so each driver class is registered only once.
+     */
     private static final Map<Class<? extends Driver>, Boolean> registeredDriverClasses = new ConcurrentHashMap<>();
 
     /**
@@ -1188,6 +1304,15 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Merges a resource-close failure into the primary failure: returns {@code closeFailure} when there is no
+     * primary failure, otherwise attaches {@code closeFailure} to {@code primaryFailure} as a suppressed exception
+     * and returns the primary failure.
+     *
+     * @param primaryFailure The failure from the main operation, or {@code null} if none occurred.
+     * @param closeFailure The failure thrown while closing a resource.
+     * @return The failure to propagate.
+     */
     private static Throwable collectCloseFailure(final Throwable primaryFailure, final Throwable closeFailure) {
         if (primaryFailure == null) {
             return closeFailure;
@@ -1197,6 +1322,14 @@ public final class JdbcUtil {
         return primaryFailure;
     }
 
+    /**
+     * Rethrows a close failure, preserving its kind: a {@link SQLException} is wrapped in {@link UncheckedSQLException},
+     * a {@link RuntimeException} or {@link Error} is rethrown as-is, and anything else is wrapped in {@link IllegalStateException}.
+     * This method never returns normally.
+     *
+     * @param failure The failure to throw; must not be {@code null}.
+     * @throws UncheckedSQLException if {@code failure} is a {@link SQLException}.
+     */
     private static void throwCloseFailure(final Throwable failure) throws UncheckedSQLException {
         if (failure instanceof final SQLException sqlException) {
             throw new UncheckedSQLException(sqlException);
@@ -1687,6 +1820,10 @@ public final class JdbcUtil {
         return (int) skip(rs, (long) rowsToSkip);
     }
 
+    /**
+     * {@link ResultSet} implementation classes known to reject {@link ResultSet#absolute(int)}; once a driver has
+     * failed an {@code absolute()} call, later skip operations on that class iterate with {@link ResultSet#next()} directly.
+     */
     private static final Set<Class<?>> resultSetClassNotSupportAbsolute = ConcurrentHashMap.newKeySet();
 
     /**
@@ -1941,6 +2078,18 @@ public final class JdbcUtil {
         return columnNameList;
     }
 
+    /**
+     * Returns the column names of a single table via {@link DatabaseMetaData#getColumns}. Because the metadata
+     * arguments are treated as patterns, rows whose catalog, schema, or table do not match the requested values
+     * (case-insensitively) are discarded, and only the columns of the first matching table are returned.
+     *
+     * @param metadata The database metadata to query.
+     * @param catalog The catalog to match, or {@code null} to match any catalog.
+     * @param schemaPattern The schema to match, or {@code null} to match any schema.
+     * @param tableNamePattern The table name to match (case-insensitive).
+     * @return The column names in ordinal order, or an empty list if no matching table is found.
+     * @throws SQLException if a database access error occurs.
+     */
     private static List<String> getColumnNamesFromMetadata(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
             final String tableNamePattern) throws SQLException {
         final ResultSet rs = metadata.getColumns(catalog, schemaPattern, tableNamePattern, null);
@@ -1984,6 +2133,15 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Fallback column lookup that executes {@code SELECT * FROM <table> WHERE 1 > 2} and reads the column names
+     * from the result metadata; used when a {@link DatabaseMetaData} lookup did not resolve the table.
+     *
+     * @param conn The connection to query with.
+     * @param qualifiedTableName The (possibly qualified) table name to select from.
+     * @return The column names in ordinal order.
+     * @throws SQLException if a database access error occurs.
+     */
     private static List<String> getColumnNamesBySelect(final Connection conn, final String qualifiedTableName) throws SQLException {
         final String query = "SELECT * FROM " + qualifiedTableName + " WHERE 1 > 2";
         PreparedStatement stmt = null;
@@ -2180,8 +2338,15 @@ public final class JdbcUtil {
         Object apply(ResultSet rs, String columnLabel, Object columnValue) throws SQLException;
     }
 
+    /**
+     * Cache of (by-index, by-label) column converter pairs, keyed by the runtime class of the read column value.
+     */
     private static final ConcurrentHashMap<Class<?>, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterPool = new ConcurrentHashMap<>();
 
+    /**
+     * Returns the cached converter pair for the runtime class of the given column value, computing and caching
+     * an Oracle-/date-type-aware conversion the first time a class is encountered.
+     */
     private static final Function<Object, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterGetter = ret -> {
         return columnConverterPool.computeIfAbsent(ret.getClass(), cls -> {
             final String className = cls.getName();
@@ -2255,9 +2420,15 @@ public final class JdbcUtil {
         });
     };
 
+    /**
+     * Converts a column value read by index, dispatching to the converter pair registered for the value's runtime class.
+     */
     private static final ColumnConverterByIndex columnConverterByIndex = (rs, columnIndex, val) -> columnConverterGetter.apply(val)._1.apply(rs, columnIndex,
             val);
 
+    /**
+     * Converts a column value read by label, dispatching to the converter pair registered for the value's runtime class.
+     */
     private static final ColumnConverterByLabel columnConverterByLabel = (rs, columnLabel, val) -> columnConverterGetter.apply(val)._2.apply(rs, columnLabel,
             val);
 
@@ -2437,6 +2608,14 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Frees the given {@link Blob}. If {@code primaryFailure} is {@code null}, a failure of {@code free()} is
+     * rethrown; otherwise it is attached to {@code primaryFailure} as a suppressed exception.
+     *
+     * @param blob The {@link Blob} to free.
+     * @param primaryFailure The failure from the preceding read operation, or {@code null} if none occurred.
+     * @throws SQLException if freeing fails and there is no primary failure.
+     */
     private static void freeBlob(final Blob blob, final Throwable primaryFailure) throws SQLException {
         try {
             blob.free();
@@ -2449,6 +2628,14 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Frees the given {@link Clob}. If {@code primaryFailure} is {@code null}, a failure of {@code free()} is
+     * rethrown; otherwise it is attached to {@code primaryFailure} as a suppressed exception.
+     *
+     * @param clob The {@link Clob} to free.
+     * @param primaryFailure The failure from the preceding read operation, or {@code null} if none occurred.
+     * @throws SQLException if freeing fails and there is no primary failure.
+     */
     private static void freeClob(final Clob clob, final Throwable primaryFailure) throws SQLException {
         try {
             clob.free();
@@ -2708,6 +2895,14 @@ public final class JdbcUtil {
         return SqlOperation.UNKNOWN;
     }
 
+    /**
+     * Returns {@code true} if {@code sql} starts with {@code token} (case-insensitive) followed by a word boundary,
+     * so that, e.g., {@code "CREATED ..."} does not match the token {@code "CREATE"}.
+     *
+     * @param sql The SQL text to test.
+     * @param token The leading token to look for.
+     * @return {@code true} if {@code sql} begins with {@code token} as a whole word.
+     */
     private static boolean startsWithSqlToken(final String sql, final String token) {
         return Strings.startsWithIgnoreCase(sql, token) //
                 && (sql.length() == token.length() || !isSqlIdentifierPart(sql.charAt(token.length())));
@@ -2771,10 +2966,21 @@ public final class JdbcUtil {
         return -1;
     }
 
+    /**
+     * Returns {@code true} if the character can appear in a non-delimited SQL identifier:
+     * a letter, a digit, {@code '_'}, or {@code '$'}.
+     */
     private static boolean isSqlIdentifierPart(final char ch) {
         return Character.isLetterOrDigit(ch) || ch == '_' || ch == '$';
     }
 
+    /**
+     * Advances past the remainder of a line comment.
+     *
+     * @param sql The SQL text being scanned.
+     * @param index The position just after the opening {@code --}.
+     * @return The index of the first character after the line break, or the end of the string.
+     */
     private static int skipLineComment(final String sql, int index) {
         final int len = sql.length();
 
@@ -2789,6 +2995,14 @@ public final class JdbcUtil {
         return index;
     }
 
+    /**
+     * Advances past a block comment, honoring nested block comments.
+     *
+     * @param sql The SQL text being scanned.
+     * @param index The position just after the opening comment delimiter.
+     * @return The index of the first character after the matching closing delimiter,
+     *         or the end of the string if the comment is unterminated.
+     */
     private static int skipBlockComment(final String sql, int index) {
         final int len = sql.length();
         int depth = 1;
@@ -2838,6 +3052,13 @@ public final class JdbcUtil {
         return index;
     }
 
+    /**
+     * Advances past a bracket-delimited identifier ({@code [...]}), treating a doubled closing bracket as an escape.
+     *
+     * @param sql The SQL text being scanned.
+     * @param index The position of the opening bracket.
+     * @return The index of the first character after the closing bracket, or the end of the string if unterminated.
+     */
     private static int skipBracketQuotedSqlText(final String sql, int index) {
         final int len = sql.length();
         index++;
@@ -2855,6 +3076,14 @@ public final class JdbcUtil {
         return index;
     }
 
+    /**
+     * Advances past a PostgreSQL dollar-quoted string ({@code $tag$...$tag$}).
+     *
+     * @param sql The SQL text being scanned.
+     * @param index The position of the opening {@code $}.
+     * @return The index just past the closing delimiter; {@code index} unchanged if this is not a valid
+     *         dollar-quote opener, or the end of the string if the closing delimiter is missing.
+     */
     private static int skipDollarQuotedSqlText(final String sql, final int index) {
         final int len = sql.length();
         int tagEnd = index + 1;
@@ -2873,6 +3102,10 @@ public final class JdbcUtil {
         return closingDelimiter < 0 ? len : closingDelimiter + delimiter.length();
     }
 
+    /**
+     * Statement configurer for queries expected to return a large result set: sets forward-only fetch direction
+     * and raises the fetch size to at least {@link #DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET}.
+     */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
@@ -2881,6 +3114,10 @@ public final class JdbcUtil {
         }
     };
 
+    /**
+     * Statement configurer for stream-based result processing: sets forward-only fetch direction
+     * and raises the fetch size to at least {@link #DEFAULT_FETCH_SIZE_FOR_STREAM}.
+     */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForStream = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
@@ -5189,6 +5426,12 @@ public final class JdbcUtil {
         return parsedSql;
     }
 
+    /**
+     * Validates that every parameter of the parsed SQL is named.
+     *
+     * @param namedSql The parsed SQL to validate.
+     * @throws IllegalArgumentException if the SQL contains positional or otherwise unnamed parameters.
+     */
     private static void validateNamedSql(final ParsedSql namedSql) {
         if (namedSql.namedParameters().size() != namedSql.parameterCount()) {
             throw new IllegalArgumentException("Named SQL contains positional or otherwise unnamed parameters");
@@ -6441,6 +6684,14 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Sums the positive entries of a batch update-count array; non-positive driver status codes
+     * (e.g., {@link Statement#SUCCESS_NO_INFO}) are ignored.
+     *
+     * @param updateCounts The per-element update counts returned by a batch execution.
+     * @return The total number of updated rows.
+     * @throws ArithmeticException if the total exceeds {@link Integer#MAX_VALUE}.
+     */
     private static int sumUpdatedRows(final int[] updateCounts) {
         int result = 0;
 
@@ -6453,6 +6704,10 @@ public final class JdbcUtil {
         return result;
     }
 
+    /**
+     * Adds one batch update count to a running total, throwing a descriptive {@link ArithmeticException}
+     * (advising {@code executeLargeBatchUpdate}) when the total would overflow an {@code int}.
+     */
     private static int addUpdatedRowsExact(final int current, final int increment) {
         try {
             return Math.addExact(current, increment);
@@ -6464,6 +6719,14 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Sums the positive entries of a large-batch update-count array; non-positive driver status codes
+     * (e.g., {@link Statement#SUCCESS_NO_INFO}) are ignored.
+     *
+     * @param updateCounts The per-element update counts returned by a large batch execution.
+     * @return The total number of updated rows.
+     * @throws ArithmeticException if the total exceeds {@link Long#MAX_VALUE}.
+     */
     private static long sumUpdatedRows(final long[] updateCounts) {
         long result = 0;
 
@@ -6476,6 +6739,10 @@ public final class JdbcUtil {
         return result;
     }
 
+    /**
+     * Adds one batch update count to a running total, throwing a descriptive {@link ArithmeticException}
+     * when the total would overflow a {@code long}.
+     */
     private static long addUpdatedRowsExact(final long current, final long increment) {
         try {
             return Math.addExact(current, increment);
@@ -6683,8 +6950,16 @@ public final class JdbcUtil {
         return Beans.isBeanClass(cls) || Beans.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
     }
 
+    /**
+     * Sentinel {@link RowFilter} meaning "no filter supplied"; compared by identity inside the {@code extractData}
+     * methods and never actually applied.
+     */
     static final RowFilter INTERNAL_DUMMY_ROW_FILTER = RowFilter.ALWAYS_TRUE;
 
+    /**
+     * Sentinel {@link RowExtractor} meaning "no extractor supplied"; compared by identity inside the
+     * {@code extractData} methods and throws {@link UnsupportedOperationException} if ever invoked.
+     */
     static final RowExtractor INTERNAL_DUMMY_ROW_EXTRACTOR = (rs, outputRow) -> {
         throw new UnsupportedOperationException("DO NOT CALL ME.");
     };
@@ -8473,6 +8748,10 @@ public final class JdbcUtil {
         Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException;
     }
 
+    /**
+     * Maps {@link java.sql.Types} constants to the {@link OutParameterGetter} that reads the matching
+     * typed value from a {@link CallableStatement}.
+     */
     private static final Map<Integer, OutParameterGetter> sqlTypeGetterMap = new HashMap<>(Types.class.getDeclaredFields().length * 2);
 
     static {
@@ -8775,6 +9054,10 @@ public final class JdbcUtil {
         });
     }
 
+    /**
+     * Fallback {@link OutParameterGetter} reading via {@code CallableStatement.getObject}, used for SQL types
+     * absent from {@link #sqlTypeGetterMap}.
+     */
     private static final OutParameterGetter objOutParameterGetter = new OutParameterGetter() {
         @Override
         public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
@@ -8938,6 +9221,18 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Returns {@code true} if {@link DatabaseMetaData#getTables} finds the requested table. When the schema or
+     * table name contains the pattern wildcard {@code '_'} or {@code '%'}, returned rows are verified against the
+     * requested values (case-insensitively) to reject wildcard-expansion false positives.
+     *
+     * @param metadata The database metadata to query.
+     * @param catalog The catalog to search, or {@code null} to search all catalogs.
+     * @param schemaPattern The schema to match, or {@code null} to match any schema.
+     * @param tableNamePattern The table name to match.
+     * @return {@code true} if a matching table exists.
+     * @throws SQLException if a database access error occurs.
+     */
     private static boolean tableExists(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern)
             throws SQLException {
         final ResultSet rs = metadata.getTables(catalog, schemaPattern, tableNamePattern, null);
@@ -8984,6 +9279,15 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Assembles a dotted {@code catalog.schema.table} name from the non-empty parts.
+     *
+     * @param catalog The catalog part, or {@code null}/empty to omit.
+     * @param schema The schema part, or {@code null}/empty to omit.
+     * @param tableName The table name part; required.
+     * @return The qualified name, or {@code null} if any present part cannot be embedded in SQL safely without quoting
+     *         (so callers skip the SQL-based existence probe).
+     */
     private static String buildSimpleQualifiedTableName(final String catalog, final String schema, final String tableName) {
         if (!isUnquotedSafeIdentifier(tableName)) {
             return null;
@@ -9098,6 +9402,13 @@ public final class JdbcUtil {
         return parts.toArray(String[]::new);
     }
 
+    /**
+     * Returns {@code true} if any part of the dotted qualified name begins with an identifier delimiter
+     * ({@code "}, {@code `}, or {@code [}).
+     *
+     * @param qualifiedName The qualified identifier to inspect.
+     * @return {@code true} if at least one part is delimited.
+     */
     private static boolean hasDelimitedIdentifierPart(final String qualifiedName) {
         boolean atPartStart = true;
 
@@ -9122,6 +9433,16 @@ public final class JdbcUtil {
         return false;
     }
 
+    /**
+     * Strips delimiters from the identifier part accumulated in {@code sb}, adds it to {@code parts},
+     * and resets the buffer.
+     *
+     * @param parts The list collecting the identifier parts.
+     * @param sb The buffer holding the current part; cleared by this method.
+     * @param qualifiedName The original qualified name, used in error messages.
+     * @param argName The argument name used in error messages.
+     * @throws IllegalArgumentException if the part is empty after stripping delimiters.
+     */
     private static void addQualifiedIdentifierPart(final List<String> parts, final StringBuilder sb, final String qualifiedName, final String argName) {
         final String part = SqlIdentifierUtil.stripIdentifierDelimiters(sb.toString());
 
@@ -9179,6 +9500,14 @@ public final class JdbcUtil {
         return sb.toString();
     }
 
+    /**
+     * Returns the database's identifier quote string, or {@code null} when the database reports none
+     * ({@code null}, blank, or a space, meaning delimited identifiers are unsupported).
+     *
+     * @param metadata The database metadata to query.
+     * @return The trimmed identifier quote string, or {@code null}.
+     * @throws SQLException if a database access error occurs.
+     */
     private static String normalizeIdentifierQuote(final DatabaseMetaData metadata) throws SQLException {
         final String quoteString = metadata.getIdentifierQuoteString();
         final String normalized = quoteString == null ? null : quoteString.trim();
@@ -9186,6 +9515,13 @@ public final class JdbcUtil {
         return Strings.isEmpty(normalized) ? null : normalized;
     }
 
+    /**
+     * Escapes an identifier part for embedding between delimiters by doubling every occurrence of the quote string.
+     *
+     * @param identifierPart The identifier part to escape.
+     * @param identifierQuote The quote string to double.
+     * @return The escaped identifier part.
+     */
     private static String escapeIdentifierPart(final String identifierPart, final String identifierQuote) {
         return identifierPart.replace(identifierQuote, identifierQuote + identifierQuote);
     }
@@ -9348,7 +9684,7 @@ public final class JdbcUtil {
      * cross-process / cross-JVM advisory locks.
      *
      * <p>The lock table is created automatically when it does not exist. A successful
-     * {@code lock(target)} call returns a unique lock code that the caller must pass back to
+     * {@code tryLock(target)} call returns a unique lock code that the caller must pass back to
      * {@code unlock(target, code)} to release the lock. Close the returned instance when it is no
      * longer needed so its refresh task stops and any remaining locks are released.</p>
      *
@@ -9356,7 +9692,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * DBLock dbLock = JdbcUtil.createDBLock(dataSource, "distributed_locks");
      * try {
-     *     String lockCode = dbLock.lock("job_processor");
+     *     String lockCode = dbLock.tryLock("job_processor");
      *     if (lockCode != null) {
      *         try {
      *             // Perform exclusive operation
@@ -9407,6 +9743,10 @@ public final class JdbcUtil {
         return false;
     }
 
+    /**
+     * Shared predicate testing whether a value is a default/unset ID property value;
+     * delegates to {@link #isDefaultIdPropValue(Object)}.
+     */
     static final com.landawn.abacus.util.function.Predicate<Object> defaultIdTester = JdbcUtil::isDefaultIdPropValue;
 
     /**
@@ -9440,6 +9780,13 @@ public final class JdbcUtil {
         return false;
     }
 
+    /**
+     * Returns {@code true} if the given number equals zero, comparing {@link BigDecimal} and {@link BigInteger}
+     * exactly and all other numeric types via {@link Number#doubleValue()}.
+     *
+     * @param value The number to test.
+     * @return {@code true} if {@code value} is numerically zero.
+     */
     private static boolean isZeroNumber(final Number value) {
         if (value instanceof BigDecimal bigDecimal) {
             return bigDecimal.compareTo(BigDecimal.ZERO) == 0;
@@ -9851,16 +10198,31 @@ public final class JdbcUtil {
         return asyncExecutor.execute(() -> sqlAction.apply(parameter1, parameter2, parameter3));
     }
 
+    /**
+     * {@link RowMapper} that extracts a single generated key from the first column of the generated-keys {@link ResultSet}.
+     */
     static final RowMapper<Object> SINGLE_GENERATED_KEY_EXTRACTOR = rs -> getColumnValue(rs, 1);
 
+    /**
+     * {@link BiRowMapper} that extracts no generated key and always returns {@code null};
+     * used for entities without an id property.
+     */
     static final BiRowMapper<Object> NO_BI_GENERATED_KEY_EXTRACTOR = (rs, columnLabels) -> null;
 
     // Must be declared after NO_BI_GENERATED_KEY_EXTRACTOR: a qualified forward reference to it would
     // compile but read null while this class is still being initialized.
+    /**
+     * Placeholder (key extractor, id getter, id setter) triple for entities without an id property:
+     * no key extraction, a {@code null}-returning id getter, and a no-op id setter.
+     */
     @SuppressWarnings("rawtypes")
     private static final Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer> noIdGeneratorGetterSetter = Tuple
             .of(NO_BI_GENERATED_KEY_EXTRACTOR, entity -> null, BiConsumers.doNothing());
 
+    /**
+     * Cache of resolved {@link PropInfo} (or an empty {@link Optional} for unresolvable paths),
+     * keyed by entity class and then by property name or dot-separated property path.
+     */
     private static final Map<Class<?>, Map<String, Optional<PropInfo>>> entityPropInfoQueueMap = new ConcurrentHashMap<>();
 
     /**
@@ -10424,15 +10786,15 @@ public final class JdbcUtil {
 
     /**
      * Resolves the prefix of a dot-qualified column name (e.g., {@code address.street}) against the
-     * properties of the given entity, remapping it via {@code prefixAndFieldNameMap} when necessary.
+     * properties of the given entity, remapping it via {@code prefixAndPropNameMap} when necessary.
      *
      * @param entityInfo The {@link BeanInfo} of the entity class.
      * @param columnName The column name to check.
-     * @param prefixAndFieldNameMap A map from column-name prefixes to entity field names. Can be {@code null}.
+     * @param prefixAndPropNameMap A map from column-name prefixes to entity field names. Can be {@code null}.
      * @param columnLabelList The list of all column labels in the result set.
      * @return The column name, possibly with its prefix remapped to the matching property name.
      */
-    static String checkPrefix(final BeanInfo entityInfo, final String columnName, final Map<String, String> prefixAndFieldNameMap,
+    static String checkPrefix(final BeanInfo entityInfo, final String columnName, final Map<String, String> prefixAndPropNameMap,
             final List<String> columnLabelList) {
 
         final int idx = columnName.indexOf('.');
@@ -10448,8 +10810,8 @@ public final class JdbcUtil {
             return columnName;
         }
 
-        if (N.notEmpty(prefixAndFieldNameMap) && prefixAndFieldNameMap.containsKey(prefix)) {
-            propInfo = entityInfo.getPropInfo(prefixAndFieldNameMap.get(prefix));
+        if (N.notEmpty(prefixAndPropNameMap) && prefixAndPropNameMap.containsKey(prefix)) {
+            propInfo = entityInfo.getPropInfo(prefixAndPropNameMap.get(prefix));
 
             if (propInfo != null) {
                 return propInfo.name + columnName.substring(idx);
@@ -10718,6 +11080,14 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Extracts the SQL text of a statement for logging, never throwing: returns an empty string if the
+     * extractor fails or yields {@code null}, so logging can never mask a JDBC failure.
+     *
+     * @param stmt The statement whose SQL to extract.
+     * @param sqlExtractor The extractor function to apply.
+     * @return The extracted SQL text, or an empty string when unavailable.
+     */
     private static String extractSqlForLog(final Statement stmt, final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
         try {
             // A custom extractor registered via setSqlExtractor may return null.
@@ -10986,7 +11356,7 @@ public final class JdbcUtil {
      *       (or {@link #runInTransaction} / {@link #callInTransaction}).</li>
      *   <li>Spring-managed transactions, when Spring is on the classpath and Spring transaction
      *       participation is not disabled on this thread (see
-     *       {@link #runWithoutUsingSpringTransaction(Throwables.Runnable)}).</li>
+     *       {@link #runIgnoringSpringTransaction(Throwables.Runnable)}).</li>
      * </ul>
      *
      * <p>For the Spring check, this method may briefly acquire and release a {@link Connection} from
@@ -11921,7 +12291,7 @@ public final class JdbcUtil {
      * public void processOrder(Order order) {
      *     orderRepository.save(order);   // uses Spring transaction
      *
-     *     JdbcUtil.runWithoutUsingSpringTransaction(() -> {
+     *     JdbcUtil.runIgnoringSpringTransaction(() -> {
      *         // Acquires a fresh connection; NOT part of the Spring transaction above
      *         auditDao.recordImmediately("ORDER_PROCESSING_STARTED", order.getId());
      *     });
@@ -11933,10 +12303,10 @@ public final class JdbcUtil {
      *                  must not be {@code null}; must not be dispatched to another thread.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      * @throws E if {@code sqlAction} throws an exception.
-     * @see #callWithoutUsingSpringTransaction(Throwables.Callable)
+     * @see #callIgnoringSpringTransaction(Throwables.Callable)
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
-    public static <E extends Exception> void runWithoutUsingSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E {
+    public static <E extends Exception> void runIgnoringSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         if (isSpringTransactionalNotUsed()) {
@@ -11957,7 +12327,7 @@ public final class JdbcUtil {
      * the current thread, and returns its result.
      *
      * <p>This is the value-returning counterpart of
-     * {@link #runWithoutUsingSpringTransaction(Throwables.Runnable)}.
+     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)}.
      * The same semantics apply — see that method for a full explanation of the Spring-bypass
      * mechanism, scope, no-op conditions, and thread-safety constraints.</p>
      *
@@ -11970,7 +12340,7 @@ public final class JdbcUtil {
      *     orderRepository.save(order);
      *
      *     // Read the pre-existing aggregate using a fresh, non-transactional connection
-     *     BigDecimal runningTotal = JdbcUtil.callWithoutUsingSpringTransaction(() ->
+     *     BigDecimal runningTotal = JdbcUtil.callIgnoringSpringTransaction(() ->
      *         JdbcUtil.prepareQuery(dataSource,
      *             "SELECT SUM(total) FROM orders WHERE customer_id = ?")
      *             .setLong(1, order.getCustomerId())
@@ -11988,10 +12358,10 @@ public final class JdbcUtil {
      * @return The result returned by {@code sqlAction}.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      * @throws E if {@code sqlAction} throws an exception.
-     * @see #runWithoutUsingSpringTransaction(Throwables.Runnable)
+     * @see #runIgnoringSpringTransaction(Throwables.Runnable)
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      */
-    public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<? extends R, E> sqlAction) throws E {
+    public static <R, E extends Exception> R callIgnoringSpringTransaction(final Throwables.Callable<? extends R, E> sqlAction) throws E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         if (isSpringTransactionalNotUsed()) {
@@ -12017,7 +12387,7 @@ public final class JdbcUtil {
     static void doNotUseSpringTransactional(final boolean b) {
         if (isInSpring) {
             // DEBUG, not WARN: toggling is the intended behavior of the public
-            // runWithoutUsingSpringTransaction/callWithoutUsingSpringTransaction API, invoked per call.
+            // runIgnoringSpringTransaction/callIgnoringSpringTransaction API, invoked per call.
             if (logger.isDebugEnabled() && isSpringTransactionalDisabled_TL.get() != b) { //NOSONAR
                 if (b) {
                     logger.debug("Disabled Spring Transactional integration");
@@ -12134,7 +12504,7 @@ public final class JdbcUtil {
                 final ImmutableMap<String, String> propColumnNameMap = QueryUtil.propToColumnNameMap(entityClass, np);
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
-                        .invert()
+                        .inverted()
                         .flatmapKey(e -> N.asList(e, e.toLowerCase(Locale.ROOT), e.toUpperCase(Locale.ROOT)))
                         .distinctByKey()
                         .toImmutableMap();
@@ -12282,7 +12652,7 @@ public final class JdbcUtil {
      *
      * <p><b>Key Features of Generated DAOs:</b></p>
      * <ul>
-     *   <li>Automatic CRUD operations (save, update, deleteById, get/gett, list, etc.)</li>
+     *   <li>Automatic CRUD operations (save, update, deleteById, get/getOrNull, list, etc.)</li>
      *   <li>Custom query methods defined by annotations or external SQL files</li>
      *   <li>Batch operation support for high-throughput processing</li>
      *   <li>Transaction-aware operations that participate in active transactions</li>
@@ -12298,7 +12668,7 @@ public final class JdbcUtil {
      *     // Automatic CRUD methods are inherited:
      *     // - save(User user)
      *     // - batchSave(Collection<User> users)
-     *     // - gett(Long id)
+     *     // - getOrNull(Long id)
      *     // - update(User user)
      *     // - deleteById(Long id)
      *     // - list(Condition cond)
@@ -12683,6 +13053,14 @@ public final class JdbcUtil {
         return openDaoCacheScope(localThreadCache, false);
     }
 
+    /**
+     * Binds {@code localThreadCache} to the current thread and returns a scope that restores the previous
+     * binding when closed. The previously bound cache and scope are captured so nested scopes unwind in order.
+     *
+     * @param localThreadCache The cache to bind to the current thread.
+     * @param clearCacheOnClose Whether {@link DaoCacheScope#close()} should clear the cache before restoring the previous binding.
+     * @return The opened scope.
+     */
     private static DaoCacheScope openDaoCacheScope(final Jdbc.DaoCache localThreadCache, final boolean clearCacheOnClose) {
 
         final Jdbc.DaoCache previousCache = localThreadCache_TL.get();
@@ -12704,13 +13082,27 @@ public final class JdbcUtil {
      * caller-supplied cache only restores the binding.
      */
     public static final class DaoCacheScope implements AutoCloseable {
+        /** The cache this scope binds to the current thread. */
         private final Jdbc.DaoCache cache;
+        /** The cache binding to restore on {@link #close()}, or {@code null} if there was none. */
         private final Jdbc.DaoCache previousCache;
+        /** The enclosing scope to restore on {@link #close()}, or {@code null} if this scope is the outermost one. */
         private final DaoCacheScope previousScope;
+        /** The thread that opened this scope; {@link #close()} must be invoked on it. */
         private final Thread ownerThread;
+        /** Whether {@link #close()} clears {@link #cache} before restoring the previous binding. */
         private final boolean clearCacheOnClose;
+        /** Whether this scope has already been closed; makes {@link #close()} idempotent. */
         private boolean closed;
 
+        /**
+         * Creates a scope for the given cache, capturing the current thread as the owner.
+         *
+         * @param cache The cache bound by this scope.
+         * @param previousCache The cache binding to restore on close, or {@code null} if there was none.
+         * @param previousScope The enclosing scope to restore on close, or {@code null} if there was none.
+         * @param clearCacheOnClose Whether closing this scope clears {@code cache}.
+         */
         private DaoCacheScope(final Jdbc.DaoCache cache, final Jdbc.DaoCache previousCache, final DaoCacheScope previousScope,
                 final boolean clearCacheOnClose) {
             this.cache = cache;
@@ -12863,6 +13255,10 @@ public final class JdbcUtil {
         localThreadCache_TL.remove();
     }
 
+    /**
+     * Throws {@link IllegalStateException} if a {@link DaoCacheScope} is active on the current thread, because the
+     * legacy open/close cache methods would break the scope's restore-on-close bookkeeping.
+     */
     private static void checkNoActiveDaoCacheScopeForLegacyOperation() {
         if (daoCacheScope_TL.get() != null) {
             throw new IllegalStateException("Legacy DAO-cache lifecycle methods cannot be used while a DaoCacheScope is active");

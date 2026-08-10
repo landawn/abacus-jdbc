@@ -81,6 +81,9 @@ import com.landawn.abacus.util.function.Function;
  */
 @Internal
 public final class DaoUtil {
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     */
     private DaoUtil() {
         // utility class - prevent instantiation.
     }
@@ -598,6 +601,17 @@ public final class DaoUtil {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
     }
 
+    /**
+     * Returns a collection containing the source select property names plus any source property names
+     * required by the join-entity property of the specified join entity class, so that the columns
+     * needed to load the join entity are always selected.
+     *
+     * @param dao the join-entity DAO whose join metadata is used.
+     * @param sourceSelectPropNames the source property names to select.
+     * @param joinEntityClass the join entity class whose required source property names are included.
+     * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
+     *         names added, or {@code null} if {@code sourceSelectPropNames} is {@code null}.
+     */
     @SuppressWarnings("deprecation")
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
             final Class<?> joinEntityClass) {
@@ -622,6 +636,17 @@ public final class DaoUtil {
         return result;
     }
 
+    /**
+     * Returns a collection containing the source select property names plus the source property names
+     * required by the join-entity properties of each of the specified join entity classes, so that the
+     * columns needed to load those join entities are always selected.
+     *
+     * @param dao the join-entity DAO whose join metadata is used.
+     * @param sourceSelectPropNames the source property names to select.
+     * @param joinEntityClasses the join entity classes whose required source property names are included.
+     * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
+     *         names added; returned unchanged if it is {@code null} or {@code joinEntityClasses} is empty.
+     */
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
             final Collection<Class<?>> joinEntityClasses) {
         if (sourceSelectPropNames == null || N.isEmpty(joinEntityClasses)) {
@@ -637,6 +662,16 @@ public final class DaoUtil {
         return result;
     }
 
+    /**
+     * Returns a collection containing the source select property names plus the source property names
+     * required by every join-entity property of the DAO's target entity, so that the columns needed to
+     * load any join entity are always selected.
+     *
+     * @param dao the join-entity DAO whose join metadata is used.
+     * @param sourceSelectPropNames the source property names to select.
+     * @return {@code sourceSelectPropNames} (possibly unchanged) with all required source join property
+     *         names added, or {@code null} if {@code sourceSelectPropNames} is {@code null}.
+     */
     @SuppressWarnings("deprecation")
     static Collection<String> includeAllSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames) {
         if (sourceSelectPropNames == null) {
@@ -652,6 +687,15 @@ public final class DaoUtil {
         return result;
     }
 
+    /**
+     * Returns a collection containing the source select property names plus any source property names
+     * of the specified {@link JoinInfo} that are not already present.
+     *
+     * @param sourceSelectPropNames the source property names to select; must not be {@code null}.
+     * @param joinInfo the join metadata whose source property names are included.
+     * @return {@code sourceSelectPropNames} unchanged if it already contains all required source property
+     *         names; otherwise a new collection with the missing names added.
+     */
     private static Collection<String> includeSourceJoinPropNames(final Collection<String> sourceSelectPropNames, final JoinInfo joinInfo) {
         List<String> result = null;
 
@@ -933,6 +977,15 @@ public final class DaoUtil {
         return Math.toIntExact(result);
     }
 
+    /**
+     * Collects a failure into the exception being accumulated, keeping the first failure as the one to
+     * propagate and attaching any later, distinct failure to it as a suppressed exception.
+     *
+     * @param firstException the first failure collected so far, or {@code null} if none yet.
+     * @param nextException the next failure to collect.
+     * @return {@code nextException} if {@code firstException} is {@code null}; otherwise
+     *         {@code firstException} with {@code nextException} added as suppressed.
+     */
     private static Exception collectFailure(final Exception firstException, final Exception nextException) {
         if (firstException == null) {
             return nextException;
@@ -945,6 +998,15 @@ public final class DaoUtil {
         return firstException;
     }
 
+    /**
+     * Copies the suppressed exceptions of {@code source} onto {@code target}, so failures retained on
+     * {@code source} are not lost when {@code target} is thrown in its place. {@code target} itself is
+     * skipped if it appears among the suppressed exceptions of {@code source}.
+     *
+     * @param source the exception whose suppressed exceptions are transferred.
+     * @param target the exception that receives the suppressed exceptions and is returned.
+     * @return {@code target} with the suppressed exceptions of {@code source} added to it.
+     */
     private static <E extends Exception> E transferSuppressed(final Exception source, final E target) {
         for (final Throwable suppressed : source.getSuppressed()) {
             if (suppressed != target) {
@@ -966,6 +1028,18 @@ public final class DaoUtil {
     static void addSuppressedIfDifferent(final Throwable primary, final Throwable secondary) {
         if (primary != secondary) {
             primary.addSuppressed(secondary);
+        }
+    }
+
+    /**
+     * Executes a statement-building action and translates a checked SQL failure for the unchecked DAO hierarchy.
+     */
+    static <R> R uncheckedSql(final Throwables.Supplier<R, SQLException> action) throws UncheckedSQLException {
+        try {
+            return action.get();
+        } catch (final Exception e) {
+            throwUncheckedSQLException.accept(e);
+            throw new AssertionError("Unreachable: throwUncheckedSQLException always throws");
         }
     }
 }

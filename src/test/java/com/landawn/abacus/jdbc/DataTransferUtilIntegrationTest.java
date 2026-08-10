@@ -572,12 +572,12 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     // ===== Builder option setters not exercised elsewhere (batchIntervalInMillis / fetchSize / stmtSetter /
     // selectColumnNames / to(PreparedStatement)). Each test asserts real row counts and a sampled value. =====
 
-    // DatasetImportBuilder.batchDelay(..) — the inter-batch pause setter (with batchSize=1 so a batch
+    // DatasetImportBuilder.batchInterval(..) — the inter-batch pause setter (with batchSize=1 so a batch
     // boundary is crossed for every row).
     @Test
     public void testImportFrom_Dataset_BatchIntervalInMillis() throws SQLException {
         try (Connection conn = ds.getConnection()) {
-            final int imported = DataTransferUtil.importFrom(threeRowDataset()).batchSize(1).batchDelay(Duration.ofMillis(1)).to(conn, CSV_INSERT_SQL);
+            final int imported = DataTransferUtil.importFrom(threeRowDataset()).batchSize(1).batchInterval(Duration.ofMillis(1)).to(conn, CSV_INSERT_SQL);
 
             assertEquals(3, imported);
         }
@@ -586,13 +586,13 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("Alice", nameOf(1));
     }
 
-    // RowImportBuilder.batchSize(..).batchDelay(..).parameterSetter(..).to(PreparedStatement) — covers the
+    // RowImportBuilder.batchSize(..).batchInterval(..).parameterSetter(..).to(PreparedStatement) — covers the
     // batchSize/batchIntervalInMillis setters and the to(PreparedStatement) terminal that no other test reaches.
     @Test
     public void testImportFrom_Iterator_BatchSize_Interval_ToStatement() throws SQLException {
         try (Connection conn = ds.getConnection();
              PreparedStatement stmt = conn.prepareStatement(CSV_INSERT_SQL)) {
-            final long n = DataTransferUtil.importFrom(threeRecs().iterator()).batchSize(1).batchDelay(Duration.ofMillis(1)).parameterSetter((q, r) -> {
+            final long n = DataTransferUtil.importFrom(threeRecs().iterator()).batchSize(1).batchInterval(Duration.ofMillis(1)).parameterSetter((q, r) -> {
                 q.setLong(1, r.id);
                 q.setString(2, r.name);
                 q.setDouble(3, r.amount);
@@ -605,11 +605,11 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("Cara", nameOf(3));
     }
 
-    // CopyFromDataSource.batchDelay(..).parameterSetter(..) — the pause setter plus the custom-binding setter
+    // CopyFromDataSource.batchInterval(..).parameterSetter(..) — the pause setter plus the custom-binding setter
     // (the existing CopyFromDataSource test uses neither).
     @Test
     public void testCopyFrom_DataSource_BatchInterval_StmtSetter() throws SQLException {
-        final long copied = DataTransferUtil.copyFrom(ds, COPY_SELECT_SQL).batchSize(1).batchDelay(Duration.ofMillis(1)).parameterSetter((pq, rs) -> {
+        final long copied = DataTransferUtil.copyFrom(ds, COPY_SELECT_SQL).batchSize(1).batchInterval(Duration.ofMillis(1)).parameterSetter((pq, rs) -> {
             pq.setLong(1, rs.getLong(1));
             pq.setString(2, rs.getString(2).toUpperCase());
             pq.setDouble(3, rs.getDouble(3));
@@ -620,7 +620,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("ALICE", copyTgtName(1));
     }
 
-    // CopyFromConnection.fetchSize(..).batchDelay(..) — the fetchSize and pause setters, exercised with
+    // CopyFromConnection.fetchSize(..).batchInterval(..) — the fetchSize and pause setters, exercised with
     // the default (no stmtSetter) column-by-column copy.
     @Test
     public void testCopyFrom_Connection_FetchSize_BatchInterval() throws SQLException {
@@ -629,7 +629,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
             final long copied = DataTransferUtil.copyFrom(src, COPY_SELECT_SQL)
                     .fetchSize(10)
                     .batchSize(2)
-                    .batchDelay(Duration.ofMillis(1))
+                    .batchInterval(Duration.ofMillis(1))
                     .to(tgt, COPY_INSERT_SQL);
 
             assertEquals(3, copied);
@@ -639,7 +639,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("Alice", copyTgtName(1));
     }
 
-    // CopyFromStatement.batchDelay(..).parameterSetter(..) — the pause setter plus the custom-binding setter
+    // CopyFromStatement.batchInterval(..).parameterSetter(..) — the pause setter plus the custom-binding setter
     // (the existing CopyFromStatement test uses neither).
     @Test
     public void testCopyFrom_Statement_BatchInterval_StmtSetter() throws SQLException {
@@ -647,7 +647,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
              Connection tgt = ds.getConnection();
              PreparedStatement sel = src.prepareStatement(COPY_SELECT_SQL);
              PreparedStatement ins = tgt.prepareStatement(COPY_INSERT_SQL)) {
-            final long copied = DataTransferUtil.copyFrom(sel).batchSize(1).batchDelay(Duration.ofMillis(1)).parameterSetter((pq, rs) -> {
+            final long copied = DataTransferUtil.copyFrom(sel).batchSize(1).batchInterval(Duration.ofMillis(1)).parameterSetter((pq, rs) -> {
                 pq.setLong(1, rs.getLong(1));
                 pq.setString(2, rs.getString(2).toUpperCase());
                 pq.setDouble(3, rs.getDouble(3));

@@ -138,7 +138,16 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
 @SuppressWarnings({ "java:S1192", "resource" })
 public final class CallableQuery extends AbstractQuery<CallableStatement, CallableQuery> {
 
+    /**
+     * The wrapped {@link CallableStatement} on which all operations of this query are performed;
+     * the same instance held by the superclass.
+     */
     final CallableStatement cstmt;
+
+    /**
+     * The OUT parameters registered through the {@code registerOutParameter} methods, in registration order.
+     * Lazily created; remains {@code null} until the first OUT parameter is registered.
+     */
     List<Jdbc.OutParam> outParams;
 
     /**
@@ -2343,6 +2352,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         return rs == null ? emptyResultSet(cstmt) : rs;
     }
 
+    /**
+     * Executes the stored procedure and returns the first {@link ResultSet} it produces, skipping any
+     * preceding update counts, or {@code null} if no result set is ever produced. Unlike
+     * {@link #executeQuery()}, no empty fallback is created. If no fetch direction was set on this
+     * query, the statement is switched to {@link ResultSet#FETCH_FORWARD} before execution.
+     *
+     * @return the first {@code ResultSet} produced by the procedure, or {@code null} if none
+     * @throws SQLException if a database access error occurs
+     * @see #executeQuery()
+     */
     private ResultSet executeQueryOrNull() throws SQLException {
         if (!isFetchDirectionSet) {
             // Mirror AbstractQuery.executeQuery(): capture the driver-default direction before
@@ -2380,6 +2399,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         return null;
     }
 
+    /**
+     * Creates an empty, read-only {@link ResultSet} placeholder for procedures that return no result set.
+     * The returned instance reports zero columns and no rows, behaves as {@code TYPE_FORWARD_ONLY} /
+     * {@code CONCUR_READ_ONLY}, and throws {@link SQLException} from column getters and row-update
+     * operations.
+     *
+     * @param producingStatement the statement reported by {@link ResultSet#getStatement()}
+     * @return an empty, read-only {@code ResultSet}; never {@code null}
+     */
     private static ResultSet emptyResultSet(final CallableStatement producingStatement) {
         final ResultSetMetaData metadata = (ResultSetMetaData) Proxy.newProxyInstance(CallableQuery.class.getClassLoader(),
                 new Class<?>[] { ResultSetMetaData.class }, (proxy, method, args) -> {
@@ -2465,6 +2493,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         });
     }
 
+    /**
+     * Handles a method invocation on an empty-result-set (or its metadata) proxy: the {@code Object}
+     * methods {@code toString}, {@code hashCode}, and {@code equals} are answered directly, and every
+     * other operation is rejected.
+     *
+     * @param proxy the proxy instance the method was invoked on
+     * @param args the invocation arguments, or {@code null} if the method takes none
+     * @param methodName the name of the invoked method
+     * @param message the detail message used for {@code toString} and for the thrown exception
+     * @return the result of the supported {@code Object} method
+     * @throws SQLException always, unless the invoked method is {@code toString}, {@code hashCode}, or {@code equals}
+     */
     private static Object unsupportedEmptyResultSetOperation(final Object proxy, final Object[] args, final String methodName, final String message)
             throws SQLException {
         if (methodName.equals("toString")) {
@@ -2801,6 +2841,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         }
     }
 
+    /**
+     * Returns a defensive copy of the registered OUT parameters for handover to a callback, so later
+     * registration calls on this query cannot mutate the list the callback sees.
+     *
+     * @return a new list containing copies of the registered {@link Jdbc.OutParam}s (never {@code null};
+     *         empty if none were registered)
+     */
     private List<Jdbc.OutParam> copyOutParams() {
         if (N.isEmpty(outParams)) {
             return N.emptyList();

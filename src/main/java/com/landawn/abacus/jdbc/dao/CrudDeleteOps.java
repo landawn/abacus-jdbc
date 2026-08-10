@@ -37,7 +37,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * int deletedRows = userDao.delete(user);
      * if (deletedRows > 0) {
      *     System.out.println("User deleted successfully");

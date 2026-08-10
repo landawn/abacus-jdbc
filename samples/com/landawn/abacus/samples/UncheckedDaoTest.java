@@ -107,14 +107,14 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         uncheckedUserDao.deleteById(100L);
 
         final long id = uncheckedUserDao.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = uncheckedUserDao.gett(id);
+        userFromDB = uncheckedUserDao.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -129,18 +129,18 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        final User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> uncheckedUserDao.gett(100L)).printResult();
+        Profiler.run(1, 10000, 1, () -> uncheckedUserDao.getOrNull(100L)).printResult();
 
         uncheckedUserDao.delete(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> uncheckedUserDao.gett(100L)).printResult();
+        Profiler.run(1, 10000, 1, () -> uncheckedUserDao.getOrNull(100L)).printResult();
 
         uncheckedUserDao.delete(userFromDB);
     }
@@ -150,7 +150,7 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        final User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -183,7 +183,7 @@ public class UncheckedDaoTest {
                 final User user = User.builder().id(idx).firstName("Forrest").lastName("Gump").email("123@email.com").build();
                 uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-                assertNotNull(uncheckedUserDao.gett(idx));
+                assertNotNull(uncheckedUserDao.getOrNull(idx));
 
                 uncheckedUserDao.deleteById(idx);
 
@@ -210,7 +210,7 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insert(user, N.asList("id", "firstName", "lastName", "email"));
 
-        final User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
@@ -233,14 +233,14 @@ public class UncheckedDaoTest {
     //        User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
     //        uncheckedUserDao.save(user, N.asList("id", "firstName", "lastName", "email"));
     //
-    //        User userFromDB = uncheckedUserDao.gett(100L, true);
+    //        User userFromDB = uncheckedUserDao.getOrNull(100L, true);
     //        System.out.println(userFromDB);
     //        assertNotNull(userFromDB);
     //
     //        uncheckedUserDao.deleteById(100L);
     //
     //        long id = uncheckedUserDao.insert(user, N.asList("firstName", "lastName", "email"));
-    //        userFromDB = uncheckedUserDao.gett(id);
+    //        userFromDB = uncheckedUserDao.getOrNull(id);
     //        System.out.println(userFromDB);
     //        assertNotNull(userFromDB);
     //
@@ -283,14 +283,14 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
         uncheckedUserDao.deleteById(100L);
 
         final long id = uncheckedUserDao.insert(user, N.asList("firstName", "lastName", "email"));
-        userFromDB = uncheckedUserDao.gett(id);
+        userFromDB = uncheckedUserDao.getOrNull(id);
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
         uncheckedUserDao.deleteById(id);
@@ -332,7 +332,7 @@ public class UncheckedDaoTest {
     //
     //        noUpdateUserDao.save(user);
     //
-    //        final User userFromDB = readOnlyUserDao.gett(100L);
+    //        final User userFromDB = readOnlyUserDao.getOrNull(100L);
     //        System.out.println(userFromDB);
     //
     //        try {
@@ -357,7 +357,7 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        final User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 100; i++) {
@@ -388,7 +388,7 @@ public class UncheckedDaoTest {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         assertEquals(1, uncheckedUserDao.batchDeleteByIds(N.repeat(100L, 1)));
@@ -401,7 +401,7 @@ public class UncheckedDaoTest {
         user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        userFromDB = uncheckedUserDao.gett(100L);
+        userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         assertEquals(1, uncheckedUserDao.batchDelete(N.repeat(userFromDB, 1)));
@@ -421,7 +421,7 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        final User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -451,7 +451,7 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        final User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -493,7 +493,7 @@ public class UncheckedDaoTest {
         user.setId(101);
         uncheckedUserDao.insertWithId(user);
 
-        final User userFromDB = uncheckedUserDao.gett(100L);
+        final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
@@ -548,7 +548,7 @@ public class UncheckedDaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.insertWithId(user);
 
-        User userFromDB = uncheckedUserDao.gett(100L);
+        User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
         final Device device = Device.builder().userId(userFromDB.getId()).manufacture("Apple").model("iPhone 11").build();
@@ -561,22 +561,22 @@ public class UncheckedDaoTest {
         uncheckedUserDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
-        userFromDB = uncheckedUserDao.gett(100L);
+        userFromDB = uncheckedUserDao.getOrNull(100L);
         Beans.copy(userFromDB);
         uncheckedUserDao.loadAllJoinEntitiesIfAbsent(userFromDB);
         System.out.println(userFromDB);
 
-        userFromDB = uncheckedUserDao.gett(100L);
+        userFromDB = uncheckedUserDao.getOrNull(100L);
         Beans.copy(userFromDB);
         uncheckedUserDao.loadJoinEntities(userFromDB, Device.class);
         System.out.println(userFromDB);
 
-        userFromDB = uncheckedUserDao.gett(100L);
+        userFromDB = uncheckedUserDao.getOrNull(100L);
         Beans.copy(userFromDB);
         uncheckedUserDao.loadJoinEntitiesIfAbsent(userFromDB, Address.class);
         System.out.println(userFromDB);
 
-        userFromDB = uncheckedUserDao.gett(100L);
+        userFromDB = uncheckedUserDao.getOrNull(100L);
         Beans.copy(userFromDB);
         uncheckedUserDao.loadAllJoinEntities(userFromDB, true);
         System.out.println(userFromDB);
@@ -595,7 +595,7 @@ public class UncheckedDaoTest {
             final User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
             uncheckedUserDao.insertWithId(user);
 
-            final User userFromDB = uncheckedUserDao.gett(100L + i);
+            final User userFromDB = uncheckedUserDao.getOrNull(100L + i);
             System.out.println(userFromDB);
             users.add(userFromDB);
 
@@ -643,25 +643,19 @@ public class UncheckedDaoTest {
     }
 
     @Test
-    public void test_SqlParser() {
-        final String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
-        SqlParser.parse(sql).forEach(Fn.println());
-    }
-
-    @Test
     public void crud_many_to_many() throws SQLException {
 
         Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
         employeeDao.insert(employee);
 
-        final Employee employeeFromDB = employeeDao.gett(employee.getEmployeeId());
+        final Employee employeeFromDB = employeeDao.getOrNull(employee.getEmployeeId());
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
         Project project = Project.builder().projectId(1000).title("Project X").build();
         projectDao.insert(project);
 
-        final Project projectFromDB = projectDao.gett(project.getProjectId());
+        final Project projectFromDB = projectDao.getOrNull(project.getProjectId());
         projectDao.loadAllJoinEntities(projectFromDB);
         System.out.println(projectFromDB);
 
@@ -710,10 +704,10 @@ public class UncheckedDaoTest {
         System.out.println(projects);
 
         assertTrue(employeeProjectDao.exists(entityId));
-        assertNotNull(employeeProjectDao.gett(entityId));
+        assertNotNull(employeeProjectDao.getOrNull(entityId));
 
         assertTrue(employeeProjectDao2.exists(entityId2));
-        assertNotNull(employeeProjectDao2.gett(entityId2));
+        assertNotNull(employeeProjectDao2.getOrNull(entityId2));
 
         employeeDao.delete(Filters.alwaysTrue());
         projectDao.delete(Filters.alwaysTrue());
@@ -721,6 +715,6 @@ public class UncheckedDaoTest {
         employeeProjectDao2.deleteById(entityId2);
 
         assertFalse(employeeProjectDao.exists(entityId));
-        assertNull(employeeProjectDao.gett(entityId));
+        assertNull(employeeProjectDao.getOrNull(entityId));
     }
 }

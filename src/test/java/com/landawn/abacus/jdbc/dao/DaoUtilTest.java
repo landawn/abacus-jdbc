@@ -118,7 +118,7 @@ public class DaoUtilTest extends TestBase {
         assertTrue(SqlParser.isInsertQuery(sql));
     }
 
-    // isReadOnlyQuery / isNoUpdateQuery are the public gates used by the DaoImpl proxy to enforce
+    // isReadOnlyQuery / isReadOrInsertQuery are the public gates used by the DaoImpl proxy to enforce
     // ReadOnlyDao (SELECT-only) and NonUpdateDao (SELECT/INSERT-only) restrictions.
     @Test
     public void testIsReadOnlyQuery() {
@@ -134,19 +134,19 @@ public class DaoUtilTest extends TestBase {
     }
 
     @Test
-    public void testIsNoUpdateQuery() {
-        assertTrue(SqlParser.isNoUpdateQuery("SELECT * FROM demo"));
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1)"));
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT DO NOTHING")); // never overwrites
-        assertFalse(SqlParser.isNoUpdateQuery("UPDATE demo SET name = 'x'"));
-        assertFalse(SqlParser.isNoUpdateQuery("DELETE FROM demo"));
-        assertFalse(SqlParser.isNoUpdateQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT OR REPLACE INTO demo(id) VALUES (1)"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON DUPLICATE KEY UPDATE name = 'x'"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT(id) DO UPDATE SET name = 'x'"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT OVERWRITE TABLE demo SELECT * FROM staging"));
-        assertFalse(SqlParser.isNoUpdateQuery("SELECT * INTO demo_copy FROM demo"));
-        assertFalse(SqlParser.isNoUpdateQuery(null));
+    public void testisReadOrInsertQuery() {
+        assertTrue(SqlParser.isReadOrInsertQuery("SELECT * FROM demo"));
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO demo(id) VALUES (1)"));
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT DO NOTHING")); // never overwrites
+        assertFalse(SqlParser.isReadOrInsertQuery("UPDATE demo SET name = 'x'"));
+        assertFalse(SqlParser.isReadOrInsertQuery("DELETE FROM demo"));
+        assertFalse(SqlParser.isReadOrInsertQuery("MERGE INTO demo USING src ON (demo.id = src.id) WHEN MATCHED THEN UPDATE SET name = src.name"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT OR REPLACE INTO demo(id) VALUES (1)"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT INTO demo(id) VALUES (1) ON DUPLICATE KEY UPDATE name = 'x'"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT INTO demo(id) VALUES (1) ON CONFLICT(id) DO UPDATE SET name = 'x'"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT OVERWRITE TABLE demo SELECT * FROM staging"));
+        assertFalse(SqlParser.isReadOrInsertQuery("SELECT * INTO demo_copy FROM demo"));
+        assertFalse(SqlParser.isReadOrInsertQuery(null));
     }
 
     @Test
@@ -737,22 +737,22 @@ public class DaoUtilTest extends TestBase {
     }
 
     @Test
-    public void testIsNoUpdateQuery_AllowsPlainInsertAndDoNothing() {
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(id, message) VALUES (1, 'created')"));
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO NOTHING"));
+    public void testisReadOrInsertQuery_AllowsPlainInsertAndDoNothing() {
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO audit_log(id, message) VALUES (1, 'created')"));
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO NOTHING"));
     }
 
     @Test
-    public void testIsNoUpdateQuery_RejectsInsertConflictUpdateClauses() {
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = VALUES(name)"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT OR REPLACE INTO users(id, name) VALUES (1, 'a')"));
+    public void testisReadOrInsertQuery_RejectsInsertConflictUpdateClauses() {
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = VALUES(name)"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT OR REPLACE INTO users(id, name) VALUES (1, 'a')"));
     }
 
     @Test
-    public void testIsNoUpdateQuery_IgnoresQuotedConflictUpdateText() {
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON DUPLICATE KEY UPDATE name = VALUES(name)')"));
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('ON CONFLICT DO UPDATE')"));
+    public void testisReadOrInsertQuery_IgnoresQuotedConflictUpdateText() {
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO audit_log(message) VALUES ('ON DUPLICATE KEY UPDATE name = VALUES(name)')"));
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO audit_log(message) VALUES ('ON CONFLICT DO UPDATE')"));
     }
 
     @Test
@@ -765,11 +765,11 @@ public class DaoUtilTest extends TestBase {
     }
 
     @Test
-    public void testIsNoUpdateQuery_RejectsSelectIntoAndInsertOverwrite() {
-        assertFalse(SqlParser.isNoUpdateQuery("SELECT * INTO user_copy FROM users"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT OVERWRITE TABLE users SELECT * FROM staging_users"));
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log(message) VALUES ('INSERT OVERWRITE TABLE users')"));
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log([INSERT OVERWRITE]) VALUES (1)"));
+    public void testisReadOrInsertQuery_RejectsSelectIntoAndInsertOverwrite() {
+        assertFalse(SqlParser.isReadOrInsertQuery("SELECT * INTO user_copy FROM users"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT OVERWRITE TABLE users SELECT * FROM staging_users"));
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO audit_log(message) VALUES ('INSERT OVERWRITE TABLE users')"));
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO audit_log([INSERT OVERWRITE]) VALUES (1)"));
     }
 
     @Test
@@ -780,10 +780,10 @@ public class DaoUtilTest extends TestBase {
     }
 
     @Test
-    public void testIsNoUpdateQuery_IgnoresBracketQuotedConflictUpdateText() {
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log([DO], [UPDATE]) VALUES (1, 2)"));
-        assertTrue(SqlParser.isNoUpdateQuery("INSERT INTO audit_log([DO UPDATE]) VALUES (1)"));
-        assertFalse(SqlParser.isNoUpdateQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
+    public void testisReadOrInsertQuery_IgnoresBracketQuotedConflictUpdateText() {
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO audit_log([DO], [UPDATE]) VALUES (1, 2)"));
+        assertTrue(SqlParser.isReadOrInsertQuery("INSERT INTO audit_log([DO UPDATE]) VALUES (1)"));
+        assertFalse(SqlParser.isReadOrInsertQuery("INSERT INTO users(id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = excluded.name"));
     }
 
     // Backtick-quoted identifiers in WITH clause exercises quote-type branch (line 941)
@@ -819,14 +819,14 @@ public class DaoUtilTest extends TestBase {
 
     @Test
     public void testIsReadOnlyQuery_LeadingParenthesis() {
-        assertTrue(SqlParser.isNoUpdateQuery("(SELECT 1)"));
+        assertTrue(SqlParser.isReadOrInsertQuery("(SELECT 1)"));
         assertTrue(SqlParser.isReadOnlyQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
     }
 
     @Test
-    public void testIsNoUpdateQuery_LeadingParenthesis() {
-        assertTrue(SqlParser.isNoUpdateQuery("(SELECT 1)"));
-        assertTrue(SqlParser.isNoUpdateQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
+    public void testisReadOrInsertQuery_LeadingParenthesis() {
+        assertTrue(SqlParser.isReadOrInsertQuery("(SELECT 1)"));
+        assertTrue(SqlParser.isReadOrInsertQuery("(SELECT a FROM t1) UNION ALL (SELECT a FROM t2)"));
     }
 
     @Test
@@ -879,7 +879,7 @@ public class DaoUtilTest extends TestBase {
     // Backslash at end of quoted literal exercises the break at line 1038.
     @Test
     public void testIsSelectQuery_CteWithBackslashAtEndOfQuote() {
-        assertFalse(SqlParser.isSelectQuery("WITH cte AS (SELECT 'test\\' AS name) SELECT * FROM cte"));
+        assertTrue(SqlParser.isSelectQuery("WITH cte AS (SELECT 'test\\' AS name) SELECT * FROM cte"));
     }
 
     // Doubled-quote escape (SQL standard) inside a CTE exercises skipQuotedLiteral line 1043.

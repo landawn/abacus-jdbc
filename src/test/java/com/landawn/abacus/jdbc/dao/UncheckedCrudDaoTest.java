@@ -118,13 +118,13 @@ public class UncheckedCrudDaoTest extends TestBase {
         TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(12L)).thenReturn(entity);
+        when(dao.getOrNull(12L)).thenReturn(entity);
 
         Optional<TestEntity> result = dao.get(12L);
 
         assertTrue(result.isPresent());
         assertSame(entity, result.orElseNull());
-        verify(dao).gett(12L);
+        verify(dao).getOrNull(12L);
     }
 
     @Test
@@ -180,7 +180,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(15L, List.of("name"))).thenReturn(entity);
+        when(dao.getOrNull(15L, List.of("name"))).thenReturn(entity);
 
         Optional<TestEntity> result = dao.get(15L, List.of("name"));
 
@@ -517,7 +517,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(3L);
 
-        when(dao.gett(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(null);
+        when(dao.getOrNull(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(null);
 
         assertFalse(dao.refresh(entity, List.of("name")));
     }
@@ -560,7 +560,7 @@ public class UncheckedCrudDaoTest extends TestBase {
         dbEntity.setId(3L);
         dbEntity.setName("fresh");
 
-        when(dao.gett(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(dbEntity);
+        when(dao.getOrNull(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(dbEntity);
 
         assertTrue(dao.refresh(entity, List.of("name")));
         assertEquals("fresh", entity.getName());
@@ -843,8 +843,8 @@ public class UncheckedCrudDaoTest extends TestBase {
             assertEquals(1L, result.get(0).getId(), "updated and inserted results must retain input order");
             assertEquals(2L, result.get(1).getId(), "updated and inserted results must retain input order");
 
-            final BatchUpsertUser reloaded1 = dao.gett(1L);
-            final BatchUpsertUser reloaded2 = dao.gett(2L);
+            final BatchUpsertUser reloaded1 = dao.getOrNull(1L);
+            final BatchUpsertUser reloaded2 = dao.getOrNull(2L);
             assertNotNull(reloaded1);
             assertNotNull(reloaded2);
             assertEquals("updated", reloaded1.getName());
@@ -866,8 +866,8 @@ public class UncheckedCrudDaoTest extends TestBase {
 
             assertEquals(1, result.size());
             assertEquals(1L, result.get(0).getId(), "the null match key must select the existing row");
-            assertNotNull(dao.gett(1L));
-            assertNull(dao.gett(2L), "a null key must not fall through to the insert path");
+            assertNotNull(dao.getOrNull(1L));
+            assertNull(dao.getOrNull(2L), "a null key must not fall through to the insert path");
         }
 
         @Test
@@ -898,8 +898,8 @@ public class UncheckedCrudDaoTest extends TestBase {
 
             assertEquals(3, result.size());
             assertEquals(List.of(1L, 2L, 1L), result.stream().map(BatchUpsertUser::getId).toList());
-            assertEquals("last-update", dao.gett(1L).getName());
-            assertEquals("second-update", dao.gett(2L).getName());
+            assertEquals("last-update", dao.getOrNull(1L).getName());
+            assertEquals("second-update", dao.getOrNull(2L).getName());
         }
     }
 }

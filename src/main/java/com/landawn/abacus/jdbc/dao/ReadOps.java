@@ -1638,7 +1638,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-        forEach(selectPropNames, cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
+        forEach(selectPropNames, cond, Jdbc.RowConsumer.forDisposableObjArray(targetEntityClass(), rowConsumer));
     }
 
     /**
@@ -1657,7 +1657,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-        forEach(cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
+        forEach(cond, Jdbc.RowConsumer.forDisposableObjArray(targetEntityClass(), rowConsumer));
     }
 
 }

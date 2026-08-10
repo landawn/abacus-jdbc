@@ -78,10 +78,10 @@ public class DBLockTest extends TestBase {
 
     // Verifies all lock overloads populate the in-memory lock pool after a successful JDBC insert.
     @Test
-    public void testLock() throws Exception {
+    public void testTryLock() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        final String code = fixture.lock.lock("resource-1");
+        final String code = fixture.lock.tryLock("resource-1");
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
@@ -89,51 +89,51 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
-    public void testLock_Timeout() throws Exception {
+    public void testTryLock_Timeout() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        final String code = fixture.lock.lock("resource-2", 50L);
+        final String code = fixture.lock.tryLock("resource-2", 50L);
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
 
     @Test
-    public void testLock_LiveTimeAndTimeout() throws Exception {
+    public void testTryLock_LiveTimeAndTimeout() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        final String code = fixture.lock.lock("resource-3", 200L, 50L);
+        final String code = fixture.lock.tryLock("resource-3", 200L, 50L);
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
 
     @Test
-    public void testLock_RetryInterval() throws Exception {
+    public void testTryLock_RetryInterval() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        final String code = fixture.lock.lock("resource-4", 200L, 50L, 1L);
+        final String code = fixture.lock.tryLock("resource-4", 200L, 50L, 1L);
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
 
     @Test
-    public void testLock_TimeoutReturnsNull() throws Exception {
+    public void testTryLock_TimeoutReturnsNull() throws Exception {
         final LockFixture fixture = newLockFixture(0, 0, 0);
 
-        final String code = fixture.lock.lock("resource-timeout", 200L, 1L, 0L);
+        final String code = fixture.lock.tryLock("resource-timeout", 200L, 1L, 0L);
 
         assertNull(code);
         assertEquals(0, targetCodePool(fixture.lock).size());
     }
 
     @Test
-    public void testLock_DoesNotSleepPastTimeoutBudget() throws Exception {
+    public void testTryLock_DoesNotSleepPastTimeoutBudget() throws Exception {
         final LockFixture fixture = newLockFixture(0, 0);
 
         final long start = System.nanoTime();
-        final String code = fixture.lock.lock("resource-timeout-budget", 200L, 20L, 250L);
+        final String code = fixture.lock.tryLock("resource-timeout-budget", 200L, 20L, 250L);
         final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
         assertNull(code);
@@ -142,10 +142,10 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
-    public void testLock_LiveTimeOverflowSaturatesExpiryTimestamp() throws Exception {
+    public void testTryLock_LiveTimeOverflowSaturatesExpiryTimestamp() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        final String code = fixture.lock.lock("resource-expiry-overflow", Long.MAX_VALUE, 50L, 0L);
+        final String code = fixture.lock.tryLock("resource-expiry-overflow", Long.MAX_VALUE, 50L, 0L);
 
         assertNotNull(code);
         final ArgumentCaptor<java.sql.Timestamp> expiryCaptor = ArgumentCaptor.forClass(java.sql.Timestamp.class);
@@ -154,32 +154,32 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
-    public void testLockRejectsEmptyTarget() throws Exception {
+    public void testTryLockRejectsEmptyTarget() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("", 200L, 50L, 1L));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.tryLock("", 200L, 50L, 1L));
     }
 
     @Test
-    public void testLockRejectsNonPositiveLiveTime() throws Exception {
+    public void testTryLockRejectsNonPositiveLiveTime() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-live-time", 0L, 50L, 1L));
-        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-live-time", -1L, 50L, 1L));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.tryLock("resource-live-time", 0L, 50L, 1L));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.tryLock("resource-live-time", -1L, 50L, 1L));
     }
 
     @Test
-    public void testLockRejectsNegativeTimeoutAndRetryInterval() throws Exception {
+    public void testTryLockRejectsNegativeTimeoutAndRetryInterval() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-timeout", 200L, -1L, 1L));
-        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-retry", 200L, 50L, -1L));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.tryLock("resource-timeout", 200L, -1L, 1L));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.tryLock("resource-retry", 200L, 50L, -1L));
     }
 
     @Test
     public void testUnlock() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 1);
-        final String code = fixture.lock.lock("resource-5", 200L, 50L, 1L);
+        final String code = fixture.lock.tryLock("resource-5", 200L, 50L, 1L);
 
         final boolean unlocked = fixture.lock.unlock("resource-5", code);
 
@@ -206,13 +206,13 @@ public class DBLockTest extends TestBase {
     @Test
     public void testClose() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 1);
-        fixture.lock.lock("resource-6");
+        fixture.lock.tryLock("resource-6");
 
         fixture.lock.close();
 
         verify(fixture.scheduledFuture).cancel(true);
         assertEquals(0, targetCodePool(fixture.lock).size());
-        assertThrows(IllegalStateException.class, () -> fixture.lock.lock("resource-6"));
+        assertThrows(IllegalStateException.class, () -> fixture.lock.tryLock("resource-6"));
     }
 
     @Test
@@ -234,7 +234,7 @@ public class DBLockTest extends TestBase {
 
         final Thread locker = new Thread(() -> {
             try {
-                outcome.set(fixture.lock.lock("resource-close-race", 5_000L, 1_000L, 1L));
+                outcome.set(fixture.lock.tryLock("resource-close-race", 5_000L, 1_000L, 1L));
             } catch (final Throwable e) {
                 outcome.set(e);
             }
@@ -369,21 +369,21 @@ public class DBLockTest extends TestBase {
 
     // removeExpiredLock throws → catch at L450 entered, lock still proceeds (L450)
     @Test
-    public void testLock_RemoveExpiredLock_ThrowsException_LockStillSucceeds() throws Exception {
+    public void testTryLock_RemoveExpiredLock_ThrowsException_LockStillSucceeds() throws Exception {
         final LockFixture fixture = newLockFixture(1);
         when(fixture.preparedStatement.executeUpdate()).thenThrow(new RuntimeException("remove expired failed")).thenReturn(1); // lockSQL succeeds on retry
-        final String code = fixture.lock.lock("resource-exc-remove", 200L, 100L, 0L);
+        final String code = fixture.lock.tryLock("resource-exc-remove", 200L, 100L, 0L);
         assertNotNull(code);
     }
 
     // lockSQL throws on first attempt then succeeds on retry → L474, L478, L482 (retryInterval > 0)
     @Test
-    public void testLock_LockAcquire_ExceptionThenSuccess_WithRetryInterval() throws Exception {
+    public void testTryLock_LockAcquire_ExceptionThenSuccess_WithRetryInterval() throws Exception {
         final LockFixture fixture = newLockFixture(1);
         when(fixture.preparedStatement.executeUpdate()).thenReturn(0) // removeExpiredLock: no expired
                 .thenThrow(new RuntimeException("lock failed")) // lockSQL first attempt: throws
                 .thenReturn(1); // lockSQL second attempt: succeeds
-        final String code = fixture.lock.lock("resource-exc-retry", 200L, 100L, 1L);
+        final String code = fixture.lock.tryLock("resource-exc-retry", 200L, 100L, 1L);
         assertNotNull(code);
     }
 
@@ -391,10 +391,10 @@ public class DBLockTest extends TestBase {
     // Before the fix, now.getTime() + Long.MAX_VALUE overflowed to a large negative number,
     // making the do-while condition false immediately so the lock was never acquired.
     @Test
-    public void testLock_MaxValueTimeout_DoesNotOverflow_LockAcquired() throws Exception {
+    public void testTryLock_MaxValueTimeout_DoesNotOverflow_LockAcquired() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
-        final String code = fixture.lock.lock("resource-maxvalue-timeout", 200L, Long.MAX_VALUE, 0L);
+        final String code = fixture.lock.tryLock("resource-maxvalue-timeout", 200L, Long.MAX_VALUE, 0L);
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
@@ -402,20 +402,20 @@ public class DBLockTest extends TestBase {
 
     // Lock: removeExpiredLockSQL returns > 0, covering L465 info log
     @Test
-    public void testLock_ExpiredLockRemoved() throws Exception {
+    public void testTryLock_ExpiredLockRemoved() throws Exception {
         final LockFixture fixture = newLockFixture(1, 1);
 
-        final String code = fixture.lock.lock("resource-expired", 200L, 50L, 0L);
+        final String code = fixture.lock.tryLock("resource-expired", 200L, 50L, 0L);
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
 
     @Test
-    public void testLock_RemovesExpiredLockOnRetry() throws Exception {
+    public void testTryLock_RemovesExpiredLockOnRetry() throws Exception {
         final LockFixture fixture = newLockFixture(0, 0, 1, 1);
 
-        final String code = fixture.lock.lock("resource-expired-on-retry", 200L, 100L, 1L);
+        final String code = fixture.lock.tryLock("resource-expired-on-retry", 200L, 100L, 1L);
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
@@ -424,11 +424,11 @@ public class DBLockTest extends TestBase {
 
     // Lock: exception during acquire, timeout expires, covering L522-L523
     @Test
-    public void testLock_ExceptionThenTimeoutReturnsNull() throws Exception {
+    public void testTryLock_ExceptionThenTimeoutReturnsNull() throws Exception {
         final LockFixture fixture = newLockFixture(0);
         when(fixture.preparedStatement.executeUpdate()).thenReturn(0).thenThrow(new RuntimeException("lock failed")).thenReturn(0);
 
-        final String code = fixture.lock.lock("resource-exc-timeout", 200L, 1L, 0L);
+        final String code = fixture.lock.tryLock("resource-exc-timeout", 200L, 1L, 0L);
 
         assertNull(code);
     }
@@ -437,7 +437,7 @@ public class DBLockTest extends TestBase {
     @Test
     public void testUnlock_WrongCode() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 0);
-        final String code = fixture.lock.lock("resource-wrong-code", 200L, 50L, 0L);
+        final String code = fixture.lock.tryLock("resource-wrong-code", 200L, 50L, 0L);
 
         assertNotNull(code);
         final boolean unlocked = fixture.lock.unlock("resource-wrong-code", "wrong-code");
@@ -460,7 +460,7 @@ public class DBLockTest extends TestBase {
     @Test
     public void testClose_UnlockThrowsExceptionDuringClose() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
-        fixture.lock.lock("resource-close-exc", 200L, 50L, 0L);
+        fixture.lock.tryLock("resource-close-exc", 200L, 50L, 0L);
         when(fixture.preparedStatement.executeUpdate()).thenThrow(new RuntimeException("unlock failed during close"));
 
         fixture.lock.close();
@@ -503,7 +503,7 @@ public class DBLockTest extends TestBase {
     @Test
     public void testUnlock_CodeMatchesButDBAffectReturnsZero() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 0);
-        final String code = fixture.lock.lock("resource-no-db", 200L, 50L, 0L);
+        final String code = fixture.lock.tryLock("resource-no-db", 200L, 50L, 0L);
 
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
@@ -521,7 +521,7 @@ public class DBLockTest extends TestBase {
     // lock() uncaught, so the deliberate Thread.interrupted() handling block was dead code for that (dominant)
     // timing. This is made deterministic by pre-setting the interrupt flag so the first N.sleep throws at once.
     @Test
-    public void testLock_InterruptedDuringSleep_ReturnsNullAndPreservesInterruptFlag() throws Exception {
+    public void testTryLock_InterruptedDuringSleep_ReturnsNullAndPreservesInterruptFlag() throws Exception {
         // removeExpiredLock -> 0, lockSQL -> 0 so the lock is never acquired and the loop reaches N.sleep.
         final LockFixture fixture = newLockFixture(0, 0);
 
@@ -529,7 +529,7 @@ public class DBLockTest extends TestBase {
         Thread.currentThread().interrupt();
 
         try {
-            final String code = fixture.lock.lock("resource-interrupt", 10_000L, 5_000L, 1_000L);
+            final String code = fixture.lock.tryLock("resource-interrupt", 10_000L, 5_000L, 1_000L);
 
             assertNull(code, "lock() must return null when interrupted during the retry sleep, not throw");
             assertTrue(Thread.currentThread().isInterrupted(), "lock() must preserve the interrupt flag on cancellation");
@@ -551,7 +551,7 @@ public class DBLockTest extends TestBase {
         try {
             lock = new DBLock(ds, "live_lock_tbl");
 
-            final String code = lock.lock("res-live", 60_000L, 2_000L, 50L);
+            final String code = lock.tryLock("res-live", 60_000L, 2_000L, 50L);
             assertNotNull(code);
             assertEquals(1, targetCodePool(lock).size());
 

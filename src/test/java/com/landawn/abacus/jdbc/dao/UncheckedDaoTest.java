@@ -2,9 +2,11 @@ package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -15,10 +17,14 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Method;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,8 +32,10 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.u.Optional;
@@ -82,6 +90,15 @@ public class UncheckedDaoTest extends TestBase {
     private interface IdentifiedUncheckedDao extends UncheckedDao<IdentifiedEntity, IdentifiedUncheckedDao> {
     }
 
+    /**
+     * Compile-time regression guard: this method cannot compile if the unchecked raw-SQL builder
+     * inherits {@code throws SQLException} again.
+     */
+    @SuppressWarnings("unused")
+    private static PreparedQuery prepareQueryWithoutCheckedCatch(final TestUncheckedDao dao) {
+        return dao.prepareQuery("SELECT 1");
+    }
+
     @Test
     public void testIsInterface() {
         assertTrue(UncheckedDao.class.isInterface());
@@ -100,6 +117,51 @@ public class UncheckedDaoTest extends TestBase {
     @Test
     public void testHasDeclaredMethods() {
         assertTrue(UncheckedDao.class.getDeclaredMethods().length > 0);
+    }
+
+    @Test
+    public void testPrepareMethods_DoNotDeclareSQLException() {
+        final Class<?>[] uncheckedDaoTypes = { UncheckedDao.class, UncheckedCrudDao.class, UncheckedNonUpdateDao.class, UncheckedNonUpdateCrudDao.class,
+                UncheckedReadOnlyDao.class, UncheckedReadOnlyCrudDao.class };
+
+        for (final Class<?> daoType : uncheckedDaoTypes) {
+            for (final Method method : daoType.getMethods()) {
+                if (method.getName().startsWith("prepare")) {
+                    for (final Class<?> exceptionType : method.getExceptionTypes()) {
+                        assertFalse(SQLException.class.isAssignableFrom(exceptionType),
+                                () -> daoType.getSimpleName() + "." + method.getName() + " still declares " + exceptionType.getName());
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testPrepareQuery_TranslatesSQLException() throws SQLException {
+        final TestUncheckedDao dao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SQLException failure = new SQLException("connection failed");
+
+        when(dao.dataSource()).thenReturn(dataSource);
+        when(dataSource.getConnection()).thenThrow(failure);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> dao.prepareQuery("SELECT 1"));
+
+        assertSame(failure, thrown.getCause());
+    }
+
+    @Test
+    public void testGeneratedKeysPrepareQuery_TranslatesSQLException() throws SQLException {
+        final TestUncheckedDao dao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SQLException failure = new SQLException("connection failed");
+
+        when(dao.dataSource()).thenReturn(dataSource);
+        when(dataSource.getConnection()).thenThrow(failure);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> dao.prepareQuery("INSERT INTO demo(name) VALUES (?)", true));
+
+        assertSame(failure, thrown.getCause());
     }
 
     @Test

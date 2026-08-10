@@ -37,11 +37,11 @@ UnsupportedOperationException). "Y" = present, "-" = absent.
 │ get(long, Collection<String>, Collection<Class<?>>)             │ Y        │ -       │
 │ get(long, Collection<String>, boolean)                          │ Y        │ -       │
 │ get(long, boolean)                                              │ Y        │ -       │
-│ gett(long, Class<?>)                                            │ Y        │ -       │
-│ gett(long, Collection<String>, Class<?>)                        │ Y        │ -       │
-│ gett(long, Collection<String>, Collection<Class<?>>)            │ Y        │ -       │
-│ gett(long, Collection<String>, boolean)                         │ Y        │ -       │
-│ gett(long, boolean)                                             │ Y        │ -       │
+│ getOrNull(long, Class<?>)                                            │ Y        │ -       │
+│ getOrNull(long, Collection<String>, Class<?>)                        │ Y        │ -       │
+│ getOrNull(long, Collection<String>, Collection<Class<?>>)            │ Y        │ -       │
+│ getOrNull(long, Collection<String>, boolean)                         │ Y        │ -       │
+│ getOrNull(long, boolean)                                             │ Y        │ -       │
 └─────────────────────────────────────────────────────────────────┴──────────┴─────────┘
 
 NOTE

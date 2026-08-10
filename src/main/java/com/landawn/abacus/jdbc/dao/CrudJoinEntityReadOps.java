@@ -28,7 +28,7 @@ import com.landawn.abacus.util.u.Optional;
 
 /**
  * Combines the read-side CRUD-by-ID operations with automatic join entity loading,
- * providing {@code get}/{@code gett}/{@code batchGet} variants that automatically
+ * providing {@code get}/{@code getOrNull}/{@code batchGet} variants that automatically
  * load related entities defined with the {@code @JoinedBy} annotation.
  *
  * <p>The interface handles one-to-one, one-to-many, and many-to-many relationships by loading
@@ -37,7 +37,7 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the
  * corresponding {@code @JoinedBy} properties of the entity instance returned by each {@code get},
- * {@code gett}, and {@code batchGet} method. When a method accepts a collection of join entity classes,
+ * {@code getOrNull}, and {@code batchGet} method. When a method accepts a collection of join entity classes,
  * a {@code null} or empty collection results in no join entities being loaded.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -114,7 +114,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, joinEntityClass));
+        return Optional.ofNullable(getOrNull(id, joinEntityClass));
     }
 
     /**
@@ -146,7 +146,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
     /**
@@ -174,7 +174,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, sourceSelectPropNames, joinEntityClass));
+        return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClass));
     }
 
     /**
@@ -204,7 +204,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, sourceSelectPropNames, joinEntityClasses));
+        return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClasses));
     }
 
     /**
@@ -233,7 +233,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, sourceSelectPropNames, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, includeAllJoinEntities));
     }
 
     /**
@@ -243,7 +243,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId, Order.class);
+     * User user = userDao.getOrNull(userId, Order.class);
      * if (user != null) {
      *     // Process user with orders loaded
      *     user.getOrders().forEach(order -> processOrder(order));
@@ -258,8 +258,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default T gett(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id);
+    default T getOrNull(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null) {
             loadJoinEntities(result, joinEntityClass);
@@ -276,7 +276,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId, true);
+     * User user = userDao.getOrNull(userId, true);
      * if (user != null) {
      *     // All @JoinedBy fields are populated
      *     performCompleteUserAnalysis(user);
@@ -291,8 +291,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id);
+    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -309,7 +309,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with specific fields and orders
-     * User user = userDao.gett(userId, Arrays.asList("id", "name", "email"), Order.class);
+     * User user = userDao.getOrNull(userId, Arrays.asList("id", "name", "email"), Order.class);
      * if (user != null) {
      *     displayUserWithOrders(user);
      * }
@@ -325,8 +325,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
+    default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
+            throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
 
         if (result != null) {
             loadJoinEntities(result, joinEntityClass);
@@ -344,7 +345,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with selected properties and multiple relations
-     * User user = userDao.gett(userId,
+     * User user = userDao.getOrNull(userId,
      *                         Arrays.asList("id", "name", "status"),
      *                         Arrays.asList(Order.class, UserProfile.class));
      * if (user != null) {
@@ -362,9 +363,9 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
-    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
+    default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudReadOps(this).gett(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
+        final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
 
         if (result != null && N.notEmpty(joinEntityClasses)) {
             for (final Class<?> joinEntityClass : joinEntityClasses) {
@@ -384,7 +385,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal fields and all relations
-     * User user = userDao.gett(userId,
+     * User user = userDao.getOrNull(userId,
      *                         Arrays.asList("id", "name", "email"),
      *                         true);   // Load all @JoinedBy fields
      * if (user != null) {
@@ -402,10 +403,10 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
+    default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, SQLException {
         final T result = DaoUtil.getCrudReadOps(this)
-                .gett(id, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames);
+                .getOrNull(id, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);

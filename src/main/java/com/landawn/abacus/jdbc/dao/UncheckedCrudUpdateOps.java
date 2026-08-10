@@ -43,7 +43,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * user.setEmail("newemail@example.com");
      * user.setLastModified(new java.util.Date());
      * int updatedRows = userDao.update(user);

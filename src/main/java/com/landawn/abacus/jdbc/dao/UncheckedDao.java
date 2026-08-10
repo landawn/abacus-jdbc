@@ -15,18 +15,28 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.CallableQuery;
+import com.landawn.abacus.jdbc.NamedQuery;
+import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.cs;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.Throwables;
 
 /**
  * Interface for an unchecked Data Access Object (DAO) that extends the base {@link Dao} interface.
@@ -58,6 +68,179 @@ import com.landawn.abacus.util.N;
 @Beta
 public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
         extends UncheckedReadOps<T, TD>, UncheckedInsertOps<T, TD>, UncheckedUpdateOps<T, TD>, UncheckedDeleteOps<T, TD>, Dao<T, TD> {
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, generateKeys));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, generatedKeyColumnIndexes));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, generatedKeyColumnNames));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+            throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, stmtCreator));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generateKeys));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnIndexes));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnNames));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generateKeys));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnIndexes));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnNames));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+            throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, stmtCreator));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+            throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, stmtCreator));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default CallableQuery prepareCallableQuery(final String sql) throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareCallableQuery(sql));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    @Override
+    @Beta
+    @NonDBOperation
+    default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
+            throws UncheckedSQLException {
+        return DaoUtil.uncheckedSql(() -> Dao.super.prepareCallableQuery(sql, stmtCreator));
+    }
+
     /**
      * Executes an upsert operation: inserts the entity if no record matches the unique properties,
      * otherwise updates the existing record.

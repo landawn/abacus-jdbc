@@ -110,6 +110,9 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("resource")
 public final class JdbcCodeGenerationUtil {
 
+    /**
+     * Logger for this class.
+     */
     private static final Logger logger = LoggerFactory.getLogger(JdbcCodeGenerationUtil.class);
 
     /**
@@ -174,8 +177,15 @@ public final class JdbcCodeGenerationUtil {
         return null;
     };
 
+    /**
+     * Line separator used in the generated source code; always the Unix {@code '\n'} regardless of the host platform.
+     */
     private static final String LINE_SEPARATOR = IOUtil.LINE_SEPARATOR_UNIX;
 
+    /**
+     * Import statements emitted at the top of every generated entity class: the Jakarta Persistence
+     * annotations and the Abacus annotations that generated classes may reference.
+     */
     private static final String eccImports = """
             import jakarta.persistence.Column;
             import jakarta.persistence.Id;
@@ -193,6 +203,9 @@ public final class JdbcCodeGenerationUtil {
             import com.landawn.abacus.util.NamingPolicy;
             """;
 
+    /**
+     * Import statements for the Lombok annotations emitted into generated entity classes.
+     */
     private static final String lombokImports = """
             import lombok.AllArgsConstructor;
             import lombok.Builder;
@@ -201,6 +214,10 @@ public final class JdbcCodeGenerationUtil {
             import lombok.experimental.Accessors;
             """;
 
+    /**
+     * Lombok class-level annotations ({@code @Builder}, {@code @Data}, {@code @NoArgsConstructor},
+     * {@code @AllArgsConstructor}, {@code @Accessors(chain = true)}) emitted on every generated entity class.
+     */
     private static final String eccClassAnnos = """
             @Builder
             @Data
@@ -209,13 +226,24 @@ public final class JdbcCodeGenerationUtil {
             @Accessors(chain = true)
             """;
 
+    /**
+     * Configuration applied when the caller supplies no {@link EntityCodeConfig}; its only customization is
+     * converting column names to camelCase field names.
+     */
     private static final EntityCodeConfig defaultEntityCodeConfig = EntityCodeConfig.builder()
             .fieldNameConverter((tableName, columnName) -> Strings.toCamelCase(columnName))
             .build();
 
+    /**
+     * Bidirectional mapping between wrapper class names and their primitive type names, used to map JDBC
+     * column class names to primitive (or, when configured, boxed) field types.
+     */
     private static final BiMap<String, String> eccClassNameMap = BiMap.copyOf(N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short",
             "short", "Integer", "int", "Long", "long", "Float", "float", "Double", "double"));
 
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     */
     private JdbcCodeGenerationUtil() {
         // utility class - prevent instantiation.
     }
@@ -977,14 +1005,40 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
+    /**
+     * Builds a metadata-only query for the specified table, resolving the database product from the connection.
+     *
+     * @param conn the connection used to resolve the database product info
+     * @param tableName the name of the table to query
+     * @return a {@code SELECT} statement that matches no rows, used to read column metadata
+     */
     private static String createQueryByTableName(final Connection conn, final String tableName) {
         return createQueryByTableName(tableName, JdbcUtil.getDBProductInfo(conn));
     }
 
+    /**
+     * Builds a {@code SELECT} query with a {@code WHERE 1 > 2} condition that matches no rows; used to obtain
+     * column metadata through {@link ResultSetMetaData} without reading any data.
+     *
+     * @param tableName the name of the table; quoted according to the database product when necessary
+     * @param dbProductInfo the database product info used to render the table name
+     * @return a {@code SELECT} statement that matches no rows
+     */
     private static String createQueryByTableName(final String tableName, final ProductInfo dbProductInfo) {
         return "SELECT * FROM " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " WHERE 1 > 2";
     }
 
+    /**
+     * Resolves the Java type name for a result-set column. Driver-specific date/time classes are normalized to
+     * the corresponding {@code java.sql} types, a leading {@code "java.lang."} prefix is stripped, and wrapper
+     * classes are mapped to their primitive names. An unresolvable class name is kept as reported, and
+     * {@code Object} is used when the metadata reports none.
+     *
+     * @param rsmd the result-set metadata
+     * @param columnIndex the 1-based column index
+     * @return the Java type name to use for the column
+     * @throws SQLException if the metadata cannot be read
+     */
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
         String columnClassName = rsmd.getColumnClassName(columnIndex);
 
@@ -1016,6 +1070,17 @@ public final class JdbcCodeGenerationUtil {
         return eccClassNameMap.getOrDefault(columnClassName, columnClassName);
     }
 
+    /**
+     * Maps a column class name to the field type name used in generated source, applying the configured
+     * conversions ({@code BigInteger} to {@code long}, {@code BigDecimal} to {@code double}, and boxing of
+     * primitives). A customized type is returned unchanged apart from stripping a leading {@code "java.lang."}
+     * prefix.
+     *
+     * @param columnClassName the column class name; {@code Object} is returned when empty
+     * @param isCustomizedType whether a customized type is configured for the column
+     * @param configToUse the effective entity code configuration
+     * @return the Java type name for the generated field
+     */
     private static String mapColumnClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
         if (Strings.isEmpty(columnClassName)) {
             return ClassUtil.getCanonicalClassName(Object.class);
@@ -2181,6 +2246,13 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
+    /**
+     * Returns the index of the first non-whitespace character at or after {@code index}.
+     *
+     * @param sql the SQL text to scan
+     * @param index the index to start from
+     * @return the first non-whitespace index, or {@code sql.length()} if the remainder is all whitespace
+     */
     private static int skipSqlWhitespace(final String sql, int index) {
         while (index < sql.length() && Character.isWhitespace(sql.charAt(index))) {
             index++;
@@ -2189,6 +2261,15 @@ public final class JdbcCodeGenerationUtil {
         return index;
     }
 
+    /**
+     * Checks whether {@code keyword} occurs in {@code sql} starting exactly at {@code startIndex},
+     * case-insensitively. No word-boundary check is performed.
+     *
+     * @param sql the SQL text to inspect
+     * @param startIndex the index at which the keyword is expected
+     * @param keyword the keyword to match
+     * @return {@code true} if the keyword occurs at {@code startIndex}
+     */
     private static boolean matchesSqlKeyword(final String sql, final int startIndex, final String keyword) {
         final int endIndex = startIndex + keyword.length();
         return startIndex >= 0 && endIndex <= sql.length() && sql.regionMatches(true, startIndex, keyword, 0, keyword.length());
@@ -2201,6 +2282,14 @@ public final class JdbcCodeGenerationUtil {
     // one statement is tokenized the same way everywhere. The cost is that a standard-SQL literal whose
     // body ends with a backslash (for example the two-character literal C: followed by a backslash) is
     // treated as an unterminated string and rejected.
+    /**
+     * Finds the opening parenthesis of the column list in an INSERT statement: the first {@code (} at or after
+     * {@code startIndex} that is not inside a quoted string, quoted identifier, or bracketed identifier.
+     *
+     * @param sql the SQL text to scan
+     * @param startIndex the index to start scanning from
+     * @return the index of the opening parenthesis, or {@code -1} if none is found
+     */
     private static int findColumnListOpeningParenthesis(final String sql, final int startIndex) {
         char quote = 0;
         boolean inBracketIdentifier = false;
@@ -2238,6 +2327,15 @@ public final class JdbcCodeGenerationUtil {
         return -1;
     }
 
+    /**
+     * Finds the closing parenthesis matching the {@code (} at {@code openingParenthesisIndex}, skipping nested
+     * parentheses and any quoted, dollar-quoted, or bracketed content.
+     *
+     * @param sql the SQL text to scan
+     * @param openingParenthesisIndex the index of the opening parenthesis to match
+     * @return the index of the matching closing parenthesis
+     * @throws IllegalArgumentException if no matching closing parenthesis exists
+     */
     private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex) {
         int parenthesisDepth = 0;
         char quote = 0;
@@ -2294,6 +2392,15 @@ public final class JdbcCodeGenerationUtil {
         throw new IllegalArgumentException("SQL contains an unclosed parenthesis");
     }
 
+    /**
+     * Returns the PostgreSQL dollar-quote delimiter starting at the {@code $} at {@code startIndex} (for
+     * example {@code $$} or {@code $func$}), or {@code null} if that character does not begin a valid
+     * dollar-quote tag.
+     *
+     * @param sql the SQL text to inspect
+     * @param startIndex the index of the opening {@code $}
+     * @return the delimiter including both {@code $} characters, or {@code null}
+     */
     private static String findDollarQuoteDelimiter(final String sql, final int startIndex) {
         final int endIndex = sql.indexOf('$', startIndex + 1);
 
@@ -2351,6 +2458,16 @@ public final class JdbcCodeGenerationUtil {
         return line;
     }
 
+    /**
+     * Parses a Java field declaration from {@link EntityCodeConfig#getAdditionalClassBodySource} into
+     * (type, fieldName, skipInCopy) tuples. All variables of a multi-variable declaration share the type of
+     * the first one.
+     *
+     * @param declaration the field declaration source to parse
+     * @param skipInCopy whether the parsed fields are skipped by the generated {@code copy()} method
+     * @return one tuple of (type, field name, skipInCopy) per declared variable
+     * @throws IllegalArgumentException if the declaration cannot be parsed
+     */
     private static List<Tuple3<String, String, Boolean>> parseAdditionalFieldDeclaration(final String declaration, final boolean skipInCopy) {
         final List<String> declarators = splitJavaDeclarators(declaration);
         final List<Tuple3<String, String, Boolean>> result = new ArrayList<>(declarators.size());
@@ -2382,6 +2499,13 @@ public final class JdbcCodeGenerationUtil {
         return result;
     }
 
+    /**
+     * Splits a Java field declaration into its individual declarators at top-level commas, ignoring commas
+     * inside generic type arguments, parentheses, brackets, braces, initializers, and string/character literals.
+     *
+     * @param declaration the field declaration source
+     * @return the trimmed declarators in declaration order
+     */
     private static List<String> splitJavaDeclarators(final String declaration) {
         final List<String> result = new ArrayList<>();
         int start = 0;
@@ -2432,6 +2556,14 @@ public final class JdbcCodeGenerationUtil {
         return result;
     }
 
+    /**
+     * Determines whether the {@code <} at {@code angleIndex} opens a generic type-argument list rather than
+     * being a less-than operator, by examining the tokens before and after it.
+     *
+     * @param declaration the declaration source containing the character
+     * @param angleIndex the index of the {@code <} character
+     * @return {@code true} if the {@code <} starts generic type arguments
+     */
     private static boolean isGenericTypeArgumentStart(final String declaration, final int angleIndex) {
         int typeNameEnd = angleIndex - 1;
 
@@ -2518,6 +2650,13 @@ public final class JdbcCodeGenerationUtil {
         return false;
     }
 
+    /**
+     * Removes a top-level {@code = ...} initializer from a field declarator, ignoring equals signs inside
+     * generic type arguments, parentheses, brackets, braces, and literals.
+     *
+     * @param declarator the declarator to strip
+     * @return the declarator without its initializer
+     */
     private static String stripJavaInitializer(final String declarator) {
         int angleDepth = 0;
         int parenthesisDepth = 0;
@@ -2560,6 +2699,12 @@ public final class JdbcCodeGenerationUtil {
         return declarator.trim();
     }
 
+    /**
+     * Returns the start index of the variable name (the trailing Java identifier) in a field declarator.
+     *
+     * @param declarator the declarator to inspect
+     * @return the start index of the variable name, or {@code -1} if the declarator does not end with an identifier
+     */
     private static int findJavaVariableNameStart(final String declarator) {
         int start = declarator.length();
 
@@ -2570,6 +2715,13 @@ public final class JdbcCodeGenerationUtil {
         return start < declarator.length() && Character.isJavaIdentifierStart(declarator.charAt(start)) ? start : -1;
     }
 
+    /**
+     * Removes trailing empty array brackets from a declarator, normalizing C-style declarations such as
+     * {@code int a[]} to {@code int a}.
+     *
+     * @param declarator the declarator to strip
+     * @return the declarator without trailing {@code []} pairs
+     */
     private static String stripTrailingArrayBrackets(final String declarator) {
         String result = declarator.trim();
 
@@ -2586,6 +2738,15 @@ public final class JdbcCodeGenerationUtil {
         return result;
     }
 
+    /**
+     * Splits a comma-separated SQL list (column names or VALUES items) at top-level commas, respecting nested
+     * parentheses, quoted strings and identifiers, bracketed identifiers, and dollar-quoted bodies.
+     *
+     * @param sqlList the list text to split
+     * @param insertSql the full SQL statement, used only in error messages
+     * @return the trimmed list items
+     * @throws IllegalArgumentException if the list contains an empty item, an unmatched parenthesis, or an unclosed token
+     */
     private static List<String> splitSqlList(final String sqlList, final String insertSql) {
         final List<String> result = new ArrayList<>();
         final StringBuilder token = Objectory.createStringBuilder();
@@ -2672,6 +2833,14 @@ public final class JdbcCodeGenerationUtil {
         return result;
     }
 
+    /**
+     * Appends the trimmed content of {@code token} to {@code result} and clears the buffer.
+     *
+     * @param result the list collecting the items
+     * @param token the accumulated characters of the current item; cleared afterwards
+     * @param insertSql the full SQL statement, used only in error messages
+     * @throws IllegalArgumentException if the token is empty
+     */
     private static void addSqlListToken(final List<String> result, final StringBuilder token, final String insertSql) {
         final String value = token.toString().trim();
 
@@ -2683,22 +2852,52 @@ public final class JdbcCodeGenerationUtil {
         token.setLength(0);
     }
 
+    /**
+     * Validates the given column labels against the database product's identifier rules, quoting them when
+     * necessary.
+     *
+     * @param columnLabelList the column labels to validate
+     * @param dbProductInfo the database product info
+     * @return the validated column labels
+     */
     private static List<String> checkColumnName(final List<String> columnLabelList, final ProductInfo dbProductInfo) {
         return N.map(columnLabelList, it -> SqlIdentifierUtil.checkColumnName(it, dbProductInfo, false));
     }
 
+    /**
+     * Ensures at least one column is available for the {@code SET} clause of a generated UPDATE statement.
+     *
+     * @param columnLabelList the columns to be updated
+     * @param tableName the table name, used only in the error message
+     * @throws IllegalArgumentException if {@code columnLabelList} is {@code null} or empty
+     */
     private static void checkUpdateSetColumnLabels(final Collection<String> columnLabelList, final String tableName) {
         if (N.isEmpty(columnLabelList)) {
             throw new IllegalArgumentException("No columns available for UPDATE SET clause for table: " + tableName);
         }
     }
 
+    /**
+     * Ensures at least one column is available to generate a SQL statement for the table.
+     *
+     * @param columnLabelList the columns included in the statement
+     * @param tableName the table name, used only in the error message
+     * @throws IllegalArgumentException if {@code columnLabelList} is {@code null} or empty
+     */
     private static void checkColumnLabels(final Collection<String> columnLabelList, final String tableName) {
         if (N.isEmpty(columnLabelList)) {
             throw new IllegalArgumentException("No columns available to generate the SQL statement for table: " + tableName + " (all columns were excluded?)");
         }
     }
 
+    /**
+     * Ensures every column label maps to a valid and unique named parameter: the camelCase parameter name must
+     * be a valid Java identifier, and no two distinct columns may map to the same parameter name.
+     *
+     * @param columnLabelList the column labels to check
+     * @param tableName the table name, used only in error messages
+     * @throws IllegalArgumentException if a column maps to an invalid or colliding named parameter
+     */
     private static void checkNamedParameterColumnLabels(final Collection<String> columnLabelList, final String tableName) {
         final Map<String, String> parameterNameToColumnName = new HashMap<>();
 
@@ -2719,6 +2918,17 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
+    /**
+     * Resolves user-supplied key column names against the table's actual columns. Matching is
+     * case-insensitive, with a fallback to comparing camelCase-normalized names; the returned list contains
+     * the actual column names without duplicates.
+     *
+     * @param keyColumnNames the requested key column names; an empty input yields an empty result
+     * @param actualColumnNames the actual column names of the table
+     * @param tableName the table name, used only in error messages
+     * @return the resolved actual key column names
+     * @throws IllegalArgumentException if a requested name is blank, matches no column, or matches more than one column
+     */
     private static List<String> resolveKeyColumnNames(final Collection<String> keyColumnNames, final List<String> actualColumnNames, final String tableName) {
         if (N.isEmpty(keyColumnNames)) {
             return N.emptyList();
@@ -2768,6 +2978,18 @@ public final class JdbcCodeGenerationUtil {
         return result;
     }
 
+    /**
+     * Validates that an annotation class configured for code generation can actually be emitted: it must have
+     * a canonical name, be publicly accessible, declare a no-arg {@code String} member named
+     * {@code suppliedStringMember} when one is supplied, have no other members without defaults, and be
+     * applicable to {@code requiredTarget}.
+     *
+     * @param annotationClass the annotation class to validate
+     * @param suppliedStringMember the name of the {@code String} member the generator supplies, or {@code null} if none
+     * @param requiredTarget the element type the annotation must be applicable to
+     * @param configName the configuration option name, used only in error messages
+     * @throws IllegalArgumentException if the annotation class fails any of the checks
+     */
     private static void checkGeneratedAnnotationClass(final Class<? extends Annotation> annotationClass, final String suppliedStringMember,
             final ElementType requiredTarget, final String configName) {
         if (annotationClass.getCanonicalName() == null) {
@@ -2821,6 +3043,14 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
+    /**
+     * Derives the default class name for a generated entity from an entity or table name: the unqualified
+     * identifier is converted to camelCase and capitalized. Names that are not valid qualified SQL identifiers
+     * (for example descriptive names used in query-based generation) are converted as-is.
+     *
+     * @param entityName the entity or table name
+     * @return the derived class name
+     */
     private static String deriveClassName(final String entityName) {
         String simpleEntityName = entityName;
 

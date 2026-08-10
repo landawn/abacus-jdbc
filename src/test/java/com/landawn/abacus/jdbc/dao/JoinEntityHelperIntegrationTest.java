@@ -166,7 +166,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         }
     }
 
-    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
     public interface JoinUserDao extends UncheckedCrudDao<JoinUser, Long, JoinUserDao>, UncheckedCrudJoinEntityHelper<JoinUser, Long, JoinUserDao> {
     }
 
@@ -249,13 +249,13 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         assertEquals(3, u.getOrders().size());
 
         // by class -> getJoinEntityPropNamesByType returns {orders, backupOrders}; both get loaded.
-        final JoinUser u2 = userDao.gett(u.getId());
+        final JoinUser u2 = userDao.getOrNull(u.getId());
         userDao.loadJoinEntities(u2, JoinOrder.class);
         assertEquals(3, u2.getOrders().size());
         assertEquals(3, u2.getBackupOrders().size());
 
         // by class with explicit select columns drives the select-prop loop branch.
-        final JoinUser u3 = userDao.gett(u.getId());
+        final JoinUser u3 = userDao.getOrNull(u.getId());
         userDao.loadJoinEntities(u3, JoinOrder.class, List.of("id", "userId", "amount"));
         assertEquals(3, u3.getOrders().size());
     }
@@ -265,13 +265,13 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     public void testLoadJoinEntities_Collection_ByClass() {
         final JoinUser a = seedUser("CollA", 1.0, 2.0);
         final JoinUser b = seedUser("CollB", 3.0);
-        final List<JoinUser> users = new ArrayList<>(List.of(userDao.gett(a.getId()), userDao.gett(b.getId())));
+        final List<JoinUser> users = new ArrayList<>(List.of(userDao.getOrNull(a.getId()), userDao.getOrNull(b.getId())));
 
         userDao.loadJoinEntities(users, JoinOrder.class);
         assertEquals(2, users.get(0).getOrders().size());
         assertEquals(1, users.get(1).getOrders().size());
 
-        final List<JoinUser> users2 = new ArrayList<>(List.of(userDao.gett(a.getId()), userDao.gett(b.getId())));
+        final List<JoinUser> users2 = new ArrayList<>(List.of(userDao.getOrNull(a.getId()), userDao.getOrNull(b.getId())));
         userDao.loadJoinEntities(users2, JoinOrder.class, List.of("id", "userId", "amount"));
         assertEquals(2, users2.get(0).getOrders().size());
     }
@@ -282,21 +282,21 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         final JoinProfile staleProfile = new JoinProfile();
         staleProfile.setUserId(persisted.getId());
 
-        final JoinUser single = userDao.gett(persisted.getId());
+        final JoinUser single = userDao.getOrNull(persisted.getId());
         single.setProfileByUserId(Map.of(persisted.getId(), staleProfile));
         userDao.loadJoinEntities(single, "profileByUserId");
         assertNotNull(single.getProfileByUserId());
         assertTrue(single.getProfileByUserId().isEmpty());
 
-        final JoinUser inOneElementCollection = userDao.gett(persisted.getId());
+        final JoinUser inOneElementCollection = userDao.getOrNull(persisted.getId());
         inOneElementCollection.setProfileByUserId(Map.of(persisted.getId(), staleProfile));
         userDao.loadJoinEntities(List.of(inOneElementCollection), "profileByUserId");
         assertNotNull(inOneElementCollection.getProfileByUserId());
         assertTrue(inOneElementCollection.getProfileByUserId().isEmpty());
 
         final JoinUser secondPersisted = seedUser("AlsoNoProfile");
-        final JoinUser firstInBatch = userDao.gett(persisted.getId());
-        final JoinUser secondInBatch = userDao.gett(secondPersisted.getId());
+        final JoinUser firstInBatch = userDao.getOrNull(persisted.getId());
+        final JoinUser secondInBatch = userDao.getOrNull(secondPersisted.getId());
         firstInBatch.setProfileByUserId(Map.of(persisted.getId(), staleProfile));
         secondInBatch.setProfileByUserId(Map.of(secondPersisted.getId(), staleProfile));
 
@@ -313,24 +313,24 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     public void testLoadAllJoinEntities_Variants() {
         final JoinUser u = seedUser("AllLoader", 5.0, 6.0);
 
-        final JoinUser single = userDao.gett(u.getId());
+        final JoinUser single = userDao.getOrNull(u.getId());
         userDao.loadAllJoinEntities(single);
         assertEquals(2, single.getOrders().size());
         assertEquals(2, single.getBackupOrders().size());
 
-        final JoinUser parallel = userDao.gett(u.getId());
+        final JoinUser parallel = userDao.getOrNull(u.getId());
         userDao.loadAllJoinEntities(parallel, true);
         assertEquals(2, parallel.getOrders().size());
 
-        final JoinUser exec = userDao.gett(u.getId());
+        final JoinUser exec = userDao.getOrNull(u.getId());
         userDao.loadAllJoinEntities(exec, DIRECT_EXECUTOR);
         assertEquals(2, exec.getOrders().size());
 
-        final List<JoinUser> users = new ArrayList<>(List.of(userDao.gett(u.getId())));
+        final List<JoinUser> users = new ArrayList<>(List.of(userDao.getOrNull(u.getId())));
         userDao.loadAllJoinEntities(users);
         assertEquals(2, users.get(0).getOrders().size());
 
-        final List<JoinUser> usersExec = new ArrayList<>(List.of(userDao.gett(u.getId())));
+        final List<JoinUser> usersExec = new ArrayList<>(List.of(userDao.getOrNull(u.getId())));
         userDao.loadAllJoinEntities(usersExec, DIRECT_EXECUTOR);
         assertEquals(2, usersExec.get(0).getOrders().size());
     }
@@ -340,7 +340,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     public void testloadJoinEntitiesIfAbsent_Variants() {
         final JoinUser u = seedUser("IfNull", 7.0, 8.0, 9.0);
 
-        final JoinUser fresh = userDao.gett(u.getId());
+        final JoinUser fresh = userDao.getOrNull(u.getId());
         userDao.loadJoinEntitiesIfAbsent(fresh, JoinOrder.class);
         assertEquals(3, fresh.getOrders().size());
 
@@ -348,15 +348,15 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         userDao.loadJoinEntitiesIfAbsent(fresh, JoinOrder.class);
         assertEquals(3, fresh.getOrders().size());
 
-        final JoinUser byProps = userDao.gett(u.getId());
+        final JoinUser byProps = userDao.getOrNull(u.getId());
         userDao.loadJoinEntitiesIfAbsent(byProps, JoinOrder.class, List.of("id", "userId", "amount"));
         assertEquals(3, byProps.getOrders().size());
 
-        final List<JoinUser> users = new ArrayList<>(List.of(userDao.gett(u.getId())));
+        final List<JoinUser> users = new ArrayList<>(List.of(userDao.getOrNull(u.getId())));
         userDao.loadJoinEntitiesIfAbsent(users, JoinOrder.class);
         assertEquals(3, users.get(0).getOrders().size());
 
-        final List<JoinUser> usersByProps = new ArrayList<>(List.of(userDao.gett(u.getId())));
+        final List<JoinUser> usersByProps = new ArrayList<>(List.of(userDao.getOrNull(u.getId())));
         userDao.loadJoinEntitiesIfAbsent(usersByProps, JoinOrder.class, List.of("id", "amount"));
         assertEquals(3, usersByProps.get(0).getOrders().size());
     }
@@ -366,24 +366,24 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     public void testLoadJoinEntities_PropNameCollection_AndParallel() {
         final JoinUser u = seedUser("MultiProp", 1.0, 2.0);
 
-        final JoinUser byNames = userDao.gett(u.getId());
+        final JoinUser byNames = userDao.getOrNull(u.getId());
         userDao.loadJoinEntities(byNames, List.of("orders", "backupOrders"));
         assertEquals(2, byNames.getOrders().size());
         assertEquals(2, byNames.getBackupOrders().size());
 
-        final JoinUser parallel = userDao.gett(u.getId());
+        final JoinUser parallel = userDao.getOrNull(u.getId());
         userDao.loadJoinEntities(parallel, List.of("orders", "backupOrders"), true);
         assertEquals(2, parallel.getOrders().size());
 
-        final JoinUser exec = userDao.gett(u.getId());
+        final JoinUser exec = userDao.getOrNull(u.getId());
         userDao.loadJoinEntities(exec, List.of("orders", "backupOrders"), DIRECT_EXECUTOR);
         assertEquals(2, exec.getOrders().size());
 
-        final List<JoinUser> users = new ArrayList<>(List.of(userDao.gett(u.getId())));
+        final List<JoinUser> users = new ArrayList<>(List.of(userDao.getOrNull(u.getId())));
         userDao.loadJoinEntities(users, List.of("orders", "backupOrders"));
         assertEquals(2, users.get(0).getOrders().size());
 
-        final List<JoinUser> usersExec = new ArrayList<>(List.of(userDao.gett(u.getId())));
+        final List<JoinUser> usersExec = new ArrayList<>(List.of(userDao.getOrNull(u.getId())));
         userDao.loadJoinEntities(usersExec, List.of("orders", "backupOrders"), DIRECT_EXECUTOR);
         assertEquals(2, usersExec.get(0).getOrders().size());
     }
@@ -433,7 +433,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         final JoinUser first = seedUser("SelectiveA", 1.0, 2.0);
         final JoinUser second = seedUser("SelectiveB", 3.0);
 
-        final JoinUser byId = userDao.gett(first.getId(), List.of("name"), JoinOrder.class);
+        final JoinUser byId = userDao.getOrNull(first.getId(), List.of("name"), JoinOrder.class);
         assertEquals(first.getId(), byId.getId());
         assertEquals(2, byId.getOrders().size());
 

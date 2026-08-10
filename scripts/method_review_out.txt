@@ -1,0 +1,1186 @@
+Total public/default methods found: 1593
+Unique method names: 403
+Classes with methods: 42
+
+=== Classes by public method count (top 40) ===
+   277  AbstractQuery
+   272  JdbcUtil
+   195  ResultSetProxy
+   149  Jdbc
+   119  DataTransferUtil
+   108  CallableQuery
+    76  NamedQuery
+    50  JoinEntityReadOps
+    47  UncheckedJoinEntityReadOps
+    35  JdbcCodeGenerationUtil
+    18  CrudJoinEntityReadOps
+    18  UncheckedCrudJoinEntityReadOps
+    16  SqlTransaction
+    16  Dao
+    16  DaoBase
+    16  UncheckedDao
+    14  CrudReadOps
+    14  JoinEntityDeleteOps
+    14  UncheckedCrudReadOps
+    14  UncheckedJoinEntityDeleteOps
+    12  UncheckedDaoBase
+    11  JoinInfo
+    10  DaoUtil
+     9  ReadOps
+     7  UncheckedCrudDao
+     6  DBLock
+     6  CrudDao
+     6  UncheckedReadOps
+     5  DaoImpl
+     5  CrudInsertOps
+     4  SpringApplicationContext
+     4  UncheckedCrudInsertOps
+     3  CrudUpdateOps
+     3  InsertOps
+     3  UncheckedCrudUpdateOps
+     3  UncheckedInsertOps
+     2  FetchDirection
+     2  IsolationLevel
+     2  CrudDeleteOps
+     2  UncheckedCrudDeleteOps
+
+=== Top 50 method names by frequency ===
+    54  getOutParameter
+    42  prepareNamedQuery
+    31  apply
+    28  setParameters
+    28  loadJoinEntitiesIfAbsent
+    24  importData
+    24  batchGet
+    24  loadJoinEntities
+    23  list
+    23  get
+    22  prepareQuery
+    20  stream
+    19  setTimestamp
+    19  copy
+    18  setObject
+    17  to
+    16  deleteJoinEntities
+    15  setString
+    13  close
+    13  getObject
+    12  findFirst
+    12  registerOutParameter
+    12  accept
+    12  prepareNamedQueryForLargeResult
+    12  deleteAllJoinEntities
+    12  loadAllJoinEntities
+    12  loadAllJoinEntitiesIfAbsent
+    11  setInt
+    11  exportCsv
+    10  setLong
+    10  setDate
+    10  setTime
+    10  addBatchParameters
+    10  findOnlyOne
+    10  callAsync
+    10  runAsync
+    10  extractData
+    10  getOrNull
+     9  setBlob
+     9  setClob
+     9  setNClob
+     9  batchInsert
+     9  update
+     9  importCsv
+     9  upsert
+     8  closeQuietly
+     8  prepareQueryForLargeResult
+     8  prepareCallableQuery
+     8  updateObject
+     8  batchUpsert
+
+=== Naming prefix patterns ===
+   286  set*
+   248  get*
+   145  other_camel
+    98  update*
+    92  prepare*
+    80  batch*
+    76  load*
+    50  query*
+    44  list*
+    37  import*
+    35  generate*
+    33  find*
+    31  apply*
+    30  delete*
+    28  to*
+    27  close*
+    26  stream*
+    26  execute*
+    19  is*
+    17  call*
+    17  run*
+    17  register*
+    15  export*
+    15  create*
+    12  accept*
+    11  add*
+     8  Object*
+     7  count*
+     6  foreach*
+     5  notExists*
+     5  has*
+     5  refresh*
+     4  for*
+     4  insert*
+     4  lock*
+     4  clear*
+     4  disable*
+     4  open*
+     3  begin*
+     2  sett*
+     2  fetch*
+     2  enable*
+     2  rollback*
+     1  on*
+     1  exists*
+     1  unlock*
+     1  build*
+     1  parse*
+     1  select*
+     1  commit*
+
+=== Potential naming issues ===
+
+Id_or_ID (12):
+  AbstractQuery.setRowId
+  CallableQuery.setRowId
+  CrudDeleteOps.batchDeleteByIds
+  CrudInsertOps.generateId
+  DaoUtil.generateId
+  DaoUtil.getDeclaredIdExtractor
+  JdbcUtil.setIdExtractorForDao
+  NamedQuery.setRowId
+  ResultSetProxy.getRowId
+  ResultSetProxy.updateRowId
+  UncheckedCrudDeleteOps.batchDeleteByIds
+  UncheckedCrudInsertOps.generateId
+
+PascalCase_method (2):
+  Jdbc.OutParam
+  JdbcCodeGenerationUtil.FieldMapping
+
+SQL_upper (5):
+  AbstractQuery.setSQLXML
+  CallableQuery.setSQLXML
+  NamedQuery.setSQLXML
+  ResultSetProxy.getSQLXML
+  ResultSetProxy.updateSQLXML
+
+Sql_mixed (24):
+  JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql
+  JdbcCodeGenerationUtil.generateInsertSql
+  JdbcCodeGenerationUtil.generateNamedInsertSql
+  JdbcCodeGenerationUtil.generateNamedUpdateSql
+  JdbcCodeGenerationUtil.generateSelectSql
+  JdbcCodeGenerationUtil.generateUpdateSql
+  JdbcUtil.callWithSqlLogDisabled
+  JdbcUtil.disableSqlLog
+  JdbcUtil.disableSqlLogGlobally
+  JdbcUtil.disableSqlPerfLogGlobally
+  JdbcUtil.enableSqlLog
+  JdbcUtil.getSqlExtractor
+  JdbcUtil.getSqlLogHandler
+  JdbcUtil.getSqlPerfLogThresholdMillis
+  JdbcUtil.isSqlLogEnabled
+  JdbcUtil.parseSql
+  JdbcUtil.runWithSqlLogDisabled
+  JdbcUtil.setSqlExtractor
+  JdbcUtil.setSqlLogHandler
+  JdbcUtil.setSqlPerfLogThresholdMillis
+  JoinInfo.batchDeleteSqlPlan
+  JoinInfo.batchSelectSqlPlan
+  JoinInfo.deleteSqlPlan
+  JoinInfo.selectSqlPlan
+
+abbrev (3):
+  Jdbc.OutParam
+  Jdbc.getOutParamValue
+  Jdbc.getOutParamValues
+
+boolean_nonstandard (10):
+  AbstractQuery.execute -> boolean
+  CrudReadOps.refresh -> boolean
+  DBLock.unlock -> boolean
+  Jdbc.put -> boolean
+  Jdbc.register -> boolean
+  JdbcUtil.createTableIfNotExists -> boolean
+  JdbcUtil.dropTableIfExists -> boolean
+  JdbcUtil.execute -> boolean
+  JdbcUtil.tableExists -> boolean
+  UncheckedCrudReadOps.refresh -> boolean
+
+typo_sett (1):
+  AbstractQuery.settParameters
+
+=== Related verb families (unique names across API) ===
+
+find* (5 unique):
+  findColumn
+  findFirst
+  findFirstOrNull
+  findOnlyOne
+  findOnlyOneOrNull
+
+get* (68 unique):
+  get
+  getAllColumnValues
+  getArray
+  getAsciiStream
+  getBean
+  getBigDecimal
+  getBinaryStream
+  getBlob
+  getBoolean
+  getByte
+  getBytes
+  getCharacterStream
+  getClob
+  getColumnCount
+  getColumnIndex
+  getColumnLabel
+  getColumnLabels
+  getColumnNames
+  getColumnToPropNameMap
+  getColumnValue
+  getConcurrency
+  getConnection
+  getCursorName
+  getDBProductInfo
+  getDate
+  getDeclaredIdExtractor
+  getDouble
+  getEntityJoinInfo
+  getFetchDirection
+  getFetchSize
+  getFloat
+  getHoldability
+  getInsertPropNames
+  getInt
+  getJoinEntityPropNamesByType
+  getLong
+  getMetaData
+  getNCharacterStream
+  getNClob
+  getNString
+  getNamedParameters
+  getObject
+  getOrCreate
+  getOrNull
+  getOutParamValue
+  getOutParamValues
+  getOutParameter
+  getOutParameters
+  getOutParams
+  getPropJoinInfo
+  getRef
+  getRow
+  getRowId
+  getSQLXML
+  getSelectPropNames
+  getShort
+  getSqlExtractor
+  getSqlLogHandler
+  getSqlPerfLogThresholdMillis
+  getStatement
+  getString
+  getTime
+  getTimestamp
+  getType
+  getURL
+  getUnicodeStream
+  getUpdatePropNames
+  getWarnings
+
+list* (6 unique):
+  list
+  listAllResultSets
+  listAllResultSetsAndGetOutParameters
+  listAndGetOutParameters
+  listThenAccept
+  listThenApply
+
+query* (30 unique):
+  query
+  query2ResultSets
+  query2ResultSetsAndGetOutParameters
+  query3ResultSets
+  query3ResultSetsAndGetOutParameters
+  queryAllResultSets
+  queryAllResultSetsAndGetOutParameters
+  queryAndGetOutParameters
+  queryByPage
+  queryForBigDecimal
+  queryForBigInteger
+  queryForBoolean
+  queryForByte
+  queryForBytes
+  queryForChar
+  queryForDate
+  queryForDouble
+  queryForFloat
+  queryForInt
+  queryForLong
+  queryForShort
+  queryForSingleNonNull
+  queryForSingleValue
+  queryForString
+  queryForTime
+  queryForTimestamp
+  queryForUniqueNonNull
+  queryForUniqueValue
+  queryThenAccept
+  queryThenApply
+
+select* (1 unique):
+  selectSqlPlan
+
+stream* (2 unique):
+  stream
+  streamAllResultSets
+
+fetch* (1 unique):
+  fetchSize
+
+load* (4 unique):
+  loadAllJoinEntities
+  loadAllJoinEntitiesIfAbsent
+  loadJoinEntities
+  loadJoinEntitiesIfAbsent
+
+delete* (4 unique):
+  deleteAllJoinEntities
+  deleteJoinEntities
+  deleteRow
+  deleteSqlPlan
+
+insert* (2 unique):
+  insert
+  insertRow
+
+create* (9 unique):
+  create
+  createC3p0DataSource
+  createConnection
+  createDBLock
+  createDao
+  createForAfterInvoke
+  createForBeforeInvoke
+  createHikariDataSource
+  createTableIfNotExists
+
+update* (30 unique):
+  update
+  updateAndReturnGeneratedKeys
+  updateArray
+  updateAsciiStream
+  updateBigDecimal
+  updateBinaryStream
+  updateBlob
+  updateBoolean
+  updateByte
+  updateBytes
+  updateCharacterStream
+  updateClob
+  updateDate
+  updateDouble
+  updateFloat
+  updateInt
+  updateLong
+  updateNCharacterStream
+  updateNClob
+  updateNString
+  updateNull
+  updateObject
+  updateRef
+  updateRow
+  updateRowId
+  updateSQLXML
+  updateShort
+  updateString
+  updateTime
+  updateTimestamp
+
+batch* (13 unique):
+  batchDelete
+  batchDeleteByIds
+  batchDeleteSqlPlan
+  batchGet
+  batchInsert
+  batchInterval
+  batchRefresh
+  batchSave
+  batchSelectSqlPlan
+  batchSize
+  batchUpdate
+  batchUpdateAndReturnGeneratedKeys
+  batchUpsert
+
+execute* (8 unique):
+  execute
+  executeAndGetOutParameters
+  executeBatchUpdate
+  executeLargeBatchUpdate
+  executeQuery
+  executeThenAccept
+  executeThenApply
+  executeUpdate
+
+prepare* (5 unique):
+  prepareCallableQuery
+  prepareNamedQuery
+  prepareNamedQueryForLargeResult
+  prepareQuery
+  prepareQueryForLargeResult
+
+exists* (1 unique):
+  exists
+
+notExists* (1 unique):
+  notExists
+
+count* (1 unique):
+  count
+
+refresh* (2 unique):
+  refresh
+  refreshRow
+
+import* (4 unique):
+  importCsv
+  importCsvFrom
+  importData
+  importFrom
+
+export* (2 unique):
+  exportCsv
+  exportCsvFrom
+
+generate* (8 unique):
+  generateEntityClass
+  generateEntityClassByQuery
+  generateId
+  generateInsertSql
+  generateNamedInsertSql
+  generateNamedUpdateSql
+  generateSelectSql
+  generateUpdateSql
+
+call* (5 unique):
+  callAsync
+  callInTransaction
+  callOutsideTransaction
+  callWithSqlLogDisabled
+  callIgnoringSpringTransaction
+
+run* (5 unique):
+  runAsync
+  runInTransaction
+  runOutsideTransaction
+  runWithSqlLogDisabled
+  runIgnoringSpringTransaction
+
+lock* (1 unique):
+  lock
+
+unlock* (1 unique):
+  unlock
+
+=== Heuristic inconsistency pairs ===
+find vs get same suffix:
+find vs list:
+find vs query:
+list vs query:
+  listAllResultSets  |  queryAllResultSets
+  listAllResultSetsAndGetOutParameters  |  queryAllResultSetsAndGetOutParameters
+  listAndGetOutParameters  |  queryAndGetOutParameters
+  listThenAccept  |  queryThenAccept
+  listThenApply  |  queryThenApply
+delete vs remove:
+get vs query:
+
+=== Full unique public method lists for major API classes ===
+
+## JdbcUtil (83)
+  advance
+  apply
+  beginTransaction
+  blobToString
+  cache
+  callAsync
+  callInTransaction
+  callOutsideTransaction
+  callWithSqlLogDisabled
+  callIgnoringSpringTransaction
+  clobToString
+  close
+  closeDaoCacheOnCurrentThread
+  closeQuietly
+  closeResource
+  count
+  createC3p0DataSource
+  createConnection
+  createDBLock
+  createDao
+  createHikariDataSource
+  createTableIfNotExists
+  disableDaoMethodPerfLogGlobally
+  disableSqlLog
+  disableSqlLogGlobally
+  disableSqlPerfLogGlobally
+  dropTableIfExists
+  enableSqlLog
+  execute
+  executeBatchUpdate
+  executeLargeBatchUpdate
+  executeQuery
+  executeUpdate
+  extractData
+  getAllColumnValues
+  getColumnCount
+  getColumnIndex
+  getColumnLabel
+  getColumnLabels
+  getColumnNames
+  getColumnToPropNameMap
+  getColumnValue
+  getConnection
+  getDBProductInfo
+  getInsertPropNames
+  getNamedParameters
+  getOutParameter
+  getOutParameters
+  getSelectPropNames
+  getSqlExtractor
+  getSqlLogHandler
+  getSqlPerfLogThresholdMillis
+  getUpdatePropNames
+  hasNext
+  isInTransaction
+  isNullOrDefault
+  isSqlLogEnabled
+  next
+  openDaoCacheOnCurrentThread
+  openDaoCacheScope
+  parseSql
+  prepareCallableQuery
+  prepareNamedQuery
+  prepareNamedQueryForLargeResult
+  prepareQuery
+  prepareQueryForLargeResult
+  queryByPage
+  releaseConnection
+  runAsync
+  runInTransaction
+  runOutsideTransaction
+  runWithSqlLogDisabled
+  runIgnoringSpringTransaction
+  setIdExtractorForDao
+  setSqlExtractor
+  setSqlLogHandler
+  setSqlPerfLogThresholdMillis
+  skip
+  stream
+  streamAllResultSets
+  tableExists
+  writeBlobToFile
+  writeClobToFile
+
+## AbstractQuery (113)
+  addBatch
+  addBatchParameters
+  allMatch
+  anyMatch
+  batchInsert
+  batchUpdate
+  batchUpdateAndReturnGeneratedKeys
+  callAsync
+  close
+  closeAfterExecution
+  configureStatement
+  count
+  execute
+  executeThenAccept
+  executeThenApply
+  exists
+  findFirst
+  findFirstOrNull
+  findOnlyOne
+  findOnlyOneOrNull
+  forEach
+  foreach
+  ifExists
+  ifExistsOrElse
+  insert
+  largeBatchUpdate
+  largeUpdate
+  list
+  listAllResultSets
+  listThenAccept
+  listThenApply
+  noneMatch
+  notExists
+  onClose
+  query
+  query2ResultSets
+  query3ResultSets
+  queryAllResultSets
+  queryForBigDecimal
+  queryForBigInteger
+  queryForBoolean
+  queryForByte
+  queryForBytes
+  queryForChar
+  queryForDate
+  queryForDouble
+  queryForFloat
+  queryForInt
+  queryForLong
+  queryForShort
+  queryForSingleNonNull
+  queryForSingleValue
+  queryForString
+  queryForTime
+  queryForTimestamp
+  queryForUniqueNonNull
+  queryForUniqueValue
+  queryThenAccept
+  queryThenApply
+  runAsync
+  setArray
+  setAsciiStream
+  setBigDecimal
+  setBigIntegerAsString
+  setBinaryStream
+  setBlob
+  setBoolean
+  setBooleanForIndices
+  setByte
+  setBytes
+  setCharacterStream
+  setClob
+  setDate
+  setDateForIndices
+  setDouble
+  setDoubleForIndices
+  setFetchDirection
+  setFetchDirectionToForward
+  setFetchSize
+  setFloat
+  setInt
+  setIntForIndices
+  setLargeMaxRows
+  setLong
+  setLongForIndices
+  setMaxFieldSize
+  setMaxRows
+  setNCharacterStream
+  setNClob
+  setNString
+  setNull
+  setNullForIndices
+  setObject
+  setObjectForIndices
+  setParameters
+  setParametersFrom
+  setQueryTimeout
+  setRef
+  setRowId
+  setSQLXML
+  setShort
+  setString
+  setStringForIndices
+  setTime
+  setTimeForIndices
+  setTimestamp
+  setTimestampForIndices
+  setURL
+  settParameters
+  stream
+  streamAllResultSets
+  update
+  updateAndReturnGeneratedKeys
+
+## PreparedQuery (0)
+
+## NamedQuery (31)
+  addBatchParameters
+  setArray
+  setAsciiStream
+  setBigDecimal
+  setBigIntegerAsString
+  setBinaryStream
+  setBlob
+  setBoolean
+  setByte
+  setBytes
+  setCharacterStream
+  setClob
+  setDate
+  setDouble
+  setFloat
+  setInt
+  setLong
+  setNCharacterStream
+  setNClob
+  setNString
+  setNull
+  setObject
+  setParameters
+  setRef
+  setRowId
+  setSQLXML
+  setShort
+  setString
+  setTime
+  setTimestamp
+  setURL
+
+## CallableQuery (39)
+  executeAndGetOutParameters
+  executeThenAccept
+  executeThenApply
+  listAllResultSetsAndGetOutParameters
+  listAndGetOutParameters
+  query2ResultSetsAndGetOutParameters
+  query3ResultSetsAndGetOutParameters
+  queryAllResultSetsAndGetOutParameters
+  queryAndGetOutParameters
+  registerOutParameter
+  registerOutParameters
+  setAsciiStream
+  setBigDecimal
+  setBigIntegerAsString
+  setBinaryStream
+  setBlob
+  setBoolean
+  setByte
+  setBytes
+  setCharacterStream
+  setClob
+  setDate
+  setDouble
+  setFloat
+  setInt
+  setLong
+  setNCharacterStream
+  setNClob
+  setNString
+  setNull
+  setObject
+  setParameters
+  setRowId
+  setSQLXML
+  setShort
+  setString
+  setTime
+  setTimestamp
+  setURL
+
+## SqlExecutor (0)
+
+## Dao (4)
+  prepareCallableQuery
+  prepareNamedQuery
+  prepareQuery
+  upsert
+
+## CrudDao (2)
+  batchUpsert
+  upsert
+
+## DaoBase (6)
+  callAsync
+  prepareNamedQuery
+  prepareNamedQueryForLargeResult
+  prepareQuery
+  prepareQueryForLargeResult
+  runAsync
+
+## Jdbc (49)
+  OutParam
+  accept
+  afterInvoke
+  and
+  andThen
+  apply
+  beforeInvoke
+  build
+  clear
+  create
+  createForAfterInvoke
+  createForBeforeInvoke
+  get
+  getBigDecimal
+  getBoolean
+  getByte
+  getDate
+  getDouble
+  getFloat
+  getInt
+  getLong
+  getObject
+  getOrCreate
+  getOutParamValue
+  getOutParamValues
+  getOutParams
+  getShort
+  getString
+  getTime
+  getTimestamp
+  negate
+  of
+  or
+  put
+  readJson
+  readXml
+  register
+  set
+  to
+  toArray
+  toBiResultExtractor
+  toBiRowConsumer
+  toBiRowFilter
+  toBiRowMapper
+  toCollection
+  toList
+  toMap
+  toRowMapper
+  update
+
+## DBLock (3)
+  close
+  lock
+  unlock
+
+## SqlTransaction (14)
+  callOutsideTransaction
+  close
+  commit
+  connection
+  equals
+  hashCode
+  id
+  isActive
+  isolationLevel
+  rollback
+  rollbackIfNotCommitted
+  runOutsideTransaction
+  status
+  toString
+
+## Transaction (0)
+
+## JoinInfo (10)
+  batchDeleteSqlPlan
+  batchSelectSqlPlan
+  deleteSqlPlan
+  getEntityJoinInfo
+  getJoinEntityPropNamesByType
+  getPropJoinInfo
+  isManyToManyJoin
+  selectSqlPlan
+  setJoinPropEntities
+  sourcePropNames
+
+## DataTransferUtil (19)
+  accept
+  batchInterval
+  batchSize
+  columnTypes
+  columns
+  copy
+  copyFrom
+  copyTable
+  exportCsv
+  exportCsvFrom
+  fetchSize
+  filter
+  importCsv
+  importCsvFrom
+  importData
+  importFrom
+  parameterSetter
+  resultSetParameterSetter
+  to
+
+## JdbcCodeGenerationUtil (9)
+  FieldMapping
+  convertInsertSqlToUpdateSql
+  generateEntityClass
+  generateEntityClassByQuery
+  generateInsertSql
+  generateNamedInsertSql
+  generateNamedUpdateSql
+  generateSelectSql
+  generateUpdateSql
+
+## SqlIdentifierUtil (0)
+
+## ReadOps (4)
+  foreach
+  list
+  notExists
+  stream
+
+## InsertOps (1)
+  batchSave
+
+## UpdateOps (1)
+  update
+
+## DeleteOps (0)
+
+## JoinEntityHelper (0)
+
+## JoinEntityReadOps (8)
+  findFirst
+  findOnlyOne
+  list
+  loadAllJoinEntities
+  loadAllJoinEntitiesIfAbsent
+  loadJoinEntities
+  loadJoinEntitiesIfAbsent
+  stream
+
+## JoinEntityDeleteOps (2)
+  deleteAllJoinEntities
+  deleteJoinEntities
+
+## CrudReadOps (6)
+  batchGet
+  batchRefresh
+  count
+  get
+  notExists
+  refresh
+
+## CrudInsertOps (3)
+  batchInsert
+  generateId
+  idExtractor
+
+## CrudUpdateOps (2)
+  batchUpdate
+  update
+
+## CrudDeleteOps (2)
+  batchDelete
+  batchDeleteByIds
+
+## cs (0)
+
+## DaoUtil (10)
+  generateId
+  getDeclaredIdExtractor
+  isCacheable
+  isCrudDaoOperationDeclaringClass
+  isCrudJoinEntityReadOps
+  isCrudReadOps
+  isDaoOperationDeclaringClass
+  isJoinEntityHelperDeclaringClass
+  isJoinEntityReadOps
+  isUncheckedReadOps
+
+## ResultSetProxy (96)
+  absolute
+  afterLast
+  beforeFirst
+  cancelRowUpdates
+  clearWarnings
+  close
+  deleteRow
+  findColumn
+  first
+  getArray
+  getAsciiStream
+  getBigDecimal
+  getBinaryStream
+  getBlob
+  getBoolean
+  getByte
+  getBytes
+  getCharacterStream
+  getClob
+  getConcurrency
+  getCursorName
+  getDate
+  getDouble
+  getFetchDirection
+  getFetchSize
+  getFloat
+  getHoldability
+  getInt
+  getLong
+  getMetaData
+  getNCharacterStream
+  getNClob
+  getNString
+  getObject
+  getRef
+  getRow
+  getRowId
+  getSQLXML
+  getShort
+  getStatement
+  getString
+  getTime
+  getTimestamp
+  getType
+  getURL
+  getUnicodeStream
+  getWarnings
+  insertRow
+  isAfterLast
+  isBeforeFirst
+  isClosed
+  isFirst
+  isLast
+  isWrapperFor
+  last
+  moveToCurrentRow
+  moveToInsertRow
+  next
+  previous
+  refreshRow
+  relative
+  rowDeleted
+  rowInserted
+  rowUpdated
+  setFetchDirection
+  setFetchSize
+  unwrap
+  updateArray
+  updateAsciiStream
+  updateBigDecimal
+  updateBinaryStream
+  updateBlob
+  updateBoolean
+  updateByte
+  updateBytes
+  updateCharacterStream
+  updateClob
+  updateDate
+  updateDouble
+  updateFloat
+  updateInt
+  updateLong
+  updateNCharacterStream
+  updateNClob
+  updateNString
+  updateNull
+  updateObject
+  updateRef
+  updateRow
+  updateRowId
+  updateSQLXML
+  updateShort
+  updateString
+  updateTime
+  updateTimestamp
+  wasNull
+
+## SqlLogConfig (0)
+
+## IsolationLevel (2)
+  intValue
+  valueOf
+
+## Propagation (0)
+
+## FetchDirection (2)
+  intValue
+  valueOf
+
+## UncheckedDao (4)
+  prepareCallableQuery
+  prepareNamedQuery
+  prepareQuery
+  upsert
+
+## UncheckedCrudDao (2)
+  batchUpsert
+  upsert
+
+## UncheckedReadOps (3)
+  foreach
+  list
+  notExists
+
+## EmptyHandler (0)
+
+## SpringApplicationContext (2)
+  getBean
+  setApplicationContext
+
+=== Other classes ===
+
+## CrudJoinEntityReadOps (3)
+  batchGet
+  get
+  getOrNull
+
+## DaoImpl (3)
+  apply
+  equals
+  hashCode
+
+## UncheckedCrudDeleteOps (2)
+  batchDelete
+  batchDeleteByIds
+
+## UncheckedCrudInsertOps (2)
+  batchInsert
+  generateId
+
+## UncheckedCrudJoinEntityReadOps (3)
+  batchGet
+  get
+  getOrNull
+
+## UncheckedCrudReadOps (6)
+  batchGet
+  batchRefresh
+  count
+  get
+  notExists
+  refresh
+
+## UncheckedCrudUpdateOps (2)
+  batchUpdate
+  update
+
+## UncheckedDaoBase (4)
+  prepareNamedQuery
+  prepareNamedQueryForLargeResult
+  prepareQuery
+  prepareQueryForLargeResult
+
+## UncheckedInsertOps (1)
+  batchSave
+
+## UncheckedJoinEntityDeleteOps (2)
+  deleteAllJoinEntities
+  deleteJoinEntities
+
+## UncheckedJoinEntityReadOps (7)
+  findFirst
+  findOnlyOne
+  list
+  loadAllJoinEntities
+  loadAllJoinEntitiesIfAbsent
+  loadJoinEntities
+  loadJoinEntitiesIfAbsent
+
+## UncheckedUpdateOps (1)
+  update
+
+Wrote scripts/public_methods_dump.txt

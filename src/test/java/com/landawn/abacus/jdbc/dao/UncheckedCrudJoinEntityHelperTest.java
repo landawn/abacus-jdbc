@@ -36,7 +36,7 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(7L)).thenReturn(entity);
+        when(dao.getOrNull(7L)).thenReturn(entity);
         doNothing().when(dao).loadJoinEntities(entity, String.class);
 
         Optional<TestEntity> result = dao.get(7L, String.class);
@@ -51,7 +51,7 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(8L, (Collection<String>) null)).thenReturn(entity);
+        when(dao.getOrNull(8L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadAllJoinEntities(entity);
 
         Optional<TestEntity> result = dao.get(8L, null, true);
@@ -77,7 +77,7 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(9L, null, String.class)).thenReturn(entity);
+        when(dao.getOrNull(9L, null, String.class)).thenReturn(entity);
 
         Optional<TestEntity> result = dao.get(9L, null, String.class);
 
@@ -90,16 +90,16 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(10L)).thenReturn(entity);
-        when(dao.gett(11L, (Collection<String>) null)).thenReturn(entity);
-        when(dao.gett(12L, (Collection<String>) null)).thenReturn(entity);
+        when(dao.getOrNull(10L)).thenReturn(entity);
+        when(dao.getOrNull(11L, (Collection<String>) null)).thenReturn(entity);
+        when(dao.getOrNull(12L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadAllJoinEntities(entity);
         doNothing().when(dao).loadJoinEntities(entity, String.class);
         doNothing().when(dao).loadJoinEntities(entity, Integer.class);
 
         assertSame(entity, dao.get(10L, true).orElseNull());
         assertSame(entity, dao.get(11L, null, List.of(String.class, Integer.class)).orElseNull());
-        assertSame(entity, dao.gett(12L, null, List.of(String.class, Integer.class)));
+        assertSame(entity, dao.getOrNull(12L, null, List.of(String.class, Integer.class)));
 
         verify(dao).loadAllJoinEntities(entity);
         verify(dao, times(2)).loadJoinEntities(entity, String.class);
@@ -111,13 +111,13 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(13L)).thenReturn(null);
-        when(dao.gett(14L, List.of("id"))).thenReturn(entity);
-        when(dao.gett(15L, List.of("id"))).thenReturn(entity);
+        when(dao.getOrNull(13L)).thenReturn(null);
+        when(dao.getOrNull(14L, List.of("id"))).thenReturn(entity);
+        when(dao.getOrNull(15L, List.of("id"))).thenReturn(entity);
 
-        assertNull(dao.gett(13L, true));
-        assertSame(entity, dao.gett(14L, List.of("id"), false));
-        assertSame(entity, dao.gett(15L, List.of("id"), List.of()));
+        assertNull(dao.getOrNull(13L, true));
+        assertSame(entity, dao.getOrNull(14L, List.of("id"), false));
+        assertSame(entity, dao.getOrNull(15L, List.of("id"), List.of()));
 
         verify(dao, never()).loadAllJoinEntities(entity);
         verify(dao, never()).loadJoinEntities(eq(entity), eq(String.class));
@@ -162,55 +162,55 @@ public class UncheckedCrudJoinEntityHelperTest extends TestBase {
         verify(dao).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
     }
 
-    // gett(id, joinEntitiesToLoad) with non-null result loads join entities (line 230 branch).
+    // getOrNull(id, joinEntitiesToLoad) with non-null result loads join entities (line 230 branch).
     @Test
     public void testGett_WithJoinClass_LoadsJoinEntities() {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(16L)).thenReturn(entity);
+        when(dao.getOrNull(16L)).thenReturn(entity);
         doNothing().when(dao).loadJoinEntities(entity, String.class);
 
-        assertSame(entity, dao.gett(16L, String.class));
+        assertSame(entity, dao.getOrNull(16L, String.class));
         verify(dao).loadJoinEntities(entity, String.class);
     }
 
-    // gett(id, boolean) with true loads all join entities (line 262 branch).
+    // getOrNull(id, boolean) with true loads all join entities (line 262 branch).
     @Test
     public void testGett_WithBooleanTrue_LoadsAllJoinEntities() {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(17L)).thenReturn(entity);
+        when(dao.getOrNull(17L)).thenReturn(entity);
         doNothing().when(dao).loadAllJoinEntities(entity);
 
-        assertSame(entity, dao.gett(17L, true));
+        assertSame(entity, dao.getOrNull(17L, true));
         verify(dao).loadAllJoinEntities(entity);
     }
 
-    // gett(id, selectPropNames, joinEntitiesToLoad) with non-null result loads join entities (lines 297-298).
+    // getOrNull(id, selectPropNames, joinEntitiesToLoad) with non-null result loads join entities (lines 297-298).
     @Test
     public void testGett_WithSelectPropNamesAndJoinClass_LoadsJoinEntities() {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(18L, (Collection<String>) null)).thenReturn(entity);
+        when(dao.getOrNull(18L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadJoinEntities(entity, String.class);
 
-        assertSame(entity, dao.gett(18L, null, String.class));
+        assertSame(entity, dao.getOrNull(18L, null, String.class));
         verify(dao).loadJoinEntities(entity, String.class);
     }
 
-    // gett(id, selectPropNames, boolean) with true loads all join entities (line 370 branch).
+    // getOrNull(id, selectPropNames, boolean) with true loads all join entities (line 370 branch).
     @Test
     public void testGett_WithSelectPropNamesAndBooleanTrue_LoadsAllJoinEntities() {
         TestUncheckedCrudJoinDao dao = Mockito.mock(TestUncheckedCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();
 
-        when(dao.gett(19L, (Collection<String>) null)).thenReturn(entity);
+        when(dao.getOrNull(19L, (Collection<String>) null)).thenReturn(entity);
         doNothing().when(dao).loadAllJoinEntities(entity);
 
-        assertSame(entity, dao.gett(19L, null, true));
+        assertSame(entity, dao.getOrNull(19L, null, true));
         verify(dao).loadAllJoinEntities(entity);
     }
 

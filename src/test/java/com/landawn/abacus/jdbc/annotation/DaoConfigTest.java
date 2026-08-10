@@ -47,7 +47,7 @@ public class DaoConfigTest extends TestBase {
 
     @Test
     public void testDefaultAllowJoiningByNullOrDefaultValue() throws Exception {
-        assertEquals(false, DaoConfig.class.getMethod("allowJoiningByNullOrDefaultValue").getDefaultValue());
+        assertEquals(false, DaoConfig.class.getMethod("allowNullOrDefaultJoinKeys").getDefaultValue());
     }
 
     @Test

@@ -152,8 +152,18 @@ import com.landawn.abacus.util.stream.Stream;
 @SuppressWarnings("resource")
 public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends AbstractQuery<Stmt, This>> implements AutoCloseable {
 
+    /**
+     * Logger for this class. Used to report non-fatal cleanup failures (statement close, reset of captured
+     * statement defaults, close-handler failures) that must not replace the primary execution failure.
+     */
     static final Logger logger = LoggerFactory.getLogger(AbstractQuery.class);
 
+    /**
+     * The set of parameter types accepted by the two-argument {@code PreparedStatement.setXxx(int, T)}
+     * setters, plus the primitive types, their wrapper types and their array types (with {@code Object}
+     * excluded). Used to decide whether a value can be bound through a typed setter rather than a generic
+     * {@code setObject}.
+     */
     static final Set<Class<?>> stmtParameterClasses = new HashSet<>();
 
     /**
@@ -191,21 +201,52 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
+    /**
+     * The default action performed by {@link #addBatch()}: delegates to {@link PreparedStatement#addBatch()}.
+     */
     @SuppressWarnings("rawtypes")
     static final Throwables.BiConsumer<AbstractQuery, PreparedStatement, SQLException> defaultAddBatchAction = (q, s) -> s.addBatch();
 
+    /**
+     * The action performed by {@link #addBatch()} on this query. Defaults to {@link #defaultAddBatchAction}
+     * and is reset to it when this query is closed.
+     */
     Throwables.BiConsumer<? super This, ? super Stmt, SQLException> addBatchAction = defaultAddBatchAction;
 
+    /**
+     * The underlying JDBC statement wrapped by this query; never {@code null}.
+     */
     final Stmt stmt;
 
+    /**
+     * Whether the fetch direction has been explicitly set through {@link #setFetchDirection(FetchDirection)}.
+     * While {@code false}, {@link #executeQuery()} applies the implicit {@code FETCH_FORWARD} default before
+     * each execution.
+     */
     boolean isFetchDirectionSet = false;
 
+    /**
+     * Whether the current parameter set has been added to the statement's batch via {@link #addBatch()}.
+     */
     boolean isBatch = false;
 
+    /**
+     * Whether this query (and its statement) is closed automatically after each execution. Defaults to
+     * {@code true}; set it to {@code false} to reuse the statement across executions and close it manually.
+     */
     boolean isCloseAfterExecution = true;
 
+    /**
+     * Whether this query has been closed. Once {@code true}, the query must not be used again; {@code volatile}
+     * so asynchronous executions observe the state without locking.
+     */
     volatile boolean isClosed = false;
 
+    /**
+     * The task registered via {@link #onClose(Runnable)} to run after this query is closed, or {@code null} if
+     * none is registered. Multiple registrations are chained into a single handler; read and cleared in
+     * {@link #close()}.
+     */
     volatile Runnable closeHandler;
 
     /**
@@ -3621,6 +3662,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
+    /**
+     * Validates that {@code parameterIndices} is neither {@code null} nor empty and that every index is
+     * positive (parameter indices are 1-based). Consistent with the other argument checks in this class,
+     * a failed validation closes this query before throwing.
+     *
+     * @param parameterIndices the parameter indices to validate
+     * @throws IllegalArgumentException if {@code parameterIndices} is {@code null}/empty or contains a non-positive index
+     */
     private void checkParameterIndices(final int... parameterIndices) {
         checkArgument(N.notEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
 
@@ -4180,15 +4229,44 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
+    /**
+     * The statement's original fetch direction, captured before this query first changes it (explicitly via
+     * {@link #setFetchDirection(FetchDirection)} or through the implicit {@code FETCH_FORWARD} applied by
+     * {@link #executeQuery()}) and restored by {@link #closeStatement()}. {@code -1} means "not captured yet".
+     */
     int defaultFetchDirection = -1;
+    /**
+     * The statement's original fetch size, captured before {@link #setFetchSize(int)} first changes it and
+     * restored by {@link #closeStatement()}; only valid when {@link #isFetchSizeCaptured} is {@code true}.
+     */
     int defaultFetchSize = -1;
     // fetchSize is the one statement property whose live value can legitimately be negative
     // (MySQL/MariaDB use Integer.MIN_VALUE for row streaming), so unlike its siblings a negative
     // sentinel cannot mark "not captured yet".
+    /**
+     * Whether {@link #defaultFetchSize} has been captured. A separate flag is needed because a live fetch
+     * size can legitimately be negative, so a negative sentinel cannot mark "not captured yet".
+     */
     boolean isFetchSizeCaptured = false;
+    /**
+     * The statement's original query timeout in seconds, captured before {@link #setQueryTimeout(int)} first
+     * changes it and restored by {@link #closeStatement()}. {@code -1} means "not captured yet".
+     */
     int defaultQueryTimeout = -1;
+    /**
+     * The statement's original maximum field size, captured before {@link #setMaxFieldSize(int)} first
+     * changes it and restored by {@link #closeStatement()}. {@code -1} means "not captured yet".
+     */
     int defaultMaxFieldSize = -1;
+    /**
+     * The statement's original maximum row count, captured before {@link #setMaxRows(int)} first changes it
+     * and restored by {@link #closeStatement()}. {@code -1} means "not captured yet".
+     */
     int defaultMaxRows = -1;
+    /**
+     * The statement's original large maximum row count, captured before {@link #setLargeMaxRows(long)} first
+     * changes it and restored by {@link #closeStatement()}. {@code -1} means "not captured yet".
+     */
     long defaultLargeMaxRows = -1L;
 
     /**
@@ -4510,6 +4588,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
+    /**
+     * Cached {@code char} type handler used by {@link #queryForChar()} to read the first column of the
+     * first row.
+     */
     private static final Type<Character> CHAR_TYPE = TypeFactory.getType(char.class);
 
     /**
@@ -4822,6 +4904,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
+    /**
+     * Cached {@link BigInteger} type handler used by {@link #queryForBigInteger()} to read the first column
+     * of the first row.
+     */
     private static final Type<BigInteger> BIG_INTEGER_TYPE = Type.of(BigInteger.class);
 
     /**
@@ -8155,6 +8241,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         });
     }
 
+    /**
+     * Creates a lazily-evaluated supplier that runs {@link #executeQuery()} when {@code get()} is called. A
+     * {@link SQLException} is wrapped in {@link UncheckedSQLException}; on any failure this query is closed
+     * first (if automatic closing is enabled) before the failure propagates.
+     *
+     * @return a supplier producing the query's {@code ResultSet}
+     */
     private Supplier<ResultSet> createQuerySupplier() {
         return () -> {
             try {
@@ -8170,6 +8263,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         };
     }
 
+    /**
+     * Creates a lazily-evaluated supplier that runs {@code JdbcUtil.execute(stmt)} when {@code get()} is
+     * called. A {@link SQLException} is wrapped in {@link UncheckedSQLException}; on any failure this query
+     * is closed first (if automatic closing is enabled) before the failure propagates.
+     *
+     * @return a supplier producing {@code true} if the first result of the execution is a {@code ResultSet}
+     */
     private Supplier<Boolean> createExecuteSupplier() {
         return () -> {
             try {
@@ -8185,6 +8285,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         };
     }
 
+    /**
+     * Closes the result-set iterator, drains any trailing results when the statement will be reused, and
+     * finally closes this query if automatic closing is enabled. A supplied {@code primaryFailure} is
+     * preserved as the primary exception: cleanup failures are added to it as suppressed rather than
+     * replacing it.
+     *
+     * @param iter the iterator over the query's result sets, or {@code null} if iteration never started
+     * @param primaryFailure the failure that must remain primary, or {@code null} if there is none
+     * @throws SQLException if a database access error occurs during cleanup and there is no primary failure
+     *         to attach it to
+     */
     final void closeAllResultsAndQueryIfAllowed(final ObjIteratorEx<ResultSet> iter, final Throwable primaryFailure) throws SQLException {
         Throwable cleanupPrimary = primaryFailure;
 
@@ -8213,6 +8324,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
+    /**
+     * Drains all remaining result sets and update counts from the statement when it will be kept open
+     * ({@code isCloseAfterExecution == false}), so the statement can be executed again safely. Does nothing
+     * when the statement will be closed anyway. A drain failure is rethrown if there is no primary failure,
+     * otherwise it is added to {@code primaryFailure} as suppressed.
+     *
+     * @param primaryFailure the failure that must remain primary, or {@code null} if there is none
+     * @throws SQLException if draining the remaining results fails and {@code primaryFailure} is {@code null}
+     */
     private void discardRemainingResultsIfStatementWillBeReused(final Throwable primaryFailure) throws SQLException {
         if (!isCloseAfterExecution) {
             try {
@@ -9233,7 +9353,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if rowConsumer is null
      * @throws SQLException if a database access error occurs
-     * @see RowConsumer#oneOff(Consumer)
+     * @see RowConsumer#forDisposableObjArray(Consumer)
      * @see #foreach(Class, Consumer)
      */
     @Beta
@@ -9242,7 +9362,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-        forEach(Jdbc.RowConsumer.oneOff(rowConsumer));
+        forEach(Jdbc.RowConsumer.forDisposableObjArray(rowConsumer));
     }
 
     /**
@@ -9286,7 +9406,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if entityClass or rowConsumer is null
      * @throws SQLException if a database access error occurs
-     * @see RowConsumer#oneOff(Class, Consumer)
+     * @see RowConsumer#forDisposableObjArray(Class, Consumer)
      * @see #foreach(Consumer)
      */
     @Beta
@@ -9296,7 +9416,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(entityClass, cs.entityClass);
         checkArgNotNull(rowConsumer, cs.rowConsumer);
 
-        forEach(Jdbc.RowConsumer.oneOff(entityClass, rowConsumer));
+        forEach(Jdbc.RowConsumer.forDisposableObjArray(entityClass, rowConsumer));
     }
 
     /**
@@ -10516,6 +10636,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
+    /**
+     * Submits {@code action} for asynchronous execution on {@code executor}. The task closes this query
+     * after the action completes or fails (if automatic closing is enabled), and also when the returned
+     * future is cancelled before the action has started.
+     *
+     * @param <R> the result type of the action
+     * @param action the task to execute
+     * @param executor the executor to run it on
+     * @return a {@link ContinuableFuture} representing the asynchronous execution
+     */
     private <R> ContinuableFuture<R> submitAsyncTask(final Callable<? extends R> action, final Executor executor) {
         final Object startLock = new Object();
         final AtomicBoolean actionStarted = new AtomicBoolean();
@@ -10568,6 +10698,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return new FutureTaskAsyncExecutor(executor).executeTask(futureTask);
     }
 
+    /**
+     * Adapter that exposes {@code AsyncExecutor}'s {@code FutureTask}-accepting {@code execute} method, so
+     * the query's asynchronous tasks can be submitted as {@link FutureTask} instances whose {@code done()}
+     * hook observes cancellation-before-start for cleanup.
+     */
     private static final class FutureTaskAsyncExecutor extends AsyncExecutor {
         FutureTaskAsyncExecutor(final Executor executor) {
             super(executor);
@@ -10578,6 +10713,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
+    /**
+     * Closes this query after submitting an asynchronous task has failed, keeping {@code submissionFailure}
+     * as the primary exception (a close failure is suppressed onto it). Does nothing if automatic closing
+     * is disabled.
+     *
+     * @param submissionFailure the failure raised while submitting the task; must remain primary
+     */
     private void closeAfterFailedAsyncSubmission(final Throwable submissionFailure) {
         if (isCloseAfterExecution) {
             closeSuppressingFailure(submissionFailure);
@@ -10766,6 +10908,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         }
     }
 
+    /**
+     * Closes this query after a failed execution if automatic closing is enabled, keeping
+     * {@code primaryFailure} as the primary exception: a failure raised while closing is added to it as
+     * suppressed rather than replacing it.
+     *
+     * @param primaryFailure the failure that must remain primary, or {@code null} to close normally
+     */
     final void closeAfterExecutionIfAllowed(final Throwable primaryFailure) {
         if (isCloseAfterExecution) {
             if (primaryFailure == null) {

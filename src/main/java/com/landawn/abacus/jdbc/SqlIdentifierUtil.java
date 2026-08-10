@@ -39,6 +39,9 @@ import com.landawn.abacus.util.Strings;
  */
 final class SqlIdentifierUtil {
 
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     */
     private SqlIdentifierUtil() {
         // utility class - prevent instantiation.
     }
@@ -276,6 +279,12 @@ final class SqlIdentifierUtil {
         return !explicitlyDelimited && isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quoteString(dbProductInfo));
     }
 
+    /**
+     * Tests whether a character can open a delimited identifier.
+     *
+     * @param ch the character to test
+     * @return {@code true} if {@code ch} is {@code "}, {@code `} or {@code [}
+     */
     private static boolean isOpeningDelimiter(final char ch) {
         return ch == '"' || ch == '`' || ch == '[';
     }

@@ -38,13 +38,13 @@ package com.landawn.abacus.jdbc.dao;
  *
  * // Get user by ID with join entities loaded
  * com.landawn.abacus.util.u.Optional<User> user = userDao.get(1L, Order.class);
- * User userWithAll = userDao.gett(1L, true);   // Load all join entities
+ * User userWithAll = userDao.getOrNull(1L, true);   // Load all join entities
  *
  * // Batch get with join entities
  * List<User> users = userDao.batchGet(Arrays.asList(1L, 2L, 3L), Order.class);
  *
  * // Load join entities for existing entities
- * User existingUser = userDao.gett(1L);
+ * User existingUser = userDao.getOrNull(1L);
  * userDao.loadJoinEntities(existingUser, "orders");
  *
  * // Delete-join operations are absent from the type and do not compile
