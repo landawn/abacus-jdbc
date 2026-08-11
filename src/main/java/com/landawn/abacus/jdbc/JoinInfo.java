@@ -477,25 +477,32 @@ public final class JoinInfo {
                 // property name — true for PLC (LOWER_CAMEL_CASE) and for PSC props that are single
                 // lowercase words like "id" or "code". When AS was omitted, the magic indices read
                 // the wrong tokens; e.g., middleTableName resolved to "employeeId" instead of
-                // "employeeProject", producing batch SQL that the driver rejected at runtime.
+                // "employeeProject", producing batch SQL that the driver rejected at runtime. Keep
+                // dotted references and the exact FROM text as well: @Table aliases render columns as
+                // alias.column and must remain attached to the physical table in the synthesized JOIN.
                 final String middleSelectPropNameRaw = nextNonBlankToken(middleSelectWords, indexOfKeyword(middleSelectWords, "SELECT"));
-                final String middleTableName = nextNonBlankToken(middleSelectWords, indexOfKeyword(middleSelectWords, "FROM"));
                 final String middleCondPropNameRaw = nextNonBlankToken(middleSelectWords, indexOfKeyword(middleSelectWords, "WHERE"));
-                N.checkState(middleSelectPropNameRaw != null && middleTableName != null && middleCondPropNameRaw != null,
+                final int middleFromIndex = middleSelectSql.lastIndexOf(" FROM ");
+                final int middleWhereIndex = middleSelectSql.lastIndexOf(" WHERE ");
+                N.checkState(middleSelectPropNameRaw != null && middleCondPropNameRaw != null && middleFromIndex >= 0 && middleWhereIndex > middleFromIndex,
                         "Cannot locate SELECT/FROM/WHERE in middle SELECT SQL: %s", middleSelectSql);
-                final String middleSelectPropName = middleTableName + "." + middleSelectPropNameRaw;
-                final String middleCondPropName = middleTableName + "." + middleCondPropNameRaw;
+                final String middleTableReference = middleSelectSql.substring(middleFromIndex + 6, middleWhereIndex).trim();
+                final String middleTableQualifier = N.defaultIfNull(qualifierOf(middleCondPropNameRaw), lastIdentifier(middleTableReference));
+                final String middleSelectPropName = qualify(middleTableQualifier, middleSelectPropNameRaw);
+                final String middleCondPropName = qualify(middleTableQualifier, middleCondPropNameRaw);
 
                 final int fromIndex = leftSelectSql.lastIndexOf(" FROM ");
                 N.checkState(fromIndex >= 0, "Cannot locate FROM in left SELECT SQL: %s", leftSelectSql);
                 final List<String> leftSelectLastWords = SqlParser.tokenize(leftSelectSql.substring(fromIndex + 6));
-                final String leftTableName = leftSelectLastWords.get(0);
                 // Keyword-anchored like the middle-SELECT extraction above (fixed offsets break when AS aliases shift token positions).
                 final String leftCondPropNameRaw = nextNonBlankToken(leftSelectLastWords, indexOfKeyword(leftSelectLastWords, "WHERE"));
-                N.checkState(leftCondPropNameRaw != null, "Cannot locate WHERE in left SELECT SQL: %s", leftSelectSql);
-                final String leftCondPropName = leftTableName + "." + leftCondPropNameRaw;
+                final int leftWhereIndex = leftSelectSql.lastIndexOf(" WHERE ");
+                N.checkState(leftCondPropNameRaw != null && leftWhereIndex > fromIndex, "Cannot locate WHERE in left SELECT SQL: %s", leftSelectSql);
+                final String leftTableReference = leftSelectSql.substring(fromIndex + 6, leftWhereIndex).trim();
+                final String leftTableQualifier = N.defaultIfNull(qualifierOf(leftCondPropNameRaw), lastIdentifier(leftTableReference));
+                final String leftCondPropName = qualify(leftTableQualifier, leftCondPropNameRaw);
 
-                final String batchSelectFromToJoinOn = " FROM " + leftTableName + " INNER JOIN " + middleTableName + " ON " + leftCondPropName + " = "
+                final String batchSelectFromToJoinOn = " FROM " + leftTableReference + " INNER JOIN " + middleTableReference + " ON " + leftCondPropName + " = "
                         + middleSelectPropName + " WHERE " + middleCondPropName + " IN (";
 
                 final Collection<String> defaultSelectPropNames = JdbcUtil.getSelectPropNames(referencedEntityClass);
@@ -507,12 +514,13 @@ public final class JoinInfo {
                 // Flat scan over all tokens catches the column at any position; false positives are
                 // implausible because the middle FK column name wouldn't appear as an unrelated SQL
                 // keyword or literal in the referenced entity's SELECT clause.
+                final String middleSelectColumnName = lastIdentifier(middleSelectPropNameRaw);
                 final boolean hasSameColumnName = SqlParser.tokenize(leftSelectSql.substring(0, fromIndex))
                         .stream()
-                        .anyMatch(middleSelectPropNameRaw::equalsIgnoreCase);
+                        .anyMatch(middleSelectColumnName::equalsIgnoreCase);
 
                 final String leftSelectSqlForBatch = hasSameColumnName //
-                        ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableName).build().query()
+                        ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query()
                         : entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass).build().query();
 
                 final int fromIndexInBatch = leftSelectSqlForBatch.lastIndexOf(" FROM ");
@@ -539,7 +547,7 @@ public final class JoinInfo {
                         final StringBuilder sb = Objectory.createStringBuilder();
 
                         final String tmpSql = hasSameColumnName //
-                                ? entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableName).build().query()
+                                ? entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query()
                                 : entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).build().query();
 
                         sb.append(tmpSql, 0, tmpSql.length() - fromLength).append(", ").append(middleCondPropName).append(batchSelectFromToJoinOn);
@@ -555,8 +563,15 @@ public final class JoinInfo {
                 batchSelectSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchSqlBuilder, batchParaSetter));
 
                 final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
-                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).build().query() + middleSelectSqlWhereIn;
-                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).build().query() + middleSelectSqlWhereIn;
+                // middleSelectSqlWhereIn inherits the SELECT's table alias (e.g. "ar.role_id") when the referenced
+                // entity declares @Table(alias = ...); that alias is unbound in an UPDATE/DELETE statement, so those
+                // statements use an unqualified WHERE fragment built from DELETE ... WHERE (like batchDeleteSqlHeader).
+                final String deleteAllSql = entry.getValue()._4.apply(referencedEntityClass).where(cond).build().query();
+                final int whereIndexInDelete = deleteAllSql.lastIndexOf(" WHERE ");
+                N.checkState(whereIndexInDelete >= 0, "SQL query does not contain ' WHERE ' clause: %s", deleteAllSql);
+                final String whereInForUpdateDelete = deleteAllSql.substring(whereIndexInDelete).replace(inCondToReplace, middleSelectSql);
+                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).build().query() + whereInForUpdateDelete;
+                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).build().query() + whereInForUpdateDelete;
                 final String middleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).build().query();
 
                 setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
@@ -1397,19 +1412,94 @@ public final class JoinInfo {
     }
 
     /**
-     * Returns the first non-blank token in {@code tokens} after position {@code afterIndex}.
-     * Returns {@code null} if {@code afterIndex < 0} or no such token exists.
+     * Returns the first non-blank SQL reference in {@code tokens} after position {@code afterIndex}.
+     * Consecutive dot-separated tokens are joined so a generated reference such as
+     * {@code ur.role_id} is not truncated to {@code ur}. Returns {@code null} if
+     * {@code afterIndex < 0} or no reference follows it.
      */
     private static String nextNonBlankToken(final List<String> tokens, final int afterIndex) {
         if (afterIndex < 0) {
             return null;
         }
-        for (int i = afterIndex + 1, n = tokens.size(); i < n; i++) {
-            final String tok = tokens.get(i);
-            if (!Strings.isBlank(tok)) {
-                return tok;
+
+        int index = afterIndex + 1;
+
+        while (index < tokens.size() && Strings.isBlank(tokens.get(index))) {
+            index++;
+        }
+
+        if (index >= tokens.size()) {
+            return null;
+        }
+
+        final StringBuilder result = new StringBuilder(tokens.get(index++));
+
+        while (index < tokens.size()) {
+            while (index < tokens.size() && Strings.isBlank(tokens.get(index))) {
+                index++;
+            }
+
+            if (index >= tokens.size() || !".".equals(tokens.get(index))) {
+                break;
+            }
+
+            result.append('.');
+            index++;
+
+            while (index < tokens.size() && Strings.isBlank(tokens.get(index))) {
+                index++;
+            }
+
+            if (index >= tokens.size()) {
+                break;
+            }
+
+            result.append(tokens.get(index++));
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Returns the qualifier of a dot-qualified SQL reference.
+     *
+     * @param reference the SQL reference
+     * @return the text before the last dot, or {@code null} for an unqualified reference
+     */
+    private static String qualifierOf(final String reference) {
+        final int dotIndex = reference.lastIndexOf('.');
+
+        return dotIndex < 0 ? null : reference.substring(0, dotIndex);
+    }
+
+    /**
+     * Returns the table alias when one is present, otherwise the last identifier in a qualified table name.
+     *
+     * @param tableReference the generated {@code FROM} table reference
+     * @return the last identifier or alias usable as a column qualifier
+     */
+    private static String lastIdentifier(final String tableReference) {
+        final List<String> tokens = SqlParser.tokenize(tableReference);
+
+        for (int i = tokens.size() - 1; i >= 0; i--) {
+            final String token = tokens.get(i);
+
+            if (!Strings.isBlank(token) && !".".equals(token)) {
+                return token;
             }
         }
-        return null;
+
+        return tableReference;
+    }
+
+    /**
+     * Qualifies an SQL reference unless it is already qualified.
+     *
+     * @param qualifier the table name or alias
+     * @param reference the column reference
+     * @return the qualified reference
+     */
+    private static String qualify(final String qualifier, final String reference) {
+        return qualifierOf(reference) == null ? qualifier + "." + reference : reference;
     }
 }

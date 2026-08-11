@@ -1402,7 +1402,10 @@ final class DaoImpl {
             checkReturnEleTypeResolved(firstReturnEleType, returnType, fullClassMethodName);
 
             if (Nullable.class.isAssignableFrom(returnType)) {
-                if (isQueryForUnique(method, queryOperation)) {
+                // Honor the uniqueness contract of findOnlyOne/selectOnlyOne method names (and queryForUnique)
+                // for Nullable returns too, like every other single-result branch does, instead of silently
+                // reading the first row.
+                if (isQueryForUnique(method, queryOperation) || isFindOnlyOne(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForUniqueValue(firstReturnEleType);
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.queryForSingleValue(firstReturnEleType);
@@ -1422,7 +1425,10 @@ final class DaoImpl {
             }
         } else {
             if (isFindOrListTargetClass(returnType)) {
-                if (isFindOnlyOne(method, queryOperation)) {
+                // Honor the uniqueness contract of queryForUnique (explicit op or method-name prefix) for
+                // bean/Map/List/array returns too, not just findOnlyOne: both promise DuplicateResultException
+                // when more than one row is found, rather than silently reading the first row.
+                if (isFindOnlyOne(method, queryOperation) || isQueryForUnique(method, queryOperation)) {
                     return (preparedQuery, args) -> (R) preparedQuery.findOnlyOne(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();

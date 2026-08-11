@@ -652,12 +652,28 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     // Test generateEntityClass with conflicting readOnly and nonUpdatable for same field
+
     @Test
     public void testGenerateEntityClass_ConflictingReadOnlyAndNonUpdatable() throws SQLException {
         setupFullGenerateEntityClassMock();
         JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .readOnlyFields(Arrays.asList("id"))
                 .nonUpdatableFields(Arrays.asList("id"))
+                .build();
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+    }
+
+    // Same conflict as above, but spelled with the two accepted name forms: read-only by column name
+    // ("created_at") and non-updatable by field name ("createdAt"). The up-front commonSet check only
+    // catches identical spellings, so the per-field emission pass must reject this instead of silently
+    // dropping @NonUpdatable.
+    @Test
+    public void testGenerateEntityClass_ConflictingReadOnlyAndNonUpdatableMixedNameForms() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .readOnlyFields(Arrays.asList("created_at"))
+                .nonUpdatableFields(Arrays.asList("createdAt"))
                 .build();
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
@@ -2336,8 +2352,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .additionalClassBodySource("    private String first = \"a;b\", second = \"c\";")
                 .build();
 
-        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
 
         assertTrue(result.contains("copy.first = this.first;"), result);
         assertTrue(result.contains("copy.second = this.second;"), result);
@@ -2352,8 +2367,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .additionalClassBodySource("    private int first; private int second;")
                 .build();
 
-        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
 
         assertTrue(result.contains("copy.first = this.first;"), result);
         assertTrue(result.contains("copy.second = this.second;"), result);

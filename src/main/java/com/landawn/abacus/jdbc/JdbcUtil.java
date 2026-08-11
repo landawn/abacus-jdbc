@@ -2092,6 +2092,22 @@ public final class JdbcUtil {
         return columnNameList;
     }
 
+    /**
+     * Returns the column names of one table through {@link DatabaseMetaData#getColumns(String, String, String, String)}.
+     * Because the metadata arguments are patterns, every returned row is checked against the requested
+     * catalog, schema, and table before it is accepted. If a pattern matches more than one table, columns
+     * from the first matching table (in metadata order) are returned.
+     *
+     * @param metadata The database metadata to query.
+     * @param catalog The requested catalog, or {@code null} to accept any catalog.
+     * @param schemaPattern The requested schema, or {@code null} to accept any schema.
+     * @param tableNamePattern The requested table name.
+     * @param catalogCaseSensitive Whether the catalog comparison is case-sensitive.
+     * @param schemaCaseSensitive Whether the schema comparison is case-sensitive.
+     * @param tableCaseSensitive Whether the table comparison is case-sensitive.
+     * @return The column names in metadata order, or an empty list if no matching table is found.
+     * @throws SQLException if a database access error occurs.
+     */
     private static List<String> getColumnNamesFromMetadata(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
             final String tableNamePattern, final boolean catalogCaseSensitive, final boolean schemaCaseSensitive, final boolean tableCaseSensitive)
             throws SQLException {
@@ -2988,7 +3004,8 @@ public final class JdbcUtil {
      *
      * @param sql The SQL text being scanned.
      * @param index The position just after the opening {@code --}.
-     * @return The index of the first character after the line break, or the end of the string.
+     * @return The index just past the line-break character that ends the comment (for a CRLF terminator,
+     *         the index of the {@code '\n'}), or the end of the string.
      */
     private static int skipLineComment(final String sql, int index) {
         final int len = sql.length();
@@ -3096,6 +3113,12 @@ public final class JdbcUtil {
     private static int skipDollarQuotedSqlText(final String sql, final int index) {
         final int len = sql.length();
         int tagEnd = index + 1;
+
+        // A dollar-quote tag follows unquoted-identifier rules, so it cannot start with a digit;
+        // $1, $2, ... are positional parameter references, not dollar-quote openers.
+        if (tagEnd < len && Character.isDigit(sql.charAt(tagEnd))) {
+            return index;
+        }
 
         while (tagEnd < len && (Character.isLetterOrDigit(sql.charAt(tagEnd)) || sql.charAt(tagEnd) == '_')) {
             tagEnd++;
@@ -9254,6 +9277,21 @@ public final class JdbcUtil {
         }
     }
 
+    /**
+     * Tests whether {@link DatabaseMetaData#getTables(String, String, String, String[])} returns the requested table.
+     * Pattern wildcard matches are verified against the concrete metadata row; explicitly delimited identifier
+     * parts request case-sensitive comparison even when their text contains no wildcard.
+     *
+     * @param metadata The database metadata to query.
+     * @param catalog The requested catalog, or {@code null} to accept any catalog.
+     * @param schemaPattern The requested schema, or {@code null} to accept any schema.
+     * @param tableNamePattern The requested table name.
+     * @param catalogCaseSensitive Whether the catalog comparison is case-sensitive.
+     * @param schemaCaseSensitive Whether the schema comparison is case-sensitive.
+     * @param tableCaseSensitive Whether the table comparison is case-sensitive.
+     * @return {@code true} if a matching table is reported; otherwise {@code false}.
+     * @throws SQLException if a database access error occurs.
+     */
     private static boolean tableExists(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern,
             final boolean catalogCaseSensitive, final boolean schemaCaseSensitive, final boolean tableCaseSensitive) throws SQLException {
         final ResultSet rs = metadata.getTables(catalog, schemaPattern, tableNamePattern, null);
@@ -10432,6 +10470,7 @@ public final class JdbcUtil {
      *
      * @param sql The SQL string containing named parameters (e.g., :paramName).
      * @return A list of named parameter names found in the SQL string (without the ':' prefix).
+     * @throws IllegalArgumentException if {@code sql} is {@code null}, empty, or blank.
      */
     public static List<String> getNamedParameters(final String sql) {
         return ParsedSql.parse(sql).namedParameters();
@@ -10451,6 +10490,7 @@ public final class JdbcUtil {
      *
      * @param sql The SQL string to be parsed.
      * @return A ParsedSql object containing parsed information about the SQL string.
+     * @throws IllegalArgumentException if {@code sql} is {@code null}, empty, or blank.
      * @see ParsedSql#parse(String)
      */
     public static ParsedSql parseSql(final String sql) {
@@ -11304,6 +11344,9 @@ public final class JdbcUtil {
      * and it does not redact SQL. Do not treat it as a security boundary for sensitive statements. The setting
      * is thread-local and is not inherited by work dispatched to another thread.</p>
      *
+     * <p>The prior enabled/disabled state and maximum SQL log length are restored when the action finishes,
+     * even if the action changes them or throws.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runWithSqlLogDisabled(() -> {
@@ -11322,17 +11365,19 @@ public final class JdbcUtil {
     public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        if (isSqlLogEnabled()) {
-            final int savedMaxSqlLogLength = isSQLLogEnabled_TL.get().maxSqlLogLength;
-            disableSqlLog();
+        final SqlLogConfig config = isSQLLogEnabled_TL.get();
+        final boolean savedEnabled = config.isEnabled;
+        final int savedMaxSqlLogLength = config.maxSqlLogLength;
 
-            try {
-                sqlAction.run();
-            } finally {
-                enableSqlLog(savedMaxSqlLogLength);
-            }
-        } else {
+        if (savedEnabled) {
+            disableSqlLog();
+        }
+
+        try {
             sqlAction.run();
+        } finally {
+            // A scoped helper must not leak logging changes made by the callback into its caller.
+            setSqlLogEnabled(savedEnabled, savedMaxSqlLogLength);
         }
     }
 
@@ -11342,6 +11387,9 @@ public final class JdbcUtil {
      * <p><b>&#9888; Warning:</b> This does not disable SQL performance logging or a configured SQL log handler,
      * and it does not redact SQL. Do not treat it as a security boundary for sensitive statements. The setting
      * is thread-local and is not inherited by work dispatched to another thread.</p>
+     *
+     * <p>The prior enabled/disabled state and maximum SQL log length are restored when the callable finishes,
+     * even if the callable changes them or throws.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11364,17 +11412,19 @@ public final class JdbcUtil {
     public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        if (isSqlLogEnabled()) {
-            final int savedMaxSqlLogLength = isSQLLogEnabled_TL.get().maxSqlLogLength;
-            disableSqlLog();
+        final SqlLogConfig config = isSQLLogEnabled_TL.get();
+        final boolean savedEnabled = config.isEnabled;
+        final int savedMaxSqlLogLength = config.maxSqlLogLength;
 
-            try {
-                return sqlAction.call();
-            } finally {
-                enableSqlLog(savedMaxSqlLogLength);
-            }
-        } else {
+        if (savedEnabled) {
+            disableSqlLog();
+        }
+
+        try {
             return sqlAction.call();
+        } finally {
+            // Restore the entire public SQL-log configuration rather than only the enabled flag.
+            setSqlLogEnabled(savedEnabled, savedMaxSqlLogLength);
         }
     }
 

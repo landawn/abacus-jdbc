@@ -16,8 +16,8 @@
 package com.landawn.abacus.jdbc.dao;
 
 /**
- * CRUD-aware join-entity helper: adds id-based reads ({@code get}/{@code getOrNull}/{@code batchGet}
- * with join loading) on top of the full {@link JoinEntityHelper} (load + delete).
+ * CRUD-aware join-entity helper: adds id-based reads ({@code get}, {@code getOrNull}, and
+ * {@code batchGet} with join loading) on top of the full {@link JoinEntityHelper} (load + delete).
  *
  * <p>This is the full CRUD join capability, composed of the read side
  * ({@link CrudJoinEntityReadOps}) and the base {@link JoinEntityHelper}. Read-only CRUD

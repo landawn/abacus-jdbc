@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.util.N;
 
 /**
  * Update capability of {@link CrudDao}: id/entity-based {@code update}/{@code batchUpdate}.
@@ -88,10 +89,13 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param propValue the new value for the property
      * @param id the ID of the entity to update
      * @return the number of rows updated
-     * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final ID id) throws SQLException {
+        N.checkArgNotEmpty(propName, "propName");
+        N.checkArgNotNull(id, "id");
+
         final Map<String, Object> updateProps = new HashMap<>();
         updateProps.put(propName, propValue);
 

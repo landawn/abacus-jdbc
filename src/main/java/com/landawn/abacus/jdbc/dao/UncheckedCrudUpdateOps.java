@@ -22,6 +22,7 @@ import java.util.Map;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.util.N;
 
 /**
  * Unchecked-exception update capability of {@link UncheckedCrudDao}: the {@link CrudUpdateOps}
@@ -99,11 +100,14 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propValue the new value for the property
      * @param id the ID of the entity to update
      * @return the number of rows updated
-     * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code id} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default int update(final String propName, final Object propValue, final ID id) throws UncheckedSQLException {
+        N.checkArgNotEmpty(propName, "propName");
+        N.checkArgNotNull(id, "id");
+
         final Map<String, Object> updateProps = new HashMap<>();
         updateProps.put(propName, propValue);
 

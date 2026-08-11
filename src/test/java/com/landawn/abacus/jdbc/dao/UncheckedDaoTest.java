@@ -275,6 +275,16 @@ public class UncheckedDaoTest extends TestBase {
     }
 
     @Test
+    public void testUpdate_SinglePropRejectsInvalidArguments() {
+        final TestUncheckedDao dao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.update(null, "active", cond));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("", "active", cond));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("status", "active", (Condition) null));
+    }
+
+    @Test
     public void testUpsert_UniquePropertiesBuildsCondition() {
         TestUncheckedDao dao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
         TestEntity entity = new TestEntity();

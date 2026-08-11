@@ -23,6 +23,7 @@ import java.util.Map;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.N;
 
 /**
  * Update capability of {@link Dao}: condition-based {@code update} operations. Extends {@link DaoBase}.
@@ -47,10 +48,13 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param propValue the new value for the property
      * @param cond the condition to match records
      * @return the number of records updated
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code cond} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final Condition cond) throws SQLException {
+        N.checkArgNotEmpty(propName, "propName");
+        N.checkArgNotNull(cond, "cond");
+
         final Map<String, Object> updateProps = new HashMap<>();
         updateProps.put(propName, propValue);
 

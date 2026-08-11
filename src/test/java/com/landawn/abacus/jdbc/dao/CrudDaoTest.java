@@ -271,6 +271,15 @@ public class CrudDaoTest extends TestBase {
     }
 
     @Test
+    public void testUpdateById_SinglePropRejectsInvalidArguments() {
+        final TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.update(null, "Alice", 1L));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("", "Alice", 1L));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("name", "Alice", (Long) null));
+    }
+
+    @Test
     public void testBatchUpdate_UsesDefaultBatchSize() throws SQLException {
         TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());

@@ -1708,6 +1708,16 @@ public class DataTransferUtilTest extends TestBase {
         verify(mockPreparedStatement, never()).executeQuery();
     }
 
+    // Same fail-fast contract for exportCsv(conn, selectSql, Writer): a null Writer must be rejected
+    // before the SELECT is prepared/executed, matching the File-target overloads.
+    @Test
+    @Tag("2025")
+    public void testExportCsvToNullWriter_FailsFastWithoutPreparingStatement() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsv(mockConnection, "SELECT col1 FROM t", (Writer) null));
+
+        verify(mockConnection, never()).prepareStatement(anyString(), anyInt(), anyInt());
+    }
+
     /**
      * Contract test for CSV short-row padding in
      * {@code importCsv(Reader, Predicate, PreparedStatement, int, long, BiConsumer)}.

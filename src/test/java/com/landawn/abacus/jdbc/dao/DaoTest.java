@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -476,6 +477,16 @@ public class DaoTest extends TestBase {
 
         assertEquals(5, dao.update("name", "Alice", cond));
         verify(dao).update(ArgumentMatchers.anyMap(), ArgumentMatchers.same(cond));
+    }
+
+    @Test
+    public void testUpdate_SinglePropRejectsInvalidArguments() {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.update(null, "Alice", cond));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("", "Alice", cond));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("name", "Alice", (Condition) null));
     }
 
     @Test

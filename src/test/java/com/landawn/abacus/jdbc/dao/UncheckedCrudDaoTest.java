@@ -276,6 +276,15 @@ public class UncheckedCrudDaoTest extends TestBase {
     }
 
     @Test
+    public void testUpdateById_SinglePropRejectsInvalidArguments() {
+        final TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.update(null, "Alice", 1L));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("", "Alice", 1L));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("name", "Alice", (Long) null));
+    }
+
+    @Test
     public void testBatchUpdate_UsesDefaultBatchSize() {
         TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());

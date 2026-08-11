@@ -227,7 +227,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *
      * <p>Performance characteristics:</p>
      * <ul>
-     *   <li>For N parent entities, executes O(1) or O(N/batch_size) DELETE statements instead of O(N)</li>
+     *   <li>For N parent entities, executes O(1) or O(N / batch size) DELETE statements instead of O(N)</li>
      *   <li>Much more efficient than deleting join entities one parent at a time</li>
      *   <li>The actual number of deleted records may be less than or greater than the number of parent entities</li>
      * </ul>

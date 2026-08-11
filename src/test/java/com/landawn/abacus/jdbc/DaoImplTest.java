@@ -380,6 +380,16 @@ public class DaoImplTest extends TestBase {
         boolean notExistsExplicit();
     }
 
+    interface NullableOnlyOneDao {
+        u.Nullable<TestEntity> findOnlyOneByName(String name);
+
+        u.Nullable<TestEntity> findFirstByName(String name);
+    }
+
+    interface BeanUniqueDao {
+        TestEntity queryForUniqueByName(String name);
+    }
+
     interface SqlMapperValueIdDao {
         @Query("findByName")
         List<TestEntity> findByName();
@@ -1006,6 +1016,75 @@ public class DaoImplTest extends TestBase {
         assertTrue(function.apply(query, new Object[0]));
         org.mockito.Mockito.verify(query).exists();
         org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).notExists();
+    }
+
+    // BUG FIX: a Nullable-returning method named findOnlyOne*/selectOnlyOne* (QueryOperation.DEFAULT) used to
+    // dispatch to queryForSingleValue, silently returning the first row, while every other single-result
+    // branch (u.Optional, bean, bare scalar) enforces the documented findOnlyOne contract
+    // (DuplicateResultException on more than one row). It must dispatch to queryForUniqueValue.
+    @Test
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void testNullableFindOnlyOneMethodNameHonorsUniqueContract() throws Exception {
+        final Method method = NullableOnlyOneDao.class.getMethod("findOnlyOneByName", String.class);
+        final Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
+        factory.setAccessible(true);
+        final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> function = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
+                .invoke(null, TestEntity.class, method, null, null, null, false, false, false, QueryOperation.DEFAULT, false,
+                        "NullableOnlyOneDao.findOnlyOneByName");
+        final AbstractQuery query = mock(AbstractQuery.class);
+        final u.Nullable<TestEntity> expected = u.Nullable.of(new TestEntity());
+        org.mockito.Mockito.when(query.queryForUniqueValue(TestEntity.class)).thenReturn(expected);
+
+        assertSame(expected, function.apply(query, new Object[0]));
+        org.mockito.Mockito.verify(query).queryForUniqueValue(TestEntity.class);
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).queryForSingleValue(Mockito.any(Class.class));
+    }
+
+    // Control for the fix above: a Nullable-returning method without only-one/unique semantics must still
+    // dispatch to queryForSingleValue (first row wins, no duplicate check).
+    @Test
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void testNullableFindFirstMethodNameStillUsesSingleValue() throws Exception {
+        final Method method = NullableOnlyOneDao.class.getMethod("findFirstByName", String.class);
+        final Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
+        factory.setAccessible(true);
+        final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> function = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
+                .invoke(null, TestEntity.class, method, null, null, null, false, false, false, QueryOperation.DEFAULT, false,
+                        "NullableOnlyOneDao.findFirstByName");
+        final AbstractQuery query = mock(AbstractQuery.class);
+        final u.Nullable<TestEntity> expected = u.Nullable.of(new TestEntity());
+        org.mockito.Mockito.when(query.queryForSingleValue(TestEntity.class)).thenReturn(expected);
+
+        assertSame(expected, function.apply(query, new Object[0]));
+        org.mockito.Mockito.verify(query).queryForSingleValue(TestEntity.class);
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).queryForUniqueValue(Mockito.any(Class.class));
+    }
+
+    // BUG FIX: a bean-returning method named queryForUnique* (or declared with op = QueryOperation.queryForUnique)
+    // used to dispatch to findFirst, silently returning the first row, although the queryForUnique contract
+    // promises DuplicateResultException when more than one row is found (and the u.Optional/scalar branches
+    // already enforce it). It must dispatch to findOnlyOne.
+    @Test
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void testBeanQueryForUniqueHonorsUniqueContract() throws Exception {
+        final Method method = BeanUniqueDao.class.getMethod("queryForUniqueByName", String.class);
+        final Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
+        factory.setAccessible(true);
+        final TestEntity entity = new TestEntity();
+
+        for (final QueryOperation op : new QueryOperation[] { QueryOperation.DEFAULT, QueryOperation.queryForUnique }) {
+            final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> function = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
+                    .invoke(null, TestEntity.class, method, null, null, null, false, false, false, op, false, "BeanUniqueDao.queryForUniqueByName");
+            final AbstractQuery query = mock(AbstractQuery.class);
+            org.mockito.Mockito.when(query.findOnlyOne(Mockito.any(Jdbc.BiRowMapper.class))).thenReturn(Optional.of(entity));
+
+            assertSame(entity, function.apply(query, new Object[0]));
+            org.mockito.Mockito.verify(query).findOnlyOne(Mockito.any(Jdbc.BiRowMapper.class));
+            org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).findFirst(Mockito.any(Jdbc.BiRowMapper.class));
+        }
     }
 
     // QueryInfo: sql ends with ";" - trims it (L6536 branch)

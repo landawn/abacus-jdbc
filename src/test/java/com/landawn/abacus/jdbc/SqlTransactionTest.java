@@ -1062,6 +1062,22 @@ public class SqlTransactionTest extends TestBase {
         verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
     }
 
+    @Test
+    public void testDecrementAndGetRef_SameNestedIsolationDoesNotResetConnection() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        tran.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false);
+
+        clearInvocations(connection);
+        doThrow(new SQLException("same isolation must not be reset")).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        assertEquals(1, assertDoesNotThrow(tran::decrementAndGetRef));
+        verify(connection, never()).setTransactionIsolation(ArgumentMatchers.anyInt());
+
+        // Let the outermost rollback restore the connection captured at transaction creation.
+        doNothing().when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        tran.rollbackIfNotCommitted();
+    }
+
     // Regression: incrementAndGetRef on a NESTED scope pre-fix called conn.setTransactionIsolation
     // BEFORE pushing recovery state onto the isolation/forUpdateOnly stacks. If the JDBC call
     // failed, the outer scope's recovery state was never preserved (no push happened on this

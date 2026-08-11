@@ -29,7 +29,9 @@ import java.sql.Types;
  *
  * <p>Each annotation instance identifies the parameter by name or position and supplies the
  * JDBC {@link Types SQL type} used when registering it on the underlying
- * {@link CallableStatement}.</p>
+ * {@link CallableStatement}. The integer is forwarded to the driver without framework validation;
+ * it is normally a {@link Types} constant, although a driver may also accept its own vendor-specific
+ * type code.</p>
  *
  * <p>The annotation is placed on a stored-procedure DAO method (per its
  * {@link ElementType#METHOD METHOD} target) and is {@link Repeatable repeatable}: declaring several
@@ -125,8 +127,9 @@ public @interface OutParameter {
     int position() default -1;
 
     /**
-     * Specifies the SQL type of the output parameter.
-     * This must be one of the constants defined in {@link java.sql.Types}.
+     * Specifies the SQL type of the output parameter. Normally this is one of the constants defined
+     * in {@link java.sql.Types}. The framework forwards the value unchanged, so a vendor-specific
+     * integer type code may also be used when the JDBC driver supports it.
      *
      * <p>Common SQL types include:</p>
      * <ul>
@@ -152,7 +155,7 @@ public @interface OutParameter {
      *
      * <p>This element has no default value and must be specified for every {@code @OutParameter}.</p>
      *
-     * @return the SQL type constant from {@link java.sql.Types}
+     * @return the SQL type code, normally a constant from {@link java.sql.Types}
      * @see Types
      */
     int sqlType();

@@ -215,8 +215,9 @@ public final class JdbcCodeGenerationUtil {
             """;
 
     /**
-     * Lombok class-level annotations ({@code @Builder}, {@code @Data}, {@code @NoArgsConstructor},
-     * {@code @AllArgsConstructor}, {@code @Accessors(chain = true)}) emitted on every generated entity class.
+     * Template for the Lombok class-level annotations used by generated entity classes. {@code @Data},
+     * {@code @NoArgsConstructor}, and {@code @AllArgsConstructor} are always retained; {@code @Builder}
+     * and {@code @Accessors(chain = true)} are removed unless their corresponding configuration flags are enabled.
      */
     private static final String eccClassAnnos = """
             @Builder
@@ -843,9 +844,20 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("    @").append(idAnnotationName).append(LINE_SEPARATOR); //NOSONAR
                 }
 
-                if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
+                // Both name forms are honored (mirroring the @Id handling above), so a field configured as
+                // read-only by one name form and non-updatable by the other is the same conflict the up-front
+                // commonSet check rejects when both configs spell the name identically.
+                final boolean isReadOnlyField = readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName);
+                final boolean isNonUpdatableField = nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName);
+
+                if (isReadOnlyField && isNonUpdatableField) {
+                    throw new IllegalArgumentException("Field '" + fieldName + "' (column '" + columnName
+                            + "') can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
+                }
+
+                if (isReadOnlyField) {
                     sb.append("    @ReadOnly").append(LINE_SEPARATOR);
-                } else if (nonUpdatableFields.remove(fieldName) || nonUpdatableFields.remove(columnName)) {
+                } else if (isNonUpdatableField) {
                     sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
@@ -3229,7 +3241,7 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * List of field-type annotation arguments.
-         * Each tuple contains: (field name, {@code @Type} annotation argument expression).
+         * Each tuple contains: (field or database-column name, {@code @Type} annotation argument expression).
          * The second element is emitted verbatim as the argument to {@code @Type(...)}, so it must be
          * a valid annotation argument — {@code @Type} declares the type-name member as {@code String name()}
          * ({@code value()} is a deprecated alias), so use the explicit attribute form: e.g.,
@@ -3263,26 +3275,26 @@ public final class JdbcCodeGenerationUtil {
         private boolean mapBigDecimalToDouble;
 
         /**
-         * Collection of field names that should be annotated with {@code @ReadOnly}.
+         * Collection of field names or database-column names that should be annotated with {@code @ReadOnly}.
          * Read-only fields cannot be updated or inserted. A field cannot be both read-only and non-updatable.
          */
         private Collection<String> readOnlyFields;
 
         /**
-         * Collection of field names that should be annotated with {@code @NonUpdatable}.
+         * Collection of field names or database-column names that should be annotated with {@code @NonUpdatable}.
          * Non-updatable fields can be inserted but cannot be updated. A field cannot be both read-only and non-updatable.
          */
         private Collection<String> nonUpdatableFields;
 
         /**
-         * Collection of field names that should be annotated with {@code @Id}.
+         * Collection of field names or database-column names that should be annotated with {@code @Id}.
          * These fields represent the primary key columns of the table.
-         * If not specified, primary keys are auto-detected from database metadata.
+         * If no configured name matches a generated field/column, primary keys are auto-detected from database metadata.
          */
         private Collection<String> idFields;
 
         /**
-         * Collection of field names to exclude from the generated entity class.
+         * Collection of field names or database-column names to exclude from the generated entity class.
          * Fields in this collection will not appear in the generated code.
          */
         private Collection<String> excludedFields;

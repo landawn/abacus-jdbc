@@ -103,7 +103,7 @@ import com.landawn.abacus.util.N;
 public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuery> {
 
     /**
-     * Minimum number of parameter placeholders above which named-parameter lookup switches from a linear
+     * Minimum number of parameter placeholders at or above which named-parameter lookup switches from a linear
      * scan of {@link #parameterNames} to a lazily built {@link #paramNameIndexMap}.
      */
     static final int MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP = 5;
@@ -666,11 +666,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a char value by converting it to an int.
      *
-     * <p>This method converts the char to its numeric value (Unicode code point) and stores it as an integer.
+     * <p>This method converts the {@code char} to its numeric UTF-16 code-unit value and stores it as an integer.
+     * A supplementary Unicode code point consists of two surrogate {@code char} values and therefore cannot be
+     * represented by one call to this method.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setInt("grade", 'A');   // stores 65 (Unicode code point value of 'A')
+     * query.setInt("grade", 'A');   // stores 65 (the UTF-16 code-unit value of 'A')
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -3862,13 +3864,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets parameters from various types of objects including beans, maps, collections, arrays, or single values.
+     * Sets parameters from various types of objects including beans, maps, collections, reference arrays, or single values.
      *
      * <p>This flexible method accepts different parameter sources:
      * <ul>
      * <li><b>Bean/Entity objects</b>: Properties matching parameter names will be used</li>
      * <li><b>Map</b>: Entries with keys matching parameter names will be used</li>
-     * <li><b>Collection/Array</b>: Elements will be assigned to parameters in positional order</li>
+     * <li><b>Collection/Object[]</b>: Elements will be assigned to parameters in positional order</li>
      * <li><b>EntityId</b>: Values with keys matching parameter names will be used</li>
      * <li><b>Single value</b>: Used only if the query has exactly one parameter placeholder
      *     (a single named parameter appearing exactly once)</li>
@@ -3891,7 +3893,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.setParameters("John");
      * }</pre>
      *
-     * @param parameters an object containing the parameters (bean, map, collection, array, or single value)
+     * @param parameters an object containing the parameters (bean, map, collection, reference array, or single value)
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameters} is {@code null}, is of an unsupported type, or is a
      *         bean that lacks a property matching one of the named parameters in the SQL (except the reserved
@@ -4116,7 +4118,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <ul>
      * <li>Bean objects with properties matching parameter names</li>
      * <li>Maps with keys matching parameter names</li>
-     * <li>Arrays or Collections for positional parameters</li>
+     * <li>{@code Object[]} arrays or Collections for positional parameters</li>
      * </ul>
      *
      * <p>All elements are interpreted in the same way as the first element (see {@link #addBatchParameters(Iterator)}).
@@ -4178,7 +4180,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <ul>
      * <li>Bean objects with properties matching parameter names</li>
      * <li>Maps with keys matching parameter names</li>
-     * <li>Arrays or Collections for positional parameters</li>
+     * <li>{@code Object[]} arrays or Collections for positional parameters</li>
      * </ul>
      *
      * <p>The runtime type of the first element (when it is non-null) determines how the remaining non-null

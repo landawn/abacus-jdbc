@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.JoinedBy;
+import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.query.Dsl;
@@ -1746,6 +1747,10 @@ public class JoinInfoTest extends TestBase {
     interface UserPermDao extends Dao<UserPermEntity, UserPermDao> {
     }
 
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
+    interface AliasedUserRoleDao extends Dao<AliasedUserRoleEntity, AliasedUserRoleDao> {
+    }
+
     @Test
     public void testGetBatchSelectSqlPlan_ManyToMany_DistinctColumnNames() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserPermDao.class, UserPermEntity.class, "user_perm_entity", "perms");
@@ -1765,6 +1770,50 @@ public class JoinInfoTest extends TestBase {
         final String sqlCols = plan._1.apply(List.of("label"), 2);
         assertNotNull(sqlCols);
         assertTrue(sqlCols.contains("JOIN"));
+    }
+
+    // Regression: @Table aliases qualify the generated SELECT/WHERE columns. The old token
+    // reconstruction read only the token before the dot ("ar" from "ar.role_id") and then
+    // prepended the physical table name, producing invalid references such as
+    // "aliased_role.ar" and "aliased_user_role_link.aurl".
+    @Test
+    public void testGetBatchSelectSqlPlan_ManyToMany_TableAliasesRemainValid() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(AliasedUserRoleDao.class, AliasedUserRoleEntity.class, "aliased_user", "roles");
+        final String sql = joinInfo.batchSelectSqlPlan(PSC)._1.apply(null, 2);
+
+        assertTrue(sql.contains("FROM aliased_role ar INNER JOIN aliased_user_role_link aurl ON ar.role_id = aurl.role_id"), sql);
+        assertTrue(sql.contains("WHERE aurl.user_id IN (?, ?)"), sql);
+        assertFalse(sql.contains("aliased_role.ar"), sql);
+        assertFalse(sql.contains("aliased_user_role_link.aurl"), sql);
+    }
+
+    // Regression: for a many-to-many join whose referenced entity declares @Table(alias = ...),
+    // the single-entity delete/set-null statements reused the SELECT's alias-qualified WHERE
+    // fragment ("ar.role_id IN ..."), but that alias is not bound in an UPDATE/DELETE statement,
+    // so the generated SQL failed at runtime with an "unknown column ar.role_id" error. The
+    // WHERE fragment for UPDATE/DELETE must be unqualified, matching the batch delete builder.
+    @Test
+    public void testGetDeleteSqlPlan_ManyToMany_TableAliasNotDangling() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(AliasedUserRoleDao.class, AliasedUserRoleEntity.class, "aliased_user_delete", "roles");
+        final String deleteSql = joinInfo.deleteSqlPlan(PSC)._1;
+
+        assertTrue(deleteSql.contains("DELETE FROM aliased_role WHERE role_id IN (SELECT"), deleteSql);
+        assertFalse(deleteSql.contains("ar.role_id"), deleteSql);
+        // Batch delete with size 1 falls back to the same single-entity delete SQL.
+        assertEquals(deleteSql, joinInfo.batchDeleteSqlPlan(PSC)._1.apply(1));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSetNullSql_ManyToMany_TableAliasNotDangling() throws Exception {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(AliasedUserRoleDao.class, AliasedUserRoleEntity.class, "aliased_user_setnull", "roles");
+        final java.lang.reflect.Field field = JoinInfo.class.getDeclaredField("setNullSqlAndParamSetterPool");
+        field.setAccessible(true);
+        final Map<Object, Tuple2<String, ?>> pool = (Map<Object, Tuple2<String, ?>>) field.get(joinInfo);
+        final String setNullSql = pool.get(PSC)._1;
+
+        assertTrue(setNullSql.contains("UPDATE aliased_role SET role_id = ? WHERE role_id IN (SELECT"), setNullSql);
+        assertFalse(setNullSql.contains("ar.role_id"), setNullSql);
     }
 
     // ---- Direct unit tests for the private SQL-token helpers (JoinInfo L1266/L1275/L1283). These
@@ -1908,6 +1957,73 @@ final class UserPermEntity {
 
     public void setPerms(final List<PermLookupEntity> perms) {
         this.perms = perms;
+    }
+}
+
+final class AliasedUserRoleEntity {
+    private long userId;
+
+    @JoinedBy("userId = AliasedUserRoleLink.userId, AliasedUserRoleLink.roleId = roleId")
+    private List<AliasedRoleEntity> roles;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public List<AliasedRoleEntity> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(final List<AliasedRoleEntity> roles) {
+        this.roles = roles;
+    }
+}
+
+@Table(name = "aliased_role", alias = "ar")
+final class AliasedRoleEntity {
+    private long roleId;
+    private String name;
+
+    public long getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(final long roleId) {
+        this.roleId = roleId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(final String name) {
+        this.name = name;
+    }
+}
+
+@Table(name = "aliased_user_role_link", alias = "aurl")
+final class AliasedUserRoleLink {
+    private long userId;
+    private long roleId;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public long getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(final long roleId) {
+        this.roleId = roleId;
     }
 }
 

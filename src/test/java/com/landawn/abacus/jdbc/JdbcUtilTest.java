@@ -66,6 +66,7 @@ import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
+import com.landawn.abacus.query.SqlOperation;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableMap;
@@ -1910,6 +1911,34 @@ public class JdbcUtilTest extends TestBase {
 
         assertEquals("test", result);
         assertTrue(JdbcUtil.isSqlLogEnabled());
+    }
+
+    @Test
+    public void testRunWithSqlLogDisabled_RestoresStateChangedByAction() {
+        JdbcUtil.enableSqlLog(123);
+        JdbcUtil.disableSqlLog();
+
+        JdbcUtil.runWithSqlLogDisabled(() -> {
+            JdbcUtil.enableSqlLog(7);
+            assertTrue(JdbcUtil.isSqlLogEnabled());
+        });
+
+        assertFalse(JdbcUtil.isSqlLogEnabled());
+        assertEquals(123, JdbcUtil.isSQLLogEnabled_TL.get().maxSqlLogLength);
+    }
+
+    @Test
+    public void testCallWithSqlLogDisabled_RestoresStateChangedByCallable() {
+        JdbcUtil.enableSqlLog(321);
+
+        final String result = JdbcUtil.callWithSqlLogDisabled(() -> {
+            JdbcUtil.enableSqlLog(9);
+            return "result";
+        });
+
+        assertEquals("result", result);
+        assertTrue(JdbcUtil.isSqlLogEnabled());
+        assertEquals(321, JdbcUtil.isSQLLogEnabled_TL.get().maxSqlLogLength);
     }
 
     @Test
@@ -4488,5 +4517,21 @@ public class JdbcUtilTest extends TestBase {
         final String key = JdbcUtil.createCacheKey("t", "Dao.m", null, logger);
         assertNotNull(key);
         assertTrue(key.startsWith("Dao.m#t#"));
+    }
+
+    // getSqlOperation scans past CTE bodies; a positional parameter ($1, $2, ...) directly followed by a
+    // dollar-quoted string must not be misread as a dollar-quote opener, because tags cannot start with a digit.
+    @Test
+    public void testGetSqlOperation_WithPositionalParamBeforeDollarQuote() {
+        assertEquals(SqlOperation.UPDATE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $1$$abc$$) UPDATE t SET a = 1"));
+        assertEquals(SqlOperation.SELECT, JdbcUtil.getSqlOperation("WITH x AS (SELECT $2$$abc$$) SELECT * FROM x"));
+    }
+
+    // Dollar-quoted strings with an empty tag or a letter/underscore-led tag (digits allowed later) are still skipped.
+    @Test
+    public void testGetSqlOperation_WithDollarQuotedStrings() {
+        assertEquals(SqlOperation.UPDATE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $$abc$$) UPDATE t SET a = 1"));
+        assertEquals(SqlOperation.DELETE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $tag$abc$tag$) DELETE FROM t"));
+        assertEquals(SqlOperation.DELETE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $t1$abc$t1$) DELETE FROM t"));
     }
 }

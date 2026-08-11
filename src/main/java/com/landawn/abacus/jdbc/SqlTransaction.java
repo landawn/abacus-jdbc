@@ -1068,7 +1068,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 _isForUpdateOnly = _isForUpdateOnlyStack.pop();
             }
 
-            if (_conn != null) {
+            // Restore the physical connection only when the effective isolation actually changes.
+            // Reissuing the same level is not merely a redundant round-trip: some drivers reject
+            // setTransactionIsolation once transaction work has started, even for the current value.
+            if (_conn != null && _isolationLevel != preIsolationLevel) {
                 try {
                     if (_isolationLevel == IsolationLevel.DEFAULT) {
                         _conn.setTransactionIsolation(_originalIsolationLevel);

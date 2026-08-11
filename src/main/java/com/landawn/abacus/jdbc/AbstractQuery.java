@@ -728,8 +728,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Sets a char parameter value as an integer.
-     * The character is stored as its numeric value (Unicode code point).
+     * Sets a {@code char} parameter value as an integer.
+     * The character is stored as the numeric value of its UTF-16 code unit. For a supplementary
+     * Unicode character represented by a surrogate pair, each {@code char} is only one half of the
+     * pair; use a {@code String} when the complete character must be preserved.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -752,8 +754,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets a Character parameter value as an integer, handling {@code null} values.
-     * The character is stored as its numeric value (Unicode code point).
+     * Sets a {@link Character} parameter value as an integer, handling {@code null} values.
+     * A non-null character is stored as the numeric value of its UTF-16 code unit. For a
+     * supplementary Unicode character represented by a surrogate pair, each {@code Character}
+     * is only one half of the pair; use a {@code String} when the complete character must be preserved.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3729,7 +3733,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of parameters for batch execution.
      * Each element in the collection represents one batch row. All rows must have the same shape:
-     * {@code Collection}, {@code Object[]}, or a single value bound as the only parameter.
+     * {@code Collection}, {@code Object[]}, or a single value bound at position 1. Collection and
+     * array rows replace the complete parameter set; single-value rows leave any parameters already
+     * bound at positions 2 and above unchanged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3742,7 +3748,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param batchParameters Collection where each element is one batch row. All rows must have the same shape:
-     *                        {@code Collection}, {@code Object[]}, or a single value bound as the only parameter.
+     *                        {@code Collection}, {@code Object[]}, or a single value bound at position 1 (with
+     *                        any pre-bound positions 2 and above retained).
      *                        An empty collection adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
@@ -3770,8 +3777,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <T> the type of elements in the batch parameters collection
-     * @param batchParameters Collection of parameters; each element is bound as the single parameter of one batch row.
-     *                        An empty collection adds no batch rows and returns this query unchanged.
+     * @param batchParameters Collection of parameters; each element is bound at position 1 of one batch row.
+     *                        Parameters already bound at positions 2 and above are retained. An empty collection
+     *                        adds no batch rows and returns this query unchanged.
      * @param type the class type of the parameters
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or type is null
@@ -3792,7 +3800,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of parameters for batch execution using an iterator.
      * Each element is one batch row. All rows must have the same shape: {@code Collection},
-     * {@code Object[]}, or a single value bound as the only parameter.
+     * {@code Object[]}, or a single value bound at position 1. Collection and array rows replace
+     * the complete parameter set; single-value rows retain pre-bound positions 2 and above.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3801,7 +3810,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param batchParameters Iterator over batch rows. All rows must have the same shape: {@code Collection},
-     *                        {@code Object[]}, or a single value bound as the only parameter.
+     *                        {@code Object[]}, or a single value bound at position 1 (with any pre-bound positions
+     *                        2 and above retained).
      *                        An empty iterator adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters is null
@@ -3874,8 +3884,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <T> the type of elements in the batch parameters collection
-     * @param batchParameters Iterator over parameters; each element is bound as the single parameter of one batch row.
-     *                        An empty iterator adds no batch rows and returns this query unchanged.
+     * @param batchParameters Iterator over parameters; each element is bound at position 1 of one batch row.
+     *                        Parameters already bound at positions 2 and above are retained. An empty iterator adds
+     *                        no batch rows and returns this query unchanged.
      * @param type the class type of the parameters
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or type is null
@@ -3964,7 +3975,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Collection of parameter objects
-     * @param parametersSetter Function to set parameters for each object
+     * @param parametersSetter Function to set parameters for each object. Parameters are not cleared between rows;
+     *                         the setter must assign every position whose value can vary from the preceding row.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
@@ -3993,7 +4005,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Iterator over parameter objects
-     * @param parametersSetter Function to set parameters for each object
+     * @param parametersSetter Function to set parameters for each object. Parameters are not cleared between rows;
+     *                         the setter must assign every position whose value can vary from the preceding row.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
@@ -4088,7 +4101,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Collection of parameter objects
-     * @param parametersSetter Function to set parameters with access to query and statement
+     * @param parametersSetter Function to set parameters with access to query and statement. Parameters are not
+     *                         cleared between rows; the setter must assign every position whose value can vary from
+     *                         the preceding row.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
@@ -4128,7 +4143,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Iterator over parameter objects
-     * @param parametersSetter Function to set parameters with access to query and statement
+     * @param parametersSetter Function to set parameters with access to query and statement. Parameters are not
+     *                         cleared between rows; the setter must assign every position whose value can vary from
+     *                         the preceding row.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
@@ -9622,8 +9639,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <ID> the expected type of the auto-generated key (the default extractor returns the value of the first generated-key column, typically numeric)
-     * @return A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated,
-     *         or if every generated key is a default/invalid value.
+     * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The
+     *         number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty
+     *         list if the driver returns no key rows, or if every extracted key is a default/invalid value.
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #batchInsert(RowMapper)
@@ -9650,8 +9668,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated keys from each row.
      *                                  Must not be {@code null}.
-     * @return A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated,
-     *         or if every generated key is a default/invalid value.
+     * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The
+     *         number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty
+     *         list if the driver returns no key rows, or if every extracted key is a default/invalid value.
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if autoGeneratedKeyExtractor is null
      * @throws SQLException if a database access error occurs
@@ -9686,8 +9705,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
-     * @return A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated,
-     *         or if every generated key is a default/invalid value.
+     * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The
+     *         number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty
+     *         list if the driver returns no key rows, or if every extracted key is a default/invalid value.
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if autoGeneratedKeyExtractor is null
      * @throws SQLException if a database access error occurs
@@ -9711,7 +9731,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated keys
      * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
-     * @return A list of generated keys, one per inserted row preserving order; or an empty list if every generated key is a default/invalid value
+     * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order; or an
+     *         empty list if the driver returns no key rows or every extracted key is a default/invalid value
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if a required argument is null
      * @throws SQLException if a database access error occurs
@@ -9754,7 +9775,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels
      * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
-     * @return A list of generated keys, one per inserted row preserving order; or an empty list if every generated key is a default/invalid value
+     * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order; or an
+     *         empty list if the driver returns no key rows or every extracted key is a default/invalid value
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if a required argument is null
      * @throws SQLException if a database access error occurs

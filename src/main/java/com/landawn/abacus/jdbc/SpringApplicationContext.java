@@ -24,18 +24,19 @@ import com.landawn.abacus.annotation.Internal;
 /**
  * A bridge class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
  *
- * <p>This class is used internally by the JDBC framework to integrate with Spring's dependency injection container,
- * enabling the framework to retrieve Spring-managed beans such as DataSources, TransactionManagers, and custom
- * DAO implementations.</p>
+ * <p>This class is used internally by {@link Jdbc.HandlerFactory} to integrate handler lookup with
+ * Spring's dependency injection container. It lets handler implementations registered as Spring beans
+ * be resolved by qualifier or type when a DAO proxy is created.</p>
  *
  * <p>The ApplicationContext is automatically injected by Spring when this class is registered as a Spring bean,
  * and is stored in a process-wide holder shared by all instances — so the instance the framework constructs
  * internally (e.g. in {@code Jdbc.HandlerFactory}) can resolve beans once any instance has been registered.
- * Once injected, it provides methods to retrieve beans by name or type from the Spring container.</p>
+ * Once injected, it provides the framework's handler registry with methods to retrieve beans by name or
+ * type from the Spring container.</p>
  *
  * <p><b>Framework Integration:</b></p>
- * <p>This class must be registered as a Spring bean for the JDBC framework to access Spring-managed resources.
- * The framework uses this to look up DataSources and other dependencies configured in the Spring context.</p>
+ * <p>This class must be registered as a Spring bean for the JDBC framework to access Spring-managed handlers.
+ * The framework uses this bridge to look up Spring-managed {@link Jdbc.Handler} instances.</p>
  *
  * <p><b>Spring Configuration Example:</b></p>
  * <pre>{@code
@@ -85,7 +86,10 @@ public final class SpringApplicationContext {
      * registered as a Spring bean. The context is stored in a process-wide holder shared by all
      * instances (including the one the framework constructs internally).
      *
-     * @param applicationContext the Spring application context.
+     * Passing {@code null} clears the process-wide holder, after which bean lookups return {@code null}
+     * until another context is supplied.
+     *
+     * @param applicationContext the Spring application context, or {@code null} to clear the holder.
      */
     @Autowired // NOSONAR
     public void setApplicationContext(final ApplicationContext applicationContext) {

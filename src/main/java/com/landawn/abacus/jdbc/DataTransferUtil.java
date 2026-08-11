@@ -2234,6 +2234,10 @@ public final class DataTransferUtil {
      * @throws UncheckedIOException if an I/O error occurs while writing
      */
     public static long exportCsv(final Connection conn, final String selectSql, final Writer output) throws SQLException {
+        // Validate the output target before doing any database work, so a null output fails fast
+        // instead of after the query has already been executed (matches the File-target overloads).
+        N.checkArgNotNull(output, "output");
+
         final ParsedSql sql = ParsedSql.parse(selectSql);
 
         final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
