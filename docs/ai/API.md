@@ -1,7 +1,7 @@
 # abacus-jdbc API Index (v4.9.0)
 - Build: unknown
 - Java: 17
-- Generated: 2026-08-09
+- Generated: 2026-08-10
 
 ## Packages
 - com.landawn.abacus.jdbc — Core JDBC execution, mapping, transaction, data-transfer, and code-generation APIs.
@@ -186,7 +186,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@Deprecated @Beta public This setInt(final int parameterIndex, final char value) throws SQLException`
-- **Summary:** Sets a char parameter value as an integer.
+- **Summary:** Sets a {@code char} parameter value as an integer.
+- **Contract:**
+  - For a supplementary Unicode character represented by a surrogate pair, each {@code char} is only one half of the pair; use a {@code String} when the complete character must be preserved.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
   - `value` (`char`) — the char value to set as an integer
@@ -195,7 +197,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #setString(int, char)
 - **Signature:** `@Deprecated @Beta public This setInt(final int parameterIndex, final Character value) throws SQLException`
-- **Summary:** Sets a Character parameter value as an integer, handling {@code null} values.
+- **Summary:** Sets a {@link Character} parameter value as an integer, handling {@code null} values.
+- **Contract:**
+  - For a supplementary Unicode character represented by a surrogate pair, each {@code Character} is only one half of the pair; use a {@code String} when the complete character must be preserved.
 - **Parameters:**
   - `parameterIndex` (`int`) — the 1-based index of the parameter to set
   - `value` (`Character`) — the Character value to set as an integer, or {@code null} to set SQL {@code NULL}
@@ -1250,9 +1254,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `@Beta public This addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds multiple sets of parameters for batch execution.
 - **Contract:**
-  - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter.
+  - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound at position 1.
 - **Parameters:**
-  - `batchParameters` (`Collection<?>`) — Collection where each element is one batch row. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter. An empty collection adds no batch rows and returns this query unchanged.
+  - `batchParameters` (`Collection<?>`) — Collection where each element is one batch row. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound at position 1 (with any pre-bound positions 2 and above retained). An empty collection adds no batch rows and returns this query unchanged.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters is null
@@ -1260,7 +1264,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `@Beta public <T> This addBatchParameters(final Collection<? extends T> batchParameters, final Class<T> type) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds multiple sets of typed parameters for batch execution.
 - **Parameters:**
-  - `batchParameters` (`Collection<? extends T>`) — Collection of parameters; each element is bound as the single parameter of one batch row. An empty collection adds no batch rows and returns this query unchanged.
+  - `batchParameters` (`Collection<? extends T>`) — Collection of parameters; each element is bound at position 1 of one batch row. Parameters already bound at positions 2 and above are retained. An empty collection adds no batch rows and returns this query unchanged.
   - `type` (`Class<T>`) — the class type of the parameters
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
@@ -1269,9 +1273,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `@Beta @SuppressWarnings("rawtypes") public This addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds multiple sets of parameters for batch execution using an iterator.
 - **Contract:**
-  - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter.
+  - All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound at position 1.
 - **Parameters:**
-  - `batchParameters` (`Iterator<?>`) — Iterator over batch rows. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound as the only parameter. An empty iterator adds no batch rows and returns this query unchanged.
+  - `batchParameters` (`Iterator<?>`) — Iterator over batch rows. All rows must have the same shape: {@code Collection} , {@code Object\[\]} , or a single value bound at position 1 (with any pre-bound positions 2 and above retained). An empty iterator adds no batch rows and returns this query unchanged.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters is null
@@ -1279,7 +1283,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `@Beta public <T> This addBatchParameters(final Iterator<? extends T> batchParameters, final Class<T> type) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds multiple sets of typed parameters for batch execution using an iterator.
 - **Parameters:**
-  - `batchParameters` (`Iterator<? extends T>`) — Iterator over parameters; each element is bound as the single parameter of one batch row. An empty iterator adds no batch rows and returns this query unchanged.
+  - `batchParameters` (`Iterator<? extends T>`) — Iterator over parameters; each element is bound at position 1 of one batch row. Parameters already bound at positions 2 and above are retained. An empty iterator adds no batch rows and returns this query unchanged.
   - `type` (`Class<T>`) — the class type of the parameters
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
@@ -1289,7 +1293,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Adds multiple sets of parameters for batch execution using a custom parameter setter.
 - **Parameters:**
   - `batchParameters` (`Collection<? extends T>`) — Collection of parameter objects
-  - `parametersSetter` (`Jdbc.BiParametersSetter<? super This, ? super T>`) — Function to set parameters for each object
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super This, ? super T>`) — Function to set parameters for each object. Parameters are not cleared between rows; the setter must assign every position whose value can vary from the preceding row.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters or parametersSetter is null
@@ -1298,7 +1302,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Adds multiple sets of parameters for batch execution using a custom parameter setter and iterator.
 - **Parameters:**
   - `batchParameters` (`Iterator<? extends T>`) — Iterator over parameter objects
-  - `parametersSetter` (`Jdbc.BiParametersSetter<? super This, ? super T>`) — Function to set parameters for each object
+  - `parametersSetter` (`Jdbc.BiParametersSetter<? super This, ? super T>`) — Function to set parameters for each object. Parameters are not cleared between rows; the setter must assign every position whose value can vary from the preceding row.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters or parametersSetter is null
@@ -1307,7 +1311,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Adds multiple sets of parameters for batch execution using a TriConsumer parameter setter.
 - **Parameters:**
   - `batchParameters` (`Collection<? extends T>`) — Collection of parameter objects
-  - `parametersSetter` (`Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException>`) — Function to set parameters with access to query and statement
+  - `parametersSetter` (`Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException>`) — Function to set parameters with access to query and statement. Parameters are not cleared between rows; the setter must assign every position whose value can vary from the preceding row.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters or parametersSetter is null
@@ -1316,7 +1320,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Adds multiple sets of parameters for batch execution using a TriConsumer parameter setter and iterator.
 - **Parameters:**
   - `batchParameters` (`Iterator<? extends T>`) — Iterator over parameter objects
-  - `parametersSetter` (`Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException>`) — Function to set parameters with access to query and statement
+  - `parametersSetter` (`Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException>`) — Function to set parameters with access to query and statement. Parameters are not cleared between rows; the setter must assign every position whose value can vary from the preceding row.
 - **Returns:** this AbstractQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if batchParameters or parametersSetter is null
@@ -2786,7 +2790,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Executes a batch INSERT statement and retrieves all generated keys.
 - **Parameters:**
   - (none)
-- **Returns:** A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated, or if every generated key is a default/invalid value.
+- **Returns:** the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty list if the driver returns no key rows, or if every extracted key is a default/invalid value.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalStateException` — if this query is closed
@@ -2797,7 +2801,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - <p> This method allows custom extraction of generated keys from batch insert operations, useful when dealing with non-numeric keys or composite keys.
 - **Parameters:**
   - `autoGeneratedKeyExtractor` (`Jdbc.RowMapper<? extends ID>`) — the extractor to retrieve the auto-generated keys from each row. Must not be {@code null} .
-- **Returns:** A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated, or if every generated key is a default/invalid value.
+- **Returns:** the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty list if the driver returns no key rows, or if every extracted key is a default/invalid value.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalStateException` — if this query is closed
@@ -2809,7 +2813,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - <p> This method provides access to both the ResultSet and column labels when extracting generated keys from batch operations.
 - **Parameters:**
   - `autoGeneratedKeyExtractor` (`Jdbc.BiRowMapper<? extends ID>`) — the extractor that receives both ResultSet and column labels. Must not be {@code null} .
-- **Returns:** A list of generated keys, one per inserted row preserving order. Empty list if no keys were generated, or if every generated key is a default/invalid value.
+- **Returns:** the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty list if the driver returns no key rows, or if every extracted key is a default/invalid value.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalStateException` — if this query is closed
@@ -7411,7 +7415,7 @@ A functional interface for extracting a typed value from a specified column of a
   - `cls` (`Class<? extends T>`) — the class for which to get a {@code ColumnGetter} . Must not be {@code null} .
 - **Returns:** a {@code ColumnGetter} for the specified type.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code cls} is {@code null} , or the {@code Type} resolved from {@code cls} is {@code null} .
+  - `java.lang.IllegalArgumentException` — if {@code cls} is {@code null} .
 - **Signature:** `static <T> ColumnGetter<T> forType(final Type<? extends T> type)`
 - **Summary:** Returns a cached (or newly created) {@code ColumnGetter} for the specified Abacus-common {@code Type} .
 - **Parameters:**
@@ -10372,7 +10376,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static boolean tableExists(final javax.sql.DataSource ds, final String tableName)`
 - **Summary:** Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource} .
 - **Contract:**
-  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
+  - If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(ds, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to obtain a connection from; must not be {@code null} .
@@ -10385,7 +10389,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static boolean tableExists(final Connection conn, final String tableName)`
 - **Summary:** Checks whether a table exists on the given {@link Connection} .
 - **Contract:**
-  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
+  - If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(connection, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use for checking table existence.
@@ -10557,12 +10561,16 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Parameters:**
   - `sql` (`String`) — The SQL string containing named parameters (e.g., :paramName).
 - **Returns:** A list of named parameter names found in the SQL string (without the ':' prefix).
+- **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} , empty, or blank.
 ##### parseSql(...) -> ParsedSql
 - **Signature:** `public static ParsedSql parseSql(final String sql)`
 - **Summary:** Parses the given SQL string and returns a ParsedSql object.
 - **Parameters:**
   - `sql` (`String`) — The SQL string to be parsed.
 - **Returns:** A ParsedSql object containing parsed information about the SQL string.
+- **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} , empty, or blank.
 - **See also:** ParsedSql#parse(String)
 ##### getInsertPropNames(...) -> Collection<String>
 - **Signature:** `public static Collection<String> getInsertPropNames(final Class<?> entityClass)`
@@ -10765,6 +10773,8 @@ Utility class providing high-level JDBC operations with automatic resource manag
 ##### runWithSqlLogDisabled(...) -> void
 - **Signature:** `public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E`
 - **Summary:** Executes the specified action with the standard SQL log temporarily disabled on the current thread.
+- **Contract:**
+  - </p> <p> The prior enabled/disabled state and maximum SQL log length are restored when the action finishes, even if the action changes them or throws.
 - **Parameters:**
   - `sqlAction` (`Throwables.Runnable<E>`) — The action to execute without the standard SQL log, must not be {@code null} .
 - **Throws:**
@@ -10773,6 +10783,8 @@ Utility class providing high-level JDBC operations with automatic resource manag
 ##### callWithSqlLogDisabled(...) -> R
 - **Signature:** `public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws E`
 - **Summary:** Executes the specified callable with the standard SQL log temporarily disabled on the current thread.
+- **Contract:**
+  - </p> <p> The prior enabled/disabled state and maximum SQL log length are restored when the callable finishes, even if the callable changes them or throws.
 - **Parameters:**
   - `sqlAction` (`Throwables.Callable<? extends R, E>`) — The callable to execute without the standard SQL log, must not be {@code null} .
 - **Returns:** The result of the callable.
@@ -12156,11 +12168,11 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
   - `java.lang.IllegalArgumentException` — if {@code parameters} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@SuppressWarnings("rawtypes") public NamedQuery setParameters(final Object parameters) throws IllegalArgumentException, SQLException`
-- **Summary:** Sets parameters from various types of objects including beans, maps, collections, arrays, or single values.
+- **Summary:** Sets parameters from various types of objects including beans, maps, collections, reference arrays, or single values.
 - **Contract:**
-  - <p> This flexible method accepts different parameter sources: <ul> <li> <b> Bean/Entity objects </b> : Properties matching parameter names will be used </li> <li> <b> Map </b> : Entries with keys matching parameter names will be used </li> <li> <b> Collection/Array </b> : Elements will be assigned to parameters in positional order </li> <li> <b> EntityId </b> : Values with keys matching parameter names will be used </li> <li> <b> Single value </b> : Used only if the query has exactly one parameter placeholder (a single named parameter appearing exactly once) </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Using a bean User user = new User("John", 30, "john@example.com"); query.setParameters(user); // Using a Map Map<String, Object> params = Map.of("name", "John", "age", 30); query.setParameters(params); // Using an array (parameters set by position) query.setParameters(new Object\[\] {"John", 30, "john@example.com"}); // Using a single value (for queries with one parameter) query.setParameters("John"); } </pre>
+  - <p> This flexible method accepts different parameter sources: <ul> <li> <b> Bean/Entity objects </b> : Properties matching parameter names will be used </li> <li> <b> Map </b> : Entries with keys matching parameter names will be used </li> <li> <b> Collection/Object\[\] </b> : Elements will be assigned to parameters in positional order </li> <li> <b> EntityId </b> : Values with keys matching parameter names will be used </li> <li> <b> Single value </b> : Used only if the query has exactly one parameter placeholder (a single named parameter appearing exactly once) </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Using a bean User user = new User("John", 30, "john@example.com"); query.setParameters(user); // Using a Map Map<String, Object> params = Map.of("name", "John", "age", 30); query.setParameters(params); // Using an array (parameters set by position) query.setParameters(new Object\[\] {"John", 30, "john@example.com"}); // Using a single value (for queries with one parameter) query.setParameters("John"); } </pre>
 - **Parameters:**
-  - `parameters` (`Object`) — an object containing the parameters (bean, map, collection, array, or single value)
+  - `parameters` (`Object`) — an object containing the parameters (bean, map, collection, reference array, or single value)
 - **Returns:** this NamedQuery instance for method chaining
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code parameters} is {@code null} , is of an unsupported type, or is a bean that lacks a property matching one of the named parameters in the SQL (except the reserved system date/time parameter names {@code now} , {@code sysTime} and {@code sysDate} , which are skipped and left unbound when no matching property exists \\u2014 bind them separately)
@@ -12194,7 +12206,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `@Beta @Override public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds a collection of parameter sets for batch execution.
 - **Contract:**
-  - Each element in the collection should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> Arrays or Collections for positional parameters </li> </ul> <p> All elements are interpreted in the same way as the first element (see {@link #addBatchParameters(Iterator)} ).
+  - Each element in the collection should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> {@code Object\[\]} arrays or Collections for positional parameters </li> </ul> <p> All elements are interpreted in the same way as the first element (see {@link #addBatchParameters(Iterator)} ).
   - If {@code batchParameters} is empty, this is a no-op and no batch is added.
 - **Parameters:**
   - `batchParameters` (`Collection<?>`) — a collection of parameter objects for batch processing
@@ -12206,7 +12218,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `@Beta @Override @SuppressWarnings("rawtypes") public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Adds a batch of parameters from an iterator for batch execution.
 - **Contract:**
-  - Each element provided by the iterator should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> Arrays or Collections for positional parameters </li> </ul> <p> The runtime type of the first element (when it is non-null) determines how the remaining non-null elements are interpreted, so they should have the same parameter shape.
+  - Each element provided by the iterator should be a parameter object compatible with {@link #setParameters(Object)} , such as: <ul> <li> Bean objects with properties matching parameter names </li> <li> Maps with keys matching parameter names </li> <li> {@code Object\[\]} arrays or Collections for positional parameters </li> </ul> <p> The runtime type of the first element (when it is non-null) determines how the remaining non-null elements are interpreted, so they should have the same parameter shape.
   - If the iterator is empty, this is a no-op and no batch is added.
   - A {@code null} element is only supported when the SQL has exactly one parameter placeholder \\u2014 a single named parameter appearing exactly once (it is bound as SQL {@code NULL} ); otherwise an {@link IllegalArgumentException} is thrown.
   - When the first element is {@code null} , each later non-null element is interpreted through {@link #setParameters(Object)} rather than being forced to a scalar value.
@@ -12282,7 +12294,7 @@ A bridge class that provides access to Spring's ApplicationContext for bean retr
 - **Contract:**
   - Invoked by Spring to supply the {@link ApplicationContext} when an instance of this class is registered as a Spring bean.
 - **Parameters:**
-  - `applicationContext` (`ApplicationContext`) — the Spring application context.
+  - `applicationContext` (`ApplicationContext`) — the Spring application context, or {@code null} to clear the holder.
 ##### getBean(...) -> Object
 - **Signature:** `public Object getBean(final String name)`
 - **Summary:** Retrieves a bean from the Spring ApplicationContext by its name.
@@ -13042,12 +13054,12 @@ Declares an {@code OUT} or {@code INOUT} parameter for a stored-procedure DAO me
 - **Signature:** `int sqlType()`
 - **Summary:** Specifies the SQL type of the output parameter.
 - **Contract:**
-  - This must be one of the constants defined in {@link java.sql.Types} .
+  - The framework forwards the value unchanged, so a vendor-specific integer type code may also be used when the JDBC driver supports it.
   - <p> Common SQL types include: </p> <ul> <li> {@link Types#VARCHAR} - String values </li> <li> {@link Types#INTEGER} - Integer values </li> <li> {@link Types#DECIMAL} or {@link Types#NUMERIC} - Decimal numbers </li> <li> {@link Types#DATE} , {@link Types#TIME} , {@link Types#TIMESTAMP} - Date/time values </li> <li> {@link Types#BOOLEAN} - Boolean values </li> <li> {@link Types#CLOB} - Character large objects </li> <li> {@link Types#BLOB} - Binary large objects </li> </ul> <p> The SQL type must match the actual type of the output parameter in the stored procedure.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code @OutParameter(name = "message", sqlType = Types.VARCHAR) @OutParameter(name = "count", sqlType = Types.INTEGER) @OutParameter(name = "amount", sqlType = Types.DECIMAL) @OutParameter(name = "processDate", sqlType = Types.TIMESTAMP) @OutParameter(name = "isActive", sqlType = Types.BOOLEAN) } </pre> <p> This element has no default value and must be specified for every {@code @OutParameter} .
 - **Parameters:**
   - (none)
-- **Returns:** the SQL type constant from {@link java.sql.Types}
+- **Returns:** the SQL type code, normally a constant from {@link java.sql.Types}
 - **See also:** Types
 
 ### Annotation OutParameters (com.landawn.abacus.jdbc.annotation.OutParameters)
@@ -13534,7 +13546,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key
 
 ### Interface CrudJoinEntityHelper (com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper)
-CRUD-aware join-entity helper: adds id-based reads ( {@code get} / {@code getOrNull} / {@code batchGet} with join loading) on top of the full {@link JoinEntityHelper} (load + delete).
+CRUD-aware join-entity helper: adds id-based reads ( {@code get} , {@code getOrNull} , and {@code batchGet} with join loading) on top of the full {@link JoinEntityHelper} (load + delete).
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
