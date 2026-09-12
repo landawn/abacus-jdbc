@@ -1521,7 +1521,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (value == null) {
             cstmt.setObject(parameterName, value);
         } else {
-            N.typeOf(value.getClass()).set(cstmt, parameterName, value);
+            Type.<Object> of(value.getClass()).set(cstmt, parameterName, value);
         }
 
         return this;

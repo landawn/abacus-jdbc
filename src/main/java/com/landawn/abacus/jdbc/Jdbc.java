@@ -66,6 +66,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.ConcurrentCacheMap;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
@@ -76,7 +77,6 @@ import com.landawn.abacus.util.ListMultimap;
 import com.landawn.abacus.util.Multimap;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
-import com.landawn.abacus.util.ObjectPool;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Suppliers;
@@ -131,7 +131,7 @@ public final class Jdbc {
      * dynamically (e.g. by {@code ColumnGetter.forType(Type)}). Pre-populated with the standard mappings for
      * primitive and common reference types.
      */
-    static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
+    static final Map<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ConcurrentCacheMap<>(1024);
 
     static {
         // Primitive types: rs.getXxx() returns 0/false for SQL NULL, which is the only valid behavior for primitives.
@@ -6335,7 +6335,7 @@ public final class Jdbc {
              * to reuse mappers for repeated lookups of the same type.
              */
             @SuppressWarnings("rawtypes")
-            static final Map<Type<?>, RowMapper> rowMapperPool = new ObjectPool<>(1024);
+            static final Map<Type<?>, RowMapper> rowMapperPool = new ConcurrentCacheMap<>(1024);
 
             /**
              * Returns the pre-defined {@link #GET_OBJECT} mapper cast to the caller's inferred type.
@@ -6573,6 +6573,44 @@ public final class Jdbc {
             this.sqlType = sqlType;
             this.typeName = typeName;
             this.scale = scale;
+        }
+
+        // Nested records compiled with Lombok omit mandated accessors and Object methods.
+        public int parameterIndex() {
+            return parameterIndex;
+        }
+
+        public String parameterName() {
+            return parameterName;
+        }
+
+        public int sqlType() {
+            return sqlType;
+        }
+
+        public String typeName() {
+            return typeName;
+        }
+
+        public int scale() {
+            return scale;
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            return obj instanceof OutParam other && parameterIndex == other.parameterIndex && sqlType == other.sqlType && scale == other.scale
+                    && Objects.equals(parameterName, other.parameterName) && Objects.equals(typeName, other.typeName);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(parameterIndex, parameterName, sqlType, typeName, scale);
+        }
+
+        @Override
+        public String toString() {
+            return "OutParam[parameterIndex=" + parameterIndex + ", parameterName=" + parameterName + ", sqlType=" + sqlType + ", typeName=" + typeName
+                    + ", scale=" + scale + "]";
         }
 
         /**
@@ -7611,6 +7649,26 @@ public final class Jdbc {
          */
         DaoCacheByMap {
             N.checkArgNotNull(cache, "cache");
+        }
+
+        // Nested records compiled with Lombok omit mandated accessors and Object methods.
+        public Map<String, Object> cache() {
+            return cache;
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            return obj instanceof DaoCacheByMap other && Objects.equals(cache, other.cache);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(cache);
+        }
+
+        @Override
+        public String toString() {
+            return "DaoCacheByMap[cache=" + cache + "]";
         }
 
         @Override

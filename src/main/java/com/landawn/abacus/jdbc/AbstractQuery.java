@@ -2244,7 +2244,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         if (value == null) {
             stmt.setObject(parameterIndex, value);
         } else {
-            N.typeOf(value.getClass()).set(stmt, parameterIndex, value);
+            Type.<Object> of(value.getClass()).set(stmt, parameterIndex, value);
         }
 
         return (This) this;
@@ -3111,7 +3111,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         final Class<?> componentType = parameters.getClass().getComponentType();
 
         if (stmtParameterClasses.contains(componentType)) {
-            final Type<T> eleType = N.typeOf(componentType);
+            @SuppressWarnings("unchecked")
+            final Type<T> eleType = N.typeOf((Class<T>) componentType);
 
             for (final T param : parameters) {
                 eleType.set(stmt, startParameterIndex++, param);

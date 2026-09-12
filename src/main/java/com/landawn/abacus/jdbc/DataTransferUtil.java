@@ -2323,7 +2323,7 @@ public final class DataTransferUtil {
         N.checkArgNotNull(rs, cs.rs);
         N.checkArgNotNull(output, "output");
 
-        final Type<Object> strType = N.typeOf(String.class);
+        final Type<Object> strType = Type.of(String.class);
         final boolean isBufferedWriter = output instanceof BufferedCsvWriter;
         final BufferedCsvWriter bw = isBufferedWriter ? (BufferedCsvWriter) output : Objectory.createBufferedCsvWriter(output);
         long result = 0;

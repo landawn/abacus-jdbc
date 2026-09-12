@@ -95,6 +95,7 @@ import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.Charsets;
 import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.ConcurrentCacheMap;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
@@ -107,7 +108,6 @@ import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.InternalUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
-import com.landawn.abacus.util.ObjectPool;
 import com.landawn.abacus.util.RowDataset;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Splitter;
@@ -2771,7 +2771,7 @@ public final class JdbcUtil {
      * @see #getColumnValue(ResultSet, String, Class)
      */
     public static <T> T getColumnValue(final ResultSet rs, final int columnIndex, final Class<? extends T> targetClass) throws SQLException {
-        return N.<T> typeOf(targetClass).get(rs, columnIndex);
+        return Type.<T> of(targetClass).get(rs, columnIndex);
     }
 
     /**
@@ -2811,7 +2811,7 @@ public final class JdbcUtil {
      */
     @Deprecated
     public static <T> T getColumnValue(final ResultSet rs, final String columnLabel, final Class<? extends T> targetClass) throws SQLException {
-        return N.<T> typeOf(targetClass).get(rs, columnLabel);
+        return Type.<T> of(targetClass).get(rs, columnLabel);
     }
 
     /**
@@ -6941,7 +6941,7 @@ public final class JdbcUtil {
                 if (parameters[i] == null) {
                     stmt.setObject(i + 1, parameters[i]);
                 } else {
-                    N.typeOf(parameters[i].getClass()).set(stmt, i + 1, parameters[i]);
+                    Type.<Object> of(parameters[i].getClass()).set(stmt, i + 1, parameters[i]);
                 }
             }
         }
@@ -10306,7 +10306,7 @@ public final class JdbcUtil {
     static PropInfo getSubPropInfo(final Class<?> entityClass, final String propName) {
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
         final Map<String, Optional<PropInfo>> propInfoQueueMap = entityPropInfoQueueMap.computeIfAbsent(entityClass,
-                cls -> new ObjectPool<>((entityInfo.propInfoList.size() + 1) * 2));
+                cls -> new ConcurrentCacheMap<>((entityInfo.propInfoList.size() + 1) * 2));
         Optional<PropInfo> propInfoHolder = propInfoQueueMap.get(propName);
         PropInfo propInfo = null;
 

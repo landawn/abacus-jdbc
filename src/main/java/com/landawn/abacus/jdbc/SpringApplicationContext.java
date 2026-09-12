@@ -133,8 +133,7 @@ public final class SpringApplicationContext {
      *
      * @param name the name of the bean to retrieve.
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
-     *
+     * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.
      * @see ApplicationContext#getBean(String)
      */
     public Object getBean(final String name) {
@@ -155,9 +154,8 @@ public final class SpringApplicationContext {
      * @param <T> the bean type to be retrieved from the Spring context.
      * @param requiredType the class object representing the type of bean to retrieve.
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean of the given type exists.
-     * @throws org.springframework.beans.factory.NoUniqueBeanDefinitionException if more than one bean of the given type exists.
-     *
+     * @throws NoSuchBeanDefinitionException if no bean of the given type exists.
+     * @throws NoUniqueBeanDefinitionException if more than one bean of the given type exists.
      * @see ApplicationContext#getBean(Class)
      */
     public <T> T getBean(final Class<T> requiredType) {
@@ -181,9 +179,8 @@ public final class SpringApplicationContext {
      * @param name the name of the bean to retrieve.
      * @param requiredType the class object representing the required type of the bean.
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
-     * @throws org.springframework.beans.factory.BeanNotOfRequiredTypeException if the bean is not of the required type.
-     *
+     * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.
+     * @throws BeanNotOfRequiredTypeException if the bean is not of the required type.
      * @see ApplicationContext#getBean(String, Class)
      */
     public <T> T getBean(final String name, final Class<T> requiredType) {
