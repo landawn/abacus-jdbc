@@ -44,6 +44,11 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
  *
+ * <p><strong>Init-time validation:</strong> {@code @RefreshCache} is only meaningful together with
+ * {@link CacheResult @CacheResult}. If a DAO (or any of its super-interfaces or methods) declares
+ * {@code @RefreshCache} while nothing on it is annotated with {@code @CacheResult}, DAO initialization
+ * fails with {@code UnsupportedOperationException}.</p>
+ *
  * <p>Note: caching (and therefore cache invalidation) is only honored on cacheable DAOs
  * ({@code NonUpdateDao} or {@code ReadOnlyDao} subtypes and their {@code Unchecked} variants), whose only write operations are the built-in
  * insert/save methods and custom {@code INSERT} queries — a custom {@code UPDATE}/{@code DELETE}
@@ -96,6 +101,10 @@ public @interface RefreshCache {
      * <pre>{@code
      * @RefreshCache
      * public interface UserDao extends NonUpdateCrudDao<User, Long, UserDao> {
+     *     @CacheResult(enabled = true)   // at least one @CacheResult is required alongside @RefreshCache
+     *     @Query("SELECT * FROM users WHERE id = :id")
+     *     User findById(@Bind("id") Long id) throws SQLException;
+     *
      *     @Query("INSERT INTO user_activity_log (user_id) VALUES (:id)")
      *     @RefreshCache(enabled = false) // Don't refresh cache for this frequent insert
      *     void addActivity(@Bind("id") long id) throws SQLException;

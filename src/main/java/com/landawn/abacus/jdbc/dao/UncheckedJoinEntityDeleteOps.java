@@ -71,7 +71,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total number of deleted records
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -131,7 +131,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override

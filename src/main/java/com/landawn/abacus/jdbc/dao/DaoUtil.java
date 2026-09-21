@@ -250,8 +250,8 @@ public final class DaoUtil {
     @SuppressWarnings({ "deprecation", "unchecked" })
     static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
         N.checkArgNotNull(entity, cs.entity);
-        N.checkArgNotEmpty(idPropNameList, "idPropNameList");
-        N.checkArgNotNull(entityInfo, "entityInfo");
+        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
+        N.checkArgNotNull(entityInfo, cs.entityInfo);
 
         if (idPropNameList.size() == 1) {
             return entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
@@ -300,8 +300,8 @@ public final class DaoUtil {
      */
     @SuppressWarnings({ "deprecation", "unchecked" })
     static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final BeanInfo entityInfo) {
-        N.checkArgNotEmpty(idPropNameList, "idPropNameList");
-        N.checkArgNotNull(entityInfo, "entityInfo");
+        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
+        N.checkArgNotNull(entityInfo, cs.entityInfo);
 
         if (idPropNameList.size() == 1) {
             final PropInfo idPropInfo = entityInfo.getPropInfo(idPropNameList.get(0));
@@ -359,8 +359,8 @@ public final class DaoUtil {
      * @throws IllegalArgumentException if {@code propName} or {@code values} is {@code null} or empty.
      */
     static Condition singlePropValuesToCondition(final String propName, final Collection<?> values) {
-        N.checkArgNotEmpty(propName, "propName");
-        N.checkArgNotEmpty(values, "values");
+        N.checkArgNotEmpty(propName, cs.propName);
+        N.checkArgNotEmpty(values, cs.values);
 
         final List<Object> nonNullValues = new ArrayList<>(values);
         final boolean containsNull = nonNullValues.removeIf(value -> value == null);

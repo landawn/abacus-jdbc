@@ -41,6 +41,11 @@ import java.lang.annotation.Target;
  * Empty collections produce an empty string in place of the token (which is usually a SQL syntax
  * error — callers should guard against that case).</p>
  *
+ * <p><b>Restriction:</b> the annotated parameter must be of a {@code Collection} or array type;
+ * otherwise DAO initialization fails with {@code UnsupportedOperationException}. Each fragment
+ * parameter on a method must also target a distinct {@code {name}} token, or DAO initialization fails
+ * with {@code IllegalArgumentException}.</p>
+ *
  * <p>If the joined fragment itself contains named parameter placeholders (for example, joining
  * elements such as {@code "discount >= :minDiscount"}), set
  * {@link Query#fragmentsContainNamedParameters() @Query(fragmentsContainNamedParameters = true)}

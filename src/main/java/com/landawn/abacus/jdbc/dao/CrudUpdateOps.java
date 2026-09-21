@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.util.N;
 
 /**
@@ -93,8 +94,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final ID id) throws SQLException {
-        N.checkArgNotEmpty(propName, "propName");
-        N.checkArgNotNull(id, "id");
+        N.checkArgNotEmpty(propName, cs.propName);
+        N.checkArgNotNull(id, cs.id);
 
         final Map<String, Object> updateProps = new HashMap<>();
         updateProps.put(propName, propValue);

@@ -54,7 +54,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} and
  * {@code enabled = true} (or eligible methods when {@code @CacheResult(enabled = true)} is applied
  * at the type level) will have their results cached according to the specified configuration. The cache key is automatically derived from the
- * fully-qualified method name and the serialized parameters.</p>
+ * fully-qualified method name, the DAO's table name and the serialized method arguments.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

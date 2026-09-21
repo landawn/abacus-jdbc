@@ -130,6 +130,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param sql the SQL query string
      * @return a PreparedQuery instance for the specified query
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
@@ -255,6 +256,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the named SQL query string with :paramName placeholders
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
@@ -271,6 +273,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the pre-parsed named query
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT

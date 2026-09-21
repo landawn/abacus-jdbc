@@ -22,6 +22,7 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.N;
 
@@ -52,8 +53,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final Condition cond) throws SQLException {
-        N.checkArgNotEmpty(propName, "propName");
-        N.checkArgNotNull(cond, "cond");
+        N.checkArgNotEmpty(propName, cs.propName);
+        N.checkArgNotNull(cond, cs.cond);
 
         final Map<String, Object> updateProps = new HashMap<>();
         updateProps.put(propName, propValue);

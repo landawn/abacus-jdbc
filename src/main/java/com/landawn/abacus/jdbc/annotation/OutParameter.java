@@ -100,9 +100,10 @@ public @interface OutParameter {
      * Specifies the position of the output parameter.
      * Use this for positional parameters in the stored procedure call.
      *
-     * <p>Positions start from 1, following JDBC convention. Exactly one of {@code name} or
-     * {@code position} must be specified for a given {@code @OutParameter} (supplying both, or
-     * neither, fails with {@code UnsupportedOperationException} at DAO initialization time).</p>
+     * <p>Positions start from 1, following JDBC convention; a {@code position} of {@code 0} is rejected.
+     * Exactly one of {@code name} or {@code position} must be specified for a given
+     * {@code @OutParameter} (supplying both, or neither, fails with
+     * {@code UnsupportedOperationException} at DAO initialization time).</p>
      *
      * <p>Position-based parameters are useful when:</p>
      * <ul>

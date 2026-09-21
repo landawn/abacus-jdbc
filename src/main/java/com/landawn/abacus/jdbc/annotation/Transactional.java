@@ -58,7 +58,8 @@ import com.landawn.abacus.jdbc.Propagation;
  * {@link com.landawn.abacus.util.stream.Stream}) or a {@link java.util.stream.BaseStream}. Such a
  * stream performs work after the method returns: an invocation-owned transaction may already have
  * completed, while a temporarily suspended or prohibited transaction context may have changed.
- * The DAO rejects those combinations at initialization. Consume the stream inside a transactional,
+ * The DAO rejects those combinations at initialization with {@code UnsupportedOperationException}.
+ * Consume the stream inside a transactional,
  * non-stream-returning {@code default} method instead. {@link Propagation#SUPPORTS} and
  * {@link Propagation#MANDATORY} remain valid because the proxy neither owns nor suspends their
  * context; the caller must consume and close the stream before changing or completing that context.

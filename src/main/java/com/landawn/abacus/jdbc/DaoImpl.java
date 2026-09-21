@@ -2496,7 +2496,7 @@ final class DaoImpl {
             final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(ds, cs.ds);
-        N.checkArgNotNull(dsl, "dsl");
+        N.checkArgNotNull(dsl, cs.dsl);
 
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
 
@@ -3023,7 +3023,7 @@ final class DaoImpl {
                         final String sqlToCheck;
 
                         if (prepareSqlIsParsed) {
-                            N.checkArgNotNull(args[0], "namedSql");
+                            N.checkArgNotNull(args[0], cs.namedSql);
                             sqlToCheck = ((ParsedSql) args[0]).originalSql();
                         } else {
                             // Validated before the SQL-kind check so null/empty SQL fails with the same IAE
@@ -3828,9 +3828,9 @@ final class DaoImpl {
                             && paramTypes[2].equals(Jdbc.BiParametersSetter.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = checkCondForPaginate((Condition) args[0]);
-                            final int pageSize = N.checkArgPositive((Integer) args[1], "pageSize");
+                            final int pageSize = N.checkArgPositive((Integer) args[1], cs.pageSize);
                             final Jdbc.BiParametersSetter<PreparedQuery, Dataset> paramSetter = N.checkArgNotNull((Jdbc.BiParametersSetter) args[2],
-                                    "paramSetter");
+                                    cs.paramSetter);
                             final Jdbc.ResultExtractor<Dataset> resultExtractor = fetchColumnByEntityClass ? Jdbc.ResultExtractor.toDataset(entityClass)
                                     : Jdbc.ResultExtractor.TO_DATASET;
 
@@ -3864,10 +3864,10 @@ final class DaoImpl {
                             && paramTypes[3].equals(Jdbc.ResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = checkCondForPaginate((Condition) args[0]);
-                            final int pageSize = N.checkArgPositive((Integer) args[1], "pageSize");
+                            final int pageSize = N.checkArgPositive((Integer) args[1], cs.pageSize);
                             final Jdbc.BiParametersSetter<PreparedQuery, Object> paramSetter = N.checkArgNotNull((Jdbc.BiParametersSetter) args[2],
-                                    "paramSetter");
-                            final Jdbc.ResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.ResultExtractor) args[3], "resultExtractor");
+                                    cs.paramSetter);
+                            final Jdbc.ResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.ResultExtractor) args[3], cs.resultExtractor);
 
                             final Condition limitedCond = handleLimit(cond, pageSize, false);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
@@ -3899,10 +3899,10 @@ final class DaoImpl {
                             && paramTypes[3].equals(Jdbc.BiResultExtractor.class)) {
                         call = (proxy, args) -> {
                             final Condition cond = checkCondForPaginate((Condition) args[0]);
-                            final int pageSize = N.checkArgPositive((Integer) args[1], "pageSize");
+                            final int pageSize = N.checkArgPositive((Integer) args[1], cs.pageSize);
                             final Jdbc.BiParametersSetter<PreparedQuery, Object> paramSetter = N.checkArgNotNull((Jdbc.BiParametersSetter) args[2],
-                                    "paramSetter");
-                            final Jdbc.BiResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.BiResultExtractor) args[3], "resultExtractor");
+                                    cs.paramSetter);
+                            final Jdbc.BiResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.BiResultExtractor) args[3], cs.resultExtractor);
 
                             final Condition limitedCond = handleLimit(cond, pageSize, false);
                             final SP sp = selectFromSqlBuilderFunc.apply(limitedCond);
@@ -3935,9 +3935,9 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = checkCondForPaginate((Condition) args[1]);
-                            final int pageSize = N.checkArgPositive((Integer) args[2], "pageSize");
+                            final int pageSize = N.checkArgPositive((Integer) args[2], cs.pageSize);
                             final Jdbc.BiParametersSetter<PreparedQuery, Dataset> paramSetter = N.checkArgNotNull((Jdbc.BiParametersSetter) args[3],
-                                    "paramSetter");
+                                    cs.paramSetter);
                             final Jdbc.ResultExtractor<Dataset> resultExtractor = fetchColumnByEntityClass ? Jdbc.ResultExtractor.toDataset(entityClass)
                                     : Jdbc.ResultExtractor.TO_DATASET;
 
@@ -3973,10 +3973,10 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = checkCondForPaginate((Condition) args[1]);
-                            final int pageSize = N.checkArgPositive((Integer) args[2], "pageSize");
+                            final int pageSize = N.checkArgPositive((Integer) args[2], cs.pageSize);
                             final Jdbc.BiParametersSetter<PreparedQuery, Object> paramSetter = N.checkArgNotNull((Jdbc.BiParametersSetter) args[3],
-                                    "paramSetter");
-                            final Jdbc.ResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.ResultExtractor) args[4], "resultExtractor");
+                                    cs.paramSetter);
+                            final Jdbc.ResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.ResultExtractor) args[4], cs.resultExtractor);
 
                             final Condition limitedCond = handleLimit(cond, pageSize, false);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
@@ -4010,10 +4010,10 @@ final class DaoImpl {
                         call = (proxy, args) -> {
                             final Collection<String> selectPropNames = (Collection<String>) args[0];
                             final Condition cond = checkCondForPaginate((Condition) args[1]);
-                            final int pageSize = N.checkArgPositive((Integer) args[2], "pageSize");
+                            final int pageSize = N.checkArgPositive((Integer) args[2], cs.pageSize);
                             final Jdbc.BiParametersSetter<PreparedQuery, Object> paramSetter = N.checkArgNotNull((Jdbc.BiParametersSetter) args[3],
-                                    "paramSetter");
-                            final Jdbc.BiResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.BiResultExtractor) args[4], "resultExtractor");
+                                    cs.paramSetter);
+                            final Jdbc.BiResultExtractor<Object> resultExtractor = N.checkArgNotNull((Jdbc.BiResultExtractor) args[4], cs.resultExtractor);
 
                             final Condition limitedCond = handleLimit(cond, pageSize, false);
                             final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
@@ -4587,13 +4587,13 @@ final class DaoImpl {
                     } else if (methodName.equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])
                             && Condition.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
-                            final Map<String, Object> propsToUpdate = (Map<String, Object>) args[0];
+                            final Map<String, Object> updateProps = (Map<String, Object>) args[0];
                             final Condition cond = (Condition) args[1];
 
-                            N.checkArgNotEmpty(propsToUpdate, cs.propsToUpdate);
+                            N.checkArgNotEmpty(updateProps, cs.updateProps);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(propsToUpdate).append(cond).build();
+                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(updateProps).append(cond).build();
                             return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter).update();
                         };
                     } else if (methodName.equals("update") && paramLen == 3 && !Map.class.equals(paramTypes[0])
@@ -5292,16 +5292,16 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("update") && paramLen == 2 && Map.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final Map<String, Object> props = (Map<String, Object>) args[0];
+                            final Map<String, Object> updateProps = (Map<String, Object>) args[0];
                             final Object id = args[1];
-                            N.checkArgNotEmpty(props, cs.propsToUpdate);
+                            N.checkArgNotEmpty(updateProps, cs.updateProps);
                             N.checkArgNotNull(id, cs.id);
 
                             // TODO not set by PropInfo.dbType of ids? it should be okay because Id should be simple type(int, long, String, UUID, Timestamp).
                             // If want to use idParamSetter, it has to be named sql. How to prepare/set named parameters? it's a problem to resolve.
                             final Condition cond = id2CondFunc.apply(id);
 
-                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(props).append(cond).build();
+                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(updateProps).append(cond).build();
                             return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter).update();
                         };
                     } else if (methodName.equals("batchUpdate") && paramLen == 2 && int.class.equals(paramTypes[1])) {
@@ -7429,7 +7429,7 @@ final class DaoImpl {
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
                 final QueryOperation queryOperation, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect,
                 final boolean isInsert, final boolean isProcedure, final boolean fragmentsContainNamedParameters) {
-            this.sql = N.checkArgNotBlank(sql != null && sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
+            this.sql = N.checkArgNotBlank(sql != null && sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, cs.sql);
             this.parsedSql = parsedSql == null ? ParsedSql.parse(this.sql) : parsedSql;
             this.queryTimeout = queryTimeout;
             this.fetchSize = fetchSize;

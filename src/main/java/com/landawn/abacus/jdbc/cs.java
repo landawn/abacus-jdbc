@@ -491,4 +491,164 @@ public final class cs { // NOSONAR
      * Parameter name for {@link com.landawn.abacus.util.Dataset} objects to be imported or exported.
      */
     public static final String dataset = "dataset";
+    /**
+     * Parameter name for the action executed after a transaction is committed.
+     */
+    public static final String actionAfterCommit = "actionAfterCommit";
+    /**
+     * Parameter name for the action executed after a transaction is rolled back.
+     */
+    public static final String actionAfterRollback = "actionAfterRollback";
+    /**
+     * Parameter name for the backing map of a map-based DAO cache.
+     */
+    public static final String cache = "cache";
+    /**
+     * Parameter name for the unlock code of a database lock.
+     */
+    public static final String code = "code";
+    /**
+     * Parameter name for collections of database column names.
+     */
+    public static final String columnNames = "columnNames";
+    /**
+     * Parameter name for the {@code CreatedBy} value identifying which component created a transaction.
+     */
+    public static final String creator = "creator";
+    /**
+     * Parameter name for Data Access Object interface classes (alternate {@code daoClass} form).
+     */
+    public static final String daoClass = "daoClass";
+    /**
+     * Parameter name for {@link java.time.Duration} delays between batches.
+     */
+    public static final String delay = "delay";
+    /**
+     * Parameter name for the SQL builder/DSL used to generate a DAO's SQL.
+     */
+    public static final String dsl = "dsl";
+    /**
+     * Parameter name for {@code BeanInfo} descriptors of entity classes.
+     */
+    public static final String entityInfo = "entityInfo";
+    /**
+     * Parameter name for the JDBC fetch size applied to a statement or result set.
+     */
+    public static final String fetchSize = "fetchSize";
+    /**
+     * Parameter name for {@link java.io.File} objects to read from or write to.
+     */
+    public static final String file = "file";
+    /**
+     * Parameter name for the class of the value held by the first column of a row.
+     */
+    public static final String firstColumnType = "firstColumnType";
+    /**
+     * Parameter name for the list of ID property names of an entity.
+     */
+    public static final String idPropNameList = "idPropNameList";
+    /**
+     * Parameter name for insert SQL statements.
+     */
+    public static final String insertSql = "insertSql";
+    /**
+     * Parameter name for the target {@code PreparedStatement} of an insert in a copy operation.
+     */
+    public static final String insertStmt = "insertStmt";
+    /**
+     * Parameter name for {@link java.util.Iterator} sources of rows or records.
+     */
+    public static final String iter = "iter";
+    /**
+     * Parameter name for the entity class referenced by a join property.
+     */
+    public static final String joinPropEntityClass = "joinPropEntityClass";
+    /**
+     * Parameter name for the live time, in milliseconds, of a lock or cache entry.
+     */
+    public static final String liveTime = "liveTime";
+    /**
+     * Parameter name for {@link java.util.Map} instances supplied as backing storage.
+     */
+    public static final String map = "map";
+    /**
+     * Parameter name for the output sink (file, writer, or stream) of an export operation.
+     */
+    public static final String output = "output";
+    /**
+     * Parameter name for the caller-supplied array that receives the values of a row.
+     */
+    public static final String outputRow = "outputRow";
+    /**
+     * Parameter name for the name of a named/callable-statement parameter.
+     */
+    public static final String parameterName = "parameterName";
+    /**
+     * Parameter name for arrays or lists of parameter values bound to a statement.
+     */
+    public static final String params = "params";
+    /**
+     * Parameter name for a single entity property name.
+     */
+    public static final String propName = "propName";
+    /**
+     * Parameter name for {@link java.io.Reader} sources of character data.
+     */
+    public static final String reader = "reader";
+    /**
+     * Parameter name for the interval, in milliseconds, between lock acquisition retries.
+     */
+    public static final String retryInterval = "retryInterval";
+    /**
+     * Parameter name for the select SQL statement of a copy/export operation.
+     */
+    public static final String selectSql = "selectSql";
+    /**
+     * Parameter name for the source {@code PreparedStatement} of a select in a copy operation.
+     */
+    public static final String selectStmt = "selectStmt";
+    /**
+     * Parameter name for the source database Connection of a copy operation.
+     */
+    public static final String sourceConn = "sourceConn";
+    /**
+     * Parameter name for the source DataSource of a copy operation.
+     */
+    public static final String sourceDataSource = "sourceDataSource";
+    /**
+     * Parameter name for the source table name of a copy operation.
+     */
+    public static final String sourceTableName = "sourceTableName";
+    /**
+     * Parameter name for the one-based index of the first parameter set by a bulk setter.
+     */
+    public static final String startParameterIndex = "startParameterIndex";
+    /**
+     * Parameter name for the target identifier of a database lock.
+     */
+    public static final String target = "target";
+    /**
+     * Parameter name for timeouts, in milliseconds, of blocking operations.
+     */
+    public static final String timeout = "timeout";
+    /**
+     * Parameter name for collections of property values to match.
+     */
+    public static final String values = "values";
+    /**
+     * Parameter name for the setter that binds the next page's parameters in paginated DAO queries.
+     */
+    public static final String paramSetter = "paramSetter";
+    /**
+     * Parameter name for the map of property names to their new values passed to {@code update} operations.
+     */
+    public static final String updateProps = "updateProps";
+    /**
+     * Parameter name for the simple name of the entity class to generate.
+     */
+    public static final String entityName = "entityName";
+    /**
+     * Parameter name for the key column used in a generated UPDATE statement's WHERE clause.
+     */
+    public static final String keyColumnName = "keyColumnName";
 }

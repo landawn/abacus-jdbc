@@ -112,6 +112,11 @@ public @interface Handler {
      * }
      * }</pre>
      *
+     * <p>The qualifier must resolve to a handler instance at DAO initialization time: a
+     * {@code static final} field of that name on the DAO (or a nested class of it) is looked up first,
+     * then {@code Jdbc.HandlerFactory}. If neither yields a handler, DAO initialization fails with
+     * {@code IllegalArgumentException}.</p>
+     *
      * @return the handler qualifier name; empty (default) means resolve a handler by {@link #impl()} instead
      */
     String qualifier() default "";
@@ -119,6 +124,9 @@ public @interface Handler {
     /**
      * Specifies the handler implementation class.
      * The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
+     * It is instantiated through {@code Jdbc.HandlerFactory} at DAO initialization time and shared by
+     * every declaration referencing the same class, so it must be concrete and expose an accessible
+     * no-argument constructor; otherwise DAO initialization fails with {@code IllegalArgumentException}.
      *
      * <p>The handler lifecycle methods are called in this order:</p>
      * <ol>

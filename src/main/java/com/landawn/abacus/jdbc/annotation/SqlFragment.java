@@ -33,6 +33,11 @@ import java.lang.annotation.Target;
  * whitelisted strings; otherwise the framework offers no protection against SQL injection at
  * this layer.</p>
  *
+ * <p><b>Restriction:</b> {@code @SqlFragment} is for a single (typically {@code String}) value. A
+ * {@code Collection} or array parameter must use {@link SqlFragmentList @SqlFragmentList} or
+ * {@link BindList @BindList} instead; annotating one with {@code @SqlFragment} fails DAO
+ * initialization with {@code UnsupportedOperationException}.</p>
+ *
  * <p>The DAO proxy ({@code DaoImpl}) resolves these substitutions when building the SQL for a
  * call. If the replacement text itself contains named parameter placeholders (e.g.,
  * {@code "discount >= :minDiscount"}), set
@@ -100,9 +105,10 @@ public @interface SqlFragment {
      * }</pre>
      *
      * <p>The resolved name must correspond to a {@code {name}} token in the surrounding
-     * {@link Query @Query} SQL, and each {@code @SqlFragment} parameter on a method should target a
-     * distinct token. Because the substitution rewrites the SQL text (it is not a JDBC bind), supply
-     * only trusted, pre-validated strings.</p>
+     * {@link Query @Query} SQL, and each fragment parameter on a method must target a distinct token;
+     * two parameters resolving to the same token fail DAO initialization with
+     * {@code IllegalArgumentException}. Because the substitution rewrites the SQL text (it is not a
+     * JDBC bind), supply only trusted, pre-validated strings.</p>
      *
      * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})
      */

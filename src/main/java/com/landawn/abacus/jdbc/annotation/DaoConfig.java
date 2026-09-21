@@ -57,9 +57,10 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * }
  *
  * @DaoConfig(allowNullOrDefaultJoinKeys = true)
- * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
+ * public interface OrderDao extends CrudDao<Order, Long, OrderDao>, CrudJoinEntityHelper<Order, Long, OrderDao> {
  *     // Framework-managed @JoinedBy joins are allowed even when the join key is null:
- *     // use inherited JoinEntityHelper methods (for example, loadJoinEntities or loadAllJoinEntities).
+ *     // the join methods (for example, loadJoinEntities or loadAllJoinEntities) come from the
+ *     // CrudJoinEntityHelper interface, which the DAO must extend explicitly.
  * }
  * }</pre>
  *
@@ -163,15 +164,16 @@ public @interface DaoConfig {
      *
      * <p>This applies to the built-in join methods provided by {@code JoinEntityHelper}
      * (for example, {@code loadJoinEntities}, {@code loadAllJoinEntities}, and the
-     * {@code findFirst(...)} overloads that accept join-entity arguments).
+     * {@code findFirst(...)} overloads that accept join-entity arguments), which are only available
+     * on a DAO that also extends {@code JoinEntityHelper}/{@code CrudJoinEntityHelper}.
      * It does not affect user-written SQL in {@link Query @Query} methods.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(allowNullOrDefaultJoinKeys = true)
-     * public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao> {
+     * public interface CustomerDao extends CrudDao<Customer, Long, CustomerDao>, CrudJoinEntityHelper<Customer, Long, CustomerDao> {
      *     // @JoinedBy-driven joins are allowed even if the join key is null or zero:
-     *     // use inherited JoinEntityHelper methods (for example, loadJoinEntities or loadAllJoinEntities).
+     *     // loadJoinEntities/loadAllJoinEntities are inherited from CrudJoinEntityHelper.
      * }
      * }</pre>
      *

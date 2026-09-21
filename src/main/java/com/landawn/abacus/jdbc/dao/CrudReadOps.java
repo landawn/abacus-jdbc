@@ -342,7 +342,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param targetValueType the class of the value type to convert to
      * @return a {@code Nullable} holding the value (possibly {@code null} for a SQL {@code NULL}) when a record
      *         matches, or an empty {@code Nullable} if no record exists
-     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleValue(Class)
      */
@@ -363,7 +363,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
-     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -411,7 +411,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param targetValueType the class of the value type to convert to
      * @return a {@code Nullable} holding the unique value (possibly {@code null} for a SQL {@code NULL}) when a
      *         record matches, or an empty {@code Nullable} if no record exists
-     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
@@ -436,7 +436,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
-     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
@@ -891,7 +891,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
      * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
@@ -904,6 +904,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final T first = N.firstOrNullIfEmpty(entities);
+        N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
+
         final Class<?> cls = first.getClass();
         final Collection<String> propNamesToRefresh = JdbcUtil.getSelectPropNames(cls);
 
@@ -954,7 +956,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null}/empty or {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive, or if the first element of
+     *                                  {@code entities} is {@code null}
      * @throws DuplicateResultException if the id of an entity matches more than one database record
      * @throws SQLException if a database access error occurs
      */
@@ -968,6 +971,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final T first = N.firstOrNullIfEmpty(entities);
+        N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
+
         final Class<?> cls = first.getClass();
         final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);

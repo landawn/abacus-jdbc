@@ -276,7 +276,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             final boolean closeConnection) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
-        N.checkArgNotNull(creator, "creator");
+        N.checkArgNotNull(creator, cs.creator);
         N.checkArgument(isolationLevel != IsolationLevel.NONE,
                 "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
         N.checkArgument(ds != null || !closeConnection, "'dataSource' must not be null when 'closeConnection' is true");
@@ -542,7 +542,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         logged and ignored rather than throwing.
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
-        N.checkArgNotNull(actionAfterCommit, "actionAfterCommit");
+        N.checkArgNotNull(actionAfterCommit, cs.actionAfterCommit);
 
         assertOwnerThread();
 
@@ -681,7 +681,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         logged and ignored rather than throwing.
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
-        N.checkArgNotNull(actionAfterRollback, "actionAfterRollback");
+        N.checkArgNotNull(actionAfterRollback, cs.actionAfterRollback);
 
         assertOwnerThread();
 
@@ -1142,7 +1142,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalArgumentException if {@code creator} is {@code null}
      */
     static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
-        N.checkArgNotNull(creator, "creator");
+        N.checkArgNotNull(creator, cs.creator);
 
         return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().threadId(), "_", creator.ordinal());
     }
@@ -1157,7 +1157,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalArgumentException if {@code creator} is {@code null}
      */
     static SqlTransaction getTransaction(final javax.sql.DataSource ds, final CreatedBy creator) {
-        N.checkArgNotNull(creator, "creator");
+        N.checkArgNotNull(creator, cs.creator);
 
         return threadTransactionMap.get(new TransactionKey(ds, Thread.currentThread(), creator));
     }

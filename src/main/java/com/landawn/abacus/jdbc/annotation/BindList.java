@@ -45,6 +45,11 @@ import com.landawn.abacus.annotation.Beta;
  * {@code ?} parameters (with plain method parameters, not {@link Bind @Bind}) alongside
  * {@code @BindList} instead.</p>
  *
+ * <p><b>Restriction:</b> the annotated parameter must be of a {@code Collection} or array type, and
+ * {@code @BindList} is <em>not</em> supported on a batch method ({@link Query#batch() @Query(batch = true)}),
+ * where the single {@code Collection} parameter already supplies the batch rows. Either violation fails
+ * DAO initialization with {@code UnsupportedOperationException}.</p>
+ *
  * <p><b>Restriction:</b> a {@code @BindList} placeholder may be referenced only <em>once</em> in the
  * SQL. Repeating it (for example {@code ... WHERE a IN ({ids}) OR b IN ({ids})}) would expand
  * placeholders at every occurrence while the collection values are bound only once, so DAO

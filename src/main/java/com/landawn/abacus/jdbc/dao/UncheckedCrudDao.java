@@ -227,7 +227,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -239,6 +239,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
         }
 
         final T entity = N.firstOrNullIfEmpty(entities);
+        N.checkArgNotNull(entity, "The first element in the specified collection 'entities' cannot be null");
+
         final Class<?> cls = entity.getClass();
         final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
@@ -303,6 +305,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
+     *                                  or if the first element of {@code entities} is {@code null}
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      * @throws UncheckedSQLException if a database access error occurs
      */

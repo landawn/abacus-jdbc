@@ -3602,10 +3602,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @param sqlType the SQLType to be used
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null}, or the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(sqlType, cs.sqlType);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -3673,11 +3675,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param scaleOrLength for numeric types, the number of digits after the decimal point;
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if {@code sqlType} is {@code null}, or the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength)
             throws IllegalArgumentException, SQLException {
+        checkArgNotNull(sqlType, cs.sqlType);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 

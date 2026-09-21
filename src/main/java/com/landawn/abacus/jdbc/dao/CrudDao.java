@@ -201,7 +201,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
@@ -212,6 +212,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         }
 
         final T entity = N.firstOrNullIfEmpty(entities);
+        N.checkArgNotNull(entity, "The first element in the specified collection 'entities' cannot be null");
+
         final Class<?> cls = entity.getClass();
         final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
 
@@ -271,12 +273,13 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
+     *                                  or if the first element of {@code entities} is {@code null}
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      * @throws SQLException if a database access error occurs
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws SQLException {
-        N.checkArgPositive(batchSize, cs.batchSize);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
+        N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
             return new ArrayList<>();
@@ -284,6 +287,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
 
         final List<String> uniquePropNameList = matchPropNames instanceof List ? (List<String>) matchPropNames : new ArrayList<>(matchPropNames);
         final T first = N.firstOrNullIfEmpty(entities);
+        N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
+
         final Class<?> cls = first.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 

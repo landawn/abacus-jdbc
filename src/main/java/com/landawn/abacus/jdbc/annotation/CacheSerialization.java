@@ -17,12 +17,20 @@ package com.landawn.abacus.jdbc.annotation;
 
 /**
  * Defines how DAO results are copied when stored in or retrieved from a cache.
+ *
+ * <p>Values that are already immutable are stored and returned as-is by every strategy; only mutable
+ * values are copied by {@link #KRYO} and {@link #JSON}.</p>
+ *
+ * @see CacheResult#serialization()
  */
 public enum CacheSerialization {
     /** Stores and returns direct object references without serialization. */
     NONE,
 
-    /** Uses Kryo to deep-copy mutable cached values. */
+    /**
+     * Uses Kryo to deep-copy mutable cached values. Requires Kryo on the classpath; without it, copying
+     * a mutable value fails with {@code UnsupportedOperationException}.
+     */
     KRYO,
 
     /** Uses JSON to deep-copy mutable cached values. */

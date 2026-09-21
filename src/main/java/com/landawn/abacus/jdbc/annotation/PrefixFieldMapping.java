@@ -34,7 +34,8 @@ import java.lang.annotation.Target;
  * <p>The method's {@code QueryOperation} must be one of {@code QueryOperation.DEFAULT}, {@code QueryOperation.findFirst},
  * {@code QueryOperation.findOnlyOne}, {@code QueryOperation.list}, {@code QueryOperation.query}, or {@code QueryOperation.stream}, and the return
  * type must be {@code Optional}/{@code List}/{@code Collection<? super Entity>}, {@code Dataset},
- * or the entity type itself; violating either constraint fails DAO initialization with
+ * the entity type itself, or the {@code Map} of a method that also carries
+ * {@link MappedByKey @MappedByKey}; violating either constraint fails DAO initialization with
  * {@code IllegalArgumentException}. A {@code Dataset}-returning method additionally requires
  * {@code fetchColumnByEntityClass = true} (via {@link FetchColumnByEntityClass} or
  * {@code DaoConfig}) — without it the mapping would be silently ignored, so DAO initialization

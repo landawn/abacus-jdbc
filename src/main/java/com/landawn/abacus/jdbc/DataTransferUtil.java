@@ -741,7 +741,7 @@ public final class DataTransferUtil {
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
-        N.checkArgNotNull(columnNames, "columnNames");
+        N.checkArgNotNull(columnNames, cs.columnNames);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1288,9 +1288,9 @@ public final class DataTransferUtil {
      */
     private static <T> long importData(final Iterator<? extends T> iter, final Predicate<? super T> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
-        N.checkArgNotNull(iter, "iter");
+        N.checkArgNotNull(iter, cs.iter);
         N.checkArgNotNull(stmt, cs.stmt);
-        N.checkArgNotNull(parameterSetter, "parameterSetter");
+        N.checkArgNotNull(parameterSetter, cs.parameterSetter);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -1571,7 +1571,7 @@ public final class DataTransferUtil {
     public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
             throws SQLException {
-        N.checkArgNotNull(file, "file");
+        N.checkArgNotNull(file, cs.file);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1783,7 +1783,7 @@ public final class DataTransferUtil {
     public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(reader, "reader");
+        N.checkArgNotNull(reader, cs.reader);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1980,7 +1980,7 @@ public final class DataTransferUtil {
     public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> columnNames, final File output) throws SQLException {
         // Validate the output target before doing any database work, so a null output fails fast
         // instead of after the SELECT has already been executed.
-        N.checkArgNotNull(output, "output");
+        N.checkArgNotNull(output, cs.output);
 
         final ParsedSql sql = ParsedSql.parse(selectSql);
 
@@ -2062,7 +2062,7 @@ public final class DataTransferUtil {
     public static long exportCsv(final PreparedStatement stmt, final Collection<String> columnNames, final File output) throws SQLException {
         // Validate the output target before doing any database work, so a null output fails fast
         // instead of after the query has already been executed.
-        N.checkArgNotNull(output, "output");
+        N.checkArgNotNull(output, cs.output);
 
         ResultSet rs = null;
 
@@ -2145,7 +2145,10 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final File output) throws SQLException {
-        N.checkArgNotNull(output, "output");
+        // Validate both arguments before opening the writer: opening it truncates an existing file, so a
+        // null 'rs' would otherwise destroy the caller's file before the delegate rejects it.
+        N.checkArgNotNull(rs, cs.rs);
+        N.checkArgNotNull(output, cs.output);
 
         // Opening the writer creates a missing file atomically. A separate exists/createNewFile
         // check introduces a TOCTOU race: another process can create the file between those calls,
@@ -2236,7 +2239,7 @@ public final class DataTransferUtil {
     public static long exportCsv(final Connection conn, final String selectSql, final Writer output) throws SQLException {
         // Validate the output target before doing any database work, so a null output fails fast
         // instead of after the query has already been executed (matches the File-target overloads).
-        N.checkArgNotNull(output, "output");
+        N.checkArgNotNull(output, cs.output);
 
         final ParsedSql sql = ParsedSql.parse(selectSql);
 
@@ -2321,7 +2324,7 @@ public final class DataTransferUtil {
     @Deprecated
     public static long exportCsv(final ResultSet rs, final Collection<String> columnNames, final Writer output) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rs, cs.rs);
-        N.checkArgNotNull(output, "output");
+        N.checkArgNotNull(output, cs.output);
 
         final Type<Object> strType = Type.of(String.class);
         final boolean isBufferedWriter = output instanceof BufferedCsvWriter;
@@ -3335,8 +3338,8 @@ public final class DataTransferUtil {
     @Deprecated
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws SQLException {
-        N.checkArgNotNull(selectStmt, "selectStmt");
-        N.checkArgNotNull(insertStmt, "insertStmt");
+        N.checkArgNotNull(selectStmt, cs.selectStmt);
+        N.checkArgNotNull(insertStmt, cs.insertStmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -3404,7 +3407,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code delay} is {@code null}, negative, or too large to represent in milliseconds
      */
     private static long toBatchIntervalMillis(final Duration delay) {
-        N.checkArgNotNull(delay, "delay");
+        N.checkArgNotNull(delay, cs.delay);
         N.checkArgument(!delay.isNegative(), "delay must not be negative: %s", delay);
 
         try {
@@ -3439,7 +3442,7 @@ public final class DataTransferUtil {
      * @throws SQLException if a database access error occurs
      */
     private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
-        N.checkArgNotNegative(fetchSize, "fetchSize");
+        N.checkArgNotNegative(fetchSize, cs.fetchSize);
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
         // MySQL and MariaDB share a protocol-level requirement for Integer.MIN_VALUE to enable
@@ -3802,7 +3805,7 @@ public final class DataTransferUtil {
      */
     @Beta
     public static <T> RowImportBuilder<T> importFrom(final Iterator<? extends T> iter) {
-        N.checkArgNotNull(iter, "iter");
+        N.checkArgNotNull(iter, cs.iter);
 
         return new RowImportBuilder<>(iter, null, null);
     }
@@ -3831,7 +3834,7 @@ public final class DataTransferUtil {
      */
     @Beta
     public static RowImportBuilder<String[]> importCsvFrom(final File file) {
-        N.checkArgNotNull(file, "file");
+        N.checkArgNotNull(file, cs.file);
 
         return new RowImportBuilder<>(null, null, file);
     }
@@ -3849,7 +3852,7 @@ public final class DataTransferUtil {
      */
     @Beta
     public static RowImportBuilder<String[]> importCsvFrom(final Reader reader) {
-        N.checkArgNotNull(reader, "reader");
+        N.checkArgNotNull(reader, cs.reader);
 
         return new RowImportBuilder<>(null, reader, null);
     }
@@ -4134,8 +4137,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CsvExportBuilder exportCsvFrom(final javax.sql.DataSource sourceDataSource, final String selectSql) {
-        N.checkArgNotNull(sourceDataSource, "sourceDataSource");
-        N.checkArgNotNull(selectSql, "selectSql");
+        N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
+        N.checkArgNotNull(selectSql, cs.selectSql);
 
         return new CsvExportBuilder(sourceDataSource, null, null, null, selectSql);
     }
@@ -4152,8 +4155,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CsvExportBuilder exportCsvFrom(final Connection conn, final String selectSql) {
-        N.checkArgNotNull(conn, "conn");
-        N.checkArgNotNull(selectSql, "selectSql");
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotNull(selectSql, cs.selectSql);
 
         return new CsvExportBuilder(null, conn, null, null, selectSql);
     }
@@ -4276,7 +4279,7 @@ public final class DataTransferUtil {
          * @throws UncheckedIOException if an I/O error occurs while writing
          */
         public long to(final File output) throws SQLException {
-            N.checkArgNotNull(output, "output");
+            N.checkArgNotNull(output, cs.output);
 
             return export(r -> exportCsv(r, columnNames, output));
         }
@@ -4293,7 +4296,7 @@ public final class DataTransferUtil {
          * @throws UncheckedIOException if an I/O error occurs while writing
          */
         public long to(final Writer output) throws SQLException {
-            N.checkArgNotNull(output, "output");
+            N.checkArgNotNull(output, cs.output);
 
             return export(r -> exportCsv(r, columnNames, output));
         }
@@ -4422,8 +4425,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyFromDataSource copyFrom(final javax.sql.DataSource sourceDataSource, final String selectSql) {
-        N.checkArgNotNull(sourceDataSource, "sourceDataSource");
-        N.checkArgNotNull(selectSql, "selectSql");
+        N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
+        N.checkArgNotNull(selectSql, cs.selectSql);
 
         return new CopyFromDataSource(sourceDataSource, selectSql);
     }
@@ -4449,8 +4452,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyFromConnection copyFrom(final Connection sourceConn, final String selectSql) {
-        N.checkArgNotNull(sourceConn, "sourceConn");
-        N.checkArgNotNull(selectSql, "selectSql");
+        N.checkArgNotNull(sourceConn, cs.sourceConn);
+        N.checkArgNotNull(selectSql, cs.selectSql);
 
         return new CopyFromConnection(sourceConn, selectSql);
     }
@@ -4478,7 +4481,7 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyFromStatement copyFrom(final PreparedStatement selectStmt) {
-        N.checkArgNotNull(selectStmt, "selectStmt");
+        N.checkArgNotNull(selectStmt, cs.selectStmt);
 
         return new CopyFromStatement(selectStmt);
     }
@@ -4511,8 +4514,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyTableFromDataSource copyTable(final javax.sql.DataSource sourceDataSource, final String sourceTableName) {
-        N.checkArgNotNull(sourceDataSource, "sourceDataSource");
-        N.checkArgNotBlank(sourceTableName, "sourceTableName");
+        N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
+        N.checkArgNotBlank(sourceTableName, cs.sourceTableName);
 
         return new CopyTableFromDataSource(sourceDataSource, sourceTableName);
     }
@@ -4537,8 +4540,8 @@ public final class DataTransferUtil {
      */
     @Beta
     public static CopyTableFromConnection copyTable(final Connection sourceConn, final String sourceTableName) {
-        N.checkArgNotNull(sourceConn, "sourceConn");
-        N.checkArgNotBlank(sourceTableName, "sourceTableName");
+        N.checkArgNotNull(sourceConn, cs.sourceConn);
+        N.checkArgNotBlank(sourceTableName, cs.sourceTableName);
 
         return new CopyTableFromConnection(sourceConn, sourceTableName);
     }

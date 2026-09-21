@@ -274,9 +274,9 @@ public final class JoinInfo {
      * @see #isManyToManyJoin()
      */
     JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowNullOrDefaultJoinKeys) {
-        N.checkArgNotNull(entityClass, "entityClass");
-        N.checkArgNotNull(tableName, "tableName");
-        N.checkArgNotNull(joinEntityPropName, "joinEntityPropName");
+        N.checkArgNotNull(entityClass, cs.entityClass);
+        N.checkArgNotNull(tableName, cs.tableName);
+        N.checkArgNotNull(joinEntityPropName, cs.joinEntityPropName);
 
         this.allowNullOrDefaultJoinKeys = allowNullOrDefaultJoinKeys;
         this.entityClass = entityClass;
@@ -530,11 +530,11 @@ public final class JoinInfo {
                 final String batchSelectAllLeftSql = leftSelectSqlForBatch.substring(0, leftSelectSqlForBatch.length() - fromLength) + ", " + middleCondPropName
                         + batchSelectFromToJoinOn;
 
-                final BiFunction<Collection<String>, Integer, String> batchSqlBuilder = (selectPropNames, size) -> {
-                    N.checkArgPositive(size, "batchSize");
+                final BiFunction<Collection<String>, Integer, String> batchSqlBuilder = (selectPropNames, batchSize) -> {
+                    N.checkArgPositive(batchSize, cs.batchSize);
 
                     if (N.isEmpty(selectPropNames)) {
-                        return Strings.repeat("?", size, ", ", batchSelectAllLeftSql, ")");
+                        return Strings.repeat("?", batchSize, ", ", batchSelectAllLeftSql, ")");
                     } else {
                         Collection<String> newSelectPropNames = selectPropNames;
 
@@ -556,7 +556,7 @@ public final class JoinInfo {
 
                         Objectory.recycle(sb);
 
-                        return Strings.repeat("?", size, ", ", sql, ")");
+                        return Strings.repeat("?", batchSize, ", ", sql, ")");
                     }
                 };
 
@@ -584,13 +584,13 @@ public final class JoinInfo {
                         .replace(inCondToReplace, middleSelectSql)
                         .replace(" = ?)", " IN (");
 
-                final IntFunction<String> batchDeleteSqlBuilder = size -> {
-                    N.checkArgPositive(size, "batchSize");
+                final IntFunction<String> batchDeleteSqlBuilder = batchSize -> {
+                    N.checkArgPositive(batchSize, cs.batchSize);
 
-                    if (size == 1) {
+                    if (batchSize == 1) {
                         return deleteSql;
                     } else {
-                        return Strings.repeat("?", size, ", ", batchDeleteSqlHeader, "))");
+                        return Strings.repeat("?", batchSize, ", ", batchDeleteSqlHeader, "))");
                     }
                 };
 
@@ -600,13 +600,13 @@ public final class JoinInfo {
                         .query()
                         .replace(" = ?", " IN (");
 
-                final IntFunction<String> batchMiddleDeleteSqlBuilder = size -> {
-                    N.checkArgPositive(size, "batchSize");
+                final IntFunction<String> batchMiddleDeleteSqlBuilder = batchSize -> {
+                    N.checkArgPositive(batchSize, cs.batchSize);
 
-                    if (size == 1) {
+                    if (batchSize == 1) {
                         return middleDeleteSql;
                     } else {
-                        return Strings.repeat("?", size, ", ", batchMiddleDeleteSql, ")");
+                        return Strings.repeat("?", batchSize, ", ", batchMiddleDeleteSql, ")");
                     }
                 };
 
@@ -726,13 +726,13 @@ public final class JoinInfo {
                                 .append(Strings.repeat("?", batchSize, ", ", " IN (", ")")) //
                         : (sb, batchSize) -> sb.where(Filters.or(N.repeat(cond, batchSize)));
 
-                final BiFunction<Collection<String>, Integer, String> batchSelectSqlBuilder = (selectPropNames, size) -> {
-                    N.checkArgPositive(size, "batchSize");
+                final BiFunction<Collection<String>, Integer, String> batchSelectSqlBuilder = (selectPropNames, batchSize) -> {
+                    N.checkArgPositive(batchSize, cs.batchSize);
 
-                    if (size == 1) {
+                    if (batchSize == 1) {
                         // The batch consumer matches fetched rows back to their source entities by the
                         // referenced join-key props, so they must be selected even for a 1-element chunk
-                        // (same augmentation as the size > 1 path below).
+                        // (same augmentation as the batchSize > 1 path below).
                         if (N.notEmpty(selectPropNames) && !N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
                             final Collection<String> newSelectPropNames = N.newLinkedHashSet(referencedPropInfos.length + selectPropNames.size());
 
@@ -748,7 +748,7 @@ public final class JoinInfo {
                         return sqlBuilder.apply(selectPropNames);
                     } else {
                         if (N.isEmpty(selectPropNames)) {
-                            return appendWhereFunc.apply(entry.getValue()._2.apply(referencedEntityClass), size).build().query();
+                            return appendWhereFunc.apply(entry.getValue()._2.apply(referencedEntityClass), batchSize).build().query();
                         } else {
                             if (!N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
                                 final Collection<String> newSelectPropNames = N.newLinkedHashSet(referencedPropInfos.length + selectPropNames.size());
@@ -759,10 +759,12 @@ public final class JoinInfo {
 
                                 newSelectPropNames.addAll(selectPropNames);
 
-                                return appendWhereFunc.apply(entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass), size).build().query();
+                                return appendWhereFunc.apply(entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass), batchSize)
+                                        .build()
+                                        .query();
                             }
 
-                            return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), size).build().query();
+                            return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), batchSize).build().query();
                         }
                     }
                 };
@@ -776,13 +778,13 @@ public final class JoinInfo {
                 setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
                 deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, null, paramSetter));
 
-                final IntFunction<String> batchDeleteSqlBuilder = size -> {
-                    N.checkArgPositive(size, "batchSize");
+                final IntFunction<String> batchDeleteSqlBuilder = batchSize -> {
+                    N.checkArgPositive(batchSize, cs.batchSize);
 
-                    if (size == 1) {
+                    if (batchSize == 1) {
                         return deleteSql;
                     } else {
-                        return appendWhereFunc.apply(entry.getValue()._4.apply(referencedEntityClass), size).build().query();
+                        return appendWhereFunc.apply(entry.getValue()._4.apply(referencedEntityClass), batchSize).build().query();
                     }
                 };
 
@@ -1231,9 +1233,9 @@ public final class JoinInfo {
      * @see DaoConfig
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
-        N.checkArgNotNull(daoClass, "daoClass");
-        N.checkArgNotNull(entityClass, "entityClass");
-        N.checkArgNotNull(tableName, "tableName");
+        N.checkArgNotNull(daoClass, cs.daoClass);
+        N.checkArgNotNull(entityClass, cs.entityClass);
+        N.checkArgNotNull(tableName, cs.tableName);
 
         Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.computeIfAbsent(daoClass,
                 k -> new ConcurrentHashMap<>());
@@ -1304,7 +1306,7 @@ public final class JoinInfo {
      * @see #getEntityJoinInfo(Class, Class, String)
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
-        N.checkArgNotNull(joinEntityPropName, "joinEntityPropName");
+        N.checkArgNotNull(joinEntityPropName, cs.joinEntityPropName);
 
         final JoinInfo joinInfo = getEntityJoinInfo(daoClass, entityClass, tableName).get(joinEntityPropName);
 
@@ -1374,10 +1376,10 @@ public final class JoinInfo {
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {
-        N.checkArgNotNull(daoClass, "daoClass");
-        N.checkArgNotNull(entityClass, "entityClass");
-        N.checkArgNotNull(tableName, "tableName");
-        N.checkArgNotNull(joinPropEntityClass, "joinPropEntityClass");
+        N.checkArgNotNull(daoClass, cs.daoClass);
+        N.checkArgNotNull(entityClass, cs.entityClass);
+        N.checkArgNotNull(tableName, cs.tableName);
+        N.checkArgNotNull(joinPropEntityClass, cs.joinPropEntityClass);
 
         final Tuple3<Class<?>, Class<?>, String> key = Tuple.of(daoClass, entityClass, tableName);
 

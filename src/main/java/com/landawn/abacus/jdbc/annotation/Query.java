@@ -47,7 +47,8 @@ import com.landawn.abacus.util.RegExUtil;
  * method may return {@code void}, the DAO ID type (or a supertype capable of holding that ID), or
  * {@link com.landawn.abacus.util.u.Optional Optional&lt;ID&gt;}. A return type narrower than the DAO ID
  * type is rejected during DAO creation because a generated ID could not be returned safely. A batch
- * INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible element types are rejected.</p>
+ * INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible element types are rejected.
+ * On a DAO whose entity class has no id property, an INSERT method must return {@code void}.</p>
  *
  * <p>Method parameters are bound to named parameters in the SQL through {@link Bind}.
  * Variable-length lists use the separate {@link BindList} curly-brace template expansion and cannot

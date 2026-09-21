@@ -69,7 +69,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
         @SuppressWarnings("deprecation")
@@ -131,7 +131,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
         if (N.isEmpty(entities)) {

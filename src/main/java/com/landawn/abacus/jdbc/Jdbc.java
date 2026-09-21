@@ -294,7 +294,7 @@ public final class Jdbc {
 
                 @Override
                 public void accept(final PreparedStatement stmt, final T[] params) throws SQLException {
-                    N.checkArgNotNull(params, "params");
+                    N.checkArgNotNull(params, cs.params);
                     N.checkArgument(params.length == len, "The parameter array length (%s) must match the field count (%s)", params.length, len);
 
                     if (fieldTypes == null) {
@@ -367,7 +367,7 @@ public final class Jdbc {
 
                 @Override
                 public void accept(final PreparedStatement stmt, final List<T> params) throws SQLException {
-                    N.checkArgNotNull(params, "params");
+                    N.checkArgNotNull(params, cs.params);
                     N.checkArgument(params.size() == len, "The parameter list size (%s) must match the field count (%s)", params.size(), len);
 
                     if (fieldTypes == null) {
@@ -2250,7 +2250,7 @@ public final class Jdbc {
              * This getter will be applied to any column index for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
-             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+            * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -4200,7 +4200,7 @@ public final class Jdbc {
              * This getter will be applied to any column name for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
-             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+            * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -4473,7 +4473,7 @@ public final class Jdbc {
              * @param <T> target type
              * @param targetClass the class to map rows to
              * @return a new stateful {@code BiRowMapper<T>}
-             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+            * @throws IllegalArgumentException if {@code targetClass} is {@code null}
              */
             @SequentialOnly
             @Stateful
@@ -4498,7 +4498,7 @@ public final class Jdbc {
              * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are silently skipped;
              * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (for bean target classes)
              * @return a new stateful {@code BiRowMapper<T>}
-             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+            * @throws IllegalArgumentException if {@code targetClass} is {@code null}
              */
             @SequentialOnly
             @Stateful
@@ -5464,7 +5464,7 @@ public final class Jdbc {
 
                 @Override
                 public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
-                    N.checkArgNotNull(outputRow, "outputRow");
+                    N.checkArgNotNull(outputRow, cs.outputRow);
 
                     if (columnTypes == null) {
                         final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClassForFetch);
@@ -5606,7 +5606,7 @@ public final class Jdbc {
              * This getter will be applied to any column index for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
-             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+            * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -5816,7 +5816,7 @@ public final class Jdbc {
              * parallel streams.</p>
              *
              * <p>Note: the returned extractor's {@code accept} method throws an {@link IllegalArgumentException}
-             * if the supplied output array is shorter than the result set's column count.</p>
+             * if the supplied output array is {@code null} or shorter than the result set's column count.</p>
              *
              * @return a new stateful {@code RowExtractor}
              */
@@ -5831,7 +5831,7 @@ public final class Jdbc {
 
                     @Override
                     public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
-                        N.checkArgNotNull(outputRow, "outputRow");
+                        N.checkArgNotNull(outputRow, cs.outputRow);
 
                         if (rsColumnGetters == null) {
                             rsColumnCount = rs.getMetaData().getColumnCount();
@@ -6377,7 +6377,7 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code firstColumnType} is {@code null}
              */
             public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
-                N.checkArgNotNull(firstColumnType, "firstColumnType");
+                N.checkArgNotNull(firstColumnType, cs.firstColumnType);
 
                 return get(N.typeOf(firstColumnType));
             }
@@ -6402,7 +6402,7 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code type} is {@code null}
              */
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
-                N.checkArgNotNull(type, "type");
+                N.checkArgNotNull(type, cs.type);
 
                 RowMapper<T> rowMapper = rowMapperPool.get(type);
 
@@ -6479,7 +6479,7 @@ public final class Jdbc {
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {
-                N.checkArgNotNull(type, "type");
+                N.checkArgNotNull(type, cs.type);
 
                 return set(N.typeOf(type));
             }
@@ -6501,7 +6501,7 @@ public final class Jdbc {
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
-                N.checkArgNotNull(type, "type");
+                N.checkArgNotNull(type, cs.type);
 
                 return (preparedQuery, x) -> type.set(preparedQuery.stmt, 1, x);
             }
@@ -6618,7 +6618,7 @@ public final class Jdbc {
          * @see CallableStatement#registerOutParameter(String, int)
          */
         public static OutParam of(String parameterName, int sqlType) {
-            N.checkArgNotEmpty(parameterName, "parameterName");
+            N.checkArgNotEmpty(parameterName, cs.parameterName);
 
             return new OutParam(0, parameterName, sqlType, null, 0);
         }
@@ -7275,7 +7275,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code map} is {@code null}.
          */
         static DaoCache createByMap(Map<String, Object> map) {
-            N.checkArgNotNull(map, "map");
+            N.checkArgNotNull(map, cs.map);
 
             return new DaoCacheByMap(map);
         }
@@ -7452,11 +7452,14 @@ public final class Jdbc {
          * @param args the method arguments (unused).
          * @param methodSignature a tuple containing method metadata (unused).
          * @return the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted).
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
          */
         @Override
         @SuppressWarnings("unused")
         public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
             final PoolableAdapter<Object> w = pool.get(defaultCacheKey);
 
             return w == null ? null : w.value();
@@ -7546,11 +7549,14 @@ public final class Jdbc {
          * @param daoProxy the DAO proxy instance (unused).
          * @param args the method arguments (unused).
          * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
          */
         @Override
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
             final Method method = methodSignature._1;
 
             if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
@@ -7610,13 +7616,22 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code cache} is {@code null}.
          */
         DaoCacheByMap {
-            N.checkArgNotNull(cache, "cache");
+            N.checkArgNotNull(cache, cs.cache);
         }
 
+        /**
+         * Retrieves a previously cached result from the backing map. The {@code daoProxy}, {@code args},
+         * and {@code methodSignature} arguments are unused by this implementation.
+         *
+         * @return the cached result, or {@code null} if the key is not present.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         */
         @Override
         @SuppressWarnings("unused")
         public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
             return cache.get(defaultCacheKey);
         }
 
@@ -7638,6 +7653,8 @@ public final class Jdbc {
         /**
          * Stores the result in the cache. The {@code liveTime} and {@code maxIdleTime} parameters
          * are ignored because this implementation does not support TTL-based eviction.
+         *
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
          */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
@@ -7659,11 +7676,15 @@ public final class Jdbc {
          * Otherwise, it clears the entire cache.
          * No action is taken for built-in update operations that report zero affected rows (an
          * {@code int}/{@code long} result of {@code 0}).
+         *
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
          */
         @Override
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
             final Method method = methodSignature._1;
 
             if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {

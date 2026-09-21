@@ -23,6 +23,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.N;
 
@@ -56,8 +57,8 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      */
     @Override
     default int update(final String propName, final Object propValue, final Condition cond) throws UncheckedSQLException {
-        N.checkArgNotEmpty(propName, "propName");
-        N.checkArgNotNull(cond, "cond");
+        N.checkArgNotEmpty(propName, cs.propName);
+        N.checkArgNotNull(cond, cs.cond);
 
         final Map<String, Object> updateProps = new HashMap<>();
         updateProps.put(propName, propValue);

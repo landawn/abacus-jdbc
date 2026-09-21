@@ -11453,7 +11453,7 @@
                 },
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if the provided function is null"
+                  "condition": "if {@code func} is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -11495,7 +11495,7 @@
                 },
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if the provided consumer is null"
+                  "condition": "if {@code consumer} is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -11536,7 +11536,7 @@
                 },
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if the provided consumer is null"
+                  "condition": "if {@code consumer} is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",

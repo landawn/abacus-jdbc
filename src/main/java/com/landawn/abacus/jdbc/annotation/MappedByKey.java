@@ -91,6 +91,10 @@ public @interface MappedByKey {
      * (the first id property when the entity has a composite id); a DAO whose entity has no
      * id property then fails initialization with {@code IllegalArgumentException}.</p>
      *
+     * <p>The resolved name must be a readable property of the DAO's target entity class, and the
+     * method's key type must accept that property's type; otherwise DAO initialization fails with
+     * {@code IllegalArgumentException}.</p>
+     *
      * <p>Examples:</p>
      * <pre>{@code
      * // Using entity property name
@@ -106,9 +110,11 @@ public @interface MappedByKey {
     /**
      * Specifies the Map implementation class to use for the result.
      * The class must be concrete, have a no-argument constructor, and be assignable to the DAO
-     * method's declared return type. For example, a method returning {@code LinkedHashMap} must
-     * explicitly select {@code LinkedHashMap.class}; the default {@link HashMap} is only compatible
-     * with return types that can accept a {@code HashMap}, such as {@code Map} or {@code HashMap}.
+     * method's declared return type; each of those is checked at DAO initialization time and a
+     * violation fails with {@code IllegalArgumentException}. For example, a method returning
+     * {@code LinkedHashMap} must explicitly select {@code LinkedHashMap.class}; the default
+     * {@link HashMap} is only compatible with return types that can accept a {@code HashMap}, such as
+     * {@code Map} or {@code HashMap}.
      *
      * <p>Common implementations:</p>
      * <ul>

@@ -2945,7 +2945,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** The result of applying the function to the PreparedStatement
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided function is null
+  - `java.lang.IllegalArgumentException` — if {@code func} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs or {@code func} throws
 - **See also:** #executeThenApply(Throwables.Function), #execute()
 ##### executeThenAccept(...) -> void
@@ -2957,7 +2957,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `consumer` (`Throwables.Consumer<? super Stmt, SQLException>`) — the consumer to apply to the PreparedStatement after execution. Must not be {@code null} .
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided consumer is null
+  - `java.lang.IllegalArgumentException` — if {@code consumer} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs or the consumer throws
 - **See also:** #execute(), #executeThenAccept(Throwables.BiConsumer)
 - **Signature:** `public void executeThenAccept(final Throwables.BiConsumer<? super Stmt, Boolean, SQLException> consumer) throws IllegalStateException, IllegalArgumentException, SQLException`
@@ -2968,7 +2968,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `consumer` (`Throwables.BiConsumer<? super Stmt, Boolean, SQLException>`) — the consumer to apply to the PreparedStatement. The first parameter is the executed PreparedStatement, the second parameter indicates if the first result is a ResultSet object. Must not be {@code null} .
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
-  - `java.lang.IllegalArgumentException` — if the provided consumer is null
+  - `java.lang.IllegalArgumentException` — if {@code consumer} is {@code null}
   - `java.sql.SQLException` — if a database access error occurs or the bi-consumer throws
 - **See also:** #executeThenAccept(Throwables.Consumer), #execute()
 ##### callAsync(...) -> ContinuableFuture<R>

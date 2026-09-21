@@ -34,8 +34,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>Consider carefully whether caching at the DAO layer is appropriate for your use case,
  * as it can lead to stale data issues if not managed properly.</p>
  *
- * <p>The cache key is automatically derived from the fully-qualified method name and the
- * serialized parameters. Results are cached after the first execution and returned from cache for subsequent
+ * <p>The cache key is automatically derived from the fully-qualified method name, the DAO's table name
+ * and the serialized method arguments; when the arguments cannot be serialized, a warning is logged and
+ * the result is not cached. Results are cached after the first execution and returned from cache for subsequent
  * calls with the same parameters until the cache expires or is invalidated. A {@code null}
  * method result is not cached; use an empty {@code Optional}, collection, or other non-null
  * result object when caching an explicit "no result" value is important.</p>
@@ -52,9 +53,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * implementation), and {@link RefreshCache @RefreshCache} on selected methods to invalidate cached
  * entries; {@code @CacheResult} only controls whether and how an individual result is cached.</p>
  *
- * <p><strong>Init-time validation:</strong> applying {@code @CacheResult} to a method whose return
- * type is not cacheable ({@code void}, {@code Iterator}, {@code Stream}, {@code Seq}) causes DAO
- * initialization to fail with {@code UnsupportedOperationException}. In addition, {@link #maxLiveTimeMillis()}
+ * <p><strong>Init-time validation:</strong> enabling caching (through a method-level annotation or a
+ * type-level one whose {@link #filter()} matches the method) for a method whose return type is not
+ * cacheable ({@code void}/{@code Void}, {@code Iterator}, or any lazy sequence type &mdash; the Abacus
+ * {@code Stream}, {@code EntryStream} and {@code Seq} as well as {@code java.util.stream.BaseStream})
+ * causes DAO initialization to fail with {@code UnsupportedOperationException}. In addition, {@link #maxLiveTimeMillis()}
  * and {@link #maxIdleTimeMillis()} must be {@code >= 0}, and {@code 0 <= minSize() <= maxSize()} must hold.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -230,7 +233,10 @@ public @interface CacheResult {
      * </ul>
      *
      * <p>Serialization provides isolation between cached objects and application code,
-     * preventing unintended modifications to cached data.</p>
+     * preventing unintended modifications to cached data. Values that are already immutable are stored
+     * and returned as-is, without copying, whichever strategy is selected. Selecting
+     * {@link CacheSerialization#KRYO} requires Kryo on the classpath; otherwise caching a mutable value
+     * fails at runtime with {@code UnsupportedOperationException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

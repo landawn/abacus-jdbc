@@ -94,7 +94,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     @Override
@@ -120,6 +120,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return an Optional containing the entity with join entities loaded as specified, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     @Override
@@ -149,7 +150,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     @Override
@@ -181,7 +182,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class
      */
     @Beta
     @Override
@@ -214,6 +215,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return an Optional containing the entity with selected properties and join entities as specified, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     @Override
@@ -241,7 +243,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return the entity with specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     @Override
@@ -276,6 +278,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return the entity with join entities loaded as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     @Override
@@ -311,7 +314,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return the entity with selected properties and join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     @Override
@@ -349,7 +352,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class
      */
     @Beta
     @Override
@@ -390,6 +393,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return the entity with selected properties and join entities as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     @Override

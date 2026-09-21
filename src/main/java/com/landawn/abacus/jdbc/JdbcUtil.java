@@ -2000,7 +2000,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
 
-        final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
+        final String[] nameParts = splitQualifiedSqlIdentifier(tableName, cs.tableName);
         final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
         final String catalog;
         final String schema;
@@ -2341,7 +2341,7 @@ public final class JdbcUtil {
          * @param columnIndex The 1-based index of the column.
          * @param columnValue The column value to convert.
          * @return The converted column value.
-         * @throws SQLException if a database access error occurs.
+        * @throws SQLException if a database access error occurs.
          */
         Object apply(ResultSet rs, int columnIndex, Object columnValue) throws SQLException;
     }
@@ -2358,7 +2358,7 @@ public final class JdbcUtil {
          * @param columnLabel The label of the column.
          * @param columnValue The column value to convert.
          * @return The converted column value.
-         * @throws SQLException if a database access error occurs.
+        * @throws SQLException if a database access error occurs.
          */
         Object apply(ResultSet rs, String columnLabel, Object columnValue) throws SQLException;
     }
@@ -2829,8 +2829,9 @@ public final class JdbcUtil {
      * System.out.println(columnToPropNameMap.get("user_name"));   // Output: userName
      * }</pre>
      *
-     * @param entityClass The entity class to analyze for column-to-field mappings.
+     * @param entityClass The entity class to analyze for column-to-field mappings; must not be {@code null}.
      * @return An {@link ImmutableMap} where keys are database column names and values are the corresponding entity field names.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      * @see com.landawn.abacus.annotation.Column
      * @see com.landawn.abacus.util.NamingPolicy
      */
@@ -8769,7 +8770,7 @@ public final class JdbcUtil {
          * @param stmt The {@link CallableStatement} to read from.
          * @param outParameterIndex The 1-based index of the out parameter.
          * @return The out parameter value.
-         * @throws SQLException if a database access error occurs.
+        * @throws SQLException if a database access error occurs.
          */
         Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException;
 
@@ -8779,7 +8780,7 @@ public final class JdbcUtil {
          * @param stmt The {@link CallableStatement} to read from.
          * @param outParameterName The name of the out parameter.
          * @return The out parameter value.
-         * @throws SQLException if a database access error occurs.
+        * @throws SQLException if a database access error occurs.
          */
         Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException;
     }
@@ -9132,11 +9133,14 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to obtain a connection from; must not be {@code null}.
      * @param tableName The table name (optionally qualified, e.g., {@code schema.table} or {@code catalog.schema.table}); must not be blank.
      * @return {@code true} if the table exists, {@code false} otherwise.
-     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank or otherwise invalid.
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error.
      * @see #tableExists(Connection, String)
      */
     public static boolean tableExists(final javax.sql.DataSource ds, final String tableName) {
+        N.checkArgNotNull(ds, cs.ds);
+        N.checkArgNotBlank(tableName, cs.tableName);
+
         Connection conn = null;
 
         try {
@@ -9181,7 +9185,7 @@ public final class JdbcUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
 
         try {
-            final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
+            final String[] nameParts = splitQualifiedSqlIdentifier(tableName, cs.tableName);
             final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
             final String catalog;
             final String schema;
@@ -9680,7 +9684,7 @@ public final class JdbcUtil {
         final String sqlTableName;
 
         try {
-            sqlTableName = toQualifiedSqlIdentifier(conn, tableName, "tableName");
+            sqlTableName = toQualifiedSqlIdentifier(conn, tableName, cs.tableName);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -9738,7 +9742,7 @@ public final class JdbcUtil {
      * part is a plain (unquoted-safe) SQL identifier; returns {@code null} otherwise.
      */
     private static String buildSimpleQualifiedName(final String qualifiedName) {
-        final String[] parts = splitQualifiedSqlIdentifier(qualifiedName, "tableName");
+        final String[] parts = splitQualifiedSqlIdentifier(qualifiedName, cs.tableName);
 
         for (final String part : parts) {
             if (!isUnquotedSafeIdentifier(part)) {
@@ -9775,12 +9779,17 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param ds The {@link javax.sql.DataSource} to use for acquiring connections.
-     * @param tableName The name of the table that stores lock records; created when absent.
+     * @param ds The {@link javax.sql.DataSource} to use for acquiring connections; must not be {@code null}.
+     * @param tableName The name of the table that stores lock records; created when absent. Must not be blank.
      * @return A new {@link DBLock} instance bound to {@code ds} and {@code tableName}.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank or otherwise invalid.
+     * @throws UncheckedSQLException if a database operation fails while initializing the lock table.
      * @see DBLock
      */
     public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName) {
+        N.checkArgNotNull(ds, cs.ds);
+        N.checkArgNotBlank(tableName, cs.tableName);
+
         return new DBLock(ds, tableName);
     }
 
@@ -10510,8 +10519,9 @@ public final class JdbcUtil {
      * // Returns property names that should be included in INSERT statement for User entities
      * }</pre>
      *
-     * @param entityClass The entity class to analyze.
+     * @param entityClass The entity class to analyze; must not be {@code null}.
      * @return A collection of property names suitable for INSERT operations.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
         return getInsertPropNames(entityClass, null);
@@ -10528,9 +10538,10 @@ public final class JdbcUtil {
      * // Returns property names for INSERT, excluding specified properties
      * }</pre>
      *
-     * @param entityClass The entity class to analyze.
+     * @param entityClass The entity class to analyze; must not be {@code null}.
      * @param excludedPropNames Property names to exclude from the result.
      * @return A collection of property names suitable for INSERT operations.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.insertPropNames(entityClass, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
@@ -10547,8 +10558,9 @@ public final class JdbcUtil {
      * // Returns property names that should be included in SELECT statement
      * }</pre>
      *
-     * @param entityClass The entity class to analyze.
+     * @param entityClass The entity class to analyze; must not be {@code null}.
      * @return A collection of property names suitable for SELECT operations.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
         return getSelectPropNames(entityClass, null);
@@ -10565,9 +10577,10 @@ public final class JdbcUtil {
      * // Returns property names for SELECT, excluding sensitive properties
      * }</pre>
      *
-     * @param entityClass The entity class to analyze.
+     * @param entityClass The entity class to analyze; must not be {@code null}.
      * @param excludedPropNames Property names to exclude from the result.
      * @return A collection of property names suitable for SELECT operations.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return getSelectPropNames(entityClass, false, excludedPropNames);
@@ -10584,10 +10597,11 @@ public final class JdbcUtil {
      * // Returns property names including sub-entity properties
      * }</pre>
      *
-     * @param entityClass The entity class to analyze.
+     * @param entityClass The entity class to analyze; must not be {@code null}.
      * @param includeSubEntityProperties Whether to include properties of sub-entities.
      * @param excludedPropNames Property names to exclude from the result.
      * @return A collection of property names suitable for SELECT operations.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
@@ -10606,8 +10620,9 @@ public final class JdbcUtil {
      * // Returns property names that can be updated
      * }</pre>
      *
-     * @param entityClass The entity class to analyze.
+     * @param entityClass The entity class to analyze; must not be {@code null}.
      * @return A collection of property names suitable for UPDATE operations.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
         return getUpdatePropNames(entityClass, null);
@@ -10624,9 +10639,10 @@ public final class JdbcUtil {
      * // Returns property names for UPDATE, excluding specified properties
      * }</pre>
      *
-     * @param entityClass The entity class to analyze.
+     * @param entityClass The entity class to analyze; must not be {@code null}.
      * @param excludedPropNames Property names to exclude from the result.
      * @return A collection of property names suitable for UPDATE operations.
+     * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.updatePropNames(entityClass, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
@@ -10720,15 +10736,18 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param blob The Blob object containing the data to be written.
-     * @param output The File object representing the output file.
+     * @param output The File object representing the output file. Must not be {@code null} when {@code blob} is not {@code null}.
      * @return The number of bytes written to the file, or {@code 0} if {@code blob} is {@code null}.
+     * @throws IllegalArgumentException if {@code output} is {@code null} (when {@code blob} is not {@code null}).
      * @throws SQLException if a database access error occurs while accessing the Blob.
      * @throws IOException if an I/O error occurs while writing to the file.
      */
-    public static long writeBlobToFile(final Blob blob, final File output) throws SQLException, IOException {
+    public static long writeBlobToFile(final Blob blob, final File output) throws IllegalArgumentException, SQLException, IOException {
         if (blob == null) {
             return 0;
         }
+
+        N.checkArgNotNull(output, cs.output);
 
         Throwable primaryFailure = null;
 
@@ -10782,15 +10801,18 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param clob The Clob object containing the data to be written.
-     * @param output The File object representing the output file.
+     * @param output The File object representing the output file. Must not be {@code null} when {@code clob} is not {@code null}.
      * @return The number of characters written to the file, or {@code 0} if {@code clob} is {@code null}.
+     * @throws IllegalArgumentException if {@code output} is {@code null} (when {@code clob} is not {@code null}).
      * @throws SQLException if a database access error occurs while accessing the Clob.
      * @throws IOException if an I/O error occurs while writing to the file.
      */
-    public static long writeClobToFile(final Clob clob, final File output) throws SQLException, IOException {
+    public static long writeClobToFile(final Clob clob, final File output) throws IllegalArgumentException, SQLException, IOException {
         if (clob == null) {
             return 0;
         }
+
+        N.checkArgNotNull(output, cs.output);
 
         Throwable primaryFailure = null;
 

@@ -493,7 +493,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntities(entity, joinEntityClass, null);
@@ -515,7 +516,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames) throws SQLException {
         @SuppressWarnings("deprecation")
@@ -545,7 +547,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntities(entities, joinEntityClass, null);
@@ -570,7 +572,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
             throws SQLException {
@@ -604,7 +606,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
+     *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntities(final T entity, final String joinEntityPropName) throws SQLException {
         loadJoinEntities(entity, joinEntityPropName, null);
@@ -643,8 +646,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                       This parameter is useful for performance optimization when only
      *                       specific fields are needed
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
-     *                                  properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
+     *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws SQLException;
 
@@ -662,7 +665,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code joinEntityPropName} is {@code null} or empty, or if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
         loadJoinEntities(entities, joinEntityPropName, null);
@@ -707,7 +711,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                       Specifying only needed properties can significantly improve query
      *                       performance and reduce memory usage
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     * @throws IllegalArgumentException if {@code joinEntityPropName} is {@code null} or empty, or if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy}
      */
     void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws SQLException;
@@ -727,7 +731,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load.
      *                            If {@code null} or empty, this method returns immediately
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
@@ -754,7 +759,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -786,11 +792,12 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
-     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is
+     *                                  not properly annotated with {@code @JoinedBy}
      */
     @Beta
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
+        N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(joinEntityPropNames)) {
@@ -909,6 +916,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * @param entity the entity for which to load all join entities
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     default void loadAllJoinEntities(final T entity) throws SQLException {
@@ -929,6 +937,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load all join entities
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -959,7 +968,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load all join entities
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1068,7 +1077,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntitiesIfAbsent(entity, joinEntityClass, null);
@@ -1091,7 +1101,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames) throws SQLException {
         @SuppressWarnings("deprecation")
@@ -1122,7 +1133,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntitiesIfAbsent(entities, joinEntityClass, null);
@@ -1147,7 +1158,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
             throws SQLException {
@@ -1300,7 +1311,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load.
      *                            If {@code null} or empty, this method returns immediately
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
@@ -1327,7 +1339,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1487,6 +1500,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *
      * @param entity the entity for which to load join entities
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     default void loadAllJoinEntitiesIfAbsent(final T entity) throws SQLException {
@@ -1507,6 +1521,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1537,7 +1552,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta

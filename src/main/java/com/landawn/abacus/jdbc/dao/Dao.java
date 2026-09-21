@@ -132,6 +132,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the SQL query string
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a PreparedQuery instance
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -147,6 +148,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the SQL query string
      * @param generatedKeyColumnIndexes array of column indexes to return as generated keys
      * @return a PreparedQuery instance
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -171,6 +173,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the SQL query string
      * @param generatedKeyColumnNames array of column names to return as generated keys
      * @return a PreparedQuery instance
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -186,7 +189,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the SQL query string
      * @param stmtCreator function to create the PreparedStatement with custom options
      * @return a PreparedQuery instance
-     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -205,6 +208,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the named SQL query string
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -220,6 +224,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the named SQL query string
      * @param generatedKeyColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -235,6 +240,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the named SQL query string
      * @param generatedKeyColumnNames array of column names to return
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -249,6 +255,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the pre-parsed named query
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -263,6 +270,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the pre-parsed named query
      * @param generatedKeyColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -277,6 +285,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the pre-parsed named query
      * @param generatedKeyColumnNames array of column names to return
      * @return a NamedQuery instance
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnNames} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -292,7 +301,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the named SQL query string
      * @param stmtCreator function to create the PreparedStatement
      * @return a NamedQuery instance
-     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -310,7 +319,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param namedSql the pre-parsed named query
      * @param stmtCreator function to create the PreparedStatement
      * @return a NamedQuery instance
-     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -338,6 +347,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *
      * @param sql the stored procedure call string
      * @return a CallableQuery instance
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -353,7 +363,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the stored procedure call string
      * @param stmtCreator function to create the CallableStatement
      * @return a CallableQuery instance
-     * @throws IllegalArgumentException if {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     @Beta

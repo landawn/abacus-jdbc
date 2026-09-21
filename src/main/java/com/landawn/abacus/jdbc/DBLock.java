@@ -240,16 +240,19 @@ public final class DBLock implements AutoCloseable {
      * @param tableName the name of the database table to use for storing lock information.
      *        This table will be created if it does not exist. Must not be {@code null} or empty.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is
-     *         {@code null}, empty, or not a valid qualified identifier.
+     *         {@code null}, empty, blank, or not a valid qualified identifier.
      * @throws UncheckedSQLException if any database operation fails during initialization (e.g., table creation).
      * @throws IllegalStateException if the lock table cannot be verified after the creation attempt.
      */
     DBLock(final DataSource ds, final String tableName) {
+        N.checkArgNotNull(ds, cs.ds);
+        N.checkArgNotBlank(tableName, cs.tableName);
+
         this.ds = ds;
         final Connection conn = JdbcUtil.getConnection(ds);
 
         try {
-            final String sqlTableName = JdbcUtil.toQualifiedSqlIdentifier(conn, tableName, "tableName");
+            final String sqlTableName = JdbcUtil.toQualifiedSqlIdentifier(conn, tableName, cs.tableName);
 
             removeExpiredLockSQL = "DELETE FROM " + sqlTableName + " WHERE target = ? AND (expiry_time < ? OR update_time < ?)"; //NOSONAR
             lockSQL = "INSERT INTO " + sqlTableName + " (host_name, target, code, status, expiry_time, update_time, create_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -547,10 +550,10 @@ public final class DBLock implements AutoCloseable {
      */
     public String tryLock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException {
         assertNotClosed();
-        N.checkArgNotEmpty(target, "target");
-        N.checkArgPositive(liveTime, "liveTime");
-        N.checkArgNotNegative(timeout, "timeout");
-        N.checkArgNotNegative(retryInterval, "retryInterval");
+        N.checkArgNotEmpty(target, cs.target);
+        N.checkArgPositive(liveTime, cs.liveTime);
+        N.checkArgNotNegative(timeout, cs.timeout);
+        N.checkArgNotNegative(retryInterval, cs.retryInterval);
 
         final String code = Strings.uuid();
 
@@ -730,8 +733,8 @@ public final class DBLock implements AutoCloseable {
      */
     public boolean unlock(final String target, final String code) {
         assertNotClosed();
-        N.checkArgNotEmpty(target, "target");
-        N.checkArgNotEmpty(code, "code");
+        N.checkArgNotEmpty(target, cs.target);
+        N.checkArgNotEmpty(code, cs.code);
 
         final LockInfo lockInfo = targetCodePool.get(target);
         final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code());

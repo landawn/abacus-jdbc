@@ -411,7 +411,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     @Override
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -438,7 +439,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -467,7 +469,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -496,7 +498,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -532,7 +534,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
+     *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException {
@@ -579,8 +582,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                       This parameter is useful for performance optimization when only
      *                       specific fields are needed
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
-     *                                  properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
+     *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
      */
     @Override
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws UncheckedSQLException;
@@ -599,7 +602,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code joinEntityPropName} is {@code null} or empty, or if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException {
@@ -656,7 +660,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                       Specifying only needed properties can significantly improve query
      *                       performance and reduce memory usage
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     * @throws IllegalArgumentException if {@code joinEntityPropName} is {@code null} or empty, or if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
@@ -680,7 +684,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -712,7 +717,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -749,12 +755,13 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
-     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is
+     *                                  not properly annotated with {@code @JoinedBy}
      */
     @Beta
     @Override
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(joinEntityPropNames)) {
@@ -888,6 +895,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity for which to load all join entities
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -909,6 +917,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load all join entities
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -941,7 +950,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load all join entities
      * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1053,7 +1062,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -1081,7 +1091,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
+     *                                  specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1112,7 +1123,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -1141,7 +1152,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1307,7 +1318,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
@@ -1339,7 +1351,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
+     *                                  annotated with {@code @JoinedBy}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1517,6 +1530,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity for which to load join entities
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1538,6 +1552,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1569,7 +1584,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @param executor the executor to use for parallel loading
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code executor} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta

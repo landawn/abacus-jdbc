@@ -110,7 +110,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
@@ -143,6 +143,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return an Optional containing the entity with join entities loaded as specified, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
@@ -169,7 +170,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
@@ -199,7 +200,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
@@ -229,6 +230,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return an Optional containing the entity with selected properties and join entities as specified, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
@@ -255,7 +257,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return the entity with specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     default T getOrNull(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, SQLException {
@@ -289,6 +291,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return the entity with join entities loaded as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
@@ -322,7 +325,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return the entity with selected properties and join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
@@ -360,7 +363,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
@@ -401,6 +404,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return the entity with selected properties and join entities as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code id} is {@code null}
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
